@@ -93,6 +93,11 @@ export default async function CompetitorsPage() {
   }
 
   // Build enriched competitor rows
+  interface ThemeAnalysis {
+    macro_themes?: { theme: string; description: string; keywords: string[]; frequency: number; excerpts?: string[] }[];
+    positioning_summary?: string;
+  }
+
   interface CompRow {
     name: string;
     projects: { id: string; name: string; brand: string }[];
@@ -103,6 +108,7 @@ export default async function CompetitorsPage() {
     avgSentiment: number | null;
     firstSeen: string;
     lastSeen: string;
+    themeAnalysis: ThemeAnalysis | null;
   }
 
   const grouped = new Map<string, CompRow>();
@@ -136,6 +142,7 @@ export default async function CompetitorsPage() {
         avgSentiment: null,
         firstSeen: c.created_at,
         lastSeen: c.created_at,
+        themeAnalysis: c.theme_analysis && Object.keys(c.theme_analysis).length > 0 ? c.theme_analysis : null,
       });
     }
   }
@@ -160,6 +167,7 @@ export default async function CompetitorsPage() {
         avgSentiment: stats.sentimentCount > 0 ? stats.sentimentSum / stats.sentimentCount : null,
         firstSeen: "",
         lastSeen: "",
+        themeAnalysis: null,
       });
     }
   }
@@ -185,6 +193,7 @@ export default async function CompetitorsPage() {
         projects: r.projects.map((p) => ({ id: p.id, name: p.name, brand: p.brand })),
       }))}
       topicGroups={topicGroups}
+      projectIds={projectIds}
     />
   );
 }

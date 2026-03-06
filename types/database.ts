@@ -142,6 +142,7 @@ export interface Database {
           discovered_at_run_id: string | null;
           topic_context: string[];
           query_type: string | null;
+          theme_analysis: Json;
           created_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["competitors"]["Row"], "id" | "created_at">;
