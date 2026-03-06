@@ -234,13 +234,25 @@ export async function POST(request: Request) {
         })
         .eq("id", run.id);
 
-      // Calculate AVI inline from response_analysis + prompts_executed
-      const { data: aviRows } = await supabase
-        .from("response_analysis")
-        .select("*, prompts_executed!inner(run_id, query_id, segment_id, run_number)")
-        .eq("prompts_executed.run_id", run.id);
+      // Step 1: fetch all prompts_executed for this run
+      const { data: runPrompts } = await supabase
+        .from("prompts_executed")
+        .select("id, query_id, segment_id, run_number")
+        .eq("run_id", run.id);
 
-      const rows = (aviRows ?? []) as any[];
+      const promptsList = (runPrompts ?? []) as any[];
+      const promptIds = promptsList.map((p: any) => p.id);
+      const promptMap = new Map(promptsList.map((p: any) => [p.id, p]));
+
+      // Step 2: fetch all response_analysis for these prompts
+      const { data: analyses } = promptIds.length > 0
+        ? await supabase
+            .from("response_analysis")
+            .select("*")
+            .in("prompt_executed_id", promptIds)
+        : { data: [] };
+
+      const rows = (analyses ?? []) as any[];
       let aviResult: any = null;
 
       if (rows.length > 0) {
@@ -265,7 +277,8 @@ export async function POST(request: Request) {
         // stability_score: per query_id+segment_id, % run che concordano. Media.
         const pairs = new Map<string, boolean[]>();
         for (const r of rows) {
-          const pe = r.prompts_executed;
+          const pe = promptMap.get(r.prompt_executed_id);
+          if (!pe) continue;
           const key = `${pe.query_id}__${pe.segment_id}`;
           const group = pairs.get(key) ?? [];
           group.push(r.brand_mentioned);
