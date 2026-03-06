@@ -103,60 +103,65 @@ Domanda: ${query}`;
 }
 
 async function callAIModel(prompt: string, model: string): Promise<string> {
-  const modelDef = MODEL_MAP.get(model);
-  const provider = modelDef?.provider ?? "openai";
+  try {
+    const modelDef = MODEL_MAP.get(model);
+    const provider = modelDef?.provider ?? "openai";
 
-  if (provider === "anthropic") {
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const msg = await anthropic.messages.create({
-      model,
-      max_tokens: 1500,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const block = msg.content[0];
-    return block.type === "text" ? block.text : "";
-  }
+    if (provider === "anthropic") {
+      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const msg = await anthropic.messages.create({
+        model,
+        max_tokens: 1500,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const block = msg.content[0];
+      return block.type === "text" ? block.text : "";
+    }
 
-  if (provider === "google") {
-    const genai = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY ?? "");
-    const geminiModel = genai.getGenerativeModel({ model });
-    const result = await geminiModel.generateContent(prompt);
-    return result.response.text();
-  }
+    if (provider === "google") {
+      const genai = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY ?? "");
+      const geminiModel = genai.getGenerativeModel({ model });
+      const result = await geminiModel.generateContent(prompt);
+      return result.response.text();
+    }
 
-  if (provider === "xai") {
-    const client = new OpenAI({
-      apiKey: process.env.XAI_API_KEY ?? "",
-      baseURL: "https://api.x.ai/v1",
-    });
-    const completion = await client.chat.completions.create({
-      model,
-      max_tokens: 1500,
-      messages: [{ role: "user", content: prompt }],
-    });
-    return completion.choices[0]?.message?.content ?? "";
-  }
+    if (provider === "xai") {
+      const client = new OpenAI({
+        apiKey: process.env.XAI_API_KEY ?? "",
+        baseURL: "https://api.x.ai/v1",
+      });
+      const completion = await client.chat.completions.create({
+        model,
+        max_tokens: 1500,
+        messages: [{ role: "user", content: prompt }],
+      });
+      return completion.choices[0]?.message?.content ?? "";
+    }
 
-  // OpenAI (default)
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    // OpenAI (default)
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-  // o1/o3 models use max_completion_tokens instead of max_tokens
-  if (model.startsWith("o1") || model.startsWith("o3")) {
+    // o1/o3 models use max_completion_tokens instead of max_tokens
+    if (model.startsWith("o1") || model.startsWith("o3")) {
+      const completion = await openai.chat.completions.create({
+        model,
+        max_completion_tokens: 1500,
+        messages: [{ role: "user", content: prompt }],
+      } as any);
+      return completion.choices[0]?.message?.content ?? "";
+    }
+
     const completion = await openai.chat.completions.create({
       model,
-      max_completion_tokens: 1500,
+      temperature: 0.7,
+      max_tokens: 1500,
       messages: [{ role: "user", content: prompt }],
-    } as any);
+    });
     return completion.choices[0]?.message?.content ?? "";
+  } catch (err) {
+    console.error(`[callAIModel] ${model} failed:`, err instanceof Error ? err.message : err);
+    return "";
   }
-
-  const completion = await openai.chat.completions.create({
-    model,
-    temperature: 0.7,
-    max_tokens: 1500,
-    messages: [{ role: "user", content: prompt }],
-  });
-  return completion.choices[0]?.message?.content ?? "";
 }
 
 /**
@@ -348,14 +353,8 @@ export async function POST(request: Request) {
 
               if (!promptRecord) continue;
 
-              let rawResponse = "";
-              let promptError: string | null = null;
-
-              try {
-                rawResponse = await callAIModel(promptText, model);
-              } catch (err) {
-                promptError = err instanceof Error ? err.message : "Errore chiamata AI";
-              }
+              const rawResponse = await callAIModel(promptText, model);
+              const promptError: string | null = rawResponse ? null : "Risposta vuota dal modello";
 
               // Update prompt with response
               await (supabase.from("prompts_executed") as any)

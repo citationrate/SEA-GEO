@@ -2,6 +2,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 import { AnalysisLauncher } from "./analysis-launcher";
+import { AnalysisProgress } from "./analysis-progress";
 import { ProjectAVITrend } from "./project-avi-trend";
 import { DeleteProjectButton } from "./delete-project-button";
 
@@ -66,6 +67,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const mofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "mofu");
 
   const proj = project as any;
+  const runningRun = (allRuns ?? []).find((r: any) => r.status === "running") as any | undefined;
 
   return (
     <div className="space-y-6 max-w-[1400px] animate-fade-in">
@@ -268,6 +270,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         </div>
         <DeleteProjectButton projectId={params.id} projectName={proj.name} />
       </div>
+
+      {runningRun && (
+        <AnalysisProgress
+          runId={runningRun.id}
+          completedPrompts={runningRun.completed_prompts ?? 0}
+          totalPrompts={runningRun.total_prompts ?? 1}
+        />
+      )}
     </div>
   );
 }
