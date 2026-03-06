@@ -43,6 +43,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     .limit(1)
     .single();
 
+  // Fetch AVI scores for all runs
+  const runIds = (allRuns ?? []).map((r: any) => r.id);
+  const { data: aviRows } = runIds.length > 0
+    ? await supabase.from("avi_history").select("run_id, avi_score").in("run_id", runIds)
+    : { data: [] };
+  const aviMap = new Map((aviRows ?? []).map((a: any) => [a.run_id, a.avi_score]));
+
   const tofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "tofu");
   const mofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "mofu");
 
@@ -193,6 +200,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               const Icon = run.status === "completed" ? CheckCircle : run.status === "failed" ? XCircle : run.status === "running" ? Loader2 : Clock;
               const badgeClass = run.status === "completed" ? "badge-success" : run.status === "running" ? "badge-primary" : "badge-muted";
               const statusLabel = run.status === "completed" ? "Completata" : run.status === "running" ? "In corso" : run.status === "failed" ? "Fallita" : run.status;
+              const aviScore = aviMap.get(run.id);
               return (
                 <a
                   key={run.id}
@@ -201,6 +209,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                 >
                   <div className="flex items-center gap-3">
                     <span className="font-display font-semibold text-foreground group-hover:text-primary transition-colors">v{run.version}</span>
+                    {aviScore != null && (
+                      <span className="font-display font-bold text-primary text-sm">AVI {aviScore}</span>
+                    )}
                     <span className="text-xs text-muted-foreground">{run.models_used?.join(", ")}</span>
                     <span className="text-xs text-muted-foreground">{run.completed_prompts}/{run.total_prompts} prompt</span>
                   </div>

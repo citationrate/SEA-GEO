@@ -1,69 +1,151 @@
 import { createServerClient } from "@/lib/supabase/server";
-import { Plus, FolderOpen } from "lucide-react";
-import type { Database } from "@/types/database";
+import { DashboardClient } from "./dashboard-client";
 
-export const metadata = { title: "Progetti" };
+export const metadata = { title: "Dashboard" };
 
-type Project = Database["public"]["Tables"]["projects"]["Row"] & {
-  analysis_runs: { count: number }[];
-};
-
-export default async function ProjectsPage() {
+export default async function DashboardPage() {
   const supabase = createServerClient();
-  const { data } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Get all projects for this user
+  const { data: projects } = await supabase
     .from("projects")
-    .select("*, analysis_runs(count)")
+    .select("id, name, target_brand")
     .order("created_at", { ascending: false });
 
-  const projects = (data ?? []) as Project[];
+  const projectIds = (projects ?? []).map((p: any) => p.id);
+  const projectMap = new Map((projects ?? []).map((p: any) => [p.id, p]));
+
+  // Get all analysis runs
+  const { data: runs } = projectIds.length > 0
+    ? await supabase
+        .from("analysis_runs")
+        .select("*")
+        .in("project_id", projectIds)
+        .order("created_at", { ascending: false })
+    : { data: [] };
+
+  // Get all AVI history
+  const { data: aviHistory } = projectIds.length > 0
+    ? await supabase
+        .from("avi_history")
+        .select("*")
+        .in("project_id", projectIds)
+        .order("computed_at", { ascending: true })
+    : { data: [] };
+
+  // Get total prompts executed
+  const runIds = (runs ?? []).map((r: any) => r.id);
+  const { count: totalPrompts } = runIds.length > 0
+    ? await supabase
+        .from("prompts_executed")
+        .select("*", { count: "exact", head: true })
+        .in("run_id", runIds)
+    : { count: 0 };
+
+  // Get competitors count
+  const { count: competitorsCount } = projectIds.length > 0
+    ? await supabase
+        .from("competitors")
+        .select("*", { count: "exact", head: true })
+        .in("project_id", projectIds)
+    : { count: 0 };
+
+  // Get sources count
+  const { count: sourcesCount } = runIds.length > 0
+    ? await supabase
+        .from("sources")
+        .select("*", { count: "exact", head: true })
+        .in("prompt_executed_id",
+          (await supabase.from("prompts_executed").select("id").in("run_id", runIds)).data?.map((p: any) => p.id) ?? ["__none__"]
+        )
+    : { count: 0 };
+
+  // Compute stats
+  const lastAvi = (aviHistory ?? []).length > 0 ? (aviHistory as any[])[(aviHistory as any[]).length - 1] : null;
+  const prevAvi = (aviHistory ?? []).length > 1 ? (aviHistory as any[])[(aviHistory as any[]).length - 2] : null;
+  const aviScore = lastAvi?.avi_score ?? null;
+  const aviTrend = lastAvi && prevAvi ? lastAvi.avi_score - prevAvi.avi_score : null;
+
+  // Compute brand mention rate
+  let mentionRate = "--";
+  if ((runs ?? []).length > 0) {
+    const completedRuns = (runs ?? []).filter((r: any) => r.status === "completed");
+    if (completedRuns.length > 0) {
+      const totalCompleted = completedRuns.reduce((s: number, r: any) => s + (r.completed_prompts ?? 0), 0);
+      // Approximate mention rate from presence_score of last AVI
+      if (lastAvi) {
+        mentionRate = `${Math.round(lastAvi.presence_score)}%`;
+      }
+    }
+  }
+
+  // Build AVI components for ring
+  const aviComponents = lastAvi ? [
+    { label: "Presence",  v: lastAvi.presence_score },
+    { label: "Rank",      v: lastAvi.rank_score },
+    { label: "Sentiment", v: lastAvi.sentiment_score },
+    { label: "Stability", v: lastAvi.stability_score },
+  ] : undefined;
+
+  // Build trend data
+  const trendData = (aviHistory ?? []).map((a: any, i: number) => ({
+    run: `v${i + 1}`,
+    avi: Math.round(a.avi_score),
+    presence: Math.round(a.presence_score),
+    sentiment: Math.round(a.sentiment_score),
+  }));
+
+  // Build recent runs
+  const aviMap = new Map((aviHistory ?? []).map((a: any) => [a.run_id, a.avi_score]));
+  const recentRuns = (runs ?? []).slice(0, 5).map((r: any) => ({
+    id: r.id,
+    project_id: r.project_id,
+    project_name: projectMap.get(r.project_id)?.name ?? "—",
+    version: r.version,
+    status: r.status,
+    avi_score: aviMap.get(r.id) ?? null,
+    date: new Date(r.completed_at ?? r.created_at).toLocaleDateString("it-IT"),
+  }));
+
+  // Get unique models used
+  const modelsSet = new Set<string>();
+  (runs ?? []).forEach((r: any) => {
+    (r.models_used ?? []).forEach((m: string) => modelsSet.add(m));
+  });
+
+  const stats = [
+    { label: "Prompt Eseguiti",    value: String(totalPrompts ?? 0),       sub: "in tutte le run" },
+    { label: "Menzioni Brand",     value: mentionRate,                     sub: "% delle risposte" },
+    { label: "Competitor Trovati", value: String(competitorsCount ?? 0),   sub: "discovery automatica" },
+    { label: "Fonti Estratte",     value: String(sourcesCount ?? 0),       sub: "totale estratte" },
+    { label: "Modelli AI",         value: String(modelsSet.size),          sub: "integrazioni usate" },
+    { label: "Analisi Eseguite",   value: String((runs ?? []).length),     sub: "totale storico" },
+  ];
+
+  // Competitor bar data - count mentions per competitor
+  const { data: allCompetitors } = projectIds.length > 0
+    ? await supabase.from("competitors").select("name").in("project_id", projectIds)
+    : { data: [] };
+
+  const compCounts = new Map<string, number>();
+  (allCompetitors ?? []).forEach((c: any) => {
+    compCounts.set(c.name, (compCounts.get(c.name) ?? 0) + 1);
+  });
+  const competitorBarData = Array.from(compCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([name, count]) => ({ name, count }));
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-[1400px]">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display font-bold text-2xl text-foreground">Progetti</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Gestisci i tuoi brand e le configurazioni di analisi</p>
-        </div>
-        <a
-          href="/projects/new"
-          className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-lg hover:bg-primary/85 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Nuovo Progetto
-        </a>
-      </div>
-
-      {!projects.length ? (
-        <div className="card flex flex-col items-center justify-center py-24 text-center">
-          <FolderOpen className="w-10 h-10 text-muted-foreground/40 mb-3" />
-          <p className="text-sm text-muted-foreground">Nessun progetto ancora.</p>
-          <a href="/projects/new" className="text-sm text-primary hover:text-primary/70 transition-colors mt-2">
-            Crea il primo progetto →
-          </a>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {projects.map((p) => (
-            <a key={p.id} href={`/projects/${p.id}`}
-              className="card p-5 hover:border-primary/30 transition-all duration-150 block group"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-                  <span className="text-primary font-bold text-sm">{p.target_brand[0].toUpperCase()}</span>
-                </div>
-                <span className="badge badge-muted text-[10px]">{p.language.toUpperCase()}</span>
-              </div>
-              <h3 className="font-display font-semibold text-foreground group-hover:text-primary transition-colors">{p.name}</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">{p.target_brand}</p>
-              <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
-                <span>{p.analysis_runs?.[0]?.count ?? 0} analisi</span>
-                <span>·</span>
-                <span>{new Date(p.created_at).toLocaleDateString("it-IT")}</span>
-              </div>
-            </a>
-          ))}
-        </div>
-      )}
-    </div>
+    <DashboardClient
+      aviScore={aviScore}
+      aviTrend={aviTrend}
+      aviComponents={aviComponents}
+      stats={stats}
+      trendData={trendData}
+      recentRuns={recentRuns}
+      competitorBarData={competitorBarData}
+    />
   );
 }

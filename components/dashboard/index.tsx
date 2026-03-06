@@ -7,9 +7,13 @@ import {
 import { TrendingUp, TrendingDown, Minus, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 
 /* ─── AVI Ring ─── */
-interface AVIRingProps { score: number | null; trend: number | null; }
+interface AVIRingProps {
+  score: number | null;
+  trend: number | null;
+  components?: { label: string; v: number | null }[];
+}
 
-export function AVIRing({ score, trend }: AVIRingProps) {
+export function AVIRing({ score, trend, components }: AVIRingProps) {
   const R = 52, C = 2 * Math.PI * R;
   const dash = score != null ? (score / 100) * C : 0;
 
@@ -17,11 +21,11 @@ export function AVIRing({ score, trend }: AVIRingProps) {
   const trendColor = trend == null ? "text-muted-foreground"
     : trend > 0 ? "text-success" : "text-destructive";
 
-  const components = [
-    { label: "Presence",  v: score != null ? 72 : null },
-    { label: "Rank",      v: score != null ? 58 : null },
-    { label: "Sentiment", v: score != null ? 81 : null },
-    { label: "Stability", v: score != null ? 90 : null },
+  const comps = components ?? [
+    { label: "Presence",  v: null },
+    { label: "Rank",      v: null },
+    { label: "Sentiment", v: null },
+    { label: "Stability", v: null },
   ];
 
   return (
@@ -54,19 +58,19 @@ export function AVIRing({ score, trend }: AVIRingProps) {
         <Icon className="w-3 h-3" />
         {trend != null
           ? <span>{trend > 0 ? "+" : ""}{trend.toFixed(1)} vs ultima run</span>
-          : <span className="text-muted-foreground">Nessun dato</span>}
+          : <span className="text-muted-foreground">Nessun dato precedente</span>}
       </div>
 
       {score != null && (
         <div className="w-full space-y-2 pt-2 border-t border-border">
-          {components.map(c => (
+          {comps.map(c => (
             <div key={c.label} className="flex items-center gap-2">
               <span className="text-[10px] text-muted-foreground w-16 shrink-0">{c.label}</span>
               <div className="flex-1 h-1 bg-border rounded-full overflow-hidden">
                 <div className="h-full bg-primary/60 rounded-full transition-all duration-700"
                   style={{ width: c.v != null ? `${c.v}%` : "0%" }} />
               </div>
-              <span className="text-[10px] text-muted-foreground w-5 text-right">{c.v ?? "--"}</span>
+              <span className="text-[10px] text-muted-foreground w-5 text-right">{c.v != null ? Math.round(c.v) : "--"}</span>
             </div>
           ))}
         </div>
@@ -76,19 +80,25 @@ export function AVIRing({ score, trend }: AVIRingProps) {
 }
 
 /* ─── Stats Row ─── */
-const STATS = [
-  { label: "Prompt Eseguiti",    value: "--", sub: "in tutte le run"     },
-  { label: "Menzioni Brand",     value: "--", sub: "% delle risposte"    },
-  { label: "Competitor Trovati", value: "--", sub: "discovery automatica"},
-  { label: "Fonti Estratte",     value: "--", sub: "domini unici"        },
-  { label: "Modelli AI",         value: "--", sub: "integrazioni attive"  },
-  { label: "Analisi Eseguite",   value: "--", sub: "totale storico"      },
-];
+interface StatItem {
+  label: string;
+  value: string;
+  sub: string;
+}
 
-export function StatsRow() {
+export function StatsRow({ stats }: { stats?: StatItem[] }) {
+  const items = stats ?? [
+    { label: "Prompt Eseguiti",    value: "--", sub: "in tutte le run"     },
+    { label: "Menzioni Brand",     value: "--", sub: "% delle risposte"    },
+    { label: "Competitor Trovati", value: "--", sub: "discovery automatica"},
+    { label: "Fonti Estratte",     value: "--", sub: "domini unici"        },
+    { label: "Modelli AI",         value: "--", sub: "integrazioni attive"  },
+    { label: "Analisi Eseguite",   value: "--", sub: "totale storico"      },
+  ];
+
   return (
     <div className="grid grid-cols-3 gap-3 h-full">
-      {STATS.map(s => (
+      {items.map(s => (
         <div key={s.label} className="card p-4 flex flex-col justify-between">
           <p className="text-xs text-muted-foreground">{s.label}</p>
           <div className="mt-2">
@@ -102,11 +112,12 @@ export function StatsRow() {
 }
 
 /* ─── AVI Trend chart ─── */
-const TREND_DATA = [
-  { run: "Run 1", avi: 38, presence: 45, sentiment: 52 },
-  { run: "Run 2", avi: 47, presence: 55, sentiment: 60 },
-  { run: "Run 3", avi: 54, presence: 61, sentiment: 65 },
-];
+interface TrendDataPoint {
+  run: string;
+  avi: number;
+  presence: number;
+  sentiment: number;
+}
 
 const TOOLTIP_STYLE = {
   background: "hsl(var(--surface-2))",
@@ -116,13 +127,26 @@ const TOOLTIP_STYLE = {
   color: "hsl(var(--foreground))",
 };
 
-export function AVITrend() {
+export function AVITrend({ data }: { data?: TrendDataPoint[] }) {
+  const trendData = data ?? [];
+
+  if (trendData.length === 0) {
+    return (
+      <div className="card p-5">
+        <h3 className="font-display font-semibold text-sm text-foreground mb-4">AVI nel Tempo</h3>
+        <div className="flex items-center justify-center py-8">
+          <p className="text-xs text-muted-foreground">Esegui almeno un&apos;analisi per vedere il trend</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="card p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="font-display font-semibold text-sm text-foreground">AVI nel Tempo</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Punteggio di visibilità tra le analisi</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Punteggio di visibilita tra le analisi</p>
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           {[
@@ -138,7 +162,7 @@ export function AVITrend() {
         </div>
       </div>
       <ResponsiveContainer width="100%" height={170}>
-        <LineChart data={TREND_DATA}>
+        <LineChart data={trendData}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false}/>
           <XAxis dataKey="run" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}/>
           <YAxis domain={[0,100]} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}/>
@@ -153,46 +177,93 @@ export function AVITrend() {
 }
 
 /* ─── Competitor Bar ─── */
-const COMP_DATA = [
-  { name: "Comp. A", avi: 71 },
-  { name: "Comp. B", avi: 54 },
-  { name: "Comp. C", avi: 39 },
-];
+interface CompetitorData {
+  name: string;
+  count: number;
+}
 
-export function CompetitorBar() {
+export function CompetitorBar({ data }: { data?: CompetitorData[] }) {
+  const compData = data ?? [];
+
+  if (compData.length === 0) {
+    return (
+      <div className="card p-5">
+        <h3 className="font-display font-semibold text-sm text-foreground mb-4">Top Competitor</h3>
+        <div className="flex items-center justify-center py-8">
+          <p className="text-xs text-muted-foreground">Nessun competitor trovato</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="card p-5">
       <h3 className="font-display font-semibold text-sm text-foreground mb-4">Top Competitor</h3>
-      <ResponsiveContainer width="100%" height={130}>
-        <BarChart data={COMP_DATA} layout="vertical">
-          <XAxis type="number" domain={[0,100]} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}/>
-          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={70}/>
+      <ResponsiveContainer width="100%" height={Math.max(80, compData.length * 35)}>
+        <BarChart data={compData} layout="vertical">
+          <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}/>
+          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={80}/>
           <Tooltip contentStyle={TOOLTIP_STYLE}/>
-          <Bar dataKey="avi" fill="hsl(var(--primary) / 0.65)" radius={[0,4,4,0]}/>
+          <Bar dataKey="count" fill="hsl(var(--primary) / 0.65)" radius={[0,4,4,0]}/>
         </BarChart>
       </ResponsiveContainer>
-      <p className="text-[10px] text-muted-foreground text-center mt-1">Dati di esempio — lancia un'analisi</p>
     </div>
   );
 }
 
 /* ─── Recent Runs ─── */
+interface RunItem {
+  id: string;
+  project_id: string;
+  project_name: string;
+  version: number;
+  status: string;
+  avi_score: number | null;
+  date: string;
+}
+
 const RUN_ICONS: Record<string, React.ReactNode> = {
   completed: <CheckCircle2 className="w-3.5 h-3.5 text-success" />,
   running:   <Clock className="w-3.5 h-3.5 text-primary animate-pulse" />,
   failed:    <AlertCircle className="w-3.5 h-3.5 text-destructive" />,
 };
 
-export function RecentRuns() {
+export function RecentRuns({ runs }: { runs?: RunItem[] }) {
+  const items = runs ?? [];
+
   return (
     <div className="card p-5">
       <h3 className="font-display font-semibold text-sm text-foreground mb-4">Ultime Analisi</h3>
-      <div className="flex flex-col items-center justify-center py-8 text-center">
-        <p className="text-xs text-muted-foreground">Nessuna analisi ancora.</p>
-        <a href="/analysis" className="text-xs text-primary hover:text-primary/70 transition-colors mt-2">
-          Avvia la prima analisi →
-        </a>
-      </div>
+      {items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <p className="text-xs text-muted-foreground">Nessuna analisi ancora.</p>
+          <a href="/projects" className="text-xs text-primary hover:text-primary/70 transition-colors mt-2">
+            Vai ai progetti →
+          </a>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.map(r => (
+            <a
+              key={r.id}
+              href={`/projects/${r.project_id}/runs/${r.id}`}
+              className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                {RUN_ICONS[r.status] ?? RUN_ICONS.failed}
+                <span className="text-sm text-foreground group-hover:text-primary transition-colors">{r.project_name}</span>
+                <span className="text-xs text-muted-foreground">v{r.version}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {r.avi_score != null && (
+                  <span className="font-display font-bold text-sm text-primary">{r.avi_score}</span>
+                )}
+                <span className="text-xs text-muted-foreground">{r.date}</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

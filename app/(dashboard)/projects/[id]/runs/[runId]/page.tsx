@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, Globe, Tag, Users, ExternalLink } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, Globe, Tag, Users, ExternalLink, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { AVIRing } from "@/components/dashboard/avi-ring";
 
 const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = {
   pending:   { label: "In attesa",   class: "badge-muted",    icon: Clock },
@@ -9,31 +10,6 @@ const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = 
   failed:    { label: "Fallita",     class: "badge badge-muted text-destructive border-destructive/20 bg-destructive/10", icon: XCircle },
   cancelled: { label: "Annullata",   class: "badge-muted",    icon: XCircle },
 };
-
-function AVIRing({ score, size = 120 }: { score: number; size?: number }) {
-  const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
-
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth={strokeWidth} />
-        <circle
-          cx={size / 2} cy={size / 2} r={radius} fill="none"
-          stroke="hsl(var(--primary))" strokeWidth={strokeWidth}
-          strokeDasharray={circumference} strokeDashoffset={offset}
-          strokeLinecap="round" className="transition-all duration-1000"
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-display font-bold text-2xl text-foreground">{score}</span>
-        <span className="text-[10px] text-muted-foreground">AVI</span>
-      </div>
-    </div>
-  );
-}
 
 function ComponentBar({ label, value, color }: { label: string; value: number; color: string }) {
   return (
@@ -73,6 +49,21 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     .eq("run_id", params.runId)
     .single();
 
+  // Fetch previous run's AVI for trend
+  let trend: number | null = null;
+  if (avi) {
+    const { data: allAvi } = await supabase
+      .from("avi_history")
+      .select("avi_score, computed_at")
+      .eq("project_id", params.id)
+      .order("computed_at", { ascending: false })
+      .limit(2);
+
+    if (allAvi && allAvi.length >= 2) {
+      trend = (allAvi[0] as any).avi_score - (allAvi[1] as any).avi_score;
+    }
+  }
+
   const { data: prompts } = await supabase
     .from("prompts_executed")
     .select("*")
@@ -107,6 +98,9 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
   const proj = project as any;
   const aviData = avi as any;
 
+  const TrendIcon = trend === null ? Minus : trend > 0 ? TrendingUp : TrendingDown;
+  const trendColor = trend === null ? "text-muted-foreground" : trend > 0 ? "text-success" : "text-destructive";
+
   return (
     <div className="space-y-6 max-w-[1400px] animate-fade-in">
       {/* Header */}
@@ -120,9 +114,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         </a>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="font-display font-bold text-2xl text-foreground">
-              Analisi v{r.version}
-            </h1>
+            <h1 className="font-display font-bold text-2xl text-foreground">Analisi v{r.version}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               {proj?.name} &middot; {proj?.target_brand}
             </p>
@@ -143,18 +135,24 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         {r.completed_at && <div><span className="text-muted-foreground">Fine:</span>{" "}<span className="text-foreground">{new Date(r.completed_at).toLocaleString("it-IT")}</span></div>}
       </div>
 
-      {/* AVI Score */}
+      {/* AVI Score with Ring + Component Bars + Trend */}
       {aviData && (
-        <div className="card p-6">
-          <h2 className="font-display font-semibold text-foreground mb-4">AI Visibility Index</h2>
-          <div className="flex items-center gap-8">
-            <AVIRing score={aviData.avi_score} />
-            <div className="flex-1 space-y-3">
-              <ComponentBar label="Presence" value={aviData.presence_score} color="hsl(186, 100%, 50%)" />
-              <ComponentBar label="Rank" value={aviData.rank_score} color="hsl(38, 95%, 58%)" />
-              <ComponentBar label="Sentiment" value={aviData.sentiment_score} color="hsl(152, 68%, 46%)" />
-              <ComponentBar label="Stability" value={aviData.stability_score} color="hsl(270, 70%, 60%)" />
+        <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6">
+          <AVIRing score={aviData.avi_score} trend={trend} />
+          <div className="card p-5 space-y-4">
+            <h2 className="font-display font-semibold text-foreground">Componenti AVI</h2>
+            <div className="space-y-3">
+              <ComponentBar label="Presence (35%)" value={aviData.presence_score} color="hsl(186, 100%, 50%)" />
+              <ComponentBar label="Rank (25%)" value={aviData.rank_score} color="hsl(38, 95%, 58%)" />
+              <ComponentBar label="Sentiment (20%)" value={aviData.sentiment_score} color="hsl(152, 68%, 46%)" />
+              <ComponentBar label="Stability (20%)" value={aviData.stability_score} color="hsl(270, 70%, 60%)" />
             </div>
+            {trend !== null && (
+              <div className={`flex items-center gap-1.5 text-sm pt-2 border-t border-border ${trendColor}`}>
+                <TrendIcon className="w-4 h-4" />
+                <span>{trend > 0 ? "+" : ""}{trend.toFixed(1)} punti rispetto alla run precedente</span>
+              </div>
+            )}
           </div>
         </div>
       )}

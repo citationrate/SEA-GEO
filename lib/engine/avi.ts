@@ -21,8 +21,8 @@ interface AnalysisRow {
  * Calcola l'AI Visibility Index (0-100) dai risultati di analisi.
  *
  * Componenti:
- * - Presence (30%): percentuale di risposte in cui il brand è menzionato
- * - Rank (30%): posizione media del brand nelle risposte (1=top → 100, 10+=0)
+ * - Presence (35%): percentuale di risposte in cui il brand è menzionato
+ * - Rank (25%): posizione media del brand nelle risposte (1=top → 100, non citato=0)
  * - Sentiment (20%): sentiment medio normalizzato a 0-100
  * - Stability (20%): consistenza della menzione tra i diversi run
  */
@@ -34,19 +34,20 @@ export function calculateAVI(analyses: AnalysisRow[]): AVIResult {
     };
   }
 
-  // --- Presence: % di risposte con brand menzionato ---
+  // --- Presence (35%): % di risposte con brand menzionato ---
   const mentionedCount = analyses.filter((a) => a.brand_mentioned).length;
   const presence_score = (mentionedCount / analyses.length) * 100;
 
-  // --- Rank: media posizione → punteggio (rank 1 = 100, rank 10+ = 0) ---
-  const ranked = analyses.filter((a) => a.brand_rank !== null && a.brand_rank > 0);
+  // --- Rank (25%): media posizione → punteggio ---
+  // brand_rank = 1 → 100, rank 10+ → 0, non citato (null) → 0
   let rank_score = 0;
-  if (ranked.length > 0) {
-    const avgRank = ranked.reduce((sum, a) => sum + a.brand_rank!, 0) / ranked.length;
-    rank_score = Math.max(0, Math.min(100, ((10 - avgRank) / 9) * 100));
-  }
+  const allRankScores = analyses.map((a) => {
+    if (a.brand_rank === null || a.brand_rank <= 0) return 0;
+    return Math.max(0, Math.min(100, ((10 - a.brand_rank) / 9) * 100));
+  });
+  rank_score = allRankScores.reduce((s, v) => s + v, 0) / allRankScores.length;
 
-  // --- Sentiment: media normalizzata (input -1..1 → 0..100) ---
+  // --- Sentiment (20%): media normalizzata (input -1..1 → 0..100) ---
   const withSentiment = analyses.filter((a) => a.sentiment_score !== null);
   let sentiment_score = 50;
   if (withSentiment.length > 0) {
@@ -54,7 +55,7 @@ export function calculateAVI(analyses: AnalysisRow[]): AVIResult {
     sentiment_score = ((avgSentiment + 1) / 2) * 100;
   }
 
-  // --- Stability: consistenza tra run diversi ---
+  // --- Stability (20%): consistenza tra run diversi ---
   // Raggruppa per run_number, calcola % menzione per ogni run, poi deviazione standard
   const runGroups = new Map<number, boolean[]>();
   for (const a of analyses) {
@@ -71,16 +72,15 @@ export function calculateAVI(analyses: AnalysisRow[]): AVIResult {
     const mean = runRates.reduce((s, r) => s + r, 0) / runRates.length;
     const variance = runRates.reduce((s, r) => s + (r - mean) ** 2, 0) / runRates.length;
     const stdDev = Math.sqrt(variance);
-    // stdDev 0 = perfettamente stabile (100), stdDev 0.5 = molto instabile (0)
     stability_score = Math.max(0, Math.min(100, (1 - stdDev * 2) * 100));
   }
 
-  // --- AVI composito ---
+  // --- AVI composito (35/25/20/20) ---
   const avi_score = Math.round(
-    presence_score * 0.3 +
-    rank_score * 0.3 +
-    sentiment_score * 0.2 +
-    stability_score * 0.2
+    presence_score * 0.35 +
+    rank_score * 0.25 +
+    sentiment_score * 0.20 +
+    stability_score * 0.20
   );
 
   return {
