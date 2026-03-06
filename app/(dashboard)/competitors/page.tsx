@@ -193,13 +193,13 @@ export default async function CompetitorsPage() {
 
     for (const row of (compAviRows ?? []) as any[]) {
       if (!compAviMap.has(row.competitor_name)) {
-        compAviMap.set(row.competitor_name, row.avi_score);
+        compAviMap.set(row.competitor_name, Math.round(row.avi_score * 10) / 10);
       }
     }
   }
 
   // Get brand AVI for benchmark
-  const brandAviScore = lastAviRow ? (lastAviRow as any).avi_score : null;
+  const brandAviScore = lastAviRow ? Math.round((lastAviRow as any).avi_score * 10) / 10 : null;
 
   const rows = Array.from(grouped.values()).sort((a, b) => {
     const aviA = compAviMap.get(a.name) ?? 0;

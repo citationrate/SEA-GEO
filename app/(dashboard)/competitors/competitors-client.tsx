@@ -185,7 +185,7 @@ export function CompetitorsClient({
                         style={{ width: `${(brandAviScore / Math.max(maxScore, 1)) * 100}%` }}
                       />
                     </div>
-                    <span className="text-xs font-bold text-primary w-14 text-right">AVI {brandAviScore}</span>
+                    <span className="text-xs font-bold text-primary w-14 text-right">AVI {Math.round(brandAviScore * 10) / 10}</span>
                   </div>
                   {/* Competitor rows */}
                   {top5.map((r) => {
@@ -200,7 +200,7 @@ export function CompetitorsClient({
                           />
                         </div>
                         <span className={`text-xs font-bold w-14 text-right ${diff > 0 ? "text-destructive" : "text-success"}`}>
-                          AVI {r.aviScore}
+                          AVI {Math.round((r.aviScore ?? 0) * 10) / 10}
                         </span>
                       </div>
                     );
@@ -272,7 +272,7 @@ function CompetitorCard({
             <span className={`font-display font-bold text-sm px-2 py-0.5 rounded-md ${
               row.aviScore >= 70 ? "bg-success/10 text-success" : row.aviScore >= 40 ? "bg-amber-500/10 text-amber-500" : "bg-destructive/10 text-destructive"
             }`}>
-              AVI {row.aviScore}
+              AVI {Math.round(row.aviScore * 10) / 10}
             </span>
           )}
           <span className="badge badge-primary font-display font-bold">
