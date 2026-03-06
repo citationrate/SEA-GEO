@@ -11,10 +11,13 @@ export interface ExtractionResult {
     url: string | null;
     domain: string | null;
     label: string | null;
-    source_type: "explicit" | "mentioned" | "inferred" | "none";
+    source_type: "brand_owned" | "competitor" | "media" | "review" | "social" | "ecommerce" | "wikipedia" | "other";
     is_brand_owned: boolean;
+    context: string | null;
   }[];
 }
+
+const VALID_SOURCE_TYPES = ["brand_owned", "competitor", "media", "review", "social", "ecommerce", "wikipedia", "other"];
 
 export async function extractFromResponse(
   response: string,
@@ -36,7 +39,7 @@ Schema JSON richiesto:
   "sentiment_score": number | null,
   "topics": string[],
   "competitors_found": string[],
-  "sources": [{ "url": string|null, "domain": string|null, "label": string|null, "source_type": "explicit"|"mentioned"|"inferred"|"none", "is_brand_owned": boolean }]
+  "sources": [{ "url": string|null, "domain": string, "label": string|null, "source_type": string, "is_brand_owned": boolean, "context": string }]
 }
 
 Regole:
@@ -46,7 +49,22 @@ Regole:
 - sentiment_score: da -1.0 (molto negativo) a 1.0 (molto positivo) verso il brand, null se non menzionato
 - topics: argomenti principali trattati nella risposta (max 5)
 - competitors_found: brand/aziende concorrenti menzionati (escluso il target)
-- sources: URL, domini o fonti citate nella risposta
+
+REGOLE PER LE FONTI (sources):
+- Estrai TUTTI gli URL e domini citati nella risposta, anche se solo menzionati come riferimento
+- url: l'URL completo se presente, altrimenti null
+- domain: SEMPRE il dominio pulito (es. nike.com, wikipedia.org, trustpilot.com). MAI vuoto.
+- source_type: classifica tra:
+  * "brand_owned" = sito ufficiale del brand "${targetBrand}"
+  * "competitor" = sito di un competitor
+  * "media" = giornali, riviste, blog, testate giornalistiche
+  * "review" = siti di recensioni (trustpilot, amazon reviews, tripadvisor ecc)
+  * "social" = social media (instagram, youtube, tiktok, twitter, facebook, linkedin ecc)
+  * "ecommerce" = shop online (amazon, ebay, zalando ecc)
+  * "wikipedia" = wikipedia in qualsiasi lingua
+  * "other" = tutto il resto
+- is_brand_owned: true solo se è il sito ufficiale del brand target
+- context: una frase breve che spiega in che contesto è stata citata questa fonte nella risposta
 
 REGOLE ASSOLUTE per i competitor:
 - Estrai SOLO brand/aziende, MAI prodotti specifici o modelli
@@ -83,8 +101,9 @@ REGOLE ASSOLUTE per i competitor:
             url: s.url ?? null,
             domain: s.domain ?? null,
             label: s.label ?? null,
-            source_type: ["explicit", "mentioned", "inferred", "none"].includes(s.source_type) ? s.source_type : "none",
+            source_type: VALID_SOURCE_TYPES.includes(s.source_type) ? s.source_type : "other",
             is_brand_owned: Boolean(s.is_brand_owned),
+            context: s.context ?? null,
           }))
         : [],
     };

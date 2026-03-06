@@ -333,12 +333,19 @@ export async function POST(request: Request) {
                     avi_components: null,
                   });
 
-                // Save sources
+                // Save sources (with context and dedup by domain)
                 for (const source of extraction.sources) {
+                  if (!source.domain) continue;
                   await (supabase.from("sources") as any)
                     .insert({
                       prompt_executed_id: promptRecord.id,
-                      ...source,
+                      url: source.url,
+                      domain: source.domain,
+                      label: source.label,
+                      source_type: source.source_type,
+                      is_brand_owned: source.is_brand_owned,
+                      context: source.context,
+                      citation_count: 1,
                     });
                 }
 

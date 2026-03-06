@@ -4,7 +4,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
 export type FunnelStage   = "tofu" | "mofu" | "bofu";
-export type SourceType    = "explicit" | "mentioned" | "inferred" | "none";
+export type SourceType    = "brand_owned" | "competitor" | "media" | "review" | "social" | "ecommerce" | "wikipedia" | "other";
 export type SegmentName   = string;
 export type AnalysisStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 export type AIModel       = "gpt-4o" | "gpt-4o-mini" | "claude-3-5-sonnet" | "gemini-1.5-pro" | "grok-2" | "perplexity-sonar" | "copilot";
@@ -128,6 +128,8 @@ export interface Database {
           label: string | null;
           source_type: SourceType;
           is_brand_owned: boolean;
+          context: string | null;
+          citation_count: number;
           created_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["sources"]["Row"], "id" | "created_at">;
