@@ -154,10 +154,13 @@ export default function SegmentsPage() {
           persona_attributes: tpl.attrs,
         }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Errore durante la creazione");
+      }
       await fetchSegments();
-    } catch {
-      setError("Errore durante la creazione");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Errore durante la creazione");
     } finally {
       setSaving(null);
     }
@@ -429,10 +432,13 @@ function PersonaDrawer({
           persona_attributes: attrs,
         }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Errore durante il salvataggio");
+      }
       onSaved();
-    } catch {
-      setError("Errore durante il salvataggio");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Errore durante il salvataggio");
     } finally {
       setSaving(false);
     }

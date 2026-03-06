@@ -1,3 +1,4 @@
+// Deploy 2026-03-06
 import { createServiceClient } from "@/lib/supabase/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
@@ -57,10 +58,14 @@ export async function POST(request: Request) {
       .select("*")
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[segments POST] Supabase error:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     return NextResponse.json(data, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Errore interno" }, { status: 500 });
+  } catch (err) {
+    console.error("[segments POST] Unexpected error:", err);
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Errore interno" }, { status: 500 });
   }
 }
 
