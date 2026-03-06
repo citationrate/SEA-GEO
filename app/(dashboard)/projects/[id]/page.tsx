@@ -1,6 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Plus, MessageSquare, Users } from "lucide-react";
+import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 import { AnalysisLauncher } from "./analysis-launcher";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
@@ -27,13 +27,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     .eq("is_active", true)
     .order("created_at", { ascending: true });
 
-  const { data: lastRun } = await supabase
+  const { data: allRuns } = await supabase
     .from("analysis_runs")
     .select("*")
     .eq("project_id", params.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
+    .order("created_at", { ascending: false });
+
+  const lastRun = (allRuns ?? [])[0] ?? null;
 
   const { data: lastAvi } = await supabase
     .from("avi_history")
@@ -179,6 +179,44 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           </div>
         )}
       </div>
+
+      {/* Analisi eseguite */}
+      {(allRuns ?? []).length > 0 && (
+        <div className="card p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-primary" />
+            <h2 className="font-display font-semibold text-foreground">Analisi Eseguite</h2>
+            <span className="badge badge-muted text-[10px]">{(allRuns ?? []).length}</span>
+          </div>
+          <div className="space-y-2">
+            {(allRuns ?? []).map((run: any) => {
+              const Icon = run.status === "completed" ? CheckCircle : run.status === "failed" ? XCircle : run.status === "running" ? Loader2 : Clock;
+              const badgeClass = run.status === "completed" ? "badge-success" : run.status === "running" ? "badge-primary" : "badge-muted";
+              const statusLabel = run.status === "completed" ? "Completata" : run.status === "running" ? "In corso" : run.status === "failed" ? "Fallita" : run.status;
+              return (
+                <a
+                  key={run.id}
+                  href={`/projects/${params.id}/runs/${run.id}`}
+                  className="flex items-center justify-between bg-muted rounded-lg px-4 py-3 border border-border hover:border-primary/30 transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-display font-semibold text-foreground group-hover:text-primary transition-colors">v{run.version}</span>
+                    <span className="text-xs text-muted-foreground">{run.models_used?.join(", ")}</span>
+                    <span className="text-xs text-muted-foreground">{run.completed_prompts}/{run.total_prompts} prompt</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground">{new Date(run.completed_at ?? run.created_at).toLocaleDateString("it-IT")}</span>
+                    <span className={`badge ${badgeClass} flex items-center gap-1 text-[10px]`}>
+                      <Icon className={`w-3 h-3 ${run.status === "running" ? "animate-spin" : ""}`} />
+                      {statusLabel}
+                    </span>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Azioni */}
       <div className="flex gap-3">
