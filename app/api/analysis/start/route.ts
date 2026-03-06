@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { extractFromResponse } from "@/lib/engine/extractor";
 import { ALL_MODEL_IDS, MODEL_MAP } from "@/lib/engine/models";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -117,17 +118,10 @@ async function callAIModel(prompt: string, model: string): Promise<string> {
   }
 
   if (provider === "google") {
-    // Google Gemini via OpenAI-compatible endpoint
-    const client = new OpenAI({
-      apiKey: process.env.GOOGLE_API_KEY ?? "",
-      baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-    });
-    const completion = await client.chat.completions.create({
-      model,
-      max_tokens: 1500,
-      messages: [{ role: "user", content: prompt }],
-    });
-    return completion.choices[0]?.message?.content ?? "";
+    const genai = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY ?? "");
+    const geminiModel = genai.getGenerativeModel({ model });
+    const result = await geminiModel.generateContent(prompt);
+    return result.response.text();
   }
 
   if (provider === "xai") {
