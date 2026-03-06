@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -13,7 +13,7 @@ const projectSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const supabase = createServerClient();
+    const supabase = createServiceClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from("projects")
-      .insert({ ...parsed.data, user_id: user.id })
+      .insert({ ...parsed.data, user_id: user.id } as any)
       .select("id")
       .single();
 
