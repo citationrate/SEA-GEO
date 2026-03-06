@@ -27,29 +27,7 @@ export default async function DashboardPage() {
         .order("created_at", { ascending: false })
     : { data: [] };
 
-  // Get latest AVI record (last completed analysis)
-  const { data: lastAviRow } = projectIds.length > 0
-    ? await supabase
-        .from("avi_history")
-        .select("*")
-        .in("project_id", projectIds)
-        .order("computed_at", { ascending: false })
-        .limit(1)
-        .single()
-    : { data: null };
-
-  // Get second-to-last AVI for trend delta
-  const { data: prevAviRow } = projectIds.length > 0
-    ? await supabase
-        .from("avi_history")
-        .select("avi_score")
-        .in("project_id", projectIds)
-        .order("computed_at", { ascending: false })
-        .range(1, 1)
-        .single()
-    : { data: null };
-
-  // Get all AVI history for trend chart
+  // Get all AVI history for this user's projects (projectIds already filtered by user_id)
   const { data: aviHistory } = projectIds.length > 0
     ? await supabase
         .from("avi_history")
@@ -57,6 +35,10 @@ export default async function DashboardPage() {
         .in("project_id", projectIds)
         .order("computed_at", { ascending: true })
     : { data: [] };
+
+  const aviRows = (aviHistory ?? []) as any[];
+  const lastAviRow = aviRows.length > 0 ? aviRows[aviRows.length - 1] : null;
+  const prevAviRow = aviRows.length > 1 ? aviRows[aviRows.length - 2] : null;
 
   // Get total prompts executed
   const runIds = (runs ?? []).map((r: any) => r.id);

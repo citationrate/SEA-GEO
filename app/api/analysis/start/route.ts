@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
 import { extractFromResponse } from "@/lib/engine/extractor";
-import { calculateAVI } from "@/lib/engine/avi";
 
 const RUN_COUNT = 3;
 
@@ -102,7 +101,6 @@ export async function POST(request: Request) {
 
     // Process all combinations in background-like sequential execution
     let completedPrompts = 0;
-    const allAnalyses: { brand_mentioned: boolean; brand_rank: number | null; sentiment_score: number | null; run_number: number; query_id: string; segment_id: string }[] = [];
 
     try {
       for (const query of queries as any[]) {
@@ -215,14 +213,6 @@ export async function POST(request: Request) {
                   }
                 }
 
-                allAnalyses.push({
-                  brand_mentioned: extraction.brand_mentioned,
-                  brand_rank: extraction.brand_rank,
-                  sentiment_score: extraction.sentiment_score,
-                  run_number: runNum,
-                  query_id: query.id,
-                  segment_id: segment.id,
-                });
               }
 
               // Update progress
@@ -235,49 +225,6 @@ export async function POST(request: Request) {
         }
       }
 
-      // Calculate AVI
-      const aviResult = calculateAVI(allAnalyses);
-
-      // Save AVI history
-      const { error: aviError } = await (supabase.from("avi_history") as any)
-        .insert({
-          project_id,
-          run_id: run.id,
-          avi_score: aviResult.avi_score,
-          presence_score: aviResult.components.presence_score,
-          rank_score: aviResult.components.rank_score,
-          sentiment_score: aviResult.components.sentiment_score,
-          stability_score: aviResult.components.stability_score,
-          computed_at: new Date().toISOString(),
-        });
-
-      if (aviError) {
-        console.error("Failed to insert avi_history:", aviError.message);
-      }
-
-      // Update individual response_analysis with AVI
-      const { data: analysisRows } = await supabase
-        .from("response_analysis")
-        .select("id, prompt_executed_id")
-        .in(
-          "prompt_executed_id",
-          allAnalyses.length > 0
-            ? (await supabase
-                .from("prompts_executed")
-                .select("id")
-                .eq("run_id", run.id)
-              ).data?.map((p: any) => p.id) ?? []
-            : ["__none__"]
-        );
-
-      if (analysisRows) {
-        for (const row of analysisRows as any[]) {
-          await (supabase.from("response_analysis") as any)
-            .update({ avi_score: aviResult.avi_score, avi_components: aviResult.components })
-            .eq("id", row.id);
-        }
-      }
-
       // Mark run as completed
       await (supabase.from("analysis_runs") as any)
         .update({
@@ -286,6 +233,23 @@ export async function POST(request: Request) {
           completed_at: new Date().toISOString(),
         })
         .eq("id", run.id);
+
+      // Calculate AVI via dedicated endpoint
+      let aviResult = null;
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+        const aviRes = await fetch(`${baseUrl}/api/analysis/${run.id}/avi`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (aviRes.ok) {
+          aviResult = await aviRes.json();
+        } else {
+          console.error("AVI endpoint failed:", await aviRes.text());
+        }
+      } catch (err) {
+        console.error("Failed to call AVI endpoint:", err instanceof Error ? err.message : err);
+      }
 
       return NextResponse.json({
         run_id: run.id,
