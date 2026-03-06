@@ -152,7 +152,7 @@ export async function POST(request: Request) {
                 const extraction = await extractFromResponse(rawResponse, targetBrand, knownCompetitors);
 
                 // Save response_analysis
-                await (supabase.from("response_analysis") as any)
+                const { data: raData, error: raError } = await (supabase.from("response_analysis") as any)
                   .insert({
                     prompt_executed_id: promptRecord.id,
                     brand_mentioned: extraction.brand_mentioned,
@@ -163,7 +163,9 @@ export async function POST(request: Request) {
                     competitors_found: extraction.competitors_found,
                     avi_score: null,
                     avi_components: null,
-                  });
+                  })
+                  .select("id");
+                console.log("response_analysis insert result:", JSON.stringify(raError), JSON.stringify(raData));
 
                 // Save sources
                 for (const source of extraction.sources) {
@@ -253,6 +255,7 @@ export async function POST(request: Request) {
         : { data: [] };
 
       const rows = (analyses ?? []) as any[];
+      console.log("analyses count:", analyses?.length, "promptIds count:", promptIds.length);
       let aviResult: any = null;
 
       if (rows.length > 0) {
@@ -314,6 +317,7 @@ export async function POST(request: Request) {
             computed_at: new Date().toISOString(),
           });
 
+        console.log("avi_history insert:", JSON.stringify(aviError));
         if (aviError) {
           console.error("Failed to insert avi_history:", aviError.message);
         }
