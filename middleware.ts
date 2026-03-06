@@ -5,15 +5,15 @@ export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
-        setAll: (toSet) => {
+        setAll: (toSet: { name: string; value: string; options?: object }[]) => {
           toSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
-          toSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+          toSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options as never));
         },
       },
     }
@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isAuthRoute = path.startsWith("/login") || path.startsWith("/register");
-  const isPublic   = path === "/" || path.startsWith("/share/") || path.startsWith("/auth/");
+  const isPublic = path === "/" || path.startsWith("/share/") || path.startsWith("/auth/");
   const isApiRoute = path.startsWith("/api/");
 
   if (!user && !isAuthRoute && !isPublic && !isApiRoute) {
