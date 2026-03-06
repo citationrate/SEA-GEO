@@ -183,15 +183,14 @@ export default async function CompetitorsPage() {
     }
   }
 
-  // Fetch latest competitor AVI scores (from the most recent run per project)
+  // Fetch competitor AVI scores per project
   const compAviMap = new Map<string, number>();
-  if (runIds.length > 0) {
+  for (const pid of projectIds) {
     const { data: compAviRows } = await (supabase.from("competitor_avi") as any)
-      .select("competitor_name, avi_score, computed_at")
-      .in("project_id", projectIds)
+      .select("competitor_name, avi_score")
+      .eq("project_id", pid)
       .order("computed_at", { ascending: false });
 
-    // Keep only the latest score per competitor
     for (const row of (compAviRows ?? []) as any[]) {
       if (!compAviMap.has(row.competitor_name)) {
         compAviMap.set(row.competitor_name, row.avi_score);

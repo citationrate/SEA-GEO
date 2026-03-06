@@ -169,35 +169,46 @@ export function CompetitorsClient({
       ) : view === "competitor" ? (
         <>
           {/* Benchmark vs Brand */}
-          {brandAviScore != null && rows.some((r) => r.aviScore != null) && (
-            <div className="card p-5 space-y-3">
-              <h2 className="font-display font-semibold text-foreground text-sm">Benchmark vs Brand</h2>
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-xs text-muted-foreground">Il tuo brand</span>
-                <span className="font-display font-bold text-primary text-lg">AVI {brandAviScore}</span>
-              </div>
-              <div className="space-y-2">
-                {rows.filter((r) => r.aviScore != null).map((r) => {
-                  const diff = (r.aviScore ?? 0) - brandAviScore;
-                  const barWidth = Math.min(100, ((r.aviScore ?? 0) / Math.max(brandAviScore, 1)) * 100);
-                  return (
-                    <div key={r.name} className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-foreground w-32 truncate">{r.name}</span>
-                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${diff > 0 ? "bg-destructive/70" : "bg-success/70"}`}
-                          style={{ width: `${barWidth}%` }}
-                        />
-                      </div>
-                      <span className={`text-xs font-bold w-16 text-right ${diff > 0 ? "text-destructive" : "text-success"}`}>
-                        AVI {r.aviScore} ({diff > 0 ? "+" : ""}{diff})
-                      </span>
+          {brandAviScore != null && rows.some((r) => r.aviScore != null) && (() => {
+            const top5 = rows.filter((r) => r.aviScore != null).slice(0, 5);
+            const maxScore = Math.max(brandAviScore, ...top5.map((r) => r.aviScore ?? 0));
+            return (
+              <div className="card p-5 space-y-4">
+                <h2 className="font-display font-semibold text-foreground text-sm">Benchmark</h2>
+                <div className="space-y-2.5">
+                  {/* Brand row */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-primary w-32 truncate">Il tuo brand</span>
+                    <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{ width: `${(brandAviScore / Math.max(maxScore, 1)) * 100}%` }}
+                      />
                     </div>
-                  );
-                })}
+                    <span className="text-xs font-bold text-primary w-14 text-right">AVI {brandAviScore}</span>
+                  </div>
+                  {/* Competitor rows */}
+                  {top5.map((r) => {
+                    const diff = (r.aviScore ?? 0) - brandAviScore;
+                    return (
+                      <div key={r.name} className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-foreground w-32 truncate">{r.name}</span>
+                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${diff > 0 ? "bg-destructive/60" : "bg-success/60"}`}
+                            style={{ width: `${((r.aviScore ?? 0) / Math.max(maxScore, 1)) * 100}%` }}
+                          />
+                        </div>
+                        <span className={`text-xs font-bold w-14 text-right ${diff > 0 ? "text-destructive" : "text-success"}`}>
+                          AVI {r.aviScore}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
           <CompetitorView rows={rows} onThemeClick={(compName, theme) => setDrawerTheme({ compName, theme })} />
         </>
       ) : (
