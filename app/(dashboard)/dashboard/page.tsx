@@ -1,84 +1,69 @@
 import { createServerClient } from "@/lib/supabase/server";
-import { AVIRing }       from "@/components/dashboard/avi-ring";
-import { StatsRow }      from "@/components/dashboard/stats-row";
-import { AVITrend }      from "@/components/dashboard/avi-trend";
-import { CompetitorBar } from "@/components/dashboard/competitor-bar";
-import { RecentRuns }    from "@/components/dashboard/recent-runs";
-import { Plus }          from "lucide-react";
+import { Plus, FolderOpen } from "lucide-react";
+import type { Database } from "@/types/database";
 
-export const metadata = { title: "Dashboard" };
+export const metadata = { title: "Progetti" };
 
-export default async function DashboardPage() {
+type Project = Database["public"]["Tables"]["projects"]["Row"] & {
+  analysis_runs: { count: number }[];
+};
+
+export default async function ProjectsPage() {
   const supabase = createServerClient();
-  const { data: projects } = await supabase
-    .from("projects").select("id").limit(1);
+  const { data } = await supabase
+    .from("projects")
+    .select("*, analysis_runs(count)")
+    .order("created_at", { ascending: false });
 
-  const hasData = (projects?.length ?? 0) > 0;
+  const projects = (data ?? []) as Project[];
 
   return (
     <div className="space-y-6 animate-fade-in max-w-[1400px]">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display font-bold text-2xl text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Panoramica AI Visibility</p>
+          <h1 className="font-display font-bold text-2xl text-foreground">Progetti</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Gestisci i tuoi brand e le configurazioni di analisi</p>
         </div>
-        {hasData && (
-          <a
-            href="/analysis"
-            className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-lg hover:bg-primary/85 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Nuova Analisi
+        <a
+          href="/projects/new"
+          className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-lg hover:bg-primary/85 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Nuovo Progetto
+        </a>
+      </div>
+
+      {!projects.length ? (
+        <div className="card flex flex-col items-center justify-center py-24 text-center">
+          <FolderOpen className="w-10 h-10 text-muted-foreground/40 mb-3" />
+          <p className="text-sm text-muted-foreground">Nessun progetto ancora.</p>
+          <a href="/projects/new" className="text-sm text-primary hover:text-primary/70 transition-colors mt-2">
+            Crea il primo progetto →
           </a>
-        )}
-      </div>
-
-      {!hasData ? (
-        <EmptyState />
+        </div>
       ) : (
-        <>
-          {/* AVI + Stats */}
-          <div className="grid grid-cols-12 gap-4">
-            <div className="col-span-3"><AVIRing score={null} trend={null} /></div>
-            <div className="col-span-9"><StatsRow /></div>
-          </div>
-
-          {/* Trend chart full width */}
-          <AVITrend />
-
-          {/* Recent runs + Competitors */}
-          <div className="grid grid-cols-2 gap-4">
-            <RecentRuns />
-            <CompetitorBar />
-          </div>
-        </>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {projects.map((p) => (
+            <a key={p.id} href={`/projects/${p.id}`}
+              className="card p-5 hover:border-primary/30 transition-all duration-150 block group"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <span className="text-primary font-bold text-sm">{p.target_brand[0].toUpperCase()}</span>
+                </div>
+                <span className="badge badge-muted text-[10px]">{p.language.toUpperCase()}</span>
+              </div>
+              <h3 className="font-display font-semibold text-foreground group-hover:text-primary transition-colors">{p.name}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">{p.target_brand}</p>
+              <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
+                <span>{p.analysis_runs?.[0]?.count ?? 0} analisi</span>
+                <span>·</span>
+                <span>{new Date(p.created_at).toLocaleDateString("it-IT")}</span>
+              </div>
+            </a>
+          ))}
+        </div>
       )}
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center py-28 text-center">
-      <div className="w-20 h-20 rounded-2xl bg-primary/8 border border-primary/15 flex items-center justify-center mb-5">
-        <svg className="w-9 h-9 text-primary/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-          <path d="M2 17l10 5 10-5"/>
-          <path d="M2 12l10 5 10-5"/>
-        </svg>
-      </div>
-      <h2 className="font-display font-semibold text-xl text-foreground mb-2">Nessun progetto ancora</h2>
-      <p className="text-muted-foreground text-sm max-w-xs mb-7 leading-relaxed">
-        Crea il tuo primo progetto per iniziare a misurare la visibilità del tuo brand nelle risposte AI.
-      </p>
-      <a
-        href="/projects/new"
-        className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary/85 transition-colors"
-      >
-        <Plus className="w-4 h-4" />
-        Crea il primo progetto
-      </a>
     </div>
   );
 }
