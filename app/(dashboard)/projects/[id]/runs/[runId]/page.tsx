@@ -162,20 +162,20 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
             score={aviData.avi_score}
             trend={trend}
             components={[
-              { label: "Presence",  v: aviData.presence_score },
-              { label: "Rank",      v: aviData.rank_score },
-              { label: "Sentiment", v: aviData.sentiment_score },
-              { label: "Stability", v: aviData.stability_score },
+              { label: "Presence",  v: aviData.presence_score != null ? aviData.presence_score * 100 : null },
+              { label: "Rank",      v: aviData.rank_score != null ? aviData.rank_score * 100 : null },
+              { label: "Sentiment", v: aviData.sentiment_score != null ? aviData.sentiment_score * 100 : null },
+              { label: "Stability", v: aviData.stability_score != null ? aviData.stability_score * 100 : null },
             ]}
           />
           <div className="card p-5 space-y-4">
             <h2 className="font-display font-semibold text-foreground">Componenti AVI</h2>
             <div className="space-y-3">
               {[
-                { label: "Presence (35%)", value: aviData.presence_score, color: "hsl(186, 100%, 50%)" },
-                { label: "Rank (25%)", value: aviData.rank_score, color: "hsl(38, 95%, 58%)" },
-                { label: "Sentiment (20%)", value: aviData.sentiment_score, color: "hsl(152, 68%, 46%)" },
-                { label: "Stability (20%)", value: aviData.stability_score, color: "hsl(270, 70%, 60%)" },
+                { label: "Presence (35%)", value: (aviData.presence_score ?? 0) * 100, color: "hsl(186, 100%, 50%)" },
+                { label: "Rank (25%)", value: (aviData.rank_score ?? 0) * 100, color: "hsl(38, 95%, 58%)" },
+                { label: "Sentiment (20%)", value: (aviData.sentiment_score ?? 0) * 100, color: "hsl(152, 68%, 46%)" },
+                { label: "Stability (20%)", value: (aviData.stability_score ?? 0) * 100, color: "hsl(270, 70%, 60%)" },
               ].map((c) => (
                 <div key={c.label} className="space-y-1">
                   <div className="flex justify-between text-xs">
