@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Play, X, Loader2, Cpu } from "lucide-react";
-import { AI_MODELS, PROVIDER_CONFIG, MODEL_MAP } from "@/lib/engine/models";
+import { Play, X, Loader2, Cpu, AlertTriangle } from "lucide-react";
+import { AI_MODELS, PROVIDER_CONFIG } from "@/lib/engine/models";
 
 const RUN_COUNT = 3;
 
@@ -34,13 +34,8 @@ export function AnalysisLauncher({
     );
   }
 
-  const costEstimate = useMemo(() => {
-    if (!selected.length || !queryCount || !segmentCount) return 0;
-    const totalPerModel = queryCount * segmentCount * RUN_COUNT;
-    return selected.reduce((sum, id) => {
-      const model = MODEL_MAP.get(id);
-      return sum + (model ? model.costPerQuery * totalPerModel : 0);
-    }, 0);
+  const totalPrompts = useMemo(() => {
+    return selected.length * queryCount * segmentCount * RUN_COUNT;
   }, [selected, queryCount, segmentCount]);
 
   async function startAnalysis() {
@@ -136,14 +131,9 @@ export function AnalysisLauncher({
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-foreground">{model.label}</span>
-                              <span className="text-[10px] text-muted-foreground">{model.tier}</span>
-                            </div>
+                            <p className="text-sm font-medium text-foreground">{model.label}</p>
+                            <p className="text-[11px] text-muted-foreground">{model.desc}</p>
                           </div>
-                          <span className="text-[11px] text-muted-foreground shrink-0">
-                            ~${model.costPerQuery}/query
-                          </span>
                         </button>
                       ))}
                     </div>
@@ -152,14 +142,20 @@ export function AnalysisLauncher({
               })}
             </div>
 
-            {/* Cost estimate */}
-            {selected.length > 0 && queryCount > 0 && segmentCount > 0 && (
-              <div className="bg-muted rounded-lg px-4 py-3 text-sm text-muted-foreground">
-                Con <span className="text-foreground font-medium">{selected.length}</span> modell{selected.length === 1 ? "o" : "i"},{" "}
-                <span className="text-foreground font-medium">{queryCount}</span> query e{" "}
-                <span className="text-foreground font-medium">{segmentCount}</span> segment{segmentCount === 1 ? "o" : "i"} attiv{segmentCount === 1 ? "o" : "i"}{" "}
-                &rarr; stima costo: <span className="text-foreground font-bold">~€{costEstimate.toFixed(2)}</span>
-              </div>
+            {/* Info box */}
+            <div className="flex gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Ogni modello AI ha una propria base di conoscenza indipendente, costruita con dataset e metodologie diverse. Analizzare lo stesso brand su piu modelli ti permette di capire come viene percepito in modo trasversale. Tieni presente che versioni diverse dello stesso modello (es. GPT-4o vs GPT-5) possono dare risultati diversi: aggiornare regolarmente le analisi con i modelli piu recenti garantisce la massima accuratezza e rilevanza dei dati.
+              </p>
+            </div>
+
+            {/* Footer info */}
+            {selected.length > 0 && (
+              <p className="text-sm text-muted-foreground text-center">
+                <span className="text-foreground font-medium">{selected.length}</span> modell{selected.length === 1 ? "o" : "i"} selezionat{selected.length === 1 ? "o" : "i"} &middot;{" "}
+                <span className="text-foreground font-medium">{totalPrompts}</span> prompt totali
+              </p>
             )}
 
             {error && <p className="text-sm text-destructive">{error}</p>}
