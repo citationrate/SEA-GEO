@@ -3,7 +3,7 @@ import { Tag } from "lucide-react";
 
 export const metadata = { title: "Topic" };
 
-export default async function TopicsPage({ searchParams }: { searchParams: { project?: string } }) {
+export default async function TopicsPage() {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -16,144 +16,132 @@ export default async function TopicsPage({ searchParams }: { searchParams: { pro
 
   const projectsList = (projects ?? []) as any[];
   const projectIds = projectsList.map((p) => p.id);
-  const filterProject = searchParams.project;
-  const activeProjectIds = filterProject ? [filterProject] : projectIds;
 
-  // Get runs for filtered projects
-  const { data: runs } = activeProjectIds.length > 0
-    ? await supabase.from("analysis_runs").select("id").in("project_id", activeProjectIds)
-    : { data: [] };
+  // For each project, get topic counts from response_analysis
+  const projectTopics: { projectId: string; projectName: string; topics: [string, number][] }[] = [];
+  const globalCounts = new Map<string, number>();
 
-  const runIds = (runs ?? []).map((r: any) => r.id);
+  for (const proj of projectsList) {
+    const { data: runs } = await supabase
+      .from("analysis_runs")
+      .select("id")
+      .eq("project_id", proj.id);
 
-  const { data: prompts } = runIds.length > 0
-    ? await supabase.from("prompts_executed").select("id").in("run_id", runIds)
-    : { data: [] };
+    const runIds = (runs ?? []).map((r: any) => r.id);
+    if (runIds.length === 0) continue;
 
-  const promptIds = (prompts ?? []).map((p: any) => p.id);
+    const { data: prompts } = await supabase
+      .from("prompts_executed")
+      .select("id")
+      .in("run_id", runIds);
 
-  // Count topic occurrences from response_analysis
-  const topicCounts = new Map<string, number>();
+    const promptIds = (prompts ?? []).map((p: any) => p.id);
+    if (promptIds.length === 0) continue;
 
-  if (promptIds.length > 0) {
     const { data: analyses } = await supabase
       .from("response_analysis")
       .select("topics")
       .in("prompt_executed_id", promptIds);
 
+    const counts = new Map<string, number>();
     (analyses ?? []).forEach((a: any) => {
       (a.topics ?? []).forEach((t: string) => {
-        topicCounts.set(t, (topicCounts.get(t) ?? 0) + 1);
+        counts.set(t, (counts.get(t) ?? 0) + 1);
+        globalCounts.set(t, (globalCounts.get(t) ?? 0) + 1);
       });
     });
+
+    if (counts.size > 0) {
+      const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+      projectTopics.push({ projectId: proj.id, projectName: proj.name, topics: sorted });
+    }
   }
 
-  const topicList = Array.from(topicCounts.entries()).sort((a, b) => b[1] - a[1]);
-  const maxCount = topicList.length > 0 ? topicList[0][1] : 1;
+  const globalList = Array.from(globalCounts.entries()).sort((a, b) => b[1] - a[1]);
+  const maxCount = globalList.length > 0 ? globalList[0][1] : 1;
+  const top5 = new Set(globalList.slice(0, 5).map(([name]) => name));
 
   function getCloudSize(count: number): string {
     const ratio = count / maxCount;
-    if (ratio >= 0.8) return "text-2xl font-bold";
-    if (ratio >= 0.5) return "text-xl font-semibold";
-    if (ratio >= 0.3) return "text-base font-medium";
-    if (ratio >= 0.15) return "text-sm";
-    return "text-xs";
-  }
-
-  function getCloudOpacity(count: number): string {
-    const ratio = count / maxCount;
-    if (ratio >= 0.5) return "opacity-100";
-    if (ratio >= 0.25) return "opacity-80";
-    return "opacity-60";
+    if (ratio >= 0.8) return "text-3xl font-bold";
+    if (ratio >= 0.5) return "text-2xl font-semibold";
+    if (ratio >= 0.3) return "text-xl font-medium";
+    if (ratio >= 0.15) return "text-base";
+    return "text-sm";
   }
 
   return (
     <div className="space-y-6 max-w-[1200px] animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Tag className="w-6 h-6 text-accent" />
-          <div>
-            <h1 className="font-display font-bold text-2xl text-foreground">Topic</h1>
-            <p className="text-sm text-muted-foreground">Argomenti emersi dalle risposte AI</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <a
-            href="/topics"
-            className={`badge ${!filterProject ? "badge-primary" : "badge-muted"} text-xs`}
-          >
-            Tutti
-          </a>
-          {projectsList.map((p) => (
-            <a
-              key={p.id}
-              href={`/topics?project=${p.id}`}
-              className={`badge ${filterProject === p.id ? "badge-primary" : "badge-muted"} text-xs`}
-            >
-              {p.name}
-            </a>
-          ))}
+      <div className="flex items-center gap-3">
+        <Tag className="w-6 h-6 text-accent" />
+        <div>
+          <h1 className="font-display font-bold text-2xl text-foreground">Topic</h1>
+          <p className="text-sm text-muted-foreground">Argomenti emersi dalle risposte AI</p>
         </div>
       </div>
 
-      {topicList.length === 0 ? (
+      {globalList.length === 0 ? (
         <div className="card p-12 text-center">
           <Tag className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground">Nessun topic trovato. Lancia un&apos;analisi per scoprirli.</p>
         </div>
       ) : (
         <>
-          {/* Tag Cloud */}
+          {/* Global Tag Cloud */}
           <div className="card p-6">
-            <h2 className="font-display font-semibold text-foreground mb-4">Tag Cloud</h2>
-            <div className="flex flex-wrap gap-3 items-center justify-center py-4">
-              {topicList.map(([name, count]) => (
+            <h2 className="font-display font-semibold text-foreground mb-4">Tag Cloud Globale</h2>
+            <div className="flex flex-wrap gap-x-4 gap-y-3 items-baseline justify-center py-4">
+              {globalList.map(([name, count]) => (
                 <span
                   key={name}
-                  className={`text-primary ${getCloudSize(count)} ${getCloudOpacity(count)} transition-opacity hover:opacity-100 cursor-default`}
+                  className={`${getCloudSize(count)} ${top5.has(name) ? "text-primary" : "text-muted-foreground"} transition-opacity hover:opacity-100 cursor-default`}
                   title={`${count} menzioni`}
                 >
                   {name}
+                  <sup className="text-[10px] ml-0.5 opacity-60">{count}</sup>
                 </span>
               ))}
             </div>
           </div>
 
-          {/* Topic List */}
-          <div className="card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="text-left py-3 px-4 text-muted-foreground font-medium">Topic</th>
-                    <th className="text-center py-3 px-4 text-muted-foreground font-medium">Menzioni</th>
-                    <th className="text-left py-3 px-4 text-muted-foreground font-medium">Frequenza</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topicList.map(([name, count]) => (
-                    <tr key={name} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="py-3 px-4 font-medium text-foreground">{name}</td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="font-display font-semibold text-foreground">{count}</span>
-                      </td>
-                      <td className="py-3 px-4 w-1/3">
-                        <div className="h-2 rounded-full bg-muted overflow-hidden">
+          {/* Per-project sections */}
+          {projectTopics.map((pt) => {
+            const projMax = pt.topics[0]?.[1] ?? 1;
+            return (
+              <div key={pt.projectId} className="card overflow-hidden">
+                <div className="px-5 py-3 border-b border-border bg-muted/30">
+                  <h2 className="font-display font-semibold text-foreground">{pt.projectName}</h2>
+                </div>
+                <div className="p-5">
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {pt.topics.map(([name, count]) => (
+                      <span
+                        key={name}
+                        className={`badge ${top5.has(name) ? "badge-primary" : "badge-muted"} flex items-center gap-1`}
+                      >
+                        {name}
+                        <span className="text-[10px] opacity-70">({count})</span>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    {pt.topics.slice(0, 10).map(([name, count]) => (
+                      <div key={name} className="flex items-center gap-3">
+                        <span className="text-sm text-foreground w-40 truncate">{name}</span>
+                        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-primary transition-all duration-500"
-                            style={{ width: `${(count / maxCount) * 100}%` }}
+                            className={`h-full rounded-full transition-all duration-500 ${top5.has(name) ? "bg-primary" : "bg-muted-foreground/40"}`}
+                            style={{ width: `${(count / projMax) * 100}%` }}
                           />
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground">
-              {topicList.length} topic trovati
-            </div>
-          </div>
+                        <span className="text-xs text-muted-foreground w-8 text-right">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </>
       )}
     </div>

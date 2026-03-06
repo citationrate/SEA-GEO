@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 import { AnalysisLauncher } from "./analysis-launcher";
 import { ProjectAVITrend } from "./project-avi-trend";
+import { DeleteProjectButton } from "./delete-project-button";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const supabase = createServerClient();
@@ -246,21 +247,24 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       )}
 
       {/* Azioni */}
-      <div className="flex gap-3">
-        <a
-          href={`/projects/${params.id}/queries`}
-          className="flex items-center gap-2 bg-surface border border-border text-foreground text-sm font-semibold px-4 py-2 rounded-lg hover:border-primary/30 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Nuova Query
-        </a>
-        <a
-          href={`/projects/${params.id}/segments`}
-          className="flex items-center gap-2 bg-surface border border-border text-foreground text-sm font-semibold px-4 py-2 rounded-lg hover:border-primary/30 transition-colors"
-        >
-          <Users className="w-4 h-4" />
-          Segmenti
-        </a>
+      <div className="flex items-center justify-between">
+        <div className="flex gap-3">
+          <a
+            href={`/projects/${params.id}/queries`}
+            className="flex items-center gap-2 bg-surface border border-border text-foreground text-sm font-semibold px-4 py-2 rounded-lg hover:border-primary/30 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Nuova Query
+          </a>
+          <a
+            href={`/projects/${params.id}/segments`}
+            className="flex items-center gap-2 bg-surface border border-border text-foreground text-sm font-semibold px-4 py-2 rounded-lg hover:border-primary/30 transition-colors"
+          >
+            <Users className="w-4 h-4" />
+            Segmenti
+          </a>
+        </div>
+        <DeleteProjectButton projectId={params.id} projectName={proj.name} />
       </div>
     </div>
   );
