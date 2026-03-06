@@ -234,21 +234,78 @@ export async function POST(request: Request) {
         })
         .eq("id", run.id);
 
-      // Calculate AVI via dedicated endpoint
-      let aviResult = null;
-      try {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-        const aviRes = await fetch(`${baseUrl}/api/analysis/${run.id}/avi`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        });
-        if (aviRes.ok) {
-          aviResult = await aviRes.json();
-        } else {
-          console.error("AVI endpoint failed:", await aviRes.text());
+      // Calculate AVI inline from response_analysis + prompts_executed
+      const { data: aviRows } = await supabase
+        .from("response_analysis")
+        .select("*, prompts_executed!inner(run_id, query_id, segment_id, run_number)")
+        .eq("prompts_executed.run_id", run.id);
+
+      const rows = (aviRows ?? []) as any[];
+      let aviResult: any = null;
+
+      if (rows.length > 0) {
+        const total = rows.length;
+
+        // presence_score: count(brand_mentioned=true) / total
+        const presence_score = rows.filter((r: any) => r.brand_mentioned).length / total;
+
+        // rank_score: media di Math.max(0, 1-(brand_rank-1)/10), 0 se null
+        const rank_score = rows.reduce((s: number, r: any) => {
+          if (r.brand_rank === null || r.brand_rank <= 0) return s;
+          return s + Math.max(0, 1 - (r.brand_rank - 1) / 10);
+        }, 0) / total;
+
+        // sentiment_score: (media sentiment non null, default 0) normalizzato (v+1)/2
+        const withSent = rows.filter((r: any) => r.sentiment_score !== null);
+        const sentAvg = withSent.length > 0
+          ? withSent.reduce((s: number, r: any) => s + r.sentiment_score, 0) / withSent.length
+          : 0;
+        const sentiment_score = (sentAvg + 1) / 2;
+
+        // stability_score: per query_id+segment_id, % run che concordano. Media.
+        const pairs = new Map<string, boolean[]>();
+        for (const r of rows) {
+          const pe = r.prompts_executed;
+          const key = `${pe.query_id}__${pe.segment_id}`;
+          const group = pairs.get(key) ?? [];
+          group.push(r.brand_mentioned);
+          pairs.set(key, group);
         }
-      } catch (err) {
-        console.error("Failed to call AVI endpoint:", err instanceof Error ? err.message : err);
+        let stability_score = 1;
+        if (pairs.size > 0) {
+          const scores: number[] = [];
+          for (const group of Array.from(pairs.values())) {
+            if (group.length <= 1) { scores.push(1); continue; }
+            const trueCount = group.filter(Boolean).length;
+            scores.push(Math.max(trueCount, group.length - trueCount) / group.length);
+          }
+          stability_score = scores.reduce((s, v) => s + v, 0) / scores.length;
+        }
+
+        const avi_score = Math.round(
+          presence_score * 35 + rank_score * 25 + sentiment_score * 20 + stability_score * 20
+        );
+
+        // Delete existing avi_history for this run, then insert
+        await (supabase.from("avi_history") as any).delete().eq("run_id", run.id);
+
+        const { error: aviError } = await (supabase.from("avi_history") as any)
+          .insert({
+            project_id,
+            run_id: run.id,
+            avi_score,
+            presence_score: Math.round(presence_score * 10000) / 100,
+            rank_score: Math.round(rank_score * 10000) / 100,
+            sentiment_score: Math.round(sentiment_score * 10000) / 100,
+            stability_score: Math.round(stability_score * 10000) / 100,
+            computed_at: new Date().toISOString(),
+          });
+
+        if (aviError) {
+          console.error("Failed to insert avi_history:", aviError.message);
+        }
+
+        aviResult = { avi_score, presence_score, rank_score, sentiment_score, stability_score };
       }
 
       return NextResponse.json({
