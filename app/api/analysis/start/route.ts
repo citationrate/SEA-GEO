@@ -328,8 +328,8 @@ export async function POST(request: Request) {
         })
         .eq("id", run.id);
 
-      // Final AVI recalculation
-      await computeAndUpsertAVI(supabase as any, run.id, project_id);
+      // Final AVI recalculation via SQL function
+      await supabase.rpc("compute_and_save_avi", { p_run_id: run.id });
 
       return NextResponse.json({
         run_id: run.id,
