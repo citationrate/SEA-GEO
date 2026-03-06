@@ -54,8 +54,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const aviMap = new Map((aviHistory ?? []).map((a: any) => [a.run_id, a.avi_score]));
 
   // Build trend data for chart
-  const trendData = (aviHistory ?? []).map((a: any) => ({
-    date: new Date(a.computed_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }),
+  const trendData = (aviHistory ?? []).map((a: any, i: number) => ({
+    version: `v${i + 1}`,
     avi: Math.round(a.avi_score),
     presence: Math.round(a.presence_score),
     sentiment: Math.round(a.sentiment_score),

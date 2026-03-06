@@ -27,7 +27,29 @@ export default async function DashboardPage() {
         .order("created_at", { ascending: false })
     : { data: [] };
 
-  // Get all AVI history for this user's projects (projectIds already filtered by user_id)
+  // Get latest AVI (last completed analysis, not average)
+  const { data: lastAviRow } = projectIds.length > 0
+    ? await supabase
+        .from("avi_history")
+        .select("*")
+        .in("project_id", projectIds)
+        .order("computed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
+  // Get previous AVI for trend delta
+  const { data: prevAviRow } = projectIds.length > 0
+    ? await supabase
+        .from("avi_history")
+        .select("avi_score")
+        .in("project_id", projectIds)
+        .order("computed_at", { ascending: false })
+        .range(1, 1)
+        .maybeSingle()
+    : { data: null };
+
+  // Get all AVI history for trend chart
   const { data: aviHistory } = projectIds.length > 0
     ? await supabase
         .from("avi_history")
@@ -35,10 +57,6 @@ export default async function DashboardPage() {
         .in("project_id", projectIds)
         .order("computed_at", { ascending: true })
     : { data: [] };
-
-  const aviRows = (aviHistory ?? []) as any[];
-  const lastAviRow = aviRows.length > 0 ? aviRows[aviRows.length - 1] : null;
-  const prevAviRow = aviRows.length > 1 ? aviRows[aviRows.length - 2] : null;
 
   // Get total prompts executed
   const runIds = (runs ?? []).map((r: any) => r.id);
@@ -72,15 +90,22 @@ export default async function DashboardPage() {
   const aviScore = lastAvi?.avi_score ?? null;
   const aviTrend = lastAvi && prevAviRow ? lastAvi.avi_score - (prevAviRow as any).avi_score : null;
 
-  // Compute brand mention rate
+  // Compute brand mention rate from response_analysis
   let mentionRate = "--";
-  if ((runs ?? []).length > 0) {
-    const completedRuns = (runs ?? []).filter((r: any) => r.status === "completed");
-    if (completedRuns.length > 0) {
-      const totalCompleted = completedRuns.reduce((s: number, r: any) => s + (r.completed_prompts ?? 0), 0);
-      // Approximate mention rate from presence_score of last AVI
-      if (lastAvi) {
-        mentionRate = `${Math.round(lastAvi.presence_score)}%`;
+  if (runIds.length > 0) {
+    const promptIdsForMention = (await supabase.from("prompts_executed").select("id").in("run_id", runIds)).data?.map((p: any) => p.id) ?? [];
+    if (promptIdsForMention.length > 0) {
+      const { count: totalAnalyses } = await supabase
+        .from("response_analysis")
+        .select("*", { count: "exact", head: true })
+        .in("prompt_executed_id", promptIdsForMention);
+      const { count: mentionedCount } = await supabase
+        .from("response_analysis")
+        .select("*", { count: "exact", head: true })
+        .in("prompt_executed_id", promptIdsForMention)
+        .eq("brand_mentioned", true);
+      if (totalAnalyses && totalAnalyses > 0) {
+        mentionRate = `${Math.round(((mentionedCount ?? 0) / totalAnalyses) * 100)}%`;
       }
     }
   }
