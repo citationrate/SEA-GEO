@@ -140,6 +140,8 @@ export interface Database {
           name: string;
           is_manual: boolean;
           discovered_at_run_id: string | null;
+          topic_context: string[];
+          query_type: string | null;
           created_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["competitors"]["Row"], "id" | "created_at">;

@@ -270,7 +270,7 @@ export async function POST(request: Request) {
                 for (const comp of extraction.competitors_found) {
                   const { data: existing } = await supabase
                     .from("competitors")
-                    .select("id")
+                    .select("id, topic_context" as any)
                     .eq("project_id", project_id)
                     .eq("name", comp)
                     .single();
@@ -282,7 +282,16 @@ export async function POST(request: Request) {
                         name: comp,
                         is_manual: false,
                         discovered_at_run_id: run.id,
+                        topic_context: extraction.topics ?? [],
+                        query_type: query.funnel_stage ?? null,
                       });
+                  } else {
+                    // Merge new topics into existing topic_context
+                    const existingTopics: string[] = (existing as any).topic_context ?? [];
+                    const merged = Array.from(new Set([...existingTopics, ...(extraction.topics ?? [])]));
+                    await (supabase.from("competitors") as any)
+                      .update({ topic_context: merged })
+                      .eq("id", (existing as any).id);
                   }
                 }
 
