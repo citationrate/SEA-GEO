@@ -117,14 +117,58 @@ export async function GET(
   const wsPrompts = XLSX.utils.aoa_to_sheet([promptHeaders, ...promptRows]);
   XLSX.utils.book_append_sheet(wb, wsPrompts, "Dettaglio Prompt");
 
-  // Sheet 3: Fonti
-  const sourceHeaders = ["Dominio", "URL", "Label", "Tipo", "Brand Owned"];
+  // Sheet 3: Competitor
+  const analysesList = (analyses ?? []) as any[];
+  const allCompetitors = new Map<string, { count: number; sentimentSum: number; sentimentN: number }>();
+  analysesList.forEach((a) => {
+    (a.competitors_found ?? []).forEach((c: string) => {
+      const existing = allCompetitors.get(c);
+      if (existing) {
+        existing.count++;
+        if (a.sentiment_score != null) { existing.sentimentSum += a.sentiment_score; existing.sentimentN++; }
+      } else {
+        allCompetitors.set(c, {
+          count: 1,
+          sentimentSum: a.sentiment_score ?? 0,
+          sentimentN: a.sentiment_score != null ? 1 : 0,
+        });
+      }
+    });
+  });
+  const compHeaders = ["Competitor", "Citazioni", "Sentiment Medio"];
+  const compRows = Array.from(allCompetitors.entries())
+    .sort((a, b) => b[1].count - a[1].count)
+    .map(([name, stats]) => [
+      name,
+      stats.count,
+      stats.sentimentN > 0 ? (stats.sentimentSum / stats.sentimentN).toFixed(2) : "—",
+    ]);
+  const wsComp = XLSX.utils.aoa_to_sheet([compHeaders, ...compRows]);
+  XLSX.utils.book_append_sheet(wb, wsComp, "Competitor");
+
+  // Sheet 4: Topic
+  const allTopics = new Map<string, number>();
+  analysesList.forEach((a) => {
+    (a.topics ?? []).forEach((t: string) => {
+      allTopics.set(t, (allTopics.get(t) ?? 0) + 1);
+    });
+  });
+  const topicHeaders = ["Topic", "Frequenza"];
+  const topicRows = Array.from(allTopics.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count]) => [name, count]);
+  const wsTopics = XLSX.utils.aoa_to_sheet([topicHeaders, ...topicRows]);
+  XLSX.utils.book_append_sheet(wb, wsTopics, "Topic");
+
+  // Sheet 5: Fonti
+  const sourceHeaders = ["Dominio", "URL", "Label", "Tipo", "Citazioni", "Brand Owned"];
   const sourceRows = (sources ?? []).map((s: any) => [
     s.domain ?? "—",
     s.url ?? "—",
     s.label ?? "—",
     s.source_type ?? "—",
-    s.brand_owned ? "Sì" : "No",
+    s.citation_count ?? 1,
+    s.is_brand_owned ? "Sì" : "No",
   ]);
   const wsSources = XLSX.utils.aoa_to_sheet([sourceHeaders, ...sourceRows]);
   XLSX.utils.book_append_sheet(wb, wsSources, "Fonti");

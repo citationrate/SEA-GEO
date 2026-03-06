@@ -2,6 +2,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, Globe, Tag, Users, ExternalLink, Eye, Hash, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { RunAVIRing } from "./run-avi-ring";
+import { ExportButtons } from "./export-buttons";
 
 const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = {
   pending:   { label: "In attesa",   class: "badge-muted",    icon: Clock },
@@ -135,10 +136,13 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
             <h1 className="font-display font-bold text-2xl text-foreground">Analisi v{r.version}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">{proj?.name} &middot; {proj?.target_brand}</p>
           </div>
-          <span className={`badge ${statusInfo.class} flex items-center gap-1`}>
-            <StatusIcon className={`w-3.5 h-3.5 ${r.status === "running" ? "animate-spin" : ""}`} />
-            {statusInfo.label}
-          </span>
+          <div className="flex items-center gap-2">
+            {r.status === "completed" && <ExportButtons runId={params.runId} />}
+            <span className={`badge ${statusInfo.class} flex items-center gap-1`}>
+              <StatusIcon className={`w-3.5 h-3.5 ${r.status === "running" ? "animate-spin" : ""}`} />
+              {statusInfo.label}
+            </span>
+          </div>
         </div>
       </div>
 
