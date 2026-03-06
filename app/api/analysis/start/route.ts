@@ -5,8 +5,6 @@ import OpenAI from "openai";
 import { extractFromResponse } from "@/lib/engine/extractor";
 import { calculateAVI } from "@/lib/engine/avi";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 const RUN_COUNT = 3;
 
 const startSchema = z.object({
@@ -24,6 +22,7 @@ Domanda: ${query}`;
 }
 
 async function callOpenAI(prompt: string, model: string): Promise<string> {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const completion = await openai.chat.completions.create({
     model,
     temperature: 0.7,
@@ -238,7 +237,7 @@ export async function POST(request: Request) {
       const aviResult = calculateAVI(allAnalyses);
 
       // Save AVI history
-      await (supabase.from("avi_history") as any)
+      const { error: aviError } = await (supabase.from("avi_history") as any)
         .insert({
           project_id,
           run_id: run.id,
@@ -249,6 +248,10 @@ export async function POST(request: Request) {
           stability_score: aviResult.components.stability_score,
           computed_at: new Date().toISOString(),
         });
+
+      if (aviError) {
+        console.error("Failed to insert avi_history:", aviError.message);
+      }
 
       // Update individual response_analysis with AVI
       const { data: analysisRows } = await supabase

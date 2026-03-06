@@ -1,7 +1,5 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 export interface ExtractionResult {
   brand_mentioned: boolean;
   brand_rank: number | null;
@@ -50,6 +48,7 @@ Regole:
 - competitors_found: tutti i brand/prodotti concorrenti menzionati (escluso il target)
 - sources: URL, domini o fonti citate nella risposta`;
 
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     temperature: 0,

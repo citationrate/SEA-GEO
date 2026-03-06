@@ -6,11 +6,13 @@ export const metadata = { title: "Dashboard" };
 export default async function DashboardPage() {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return <DashboardClient aviScore={null} aviTrend={null} stats={[]} trendData={[]} recentRuns={[]} competitorBarData={[]} />;
 
   // Get all projects for this user
   const { data: projects } = await supabase
     .from("projects")
     .select("id, name, target_brand")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   const projectIds = (projects ?? []).map((p: any) => p.id);
