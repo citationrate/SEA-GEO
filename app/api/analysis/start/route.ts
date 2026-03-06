@@ -2,7 +2,9 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { extractFromResponse } from "@/lib/engine/extractor";
+import { ALL_MODEL_IDS, MODEL_MAP } from "@/lib/engine/models";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const RUN_COUNT = 3;
@@ -84,7 +86,10 @@ async function normalizeCompetitorName(
 
 const startSchema = z.object({
   project_id: z.string().uuid(),
-  models_used: z.array(z.enum(["gpt-4o", "gpt-4o-mini"])).min(1),
+  models_used: z.array(z.string()).min(1).refine(
+    (ids) => ids.every((id) => ALL_MODEL_IDS.includes(id)),
+    { message: "Modello non supportato" }
+  ),
 });
 
 function buildPrompt(query: string, segmentContext: string, language: string): string {
@@ -96,8 +101,61 @@ Contesto utente: ${segmentContext}
 Domanda: ${query}`;
 }
 
-async function callOpenAI(prompt: string, model: string): Promise<string> {
+async function callAIModel(prompt: string, model: string): Promise<string> {
+  const modelDef = MODEL_MAP.get(model);
+  const provider = modelDef?.provider ?? "openai";
+
+  if (provider === "anthropic") {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const msg = await anthropic.messages.create({
+      model,
+      max_tokens: 1500,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const block = msg.content[0];
+    return block.type === "text" ? block.text : "";
+  }
+
+  if (provider === "google") {
+    // Google Gemini via OpenAI-compatible endpoint
+    const client = new OpenAI({
+      apiKey: process.env.GOOGLE_API_KEY ?? "",
+      baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+    });
+    const completion = await client.chat.completions.create({
+      model,
+      max_tokens: 1500,
+      messages: [{ role: "user", content: prompt }],
+    });
+    return completion.choices[0]?.message?.content ?? "";
+  }
+
+  if (provider === "xai") {
+    const client = new OpenAI({
+      apiKey: process.env.XAI_API_KEY ?? "",
+      baseURL: "https://api.x.ai/v1",
+    });
+    const completion = await client.chat.completions.create({
+      model,
+      max_tokens: 1500,
+      messages: [{ role: "user", content: prompt }],
+    });
+    return completion.choices[0]?.message?.content ?? "";
+  }
+
+  // OpenAI (default)
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+  // o1/o3 models use max_completion_tokens instead of max_tokens
+  if (model.startsWith("o1") || model.startsWith("o3")) {
+    const completion = await openai.chat.completions.create({
+      model,
+      max_completion_tokens: 1500,
+      messages: [{ role: "user", content: prompt }],
+    } as any);
+    return completion.choices[0]?.message?.content ?? "";
+  }
+
   const completion = await openai.chat.completions.create({
     model,
     temperature: 0.7,
@@ -300,7 +358,7 @@ export async function POST(request: Request) {
               let promptError: string | null = null;
 
               try {
-                rawResponse = await callOpenAI(promptText, model);
+                rawResponse = await callAIModel(promptText, model);
               } catch (err) {
                 promptError = err instanceof Error ? err.message : "Errore chiamata AI";
               }

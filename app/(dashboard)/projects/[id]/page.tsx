@@ -90,6 +90,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             projectId={params.id}
             hasQueries={(queries ?? []).length > 0}
             hasSegments={(segments ?? []).length > 0}
+            queryCount={(queries ?? []).length}
+            segmentCount={(segments ?? []).length}
           />
         </div>
       </div>
