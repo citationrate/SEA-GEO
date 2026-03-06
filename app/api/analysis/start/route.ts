@@ -102,7 +102,7 @@ export async function POST(request: Request) {
 
     // Process all combinations in background-like sequential execution
     let completedPrompts = 0;
-    const allAnalyses: { brand_mentioned: boolean; brand_rank: number | null; sentiment_score: number | null; run_number: number }[] = [];
+    const allAnalyses: { brand_mentioned: boolean; brand_rank: number | null; sentiment_score: number | null; run_number: number; query_id: string; segment_id: string }[] = [];
 
     try {
       for (const query of queries as any[]) {
@@ -220,6 +220,8 @@ export async function POST(request: Request) {
                   brand_rank: extraction.brand_rank,
                   sentiment_score: extraction.sentiment_score,
                   run_number: runNum,
+                  query_id: query.id,
+                  segment_id: segment.id,
                 });
               }
 

@@ -2,6 +2,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 import { AnalysisLauncher } from "./analysis-launcher";
+import { ProjectAVITrend } from "./project-avi-trend";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const supabase = createServerClient();
@@ -43,12 +44,22 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     .limit(1)
     .single();
 
-  // Fetch AVI scores for all runs
-  const runIds = (allRuns ?? []).map((r: any) => r.id);
-  const { data: aviRows } = runIds.length > 0
-    ? await supabase.from("avi_history").select("run_id, avi_score").in("run_id", runIds)
-    : { data: [] };
-  const aviMap = new Map((aviRows ?? []).map((a: any) => [a.run_id, a.avi_score]));
+  // Fetch all AVI history for trend chart + run scores
+  const { data: aviHistory } = await supabase
+    .from("avi_history")
+    .select("*")
+    .eq("project_id", params.id)
+    .order("computed_at", { ascending: true });
+
+  const aviMap = new Map((aviHistory ?? []).map((a: any) => [a.run_id, a.avi_score]));
+
+  // Build trend data for chart
+  const trendData = (aviHistory ?? []).map((a: any) => ({
+    date: new Date(a.computed_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }),
+    avi: Math.round(a.avi_score),
+    presence: Math.round(a.presence_score),
+    sentiment: Math.round(a.sentiment_score),
+  }));
 
   const tofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "tofu");
   const mofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "mofu");
@@ -227,6 +238,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             })}
           </div>
         </div>
+      )}
+
+      {/* AVI Trend Chart */}
+      {trendData.length > 0 && (
+        <ProjectAVITrend data={trendData} />
       )}
 
       {/* Azioni */}

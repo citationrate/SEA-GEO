@@ -27,7 +27,29 @@ export default async function DashboardPage() {
         .order("created_at", { ascending: false })
     : { data: [] };
 
-  // Get all AVI history
+  // Get latest AVI record (last completed analysis)
+  const { data: lastAviRow } = projectIds.length > 0
+    ? await supabase
+        .from("avi_history")
+        .select("*")
+        .in("project_id", projectIds)
+        .order("computed_at", { ascending: false })
+        .limit(1)
+        .single()
+    : { data: null };
+
+  // Get second-to-last AVI for trend delta
+  const { data: prevAviRow } = projectIds.length > 0
+    ? await supabase
+        .from("avi_history")
+        .select("avi_score")
+        .in("project_id", projectIds)
+        .order("computed_at", { ascending: false })
+        .range(1, 1)
+        .single()
+    : { data: null };
+
+  // Get all AVI history for trend chart
   const { data: aviHistory } = projectIds.length > 0
     ? await supabase
         .from("avi_history")
@@ -64,10 +86,9 @@ export default async function DashboardPage() {
     : { count: 0 };
 
   // Compute stats
-  const lastAvi = (aviHistory ?? []).length > 0 ? (aviHistory as any[])[(aviHistory as any[]).length - 1] : null;
-  const prevAvi = (aviHistory ?? []).length > 1 ? (aviHistory as any[])[(aviHistory as any[]).length - 2] : null;
+  const lastAvi = lastAviRow as any;
   const aviScore = lastAvi?.avi_score ?? null;
-  const aviTrend = lastAvi && prevAvi ? lastAvi.avi_score - prevAvi.avi_score : null;
+  const aviTrend = lastAvi && prevAviRow ? lastAvi.avi_score - (prevAviRow as any).avi_score : null;
 
   // Compute brand mention rate
   let mentionRate = "--";

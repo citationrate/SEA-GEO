@@ -1,7 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, Globe, Tag, Users, ExternalLink, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { AVIRing } from "@/components/dashboard/avi-ring";
+import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, Globe, Tag, Users, ExternalLink, Eye, Hash, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { RunAVIRing } from "./run-avi-ring";
 
 const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = {
   pending:   { label: "In attesa",   class: "badge-muted",    icon: Clock },
@@ -10,20 +10,6 @@ const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = 
   failed:    { label: "Fallita",     class: "badge badge-muted text-destructive border-destructive/20 bg-destructive/10", icon: XCircle },
   cancelled: { label: "Annullata",   class: "badge-muted",    icon: XCircle },
 };
-
-function ComponentBar({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="font-medium text-foreground">{Math.round(value)}</span>
-      </div>
-      <div className="h-2 rounded-full bg-muted overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, value)}%`, backgroundColor: color }} />
-      </div>
-    </div>
-  );
-}
 
 export default async function RunDetailPage({ params }: { params: { id: string; runId: string } }) {
   const supabase = createServerClient();
@@ -49,7 +35,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     .eq("run_id", params.runId)
     .single();
 
-  // Fetch previous run's AVI for trend
+  // Trend vs previous run
   let trend: number | null = null;
   if (avi) {
     const { data: allAvi } = await supabase
@@ -58,7 +44,6 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
       .eq("project_id", params.id)
       .order("computed_at", { ascending: false })
       .limit(2);
-
     if (allAvi && allAvi.length >= 2) {
       trend = (allAvi[0] as any).avi_score - (allAvi[1] as any).avi_score;
     }
@@ -92,14 +77,47 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     .eq("project_id", params.id)
     .eq("first_seen_run_id", params.runId);
 
-  const analysisMap = new Map((analyses ?? []).map((a: any) => [a.prompt_executed_id, a]));
+  // Compute aggregate stats from analyses
+  const analysesList = (analyses ?? []) as any[];
+  const analysisMap = new Map(analysesList.map((a) => [a.prompt_executed_id, a]));
+  const totalAnalysed = analysesList.length;
+  const mentionCount = analysesList.filter((a) => a.brand_mentioned).length;
+  const mentionRate = totalAnalysed > 0 ? Math.round((mentionCount / totalAnalysed) * 100) : 0;
+
+  const ranked = analysesList.filter((a) => a.brand_rank !== null && a.brand_rank > 0);
+  const avgRank = ranked.length > 0
+    ? (ranked.reduce((s: number, a: any) => s + a.brand_rank, 0) / ranked.length).toFixed(1)
+    : "—";
+
+  const withSentiment = analysesList.filter((a) => a.sentiment_score !== null);
+  const avgSentiment = withSentiment.length > 0
+    ? (withSentiment.reduce((s: number, a: any) => s + a.sentiment_score, 0) / withSentiment.length).toFixed(2)
+    : "—";
+
+  const totalOccurrences = analysesList.reduce((s: number, a: any) => s + (a.brand_occurrences ?? 0), 0);
+
+  // All competitors from all response_analysis rows (not just discovered)
+  const allCompetitors = new Map<string, number>();
+  analysesList.forEach((a) => {
+    (a.competitors_found ?? []).forEach((c: string) => {
+      allCompetitors.set(c, (allCompetitors.get(c) ?? 0) + 1);
+    });
+  });
+  const competitorList = Array.from(allCompetitors.entries()).sort((a, b) => b[1] - a[1]);
+
+  // All topics from analyses
+  const allTopics = new Map<string, number>();
+  analysesList.forEach((a) => {
+    (a.topics ?? []).forEach((t: string) => {
+      allTopics.set(t, (allTopics.get(t) ?? 0) + 1);
+    });
+  });
+  const topicList = Array.from(allTopics.entries()).sort((a, b) => b[1] - a[1]);
+
   const statusInfo = STATUS_MAP[r.status] ?? STATUS_MAP.pending;
   const StatusIcon = statusInfo.icon;
   const proj = project as any;
   const aviData = avi as any;
-
-  const TrendIcon = trend === null ? Minus : trend > 0 ? TrendingUp : TrendingDown;
-  const trendColor = trend === null ? "text-muted-foreground" : trend > 0 ? "text-success" : "text-destructive";
 
   return (
     <div className="space-y-6 max-w-[1400px] animate-fade-in">
@@ -115,9 +133,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         <div className="flex items-start justify-between">
           <div>
             <h1 className="font-display font-bold text-2xl text-foreground">Analisi v{r.version}</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {proj?.name} &middot; {proj?.target_brand}
-            </p>
+            <p className="text-sm text-muted-foreground mt-0.5">{proj?.name} &middot; {proj?.target_brand}</p>
           </div>
           <span className={`badge ${statusInfo.class} flex items-center gap-1`}>
             <StatusIcon className={`w-3.5 h-3.5 ${r.status === "running" ? "animate-spin" : ""}`} />
@@ -126,7 +142,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         </div>
       </div>
 
-      {/* Run info */}
+      {/* Run metadata */}
       <div className="card p-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
         <div><span className="text-muted-foreground">Modelli:</span>{" "}<span className="text-foreground font-medium">{r.models_used?.join(", ")}</span></div>
         <div><span className="text-muted-foreground">Prompt:</span>{" "}<span className="text-foreground font-medium">{r.completed_prompts}/{r.total_prompts}</span></div>
@@ -135,27 +151,69 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         {r.completed_at && <div><span className="text-muted-foreground">Fine:</span>{" "}<span className="text-foreground">{new Date(r.completed_at).toLocaleString("it-IT")}</span></div>}
       </div>
 
-      {/* AVI Score with Ring + Component Bars + Trend */}
+      {/* AVI Score: Ring + Component Bars */}
       {aviData && (
         <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6">
-          <AVIRing score={aviData.avi_score} trend={trend} />
+          <RunAVIRing
+            score={aviData.avi_score}
+            trend={trend}
+            components={[
+              { label: "Presence",  v: aviData.presence_score },
+              { label: "Rank",      v: aviData.rank_score },
+              { label: "Sentiment", v: aviData.sentiment_score },
+              { label: "Stability", v: aviData.stability_score },
+            ]}
+          />
           <div className="card p-5 space-y-4">
             <h2 className="font-display font-semibold text-foreground">Componenti AVI</h2>
             <div className="space-y-3">
-              <ComponentBar label="Presence (35%)" value={aviData.presence_score} color="hsl(186, 100%, 50%)" />
-              <ComponentBar label="Rank (25%)" value={aviData.rank_score} color="hsl(38, 95%, 58%)" />
-              <ComponentBar label="Sentiment (20%)" value={aviData.sentiment_score} color="hsl(152, 68%, 46%)" />
-              <ComponentBar label="Stability (20%)" value={aviData.stability_score} color="hsl(270, 70%, 60%)" />
+              {[
+                { label: "Presence (35%)", value: aviData.presence_score, color: "hsl(186, 100%, 50%)" },
+                { label: "Rank (25%)", value: aviData.rank_score, color: "hsl(38, 95%, 58%)" },
+                { label: "Sentiment (20%)", value: aviData.sentiment_score, color: "hsl(152, 68%, 46%)" },
+                { label: "Stability (20%)", value: aviData.stability_score, color: "hsl(270, 70%, 60%)" },
+              ].map((c) => (
+                <div key={c.label} className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">{c.label}</span>
+                    <span className="font-medium text-foreground">{Math.round(c.value)}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, c.value)}%`, backgroundColor: c.color }} />
+                  </div>
+                </div>
+              ))}
             </div>
-            {trend !== null && (
-              <div className={`flex items-center gap-1.5 text-sm pt-2 border-t border-border ${trendColor}`}>
-                <TrendIcon className="w-4 h-4" />
-                <span>{trend > 0 ? "+" : ""}{trend.toFixed(1)} punti rispetto alla run precedente</span>
-              </div>
-            )}
           </div>
         </div>
       )}
+
+      {/* Brand Mention Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card p-4 text-center">
+          <Eye className="w-5 h-5 text-primary mx-auto mb-2" />
+          <p className="font-display font-bold text-2xl text-foreground">{mentionRate}%</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Menzioni Brand</p>
+          <p className="text-[10px] text-muted-foreground">{mentionCount}/{totalAnalysed} prompt</p>
+        </div>
+        <div className="card p-4 text-center">
+          <Hash className="w-5 h-5 text-accent mx-auto mb-2" />
+          <p className="font-display font-bold text-2xl text-foreground">{totalOccurrences}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Occorrenze Totali</p>
+        </div>
+        <div className="card p-4 text-center">
+          <TrendingUp className="w-5 h-5 text-success mx-auto mb-2" />
+          <p className="font-display font-bold text-2xl text-foreground">{avgRank}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Rank Medio</p>
+          <p className="text-[10px] text-muted-foreground">{ranked.length} risposte con rank</p>
+        </div>
+        <div className="card p-4 text-center">
+          <TrendingDown className="w-5 h-5 text-primary mx-auto mb-2" />
+          <p className="font-display font-bold text-2xl text-foreground">{avgSentiment}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Sentiment Medio</p>
+          <p className="text-[10px] text-muted-foreground">scala -1 / +1</p>
+        </div>
+      </div>
 
       {/* Competitors & Topics */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -163,14 +221,17 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-primary" />
             <h2 className="font-display font-semibold text-foreground">Competitor Trovati</h2>
-            <span className="badge badge-muted text-[10px]">{(competitors ?? []).length}</span>
+            <span className="badge badge-muted text-[10px]">{competitorList.length}</span>
           </div>
-          {!(competitors ?? []).length ? (
+          {competitorList.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Nessun competitor individuato</p>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {(competitors ?? []).map((c: any) => (
-                <span key={c.id} className="badge badge-primary">{c.name}</span>
+              {competitorList.map(([name, count]) => (
+                <span key={name} className="badge badge-primary flex items-center gap-1">
+                  {name}
+                  <span className="text-[9px] opacity-70">({count})</span>
+                </span>
               ))}
             </div>
           )}
@@ -180,15 +241,21 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
           <div className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-accent" />
             <h2 className="font-display font-semibold text-foreground">Topic Emersi</h2>
-            <span className="badge badge-muted text-[10px]">{(topics ?? []).length}</span>
+            <span className="badge badge-muted text-[10px]">{topicList.length}</span>
           </div>
-          {!(topics ?? []).length ? (
+          {topicList.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Nessun topic individuato</p>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {(topics ?? []).map((t: any) => (
-                <span key={t.id} className="badge badge-muted">{t.name}</span>
-              ))}
+              {topicList.map(([name, count]) => {
+                const size = count >= 5 ? "text-sm" : count >= 3 ? "text-xs" : "text-[10px]";
+                const opacity = count >= 5 ? "opacity-100" : count >= 3 ? "opacity-80" : "opacity-60";
+                return (
+                  <span key={name} className={`badge badge-muted ${size} ${opacity}`}>
+                    {name}
+                  </span>
+                );
+              })}
             </div>
           )}
         </div>
@@ -221,9 +288,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
                           <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0" />
                           <span className="truncate max-w-[300px]">{s.url}</span>
                         </span>
-                      ) : (
-                        s.domain ?? "-"
-                      )}
+                      ) : s.domain ?? "-"}
                     </td>
                     <td className="py-2 pr-4 text-muted-foreground">{s.label ?? "-"}</td>
                     <td className="py-2 pr-4"><span className="badge badge-muted text-[10px]">{s.source_type}</span></td>
@@ -239,7 +304,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
       {/* Prompt results table */}
       {(prompts ?? []).length > 0 && (
         <div className="card p-5 space-y-3">
-          <h2 className="font-display font-semibold text-foreground">Prompt Eseguiti</h2>
+          <h2 className="font-display font-semibold text-foreground">Prompt Eseguiti ({(prompts ?? []).length})</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -285,8 +350,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
                           ? <span className="badge badge-muted text-destructive text-[10px]">Errore</span>
                           : p.raw_response
                             ? <span className="badge badge-success text-[10px]">OK</span>
-                            : <span className="badge badge-muted text-[10px]">Pending</span>
-                        }
+                            : <span className="badge badge-muted text-[10px]">Pending</span>}
                       </td>
                     </tr>
                   );

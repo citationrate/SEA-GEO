@@ -15,16 +15,17 @@ interface AnalysisRow {
   brand_rank: number | null;
   sentiment_score: number | null;
   run_number: number;
+  query_id: string;
+  segment_id: string;
 }
 
 /**
  * Calcola l'AI Visibility Index (0-100) dai risultati di analisi.
  *
- * Componenti:
- * - Presence (35%): percentuale di risposte in cui il brand è menzionato
- * - Rank (25%): posizione media del brand nelle risposte (1=top → 100, non citato=0)
- * - Sentiment (20%): sentiment medio normalizzato a 0-100
- * - Stability (20%): consistenza della menzione tra i diversi run
+ * - Presence (35%): % prompt con brand_mentioned=true
+ * - Rank (25%): media di (1/brand_rank) dove menzionato, 0 altrimenti → scala 0-100
+ * - Sentiment (20%): media dei sentiment_score (non null), default 0.5 → scala 0-100
+ * - Stability (20%): per ogni coppia query+segment, quante delle 3 run concordano → media
  */
 export function calculateAVI(analyses: AnalysisRow[]): AVIResult {
   if (analyses.length === 0) {
@@ -34,48 +35,53 @@ export function calculateAVI(analyses: AnalysisRow[]): AVIResult {
     };
   }
 
-  // --- Presence (35%): % di risposte con brand menzionato ---
+  // --- Presence (35%): % prompt con brand menzionato ---
   const mentionedCount = analyses.filter((a) => a.brand_mentioned).length;
   const presence_score = (mentionedCount / analyses.length) * 100;
 
-  // --- Rank (25%): media posizione → punteggio ---
-  // brand_rank = 1 → 100, rank 10+ → 0, non citato (null) → 0
-  let rank_score = 0;
-  const allRankScores = analyses.map((a) => {
-    if (a.brand_rank === null || a.brand_rank <= 0) return 0;
-    return Math.max(0, Math.min(100, ((10 - a.brand_rank) / 9) * 100));
+  // --- Rank (25%): media di 1/brand_rank per i menzionati, 0 per non menzionati ---
+  const rankValues = analyses.map((a) => {
+    if (!a.brand_mentioned || a.brand_rank === null || a.brand_rank <= 0) return 0;
+    return 1 / a.brand_rank;
   });
-  rank_score = allRankScores.reduce((s, v) => s + v, 0) / allRankScores.length;
+  const avgRankInverse = rankValues.reduce((s, v) => s + v, 0) / rankValues.length;
+  const rank_score = avgRankInverse * 100; // 1/1=1→100, 1/2=0.5→50, etc.
 
-  // --- Sentiment (20%): media normalizzata (input -1..1 → 0..100) ---
+  // --- Sentiment (20%): media dei sentiment_score non null, default 0.5 ---
   const withSentiment = analyses.filter((a) => a.sentiment_score !== null);
-  let sentiment_score = 50;
+  let sentimentAvg = 0.5;
   if (withSentiment.length > 0) {
-    const avgSentiment = withSentiment.reduce((sum, a) => sum + a.sentiment_score!, 0) / withSentiment.length;
-    sentiment_score = ((avgSentiment + 1) / 2) * 100;
+    sentimentAvg = withSentiment.reduce((sum, a) => sum + a.sentiment_score!, 0) / withSentiment.length;
   }
+  // Normalizza da -1..1 a 0..100
+  const sentiment_score = ((sentimentAvg + 1) / 2) * 100;
 
-  // --- Stability (20%): consistenza tra run diversi ---
-  // Raggruppa per run_number, calcola % menzione per ogni run, poi deviazione standard
-  const runGroups = new Map<number, boolean[]>();
+  // --- Stability (20%): per ogni coppia query+segment, calcola concordanza tra run ---
+  const pairGroups = new Map<string, boolean[]>();
   for (const a of analyses) {
-    const group = runGroups.get(a.run_number) ?? [];
+    const key = `${a.query_id}__${a.segment_id}`;
+    const group = pairGroups.get(key) ?? [];
     group.push(a.brand_mentioned);
-    runGroups.set(a.run_number, group);
+    pairGroups.set(key, group);
   }
 
   let stability_score = 100;
-  if (runGroups.size > 1) {
-    const runRates = Array.from(runGroups.values()).map(
-      (group) => group.filter(Boolean).length / group.length
-    );
-    const mean = runRates.reduce((s, r) => s + r, 0) / runRates.length;
-    const variance = runRates.reduce((s, r) => s + (r - mean) ** 2, 0) / runRates.length;
-    const stdDev = Math.sqrt(variance);
-    stability_score = Math.max(0, Math.min(100, (1 - stdDev * 2) * 100));
+  if (pairGroups.size > 0) {
+    const pairScores: number[] = [];
+    for (const runs of Array.from(pairGroups.values())) {
+      if (runs.length <= 1) {
+        pairScores.push(100);
+        continue;
+      }
+      // Conta quante concordano col risultato di maggioranza
+      const trueCount = runs.filter(Boolean).length;
+      const majority = Math.max(trueCount, runs.length - trueCount);
+      pairScores.push((majority / runs.length) * 100);
+    }
+    stability_score = pairScores.reduce((s, v) => s + v, 0) / pairScores.length;
   }
 
-  // --- AVI composito (35/25/20/20) ---
+  // --- AVI composito ---
   const avi_score = Math.round(
     presence_score * 0.35 +
     rank_score * 0.25 +
