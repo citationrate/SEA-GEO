@@ -128,10 +128,10 @@ ${a ? `
 <h2>AVI Components</h2>
 <div class="avi-box">
   ${[
-    { label: "Presence (35%)", val: (a.presence_score ?? 0) * 100 },
-    { label: "Rank (25%)", val: (a.rank_score ?? 0) * 100 },
-    { label: "Sentiment (20%)", val: (a.sentiment_score ?? 0) * 100 },
-    { label: "Stability (20%)", val: (a.stability_score ?? 0) * 100 },
+    { label: "Prominence", val: (a.presence_score ?? 0) * 100 },
+    { label: "Rank", val: (a.rank_score ?? 0) * 100 },
+    { label: "Sentiment", val: (a.sentiment_score ?? 0) * 100 },
+    { label: "Consistency", val: (a.stability_score ?? 0) * 100 },
   ].map((c) => `
   <div class="bar-row">
     <span class="bar-label">${c.label}</span>

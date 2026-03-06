@@ -76,7 +76,7 @@ REGOLE ASSOLUTE per i competitor:
 
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-4o",
     temperature: 0,
     response_format: { type: "json_object" },
     messages: [

@@ -72,6 +72,12 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     .eq("project_id", params.id)
     .eq("discovered_at_run_id", params.runId);
 
+  // Fetch competitor AVI scores for this run
+  const { data: competitorAvi } = await (supabase.from("competitor_avi") as any)
+    .select("competitor_name, avi_score")
+    .eq("run_id", params.runId);
+  const compAviMap = new Map<string, number>((competitorAvi ?? []).map((c: any) => [c.competitor_name, c.avi_score as number]));
+
   const { data: topics } = await supabase
     .from("topics")
     .select("*")
@@ -104,7 +110,11 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
       allCompetitors.set(c, (allCompetitors.get(c) ?? 0) + 1);
     });
   });
-  const competitorList = Array.from(allCompetitors.entries()).sort((a, b) => b[1] - a[1]);
+  const competitorList = Array.from(allCompetitors.entries()).sort((a, b) => {
+    const aviA = compAviMap.get(a[0]) ?? 0;
+    const aviB = compAviMap.get(b[0]) ?? 0;
+    return aviB - aviA || b[1] - a[1];
+  });
 
   // All topics from analyses
   const allTopics = new Map<string, number>();
@@ -162,20 +172,20 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
             score={aviData.avi_score}
             trend={trend}
             components={[
-              { label: "Presence",  v: aviData.presence_score != null ? aviData.presence_score * 100 : null },
-              { label: "Rank",      v: aviData.rank_score != null ? aviData.rank_score * 100 : null },
-              { label: "Sentiment", v: aviData.sentiment_score != null ? aviData.sentiment_score * 100 : null },
-              { label: "Stability", v: aviData.stability_score != null ? aviData.stability_score * 100 : null },
+              { label: "Prominence", v: aviData.presence_score != null ? aviData.presence_score * 100 : null },
+              { label: "Rank",       v: aviData.rank_score != null ? aviData.rank_score * 100 : null },
+              { label: "Sentiment",  v: aviData.sentiment_score != null ? aviData.sentiment_score * 100 : null },
+              { label: "Consistency", v: aviData.stability_score != null ? aviData.stability_score * 100 : null },
             ]}
           />
           <div className="card p-5 space-y-4">
             <h2 className="font-display font-semibold text-foreground">Componenti AVI</h2>
             <div className="space-y-3">
               {[
-                { label: "Presence", value: (aviData.presence_score ?? 0) * 100, color: "hsl(186, 100%, 50%)" },
+                { label: "Prominence", value: (aviData.presence_score ?? 0) * 100, color: "hsl(186, 100%, 50%)" },
                 { label: "Rank", value: (aviData.rank_score ?? 0) * 100, color: "hsl(38, 95%, 58%)" },
                 { label: "Sentiment", value: (aviData.sentiment_score ?? 0) * 100, color: "hsl(152, 68%, 46%)" },
-                { label: "Stability", value: (aviData.stability_score ?? 0) * 100, color: "hsl(270, 70%, 60%)" },
+                { label: "Consistency", value: (aviData.stability_score ?? 0) * 100, color: "hsl(270, 70%, 60%)" },
               ].map((c) => (
                 <div key={c.label} className="space-y-1">
                   <div className="flex justify-between text-xs">
@@ -231,12 +241,21 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
             <p className="text-sm text-muted-foreground text-center py-4">Nessun competitor individuato</p>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {competitorList.map(([name, count]) => (
-                <span key={name} className="badge badge-primary flex items-center gap-1">
-                  {name}
-                  <span className="text-[9px] opacity-70">({count})</span>
-                </span>
-              ))}
+              {competitorList.map(([name, count]) => {
+                const cAvi = compAviMap.get(name);
+                const aviColor = cAvi != null
+                  ? cAvi >= 70 ? "text-success" : cAvi >= 40 ? "text-amber-500" : "text-destructive"
+                  : "";
+                return (
+                  <span key={name} className="badge badge-primary flex items-center gap-1.5">
+                    {name}
+                    <span className="text-[9px] opacity-70">({count})</span>
+                    {cAvi != null && (
+                      <span className={`text-[10px] font-bold ${aviColor}`}>AVI {cAvi}</span>
+                    )}
+                  </span>
+                );
+              })}
             </div>
           )}
         </div>

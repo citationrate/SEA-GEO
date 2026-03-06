@@ -139,7 +139,7 @@ async function computeAndUpsertAVI(
 
   const total = rows.length;
 
-  // presence_score: count(brand_mentioned=true) / total
+  // prominence_score (ex presence): count(brand_mentioned=true) / total
   const presence_score = rows.filter((r: any) => r.brand_mentioned).length / total;
 
   // rank_score: media di Math.max(0, 1-(brand_rank-1)/10), 0 se null
@@ -155,7 +155,7 @@ async function computeAndUpsertAVI(
     : 0;
   const sentiment_score = (sentAvg + 1) / 2;
 
-  // stability_score: per query_id+segment_id, % run che concordano. Media.
+  // consistency_score (ex stability): per query_id+segment_id, % run che concordano. Media.
   const pairs = new Map<string, boolean[]>();
   for (const r of rows) {
     const pe = promptMap.get(r.prompt_executed_id);
@@ -428,6 +428,7 @@ export async function POST(request: Request) {
 
       // Final AVI recalculation via SQL function
       await (supabase.rpc as any)("compute_and_save_avi", { p_run_id: run.id });
+      await (supabase.rpc as any)("compute_competitor_avi", { p_run_id: run.id });
 
       return NextResponse.json({
         run_id: run.id,

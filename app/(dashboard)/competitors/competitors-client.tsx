@@ -32,6 +32,7 @@ interface CompRow {
   firstSeen: string;
   lastSeen: string;
   themeAnalysis: ThemeAnalysis | null;
+  aviScore: number | null;
 }
 
 interface TopicGroup {
@@ -71,10 +72,12 @@ export function CompetitorsClient({
   rows,
   topicGroups,
   projectIds,
+  brandAviScore,
 }: {
   rows: CompRow[];
   topicGroups: TopicGroup[];
   projectIds: string[];
+  brandAviScore?: number | null;
 }) {
   const router = useRouter();
   const [view, setView] = useState<"competitor" | "ambito">("competitor");
@@ -164,7 +167,39 @@ export function CompetitorsClient({
           <p className="text-muted-foreground">Nessun competitor trovato. Lancia un&apos;analisi per scoprirli.</p>
         </div>
       ) : view === "competitor" ? (
-        <CompetitorView rows={rows} onThemeClick={(compName, theme) => setDrawerTheme({ compName, theme })} />
+        <>
+          {/* Benchmark vs Brand */}
+          {brandAviScore != null && rows.some((r) => r.aviScore != null) && (
+            <div className="card p-5 space-y-3">
+              <h2 className="font-display font-semibold text-foreground text-sm">Benchmark vs Brand</h2>
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-xs text-muted-foreground">Il tuo brand</span>
+                <span className="font-display font-bold text-primary text-lg">AVI {brandAviScore}</span>
+              </div>
+              <div className="space-y-2">
+                {rows.filter((r) => r.aviScore != null).map((r) => {
+                  const diff = (r.aviScore ?? 0) - brandAviScore;
+                  const barWidth = Math.min(100, ((r.aviScore ?? 0) / Math.max(brandAviScore, 1)) * 100);
+                  return (
+                    <div key={r.name} className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-foreground w-32 truncate">{r.name}</span>
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${diff > 0 ? "bg-destructive/70" : "bg-success/70"}`}
+                          style={{ width: `${barWidth}%` }}
+                        />
+                      </div>
+                      <span className={`text-xs font-bold w-16 text-right ${diff > 0 ? "text-destructive" : "text-success"}`}>
+                        AVI {r.aviScore} ({diff > 0 ? "+" : ""}{diff})
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <CompetitorView rows={rows} onThemeClick={(compName, theme) => setDrawerTheme({ compName, theme })} />
+        </>
       ) : (
         <AmbitoView topicGroups={topicGroups} rows={rows} />
       )}
@@ -221,9 +256,18 @@ function CompetitorCard({
           </span>
           <h3 className="font-display font-bold text-lg text-foreground">{row.name}</h3>
         </div>
-        <span className="badge badge-primary font-display font-bold">
-          {row.mentions} citazioni
-        </span>
+        <div className="flex items-center gap-2">
+          {row.aviScore != null && (
+            <span className={`font-display font-bold text-sm px-2 py-0.5 rounded-md ${
+              row.aviScore >= 70 ? "bg-success/10 text-success" : row.aviScore >= 40 ? "bg-amber-500/10 text-amber-500" : "bg-destructive/10 text-destructive"
+            }`}>
+              AVI {row.aviScore}
+            </span>
+          )}
+          <span className="badge badge-primary font-display font-bold">
+            {row.mentions} citazioni
+          </span>
+        </div>
       </div>
 
       {/* Positioning summary */}

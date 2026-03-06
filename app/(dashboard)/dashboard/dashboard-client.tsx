@@ -7,7 +7,7 @@ interface DashboardClientProps {
   aviTrend: number | null;
   aviComponents?: { label: string; v: number | null }[];
   stats: { label: string; value: string; sub: string }[];
-  trendData: { run: string; avi: number; presence: number; sentiment: number }[];
+  trendData: { run: string; avi: number; prominence: number; sentiment: number }[];
   recentRuns: { id: string; project_id: string; project_name: string; version: number; status: string; avi_score: number | null; date: string }[];
   competitorBarData: { name: string; count: number }[];
 }

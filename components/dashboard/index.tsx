@@ -22,10 +22,10 @@ export function AVIRing({ score, trend, components }: AVIRingProps) {
     : trend > 0 ? "text-success" : "text-destructive";
 
   const comps = components ?? [
-    { label: "Presence",  v: null },
-    { label: "Rank",      v: null },
-    { label: "Sentiment", v: null },
-    { label: "Stability", v: null },
+    { label: "Prominence", v: null },
+    { label: "Rank",       v: null },
+    { label: "Sentiment",  v: null },
+    { label: "Consistency", v: null },
   ];
 
   return (
@@ -115,7 +115,7 @@ export function StatsRow({ stats }: { stats?: StatItem[] }) {
 interface TrendDataPoint {
   run: string;
   avi: number;
-  presence: number;
+  prominence: number;
   sentiment: number;
 }
 
@@ -152,7 +152,7 @@ export function AVITrend({ data }: { data?: TrendDataPoint[] }) {
           {[
             { label: "AVI",        color: "hsl(var(--primary))" },
             { label: "Sentiment",  color: "hsl(var(--accent))"  },
-            { label: "Presence",   color: "hsl(var(--success))" },
+            { label: "Prominence", color: "hsl(var(--success))" },
           ].map(l => (
             <span key={l.label} className="flex items-center gap-1.5">
               <span className="w-4 h-0.5 rounded-full inline-block" style={{ background: l.color }} />
@@ -169,7 +169,7 @@ export function AVITrend({ data }: { data?: TrendDataPoint[] }) {
           <Tooltip contentStyle={TOOLTIP_STYLE}/>
           <Line type="monotone" dataKey="avi"       stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3, fill: "hsl(var(--primary))" }}/>
           <Line type="monotone" dataKey="sentiment" stroke="hsl(var(--accent))"  strokeWidth={2} dot={{ r: 3, fill: "hsl(var(--accent))"  }}/>
-          <Line type="monotone" dataKey="presence"  stroke="hsl(var(--success))" strokeWidth={2} dot={{ r: 3, fill: "hsl(var(--success))" }}/>
+          <Line type="monotone" dataKey="prominence" stroke="hsl(var(--success))" strokeWidth={2} dot={{ r: 3, fill: "hsl(var(--success))" }}/>
         </LineChart>
       </ResponsiveContainer>
     </div>
