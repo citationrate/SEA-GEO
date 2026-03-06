@@ -36,7 +36,7 @@ export default async function ResultsPage() {
     .order("created_at", { ascending: false });
 
   // Get project info for each run
-  const projectIds = [...new Set((runs ?? []).map((r: any) => r.project_id))];
+  const projectIds = Array.from(new Set((runs ?? []).map((r: any) => r.project_id)));
   const { data: projects } = projectIds.length > 0
     ? await supabase.from("projects").select("id, name, target_brand").in("id", projectIds)
     : { data: [] };
