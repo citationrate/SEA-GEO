@@ -312,15 +312,17 @@ export default function SegmentsPage() {
 }
 
 /* ─── Chip Component ─── */
-function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function Chip({ label, active, custom, onClick }: { label: string; active: boolean; custom?: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
         active
-          ? "border-primary text-primary bg-primary/10"
-          : "border-border text-muted-foreground bg-transparent hover:border-muted-foreground/40"
+          ? custom
+            ? "border border-dashed border-primary text-primary bg-primary/15"
+            : "border border-primary text-primary bg-primary/15"
+          : "border border-border text-muted-foreground bg-transparent hover:border-foreground/40"
       }`}
     >
       {label}
@@ -328,13 +330,44 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
   );
 }
 
+/* ─── Custom chip input ─── */
+function CustomChipInput({ placeholder, onAdd }: { placeholder?: string; onAdd: (val: string) => void }) {
+  const [val, setVal] = useState("");
+  function submit() {
+    const v = val.trim();
+    if (!v) return;
+    onAdd(v);
+    setVal("");
+  }
+  return (
+    <div className="flex gap-1.5 mt-1.5">
+      <input
+        type="text"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), submit())}
+        placeholder={placeholder ?? "Aggiungi custom..."}
+        className="input-base flex-1 !py-1.5 !text-xs"
+      />
+      <button onClick={submit}
+        className="flex items-center justify-center w-8 h-8 rounded-lg border border-primary/40 text-primary hover:bg-primary/10 transition-colors shrink-0">
+        <Plus className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 /* ─── Section label ─── */
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <h4 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mt-5 mb-2">{children}</h4>;
+  return (
+    <div className="pt-6 pb-2 border-t border-border mt-6 first:mt-0 first:border-t-0 first:pt-0">
+      <h4 className="text-sm font-semibold uppercase tracking-widest text-primary">{children}</h4>
+    </div>
+  );
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-xs font-medium text-foreground mb-1.5">{children}</p>;
+  return <p className="text-xs font-medium text-foreground mb-1.5 mt-4">{children}</p>;
 }
 
 /* ─── Persona Builder Drawer ─── */
@@ -349,13 +382,18 @@ function PersonaDrawer({
 }) {
   const [name, setName] = useState("");
   const [attrs, setAttrs] = useState<PersonaAttributes>({});
-  const [customZona, setCustomZona] = useState("");
+  const [customSingles, setCustomSingles] = useState<Partial<Record<keyof PersonaAttributes, string[]>>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   // Single-select helpers
   function setSingle(key: keyof PersonaAttributes, val: string) {
     setAttrs((prev) => ({ ...prev, [key]: prev[key] === val ? undefined : val }));
+  }
+
+  function addCustomSingle(key: keyof PersonaAttributes, val: string) {
+    setCustomSingles((prev) => ({ ...prev, [key]: [...(prev[key] ?? []), val] }));
+    setAttrs((prev) => ({ ...prev, [key]: val }));
   }
 
   // Multi-select helpers
@@ -366,11 +404,9 @@ function PersonaDrawer({
     });
   }
 
-  function addCustomZona() {
-    const z = customZona.trim();
-    if (!z) return;
-    toggleMulti("zona", z);
-    setCustomZona("");
+  function addCustomMulti(key: keyof PersonaAttributes, val: string) {
+    setCustomSingles((prev) => ({ ...prev, [key]: [...(prev[key] ?? []), val] }));
+    toggleMulti(key, val);
   }
 
   const prompt = useMemo(() => generatePrompt(name, attrs), [name, attrs]);
@@ -418,7 +454,7 @@ function PersonaDrawer({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-1">
+        <div className="flex-1 overflow-y-auto px-5 py-4">
           {/* Name */}
           <FieldLabel>Nome persona *</FieldLabel>
           <input
@@ -433,115 +469,146 @@ function PersonaDrawer({
           <SectionLabel>Demografiche</SectionLabel>
 
           <FieldLabel>Sesso</FieldLabel>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {SESSO_OPTIONS.map((o) => (
               <Chip key={o} label={o} active={attrs.sesso === o} onClick={() => setSingle("sesso", o)} />
             ))}
+            {(customSingles.sesso ?? []).filter((c) => !SESSO_OPTIONS.includes(c)).map((c) => (
+              <Chip key={c} label={c} active={attrs.sesso === c} custom onClick={() => setSingle("sesso", c)} />
+            ))}
           </div>
+          <CustomChipInput placeholder="Sesso custom..." onAdd={(v) => addCustomSingle("sesso", v)} />
 
-          <FieldLabel>Et\u00E0</FieldLabel>
-          <div className="flex flex-wrap gap-1.5">
+          <FieldLabel>Et&agrave;</FieldLabel>
+          <div className="flex flex-wrap gap-2">
             {ETA_OPTIONS.map((o) => (
               <Chip key={o} label={o} active={attrs.eta?.includes(o) ?? false} onClick={() => toggleMulti("eta", o)} />
             ))}
+            {(customSingles.eta ?? []).filter((c) => !ETA_OPTIONS.includes(c)).map((c) => (
+              <Chip key={c} label={c} active={attrs.eta?.includes(c) ?? false} custom onClick={() => toggleMulti("eta", c)} />
+            ))}
           </div>
+          <CustomChipInput placeholder="Fascia et&agrave; custom..." onAdd={(v) => addCustomMulti("eta", v)} />
 
           <FieldLabel>Zona</FieldLabel>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {ZONA_OPTIONS.map((o) => (
               <Chip key={o} label={o} active={attrs.zona?.includes(o) ?? false} onClick={() => toggleMulti("zona", o)} />
             ))}
             {(attrs.zona ?? []).filter((z) => !ZONA_OPTIONS.includes(z)).map((z) => (
-              <Chip key={z} label={z} active={true} onClick={() => toggleMulti("zona", z)} />
+              <Chip key={z} label={z} active={true} custom onClick={() => toggleMulti("zona", z)} />
             ))}
           </div>
-          <div className="flex gap-1.5 mt-1">
-            <input
-              type="text"
-              value={customZona}
-              onChange={(e) => setCustomZona(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustomZona())}
-              placeholder="Zona custom..."
-              className="input-base flex-1 !py-1.5 !text-xs"
-            />
-            <button onClick={addCustomZona}
-              className="text-xs text-primary hover:text-primary/70 transition-colors font-medium px-2">
-              Aggiungi
-            </button>
-          </div>
+          <CustomChipInput placeholder="Zona custom..." onAdd={(v) => addCustomMulti("zona", v)} />
 
           <FieldLabel>Occupazione</FieldLabel>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {OCCUPAZIONE_OPTIONS.map((o) => (
               <Chip key={o} label={o} active={attrs.occupazione?.includes(o) ?? false} onClick={() => toggleMulti("occupazione", o)} />
             ))}
+            {(customSingles.occupazione ?? []).filter((c) => !OCCUPAZIONE_OPTIONS.includes(c)).map((c) => (
+              <Chip key={c} label={c} active={attrs.occupazione?.includes(c) ?? false} custom onClick={() => toggleMulti("occupazione", c)} />
+            ))}
           </div>
+          <CustomChipInput placeholder="Occupazione custom..." onAdd={(v) => addCustomMulti("occupazione", v)} />
 
           <FieldLabel>Titolo di studio</FieldLabel>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {TITOLO_OPTIONS.map((o) => (
               <Chip key={o} label={o} active={attrs.titolo_studio === o} onClick={() => setSingle("titolo_studio", o)} />
             ))}
+            {(customSingles.titolo_studio ?? []).filter((c) => !TITOLO_OPTIONS.includes(c)).map((c) => (
+              <Chip key={c} label={c} active={attrs.titolo_studio === c} custom onClick={() => setSingle("titolo_studio", c)} />
+            ))}
           </div>
+          <CustomChipInput placeholder="Titolo custom..." onAdd={(v) => addCustomSingle("titolo_studio", v)} />
 
           <FieldLabel>Reddito</FieldLabel>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {REDDITO_OPTIONS.map((o) => (
               <Chip key={o} label={o} active={attrs.reddito === o} onClick={() => setSingle("reddito", o)} />
             ))}
+            {(customSingles.reddito ?? []).filter((c) => !REDDITO_OPTIONS.includes(c)).map((c) => (
+              <Chip key={c} label={c} active={attrs.reddito === c} custom onClick={() => setSingle("reddito", c)} />
+            ))}
           </div>
+          <CustomChipInput placeholder="Reddito custom..." onAdd={(v) => addCustomSingle("reddito", v)} />
 
           {/* PSICOGRAFICHE */}
           <SectionLabel>Psicografiche</SectionLabel>
 
           <FieldLabel>Interessi</FieldLabel>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {INTERESSI_OPTIONS.map((o) => (
               <Chip key={o} label={o} active={attrs.interessi?.includes(o) ?? false} onClick={() => toggleMulti("interessi", o)} />
             ))}
+            {(customSingles.interessi ?? []).filter((c) => !INTERESSI_OPTIONS.includes(c)).map((c) => (
+              <Chip key={c} label={c} active={attrs.interessi?.includes(c) ?? false} custom onClick={() => toggleMulti("interessi", c)} />
+            ))}
           </div>
+          <CustomChipInput placeholder="Interesse custom..." onAdd={(v) => addCustomMulti("interessi", v)} />
 
           <FieldLabel>Valori</FieldLabel>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {VALORI_OPTIONS.map((o) => (
               <Chip key={o} label={o} active={attrs.valori?.includes(o) ?? false} onClick={() => toggleMulti("valori", o)} />
             ))}
+            {(customSingles.valori ?? []).filter((c) => !VALORI_OPTIONS.includes(c)).map((c) => (
+              <Chip key={c} label={c} active={attrs.valori?.includes(c) ?? false} custom onClick={() => toggleMulti("valori", c)} />
+            ))}
           </div>
+          <CustomChipInput placeholder="Valore custom..." onAdd={(v) => addCustomMulti("valori", v)} />
 
           <FieldLabel>Stile di vita</FieldLabel>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {STILE_OPTIONS.map((o) => (
               <Chip key={o} label={o} active={attrs.stile_vita?.includes(o) ?? false} onClick={() => toggleMulti("stile_vita", o)} />
             ))}
+            {(customSingles.stile_vita ?? []).filter((c) => !STILE_OPTIONS.includes(c)).map((c) => (
+              <Chip key={c} label={c} active={attrs.stile_vita?.includes(c) ?? false} custom onClick={() => toggleMulti("stile_vita", c)} />
+            ))}
           </div>
+          <CustomChipInput placeholder="Stile custom..." onAdd={(v) => addCustomMulti("stile_vita", v)} />
 
           {/* COMPORTAMENTALI */}
           <SectionLabel>Comportamentali</SectionLabel>
 
           <FieldLabel>Fase acquisto</FieldLabel>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {FASE_OPTIONS.map((o) => (
               <Chip key={o} label={o} active={attrs.fase_acquisto === o} onClick={() => setSingle("fase_acquisto", o)} />
             ))}
+            {(customSingles.fase_acquisto ?? []).filter((c) => !FASE_OPTIONS.includes(c)).map((c) => (
+              <Chip key={c} label={c} active={attrs.fase_acquisto === c} custom onClick={() => setSingle("fase_acquisto", c)} />
+            ))}
           </div>
+          <CustomChipInput placeholder="Fase custom..." onAdd={(v) => addCustomSingle("fase_acquisto", v)} />
 
           <FieldLabel>Expertise settore</FieldLabel>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {EXPERTISE_OPTIONS.map((o) => (
               <Chip key={o} label={o} active={attrs.expertise === o} onClick={() => setSingle("expertise", o)} />
             ))}
+            {(customSingles.expertise ?? []).filter((c) => !EXPERTISE_OPTIONS.includes(c)).map((c) => (
+              <Chip key={c} label={c} active={attrs.expertise === c} custom onClick={() => setSingle("expertise", c)} />
+            ))}
           </div>
+          <CustomChipInput placeholder="Expertise custom..." onAdd={(v) => addCustomSingle("expertise", v)} />
 
           <FieldLabel>Frequenza acquisto</FieldLabel>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {FREQUENZA_OPTIONS.map((o) => (
               <Chip key={o} label={o} active={attrs.frequenza_acquisto === o} onClick={() => setSingle("frequenza_acquisto", o)} />
             ))}
+            {(customSingles.frequenza_acquisto ?? []).filter((c) => !FREQUENZA_OPTIONS.includes(c)).map((c) => (
+              <Chip key={c} label={c} active={attrs.frequenza_acquisto === c} custom onClick={() => setSingle("frequenza_acquisto", c)} />
+            ))}
           </div>
+          <CustomChipInput placeholder="Frequenza custom..." onAdd={(v) => addCustomSingle("frequenza_acquisto", v)} />
 
           {/* ANTEPRIMA PROMPT */}
           <SectionLabel>Anteprima Prompt</SectionLabel>
-          <div className="card p-3 border-primary/20">
+          <div className="card p-4 border-primary/20">
             <div className="flex items-center gap-1.5 mb-2">
               <Eye className="w-3.5 h-3.5 text-primary" />
               <span className="text-[10px] font-semibold uppercase tracking-widest text-primary">Preview</span>
