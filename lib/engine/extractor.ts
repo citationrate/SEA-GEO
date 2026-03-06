@@ -45,8 +45,16 @@ Regole:
 - brand_occurrences: numero di volte che il brand appare nel testo
 - sentiment_score: da -1.0 (molto negativo) a 1.0 (molto positivo) verso il brand, null se non menzionato
 - topics: argomenti principali trattati nella risposta (max 5)
-- competitors_found: tutti i brand/prodotti concorrenti menzionati (escluso il target)
-- sources: URL, domini o fonti citate nella risposta`;
+- competitors_found: brand/aziende concorrenti menzionati (escluso il target)
+- sources: URL, domini o fonti citate nella risposta
+
+REGOLE ASSOLUTE per i competitor:
+- Estrai SOLO brand/aziende, MAI prodotti specifici o modelli
+- Se vedi "Brand + Prodotto" (es. "Adidas Ultraboost", "Nike Air Max 90", "Apple iPhone"), estrai SOLO il brand ("Adidas", "Nike", "Apple")
+- Regola: se il nome contiene un numero, una versione, o un nome di modello dopo il brand → tieni solo il brand
+- NON estrarre il brand target "${targetBrand}" come competitor di se stesso
+- MAI estrarre descrizioni generiche come "scarpe da running", "brand sportivo", "competitor locale"
+- Il competitor deve essere un'azienda reale e identificabile`;
 
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const completion = await openai.chat.completions.create({

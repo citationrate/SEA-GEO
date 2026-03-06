@@ -7,6 +7,81 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const RUN_COUNT = 3;
 
+// Cache for normalized competitor names within a single run
+const normCache = new Map<string, string | null>();
+
+/**
+ * Normalize a competitor name: ensures it's a brand (not a product/model),
+ * deduplicates case-insensitively, and filters out the target brand.
+ */
+async function normalizeCompetitorName(
+  rawName: string,
+  targetBrand: string,
+): Promise<string | null> {
+  const trimmed = rawName.trim();
+  if (!trimmed) return null;
+
+  // Check cache (case-insensitive)
+  const cacheKey = trimmed.toLowerCase();
+  if (normCache.has(cacheKey)) return normCache.get(cacheKey)!;
+
+  // Quick filter: skip if it IS the target brand (case-insensitive)
+  if (cacheKey === targetBrand.toLowerCase()) {
+    normCache.set(cacheKey, null);
+    return null;
+  }
+
+  // Quick filter: skip generic descriptions
+  const genericPatterns = /^(brand|competitor|aziend|prodott|servizi|scarpe|telefon|auto |il |la |un |una )/i;
+  if (genericPatterns.test(trimmed)) {
+    normCache.set(cacheKey, null);
+    return null;
+  }
+
+  // Use GPT-4o-mini to normalize brand vs product
+  try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0,
+      max_tokens: 50,
+      messages: [{
+        role: "user",
+        content: `\u00C8 "${trimmed}" un brand/azienda o un prodotto specifico? Se \u00E8 un prodotto, dimmi solo il nome del brand padre. Rispondi SOLO con il nome corretto del brand, nessun altro testo.`,
+      }],
+    });
+
+    let normalized = (completion.choices[0]?.message?.content ?? trimmed).trim();
+
+    // Remove quotes/punctuation that GPT might add
+    normalized = normalized.replace(/^["']+|["']+$/g, "").replace(/\.$/,"").trim();
+
+    // If empty after normalization, skip
+    if (!normalized) {
+      normCache.set(cacheKey, null);
+      return null;
+    }
+
+    // Final check: is the normalized name the target brand?
+    if (normalized.toLowerCase() === targetBrand.toLowerCase()) {
+      normCache.set(cacheKey, null);
+      return null;
+    }
+
+    // Proper casing: capitalize first letter of each word
+    const proper = normalized.split(/\s+/).map(
+      (w) => w.charAt(0).toUpperCase() + w.slice(1)
+    ).join(" ");
+
+    normCache.set(cacheKey, proper);
+    return proper;
+  } catch {
+    // Fallback: use the raw name if GPT call fails
+    normCache.set(cacheKey, trimmed);
+    return trimmed;
+  }
+}
+
 const startSchema = z.object({
   project_id: z.string().uuid(),
   models_used: z.array(z.enum(["gpt-4o", "gpt-4o-mini"])).min(1),
@@ -193,6 +268,7 @@ export async function POST(request: Request) {
 
     // Process all combinations in background-like sequential execution
     let completedPrompts = 0;
+    normCache.clear();
 
     try {
       for (const query of queries as any[]) {
@@ -266,20 +342,26 @@ export async function POST(request: Request) {
                     });
                 }
 
-                // Save discovered competitors
-                for (const comp of extraction.competitors_found) {
-                  const { data: existing } = await supabase
+                // Save discovered competitors (with normalization)
+                for (const rawComp of extraction.competitors_found) {
+                  const normalizedName = await normalizeCompetitorName(rawComp, targetBrand);
+                  if (!normalizedName) continue;
+
+                  // Case-insensitive dedup: check if already exists
+                  const { data: existingRows } = await supabase
                     .from("competitors")
-                    .select("id, topic_context" as any)
-                    .eq("project_id", project_id)
-                    .eq("name", comp)
-                    .single();
+                    .select("id, name, topic_context" as any)
+                    .eq("project_id", project_id);
+
+                  const existing = (existingRows ?? []).find(
+                    (r: any) => r.name.toLowerCase() === normalizedName.toLowerCase()
+                  );
 
                   if (!existing) {
                     await (supabase.from("competitors") as any)
                       .insert({
                         project_id,
-                        name: comp,
+                        name: normalizedName,
                         is_manual: false,
                         discovered_at_run_id: run.id,
                         topic_context: extraction.topics ?? [],
