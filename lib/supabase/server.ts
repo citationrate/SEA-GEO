@@ -1,6 +1,7 @@
 import { createServerClient as _createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
+import type { CookieMethodsServer } from "@supabase/ssr";
 
 export function createServerClient() {
   const cookieStore = cookies();
@@ -10,7 +11,7 @@ export function createServerClient() {
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
-        setAll: (toSet) => {
+        setAll: (toSet: Parameters<CookieMethodsServer["setAll"]>[0]) => {
           try { toSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)); }
           catch { /* ignored in Server Components */ }
         },
@@ -19,7 +20,6 @@ export function createServerClient() {
   );
 }
 
-/** Use only in API routes — has full DB access, bypasses RLS */
 export function createServiceClient() {
   const cookieStore = cookies();
   return _createServerClient<Database>(
