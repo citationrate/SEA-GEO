@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Plus, Play, MessageSquare, Users } from "lucide-react";
+import { ArrowLeft, Plus, MessageSquare, Users } from "lucide-react";
+import { AnalysisLauncher } from "./analysis-launcher";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const supabase = createServerClient();
@@ -26,8 +27,26 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     .eq("is_active", true)
     .order("created_at", { ascending: true });
 
+  const { data: lastRun } = await supabase
+    .from("analysis_runs")
+    .select("*")
+    .eq("project_id", params.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  const { data: lastAvi } = await supabase
+    .from("avi_history")
+    .select("*")
+    .eq("project_id", params.id)
+    .order("computed_at", { ascending: false })
+    .limit(1)
+    .single();
+
   const tofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "tofu");
   const mofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "mofu");
+
+  const proj = project as any;
 
   return (
     <div className="space-y-6 max-w-[1400px] animate-fade-in">
@@ -41,22 +60,53 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         </a>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="font-display font-bold text-2xl text-foreground">{(project as any).name}</h1>
+            <h1 className="font-display font-bold text-2xl text-foreground">{proj.name}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {(project as any).target_brand}
-              {(project as any).country && <> &middot; {(project as any).country}</>}
-              {" "}&middot; {((project as any).language as string).toUpperCase()}
+              {proj.target_brand}
+              {proj.country && <> &middot; {proj.country}</>}
+              {" "}&middot; {(proj.language as string).toUpperCase()}
             </p>
           </div>
-          <a
-            href={`/projects/${params.id}/queries`}
-            className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-lg hover:bg-primary/85 transition-colors"
-          >
-            <Play className="w-4 h-4" />
-            Lancia Analisi
-          </a>
+          <AnalysisLauncher
+            projectId={params.id}
+            hasQueries={(queries ?? []).length > 0}
+            hasSegments={(segments ?? []).length > 0}
+          />
         </div>
       </div>
+
+      {/* AVI Score + Last Run */}
+      {lastAvi && (
+        <div className="card p-5">
+          <div className="flex items-center gap-6">
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground mb-1">AVI Score</p>
+              <p className="font-display font-bold text-3xl text-primary">{(lastAvi as any).avi_score}</p>
+            </div>
+            <div className="h-12 w-px bg-border" />
+            <div className="grid grid-cols-4 gap-4 flex-1">
+              {[
+                { label: "Presence", value: (lastAvi as any).presence_score },
+                { label: "Rank", value: (lastAvi as any).rank_score },
+                { label: "Sentiment", value: (lastAvi as any).sentiment_score },
+                { label: "Stability", value: (lastAvi as any).stability_score },
+              ].map((c) => (
+                <div key={c.label} className="text-center">
+                  <p className="text-xs text-muted-foreground">{c.label}</p>
+                  <p className="font-display font-semibold text-foreground">{Math.round(c.value)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          {lastRun && (
+            <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
+              Ultima analisi: {new Date((lastRun as any).completed_at ?? (lastRun as any).created_at).toLocaleString("it-IT")}
+              {" "}&middot; v{(lastRun as any).version}
+              {" "}&middot; <span className="badge badge-success text-[10px]">{(lastRun as any).status}</span>
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Query TOFU */}
@@ -67,10 +117,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               <h2 className="font-display font-semibold text-foreground">Query TOFU</h2>
               <span className="badge badge-muted text-[10px]">{tofuQueries.length}</span>
             </div>
-            <a
-              href={`/projects/${params.id}/queries`}
-              className="text-xs text-primary hover:text-primary/70 transition-colors"
-            >
+            <a href={`/projects/${params.id}/queries`} className="text-xs text-primary hover:text-primary/70 transition-colors">
               <Plus className="w-4 h-4" />
             </a>
           </div>
@@ -79,9 +126,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           ) : (
             <ul className="space-y-2">
               {tofuQueries.map((q: any) => (
-                <li key={q.id} className="text-sm text-foreground bg-muted rounded-lg px-3 py-2 border border-border">
-                  {q.text}
-                </li>
+                <li key={q.id} className="text-sm text-foreground bg-muted rounded-lg px-3 py-2 border border-border">{q.text}</li>
               ))}
             </ul>
           )}
@@ -95,10 +140,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               <h2 className="font-display font-semibold text-foreground">Query MOFU</h2>
               <span className="badge badge-muted text-[10px]">{mofuQueries.length}</span>
             </div>
-            <a
-              href={`/projects/${params.id}/queries`}
-              className="text-xs text-primary hover:text-primary/70 transition-colors"
-            >
+            <a href={`/projects/${params.id}/queries`} className="text-xs text-primary hover:text-primary/70 transition-colors">
               <Plus className="w-4 h-4" />
             </a>
           </div>
@@ -107,9 +149,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           ) : (
             <ul className="space-y-2">
               {mofuQueries.map((q: any) => (
-                <li key={q.id} className="text-sm text-foreground bg-muted rounded-lg px-3 py-2 border border-border">
-                  {q.text}
-                </li>
+                <li key={q.id} className="text-sm text-foreground bg-muted rounded-lg px-3 py-2 border border-border">{q.text}</li>
               ))}
             </ul>
           )}
@@ -124,12 +164,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             <h2 className="font-display font-semibold text-foreground">Segmenti Audience Attivi</h2>
             <span className="badge badge-muted text-[10px]">{(segments ?? []).length}</span>
           </div>
-          <a
-            href={`/projects/${params.id}/segments`}
-            className="text-xs text-primary hover:text-primary/70 transition-colors flex items-center gap-1"
-          >
-            Gestisci
-          </a>
+          <a href={`/projects/${params.id}/segments`} className="text-xs text-primary hover:text-primary/70 transition-colors">Gestisci</a>
         </div>
         {!(segments ?? []).length ? (
           <p className="text-sm text-muted-foreground py-4 text-center">Nessun segmento attivo</p>
