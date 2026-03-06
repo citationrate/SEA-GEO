@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
 import { extractFromResponse } from "@/lib/engine/extractor";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const RUN_COUNT = 3;
 
@@ -29,6 +30,97 @@ async function callOpenAI(prompt: string, model: string): Promise<string> {
     messages: [{ role: "user", content: prompt }],
   });
   return completion.choices[0]?.message?.content ?? "";
+}
+
+/**
+ * Ricalcola l'AVI leggendo TUTTI i response_analysis completati per questa run
+ * e fa upsert in avi_history. Chiamata dopo ogni prompt completato.
+ */
+async function computeAndUpsertAVI(
+  supabase: SupabaseClient,
+  runId: string,
+  projectId: string,
+) {
+  // Step 1: fetch all prompts_executed for this run
+  const { data: runPrompts } = await supabase
+    .from("prompts_executed")
+    .select("id, query_id, segment_id, run_number")
+    .eq("run_id", runId);
+
+  const promptsList = (runPrompts ?? []) as any[];
+  const promptIds = promptsList.map((p: any) => p.id);
+  if (promptIds.length === 0) return;
+
+  const promptMap = new Map(promptsList.map((p: any) => [p.id, p]));
+
+  // Step 2: fetch all response_analysis for these prompts
+  const { data: analyses } = await supabase
+    .from("response_analysis")
+    .select("*")
+    .in("prompt_executed_id", promptIds);
+
+  const rows = (analyses ?? []) as any[];
+  if (rows.length === 0) return;
+
+  const total = rows.length;
+
+  // presence_score: count(brand_mentioned=true) / total
+  const presence_score = rows.filter((r: any) => r.brand_mentioned).length / total;
+
+  // rank_score: media di Math.max(0, 1-(brand_rank-1)/10), 0 se null
+  const rank_score = rows.reduce((s: number, r: any) => {
+    if (r.brand_rank === null || r.brand_rank <= 0) return s;
+    return s + Math.max(0, 1 - (r.brand_rank - 1) / 10);
+  }, 0) / total;
+
+  // sentiment_score: (media sentiment non null, default 0) normalizzato (v+1)/2
+  const withSent = rows.filter((r: any) => r.sentiment_score !== null);
+  const sentAvg = withSent.length > 0
+    ? withSent.reduce((s: number, r: any) => s + r.sentiment_score, 0) / withSent.length
+    : 0;
+  const sentiment_score = (sentAvg + 1) / 2;
+
+  // stability_score: per query_id+segment_id, % run che concordano. Media.
+  const pairs = new Map<string, boolean[]>();
+  for (const r of rows) {
+    const pe = promptMap.get(r.prompt_executed_id);
+    if (!pe) continue;
+    const key = `${pe.query_id}__${pe.segment_id}`;
+    const group = pairs.get(key) ?? [];
+    group.push(r.brand_mentioned);
+    pairs.set(key, group);
+  }
+  let stability_score = 1;
+  if (pairs.size > 0) {
+    const scores: number[] = [];
+    for (const group of Array.from(pairs.values())) {
+      if (group.length <= 1) { scores.push(1); continue; }
+      const trueCount = group.filter(Boolean).length;
+      scores.push(Math.max(trueCount, group.length - trueCount) / group.length);
+    }
+    stability_score = scores.reduce((s, v) => s + v, 0) / scores.length;
+  }
+
+  const avi_score = Math.round(
+    presence_score * 35 + rank_score * 25 + sentiment_score * 20 + stability_score * 20
+  );
+
+  // Upsert: insert or update if run_id already exists
+  const { error: aviError } = await (supabase.from("avi_history") as any)
+    .upsert({
+      project_id: projectId,
+      run_id: runId,
+      avi_score,
+      presence_score: Math.round(presence_score * 10000) / 100,
+      rank_score: Math.round(rank_score * 10000) / 100,
+      sentiment_score: Math.round(sentiment_score * 10000) / 100,
+      stability_score: Math.round(stability_score * 10000) / 100,
+      computed_at: new Date().toISOString(),
+    }, { onConflict: "project_id,run_id" });
+
+  if (aviError) {
+    console.error("avi_history upsert error:", aviError.message);
+  }
 }
 
 export async function POST(request: Request) {
@@ -152,7 +244,7 @@ export async function POST(request: Request) {
                 const extraction = await extractFromResponse(rawResponse, targetBrand, knownCompetitors);
 
                 // Save response_analysis
-                const { data: raData, error: raError } = await (supabase.from("response_analysis") as any)
+                await (supabase.from("response_analysis") as any)
                   .insert({
                     prompt_executed_id: promptRecord.id,
                     brand_mentioned: extraction.brand_mentioned,
@@ -163,9 +255,7 @@ export async function POST(request: Request) {
                     competitors_found: extraction.competitors_found,
                     avi_score: null,
                     avi_components: null,
-                  })
-                  .select("id");
-                console.log("response_analysis insert result:", JSON.stringify(raError), JSON.stringify(raData));
+                  });
 
                 // Save sources
                 for (const source of extraction.sources) {
@@ -215,6 +305,8 @@ export async function POST(request: Request) {
                   }
                 }
 
+                // Recalculate and upsert AVI after each response_analysis
+                await computeAndUpsertAVI(supabase as any, run.id, project_id);
               }
 
               // Update progress
@@ -236,100 +328,13 @@ export async function POST(request: Request) {
         })
         .eq("id", run.id);
 
-      // Step 1: fetch all prompts_executed for this run
-      const { data: runPrompts } = await supabase
-        .from("prompts_executed")
-        .select("id, query_id, segment_id, run_number")
-        .eq("run_id", run.id);
-
-      const promptsList = (runPrompts ?? []) as any[];
-      const promptIds = promptsList.map((p: any) => p.id);
-      const promptMap = new Map(promptsList.map((p: any) => [p.id, p]));
-
-      // Step 2: fetch all response_analysis for these prompts
-      const { data: analyses } = promptIds.length > 0
-        ? await supabase
-            .from("response_analysis")
-            .select("*")
-            .in("prompt_executed_id", promptIds)
-        : { data: [] };
-
-      const rows = (analyses ?? []) as any[];
-      console.log("analyses count:", analyses?.length, "promptIds count:", promptIds.length);
-      let aviResult: any = null;
-
-      if (rows.length > 0) {
-        const total = rows.length;
-
-        // presence_score: count(brand_mentioned=true) / total
-        const presence_score = rows.filter((r: any) => r.brand_mentioned).length / total;
-
-        // rank_score: media di Math.max(0, 1-(brand_rank-1)/10), 0 se null
-        const rank_score = rows.reduce((s: number, r: any) => {
-          if (r.brand_rank === null || r.brand_rank <= 0) return s;
-          return s + Math.max(0, 1 - (r.brand_rank - 1) / 10);
-        }, 0) / total;
-
-        // sentiment_score: (media sentiment non null, default 0) normalizzato (v+1)/2
-        const withSent = rows.filter((r: any) => r.sentiment_score !== null);
-        const sentAvg = withSent.length > 0
-          ? withSent.reduce((s: number, r: any) => s + r.sentiment_score, 0) / withSent.length
-          : 0;
-        const sentiment_score = (sentAvg + 1) / 2;
-
-        // stability_score: per query_id+segment_id, % run che concordano. Media.
-        const pairs = new Map<string, boolean[]>();
-        for (const r of rows) {
-          const pe = promptMap.get(r.prompt_executed_id);
-          if (!pe) continue;
-          const key = `${pe.query_id}__${pe.segment_id}`;
-          const group = pairs.get(key) ?? [];
-          group.push(r.brand_mentioned);
-          pairs.set(key, group);
-        }
-        let stability_score = 1;
-        if (pairs.size > 0) {
-          const scores: number[] = [];
-          for (const group of Array.from(pairs.values())) {
-            if (group.length <= 1) { scores.push(1); continue; }
-            const trueCount = group.filter(Boolean).length;
-            scores.push(Math.max(trueCount, group.length - trueCount) / group.length);
-          }
-          stability_score = scores.reduce((s, v) => s + v, 0) / scores.length;
-        }
-
-        const avi_score = Math.round(
-          presence_score * 35 + rank_score * 25 + sentiment_score * 20 + stability_score * 20
-        );
-
-        // Delete existing avi_history for this run, then insert
-        await (supabase.from("avi_history") as any).delete().eq("run_id", run.id);
-
-        const { error: aviError } = await (supabase.from("avi_history") as any)
-          .insert({
-            project_id,
-            run_id: run.id,
-            avi_score,
-            presence_score: Math.round(presence_score * 10000) / 100,
-            rank_score: Math.round(rank_score * 10000) / 100,
-            sentiment_score: Math.round(sentiment_score * 10000) / 100,
-            stability_score: Math.round(stability_score * 10000) / 100,
-            computed_at: new Date().toISOString(),
-          });
-
-        console.log("avi_history insert:", JSON.stringify(aviError));
-        if (aviError) {
-          console.error("Failed to insert avi_history:", aviError.message);
-        }
-
-        aviResult = { avi_score, presence_score, rank_score, sentiment_score, stability_score };
-      }
+      // Final AVI recalculation
+      await computeAndUpsertAVI(supabase as any, run.id, project_id);
 
       return NextResponse.json({
         run_id: run.id,
         total_prompts: totalPrompts,
         completed: completedPrompts,
-        avi: aviResult,
       }, { status: 200 });
 
     } catch (err) {
