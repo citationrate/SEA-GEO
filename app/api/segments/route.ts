@@ -73,9 +73,9 @@ export async function PATCH(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
     const { id, ...updates } = parsed.data;
-    const { data, error } = await supabase
-      .from("audience_segments")
-      .update(updates as any)
+    const { data, error } = await (supabase
+      .from("audience_segments") as any)
+      .update(updates)
       .eq("id", id)
       .select("*")
       .single();
