@@ -5,7 +5,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json } | 
 
 export type FunnelStage   = "tofu" | "mofu" | "bofu";
 export type SourceType    = "explicit" | "mentioned" | "inferred" | "none";
-export type SegmentName   = "beginner" | "researcher" | "professional" | "buyer" | "custom";
+export type SegmentName   = string;
 export type AnalysisStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 export type AIModel       = "gpt-4o" | "gpt-4o-mini" | "claude-3-5-sonnet" | "gemini-1.5-pro" | "grok-2" | "perplexity-sonar" | "copilot";
 export type UserPlan      = "free" | "pro" | "agency";

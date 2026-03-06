@@ -4,10 +4,11 @@ import { z } from "zod";
 
 const segmentSchema = z.object({
   project_id: z.string().uuid(),
-  name: z.enum(["beginner", "researcher", "professional", "buyer", "custom"]),
+  name: z.string().min(1),
   label: z.string().min(1),
   prompt_context: z.string().min(1),
   is_active: z.boolean().default(true),
+  persona_attributes: z.record(z.any()).optional(),
 });
 
 const patchSchema = z.object({
@@ -15,6 +16,7 @@ const patchSchema = z.object({
   is_active: z.boolean().optional(),
   prompt_context: z.string().min(1).optional(),
   label: z.string().min(1).optional(),
+  persona_attributes: z.record(z.any()).optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -82,6 +84,27 @@ export async function PATCH(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json(data);
+  } catch {
+    return NextResponse.json({ error: "Errore interno" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = createServiceClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+
+    const id = request.nextUrl.searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "id richiesto" }, { status: 400 });
+
+    const { error } = await supabase
+      .from("audience_segments")
+      .delete()
+      .eq("id", id);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Errore interno" }, { status: 500 });
   }
