@@ -279,6 +279,9 @@ async function executePrompt(
 
   const extraction = await extractFromResponse(rawResponse, task.targetBrand, task.knownCompetitors);
 
+  console.log("Competitors found:", extraction.competitors_found);
+  console.log("Sources found:", extraction.sources);
+
   // Save response_analysis
   await (supabase.from("response_analysis") as any)
     .insert({
@@ -293,53 +296,52 @@ async function executePrompt(
       avi_components: null,
     });
 
-  // Save sources
-  for (const source of extraction.sources) {
+  // Save sources (upsert by project_id + domain)
+  for (const source of extraction.sources || []) {
     if (!source.domain) continue;
     await (supabase.from("sources") as any)
-      .insert({
+      .upsert({
+        project_id: task.projectId,
+        run_id: task.runId,
         prompt_executed_id: promptRecord.id,
-        url: source.url,
+        url: source.url || source.domain,
         domain: source.domain,
         label: source.label,
-        source_type: source.source_type,
+        source_type: source.source_type || "other",
         is_brand_owned: source.is_brand_owned,
         context: source.context,
         citation_count: 1,
+      }, {
+        onConflict: "project_id,domain",
+        ignoreDuplicates: false,
       });
   }
 
-  // Save discovered competitors (with normalization)
-  for (const rawComp of extraction.competitors_found) {
+  // Save discovered competitors (upsert with normalization)
+  for (const rawComp of extraction.competitors_found || []) {
     const normalizedName = await normalizeCompetitorName(rawComp, task.targetBrand, normCache);
-    if (!normalizedName) continue;
+    if (!normalizedName || normalizedName === task.targetBrand) continue;
 
-    const { data: existingRows } = await supabase
-      .from("competitors")
-      .select("id, name, topic_context" as any)
-      .eq("project_id", task.projectId);
+    await (supabase.from("competitors") as any)
+      .upsert({
+        project_id: task.projectId,
+        name: normalizedName,
+        is_manual: false,
+        first_seen_run_id: task.runId,
+        discovered_at_run_id: task.runId,
+        topic_context: extraction.topics ?? [],
+        query_type: task.queryFunnelStage ?? null,
+        mention_count: 1,
+      }, {
+        onConflict: "project_id,name",
+        ignoreDuplicates: false,
+      });
 
-    const existing = (existingRows ?? []).find(
-      (r: any) => r.name.toLowerCase() === normalizedName.toLowerCase()
-    );
-
-    if (!existing) {
-      await (supabase.from("competitors") as any)
-        .insert({
-          project_id: task.projectId,
-          name: normalizedName,
-          is_manual: false,
-          discovered_at_run_id: task.runId,
-          topic_context: extraction.topics ?? [],
-          query_type: task.queryFunnelStage ?? null,
-        });
-    } else {
-      const existingTopics: string[] = (existing as any).topic_context ?? [];
-      const merged = Array.from(new Set([...existingTopics, ...(extraction.topics ?? [])]));
-      await (supabase.from("competitors") as any)
-        .update({ topic_context: merged })
-        .eq("id", (existing as any).id);
-    }
+    // Increment mention_count
+    await (supabase.rpc as any)("increment_competitor_count", {
+      p_project_id: task.projectId,
+      p_name: normalizedName,
+    });
   }
 
   // Save discovered topics
