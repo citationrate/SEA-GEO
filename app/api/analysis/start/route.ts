@@ -4,14 +4,13 @@ import { z } from "zod";
 import { ALL_MODEL_IDS } from "@/lib/engine/models";
 import { inngest } from "@/lib/inngest";
 
-const RUN_COUNT = 3;
-
 const startSchema = z.object({
   project_id: z.string().uuid(),
   models_used: z.array(z.string()).min(1).refine(
     (ids) => ids.every((id) => ALL_MODEL_IDS.includes(id)),
     { message: "Modello non supportato" }
   ),
+  run_count: z.number().int().min(1).max(3).default(1),
 });
 
 export async function POST(request: Request) {
@@ -25,7 +24,7 @@ export async function POST(request: Request) {
     const parsed = startSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { project_id, models_used } = parsed.data;
+    const { project_id, models_used, run_count } = parsed.data;
 
     // Fetch project
     const { data: project } = await supabase
@@ -56,7 +55,7 @@ export async function POST(request: Request) {
       .select("*", { count: "exact", head: true })
       .eq("project_id", project_id);
 
-    const totalPrompts = queries.length * segments.length * models_used.length * RUN_COUNT;
+    const totalPrompts = queries.length * segments.length * models_used.length * run_count;
 
     // Create analysis run
     const { data: run, error: runError } = await (supabase.from("analysis_runs") as any)
@@ -65,7 +64,7 @@ export async function POST(request: Request) {
         version: (existingRuns ?? 0) + 1,
         status: "running",
         models_used,
-        run_count: RUN_COUNT,
+        run_count,
         total_prompts: totalPrompts,
         completed_prompts: 0,
         started_at: new Date().toISOString(),
@@ -84,7 +83,7 @@ export async function POST(request: Request) {
         runId: run.id,
         projectId: project_id,
         modelsUsed: models_used,
-        runCount: RUN_COUNT,
+        runCount: run_count,
       },
     });
 

@@ -440,7 +440,7 @@ export const runAnalysis = inngest.createFunction(
     }
 
     // Step 2: execute prompts in batches of 5
-    const batches = chunk(allTasks, 5);
+    const batches = chunk(allTasks, 15);
     const normCache = new Map<string, string | null>();
 
     for (let i = 0; i < batches.length; i++) {
@@ -451,7 +451,7 @@ export const runAnalysis = inngest.createFunction(
           await executePrompt(supabase, task, normCache);
         }
         // Update progress
-        const completedSoFar = Math.min((i + 1) * 5, allTasks.length);
+        const completedSoFar = Math.min((i + 1) * 15, allTasks.length);
         await (supabase.from("analysis_runs") as any)
           .update({ completed_prompts: completedSoFar })
           .eq("id", runId);

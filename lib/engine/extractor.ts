@@ -50,21 +50,11 @@ Regole:
 - topics: argomenti principali trattati nella risposta (max 5)
 - competitors_found: brand/aziende concorrenti menzionati (escluso il target)
 
-REGOLE PER LE FONTI (sources):
-- Estrai TUTTI gli URL e domini citati nella risposta, anche se solo menzionati come riferimento
-- url: l'URL completo se presente, altrimenti null
-- domain: SEMPRE il dominio pulito (es. nike.com, wikipedia.org, trustpilot.com). MAI vuoto.
-- source_type: classifica tra:
-  * "brand_owned" = sito ufficiale del brand "${targetBrand}"
-  * "competitor" = sito di un competitor
-  * "media" = giornali, riviste, blog, testate giornalistiche
-  * "review" = siti di recensioni (trustpilot, amazon reviews, tripadvisor ecc)
-  * "social" = social media (instagram, youtube, tiktok, twitter, facebook, linkedin ecc)
-  * "ecommerce" = shop online (amazon, ebay, zalando ecc)
-  * "wikipedia" = wikipedia in qualsiasi lingua
-  * "other" = tutto il resto
-- is_brand_owned: true solo se è il sito ufficiale del brand target
-- context: una frase breve che spiega in che contesto è stata citata questa fonte nella risposta
+FONTI: Estrai TUTTI i siti web, domini, URL, blog, riviste, piattaforme citati o menzionati nella risposta, anche implicitamente.
+Esempi: se dice 'secondo Gambero Rosso' → estrai 'gamberorosso.it', se dice 'disponibile su Amazon' → estrai 'amazon.it', se dice 'recensioni su Trustpilot' → estrai 'trustpilot.com'.
+Se la risposta cita categorie di siti senza nominarli esplicitamente (es. 'siti di recensioni', 'e-commerce'), estrai i domini più probabili per quel contesto.
+Restituisci array di oggetti: [{url: 'dominio.com', domain: 'dominio.com', label: null, source_type: 'media|review|ecommerce|social|brand_owned|competitor|wikipedia|other', is_brand_owned: boolean, context: 'breve spiegazione'}]
+Se non ci sono fonti restituisci [].
 
 REGOLE ASSOLUTE per i competitor:
 - Estrai SOLO brand/aziende, MAI prodotti specifici o modelli
@@ -76,7 +66,7 @@ REGOLE ASSOLUTE per i competitor:
 
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-4o-mini",
     temperature: 0,
     response_format: { type: "json_object" },
     messages: [
@@ -89,6 +79,7 @@ REGOLE ASSOLUTE per i competitor:
 
   try {
     const parsed = JSON.parse(raw);
+    console.log("Sources extracted:", JSON.stringify(parsed.sources));
     return {
       brand_mentioned: Boolean(parsed.brand_mentioned),
       brand_rank: parsed.brand_rank ?? null,

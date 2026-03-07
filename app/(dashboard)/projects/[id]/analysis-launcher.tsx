@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { Play, X, Loader2, Cpu, AlertTriangle } from "lucide-react";
 import { AI_MODELS, PROVIDER_CONFIG } from "@/lib/engine/models";
 
-const RUN_COUNT = 3;
+const RUN_OPTIONS = [
+  { value: 1, label: "1 run", desc: "Veloce" },
+  { value: 2, label: "2 run", desc: "Bilanciato" },
+  { value: 3, label: "3 run", desc: "Preciso" },
+] as const;
 
 const PROVIDERS = ["openai", "anthropic", "google", "xai"] as const;
 
@@ -25,6 +29,7 @@ export function AnalysisLauncher({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>(["gpt-4o-mini"]);
+  const [runCount, setRunCount] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -35,8 +40,8 @@ export function AnalysisLauncher({
   }
 
   const totalPrompts = useMemo(() => {
-    return selected.length * queryCount * segmentCount * RUN_COUNT;
-  }, [selected, queryCount, segmentCount]);
+    return selected.length * queryCount * segmentCount * runCount;
+  }, [selected, queryCount, segmentCount, runCount]);
 
   async function startAnalysis() {
     if (!selected.length) return;
@@ -47,7 +52,7 @@ export function AnalysisLauncher({
       const res = await fetch("/api/analysis/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, models_used: selected }),
+        body: JSON.stringify({ project_id: projectId, models_used: selected, run_count: runCount }),
       });
 
       if (!res.ok) {
@@ -148,6 +153,28 @@ export function AnalysisLauncher({
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Ogni modello AI ha una propria base di conoscenza indipendente, costruita con dataset e metodologie diverse. Analizzare lo stesso brand su piu modelli ti permette di capire come viene percepito in modo trasversale. Tieni presente che versioni diverse dello stesso modello (es. GPT-4o vs GPT-5) possono dare risultati diversi: aggiornare regolarmente le analisi con i modelli piu recenti garantisce la massima accuratezza e rilevanza dei dati.
               </p>
+            </div>
+
+            {/* Run count selector */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Numero di Run</p>
+              <div className="grid grid-cols-3 gap-2">
+                {RUN_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setRunCount(opt.value)}
+                    disabled={loading}
+                    className={`px-3 py-2.5 rounded-lg border transition-all text-center ${
+                      runCount === opt.value
+                        ? "border-primary/50 bg-primary/5"
+                        : "border-border hover:border-border/80"
+                    }`}
+                  >
+                    <p className="text-sm font-medium text-foreground">{opt.label}</p>
+                    <p className="text-[11px] text-muted-foreground">{opt.desc}</p>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Footer info */}
