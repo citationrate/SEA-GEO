@@ -344,23 +344,26 @@ async function executePrompt(
     });
   }
 
-  // Save discovered topics
-  for (const topic of extraction.topics) {
-    const { data: existingTopic } = await supabase
-      .from("topics")
-      .select("id")
-      .eq("project_id", task.projectId)
-      .eq("name", topic)
-      .single();
+  // Save discovered topics (upsert + increment frequency)
+  for (const topic of extraction.topics || []) {
+    const name = typeof topic === "string" ? topic : (topic as any).name;
+    if (!name) continue;
 
-    if (!existingTopic) {
-      await (supabase.from("topics") as any)
-        .insert({
-          project_id: task.projectId,
-          name: topic,
-          first_seen_run_id: task.runId,
-        });
-    }
+    await (supabase.from("topics") as any)
+      .upsert({
+        project_id: task.projectId,
+        name,
+        frequency: 1,
+        first_seen_run_id: task.runId,
+      }, {
+        onConflict: "project_id,name",
+        ignoreDuplicates: false,
+      });
+
+    await (supabase.rpc as any)("increment_topic_frequency", {
+      p_project_id: task.projectId,
+      p_name: name,
+    });
   }
 
   // Recalculate AVI
