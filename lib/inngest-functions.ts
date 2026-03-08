@@ -9,6 +9,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 /* ─── Helpers ─── */
 
+interface BrowsingSource {
+  url: string;
+  domain: string;
+  title?: string;
+}
+
+interface AIModelResult {
+  text: string;
+  sources: BrowsingSource[];
+}
+
 function chunk<T>(arr: T[], size: number): T[][] {
   return Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
     arr.slice(i * size, i * size + size)
@@ -20,7 +31,26 @@ function buildPrompt(query: string, segmentContext: string, language: string): s
   return `${lang}\n\nContesto utente: ${segmentContext}\n\nDomanda: ${query}`;
 }
 
-async function callAIModel(prompt: string, model: string, browsing = false): Promise<string> {
+function extractUrlsFromText(text: string): BrowsingSource[] {
+  const urlRegex = /https?:\/\/[^\s)\"'<>]+/g;
+  const matches = text.match(urlRegex) || [];
+  const results: BrowsingSource[] = [];
+  for (const url of matches) {
+    try {
+      const domain = new URL(url).hostname.replace(/^www\./, "");
+      results.push({ url, domain });
+    } catch { /* skip invalid URLs */ }
+  }
+  return results;
+}
+
+function safeDomain(url: string): string | null {
+  try { return new URL(url).hostname.replace(/^www\./, ""); }
+  catch { return null; }
+}
+
+async function callAIModel(prompt: string, model: string, browsing = false): Promise<AIModelResult> {
+  const empty: AIModelResult = { text: "", sources: [] };
   try {
     const modelDef = MODEL_MAP.get(model);
     const provider = modelDef?.provider ?? "openai";
@@ -33,7 +63,7 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
         messages: [{ role: "user", content: prompt }],
       });
       const block = msg.content[0];
-      return block.type === "text" ? block.text : "";
+      return { text: block.type === "text" ? block.text : "", sources: [] };
     }
 
     if (provider === "google") {
@@ -44,11 +74,22 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
           tools: [{ googleSearch: {} } as any],
         });
         const result = await geminiModel.generateContent(prompt);
-        return result.response.text();
+        const candidate = (result.response as any).candidates?.[0];
+        const groundingChunks = candidate?.groundingMetadata?.groundingChunks ?? [];
+        const sources: BrowsingSource[] = groundingChunks
+          .map((chunk: any) => {
+            const uri = chunk.web?.uri;
+            if (!uri) return null;
+            const domain = safeDomain(uri);
+            if (!domain) return null;
+            return { url: uri, domain, title: chunk.web?.title };
+          })
+          .filter(Boolean) as BrowsingSource[];
+        return { text: result.response.text(), sources };
       }
       const geminiModel = genai.getGenerativeModel({ model });
       const result = await geminiModel.generateContent(prompt);
-      return result.response.text();
+      return { text: result.response.text(), sources: [] };
     }
 
     if (provider === "xai") {
@@ -61,7 +102,7 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
         max_tokens: 1500,
         messages: [{ role: "user", content: prompt }],
       });
-      return completion.choices[0]?.message?.content ?? "";
+      return { text: completion.choices[0]?.message?.content ?? "", sources: [] };
     }
 
     // OpenAI (default)
@@ -74,7 +115,17 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
         tools: [{ type: "web_search_preview" }],
         input: prompt,
       });
-      return response.output_text ?? "";
+      const outputItems = response.output ?? [];
+      const sources: BrowsingSource[] = outputItems
+        .filter((item: any) => item.type === "web_search_call")
+        .flatMap((item: any) => item.results ?? [])
+        .map((r: any) => {
+          const domain = safeDomain(r.url);
+          if (!domain) return null;
+          return { url: r.url, domain, title: r.title };
+        })
+        .filter(Boolean) as BrowsingSource[];
+      return { text: response.output_text ?? "", sources };
     }
 
     if (model.startsWith("o1") || model.startsWith("o3")) {
@@ -83,7 +134,7 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
         max_completion_tokens: 1500,
         messages: [{ role: "user", content: prompt }],
       } as any);
-      return completion.choices[0]?.message?.content ?? "";
+      return { text: completion.choices[0]?.message?.content ?? "", sources: [] };
     }
 
     const completion = await openai.chat.completions.create({
@@ -92,10 +143,10 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
       max_tokens: 1500,
       messages: [{ role: "user", content: prompt }],
     });
-    return completion.choices[0]?.message?.content ?? "";
+    return { text: completion.choices[0]?.message?.content ?? "", sources: [] };
   } catch (err) {
     console.error(`[callAIModel] ${model} failed:`, err instanceof Error ? err.message : err);
-    return "";
+    return empty;
   }
 }
 
@@ -280,28 +331,30 @@ async function executePrompt(
 
   if (!promptRecord) return;
 
-  const rawResponse = await callAIModel(promptText, task.model, task.browsing);
-  const promptError: string | null = rawResponse ? null : "Risposta vuota dal modello";
+  const aiResult = await callAIModel(promptText, task.model, task.browsing);
+  const rawText = aiResult.text;
+  const promptError: string | null = rawText ? null : "Risposta vuota dal modello";
 
   // Update prompt with response
   await (supabase.from("prompts_executed") as any)
     .update({
-      raw_response: rawResponse || null,
-      response_length: rawResponse.length,
+      raw_response: rawText || null,
+      response_length: rawText.length,
       executed_at: new Date().toISOString(),
       error: promptError,
     })
     .eq("id", promptRecord.id);
 
   // Extract structured data if we got a response
-  if (!rawResponse) return;
+  if (!rawText) return;
 
-  const extraction = await extractFromResponse(rawResponse, task.targetBrand, task.knownCompetitors);
+  const extraction = await extractFromResponse(rawText, task.targetBrand, task.knownCompetitors);
 
   console.log("=== EXTRACTION DEBUG ===");
   console.log("topics raw:", JSON.stringify(extraction.topics));
   console.log("sources raw:", JSON.stringify(extraction.sources));
   console.log("competitors raw:", JSON.stringify(extraction.competitors_found));
+  console.log("browsing sources:", aiResult.sources.length);
 
   // Save response_analysis
   await (supabase.from("response_analysis") as any)
@@ -317,20 +370,58 @@ async function executePrompt(
       avi_components: null,
     });
 
-  // Save sources (upsert by project_id + domain)
-  for (const source of extraction.sources || []) {
-    if (!source.domain) continue;
+  // Merge sources: browsing API sources + URL-from-text extraction + extractor sources
+  const textUrlSources = extractUrlsFromText(rawText);
+  const allSourceDomains = new Set<string>();
+  const mergedSources: {
+    url: string; domain: string; label?: string;
+    source_type?: string; is_brand_owned?: boolean; context?: string;
+  }[] = [];
+
+  // 1. Browsing API sources (highest quality)
+  for (const s of aiResult.sources) {
+    if (!s.domain || allSourceDomains.has(s.domain)) continue;
+    allSourceDomains.add(s.domain);
+    mergedSources.push({
+      url: s.url, domain: s.domain, label: s.title,
+      source_type: "other", context: "fonte da web browsing AI",
+    });
+  }
+
+  // 2. Extractor sources (from AI extraction pipeline)
+  for (const s of extraction.sources || []) {
+    if (!s.domain || allSourceDomains.has(s.domain)) continue;
+    allSourceDomains.add(s.domain);
+    mergedSources.push({
+      url: s.url || s.domain, domain: s.domain, label: s.label ?? undefined,
+      source_type: s.source_type || "other",
+      is_brand_owned: s.is_brand_owned ?? undefined, context: s.context ?? undefined,
+    });
+  }
+
+  // 3. URL regex fallback from response text
+  for (const s of textUrlSources) {
+    if (!s.domain || allSourceDomains.has(s.domain)) continue;
+    allSourceDomains.add(s.domain);
+    mergedSources.push({
+      url: s.url, domain: s.domain,
+      source_type: "other", context: "citato nella risposta",
+    });
+  }
+
+  // Save all merged sources (upsert by project_id + domain)
+  for (const source of mergedSources) {
     await (supabase.from("sources") as any)
       .upsert({
         project_id: task.projectId,
         run_id: task.runId,
         prompt_executed_id: promptRecord.id,
-        url: source.url || source.domain,
+        url: source.url,
         domain: source.domain,
-        label: source.label,
+        label: source.label ?? null,
         source_type: source.source_type || "other",
-        is_brand_owned: source.is_brand_owned,
-        context: source.context,
+        is_brand_owned: source.is_brand_owned ?? false,
+        context: source.context ?? null,
         citation_count: 1,
       }, {
         onConflict: "project_id,domain",
@@ -338,7 +429,7 @@ async function executePrompt(
       });
   }
 
-  console.log("Sources upsert done for:", extraction.sources?.length, "sources");
+  console.log("Sources upsert done for:", mergedSources.length, "sources (browsing:", aiResult.sources.length, "extractor:", extraction.sources?.length ?? 0, "text:", textUrlSources.length, ")");
 
   // Save discovered competitors (upsert with normalization)
   for (const rawComp of extraction.competitors_found || []) {
