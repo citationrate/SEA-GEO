@@ -279,8 +279,10 @@ async function executePrompt(
 
   const extraction = await extractFromResponse(rawResponse, task.targetBrand, task.knownCompetitors);
 
-  console.log("Competitors found:", extraction.competitors_found);
-  console.log("Sources found:", extraction.sources);
+  console.log("=== EXTRACTION DEBUG ===");
+  console.log("topics raw:", JSON.stringify(extraction.topics));
+  console.log("sources raw:", JSON.stringify(extraction.sources));
+  console.log("competitors raw:", JSON.stringify(extraction.competitors_found));
 
   // Save response_analysis
   await (supabase.from("response_analysis") as any)
@@ -316,6 +318,8 @@ async function executePrompt(
         ignoreDuplicates: false,
       });
   }
+
+  console.log("Sources upsert done for:", extraction.sources?.length, "sources");
 
   // Save discovered competitors (upsert with normalization)
   for (const rawComp of extraction.competitors_found || []) {
@@ -365,6 +369,8 @@ async function executePrompt(
       p_name: name,
     });
   }
+
+  console.log("Topics upsert done for:", extraction.topics?.length, "topics");
 
   // Recalculate AVI
   await computeAndUpsertAVI(supabase, task.runId, task.projectId);
