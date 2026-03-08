@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Play, X, Loader2, Cpu, AlertTriangle } from "lucide-react";
+import { Play, X, Loader2, Cpu, AlertTriangle, Globe } from "lucide-react";
 import { AI_MODELS, PROVIDER_CONFIG } from "@/lib/engine/models";
 
 const RUN_OPTIONS = [
@@ -30,6 +30,7 @@ export function AnalysisLauncher({
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>(["gpt-4o-mini"]);
   const [runCount, setRunCount] = useState(1);
+  const [browsing, setBrowsing] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -52,7 +53,7 @@ export function AnalysisLauncher({
       const res = await fetch("/api/analysis/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, models_used: selected, run_count: runCount }),
+        body: JSON.stringify({ project_id: projectId, models_used: selected, run_count: runCount, browsing }),
       });
 
       if (!res.ok) {
@@ -175,6 +176,33 @@ export function AnalysisLauncher({
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Browsing toggle */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Web Browsing</p>
+              <button
+                onClick={() => setBrowsing(!browsing)}
+                disabled={loading}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left ${
+                  browsing
+                    ? "border-primary/50 bg-primary/5"
+                    : "border-border hover:border-border/80"
+                }`}
+              >
+                <div className={`relative w-9 h-5 rounded-full transition-colors ${browsing ? "bg-primary" : "bg-muted-foreground/30"}`}>
+                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${browsing ? "translate-x-4" : "translate-x-0.5"}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-primary" />
+                    <p className="text-sm font-medium text-foreground">Browsing attivo</p>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    I modelli cercano informazioni aggiornate sul web (piu lento, piu fonti)
+                  </p>
+                </div>
+              </button>
             </div>
 
             {/* Footer info */}

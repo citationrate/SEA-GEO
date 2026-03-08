@@ -20,7 +20,7 @@ function buildPrompt(query: string, segmentContext: string, language: string): s
   return `${lang}\n\nContesto utente: ${segmentContext}\n\nDomanda: ${query}`;
 }
 
-async function callAIModel(prompt: string, model: string): Promise<string> {
+async function callAIModel(prompt: string, model: string, browsing = false): Promise<string> {
   try {
     const modelDef = MODEL_MAP.get(model);
     const provider = modelDef?.provider ?? "openai";
@@ -38,6 +38,14 @@ async function callAIModel(prompt: string, model: string): Promise<string> {
 
     if (provider === "google") {
       const genai = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY ?? "");
+      if (browsing) {
+        const geminiModel = genai.getGenerativeModel({
+          model,
+          tools: [{ googleSearch: {} } as any],
+        });
+        const result = await geminiModel.generateContent(prompt);
+        return result.response.text();
+      }
       const geminiModel = genai.getGenerativeModel({ model });
       const result = await geminiModel.generateContent(prompt);
       return result.response.text();
@@ -58,6 +66,16 @@ async function callAIModel(prompt: string, model: string): Promise<string> {
 
     // OpenAI (default)
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    // OpenAI with browsing: use responses API with web_search_preview
+    if (browsing) {
+      const response = await (openai as any).responses.create({
+        model,
+        tools: [{ type: "web_search_preview" }],
+        input: prompt,
+      });
+      return response.output_text ?? "";
+    }
 
     if (model.startsWith("o1") || model.startsWith("o3")) {
       const completion = await openai.chat.completions.create({
@@ -233,6 +251,7 @@ interface PromptTask {
   targetBrand: string;
   knownCompetitors: string[];
   language: string;
+  browsing: boolean;
 }
 
 async function executePrompt(
@@ -261,7 +280,7 @@ async function executePrompt(
 
   if (!promptRecord) return;
 
-  const rawResponse = await callAIModel(promptText, task.model);
+  const rawResponse = await callAIModel(promptText, task.model, task.browsing);
   const promptError: string | null = rawResponse ? null : "Risposta vuota dal modello";
 
   // Update prompt with response
@@ -385,11 +404,12 @@ export const runAnalysis = inngest.createFunction(
   },
   { event: "analysis/start" },
   async ({ event, step }) => {
-    const { runId, projectId, modelsUsed, runCount } = event.data as {
+    const { runId, projectId, modelsUsed, runCount, browsing = true } = event.data as {
       runId: string;
       projectId: string;
       modelsUsed: string[];
       runCount: number;
+      browsing?: boolean;
     };
 
     // Step 1: load project data
@@ -444,6 +464,7 @@ export const runAnalysis = inngest.createFunction(
               targetBrand,
               knownCompetitors,
               language,
+              browsing,
             });
           }
         }

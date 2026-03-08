@@ -11,6 +11,7 @@ const startSchema = z.object({
     { message: "Modello non supportato" }
   ),
   run_count: z.number().int().min(1).max(3).default(1),
+  browsing: z.boolean().default(true),
 });
 
 export async function POST(request: Request) {
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     const parsed = startSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { project_id, models_used, run_count } = parsed.data;
+    const { project_id, models_used, run_count, browsing } = parsed.data;
 
     // Fetch project
     const { data: project } = await supabase
@@ -84,6 +85,7 @@ export async function POST(request: Request) {
         projectId: project_id,
         modelsUsed: models_used,
         runCount: run_count,
+        browsing,
       },
     });
 
