@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
-import { ProjectSelector, resolveProjectId } from "@/components/project-selector";
+import { ProjectSelector } from "@/components/project-selector";
+import { resolveProjectId } from "@/lib/utils/resolve-project";
 import { Tag } from "lucide-react";
 
 export const metadata = { title: "Topic" };
