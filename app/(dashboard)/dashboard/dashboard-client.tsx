@@ -1,6 +1,7 @@
 "use client";
 
 import { AVIRing, StatsRow, AVITrend, CompetitorBar, RecentRuns } from "@/components/dashboard/index";
+import { ProjectSelector } from "@/components/project-selector";
 
 interface DashboardClientProps {
   aviScore: number | null;
@@ -10,6 +11,7 @@ interface DashboardClientProps {
   trendData: { run: string; avi: number; prominence: number; sentiment: number }[];
   recentRuns: { id: string; project_id: string; project_name: string; version: number; status: string; avi_score: number | null; date: string }[];
   competitorBarData: { name: string; count: number }[];
+  projects?: { id: string; name: string }[];
 }
 
 export function DashboardClient({
@@ -20,12 +22,16 @@ export function DashboardClient({
   trendData,
   recentRuns,
   competitorBarData,
+  projects,
 }: DashboardClientProps) {
   return (
     <div className="space-y-6 animate-fade-in max-w-[1400px]">
-      <div>
-        <h1 className="font-display font-bold text-2xl text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Panoramica della visibilita AI dei tuoi brand</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="font-display font-bold text-2xl text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Panoramica della visibilita AI dei tuoi brand</p>
+        </div>
+        {projects && <ProjectSelector projects={projects} />}
       </div>
 
       {/* Top row: AVI Ring + Stats */}

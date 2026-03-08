@@ -1,4 +1,5 @@
 import { createServerClient } from "@/lib/supabase/server";
+import { ProjectSelector, resolveProjectId } from "@/components/project-selector";
 import { SourcesClient } from "./sources-client";
 
 export const metadata = { title: "Fonti" };
@@ -13,7 +14,11 @@ export interface SourceDomain {
   urls: string[];
 }
 
-export default async function SourcesPage() {
+export default async function SourcesPage({
+  searchParams,
+}: {
+  searchParams: { projectId?: string };
+}) {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -21,14 +26,20 @@ export default async function SourcesPage() {
   const { data: projects } = await supabase
     .from("projects")
     .select("id, name, target_brand")
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
 
-  const projectIds = (projects ?? []).map((p: any) => p.id);
-  const brand = ((projects ?? []) as any[])[0]?.target_brand ?? "";
+  const projectsList = (projects ?? []) as any[];
+  const projectIds = projectsList.map((p: any) => p.id);
+  const selectedId = resolveProjectId(searchParams, projectIds);
+
+  const targetIds = selectedId ? [selectedId] : projectIds;
+  const selectedProject = projectsList.find((p: any) => p.id === selectedId);
+  const brand = selectedProject?.target_brand ?? projectsList[0]?.target_brand ?? "";
 
   // Get runs → prompts → sources
-  const { data: runs } = projectIds.length > 0
-    ? await supabase.from("analysis_runs").select("id, project_id").in("project_id", projectIds)
+  const { data: runs } = targetIds.length > 0
+    ? await supabase.from("analysis_runs").select("id, project_id").in("project_id", targetIds)
     : { data: [] };
 
   const runIds = (runs ?? []).map((r: any) => r.id);
@@ -53,15 +64,11 @@ export default async function SourcesPage() {
   for (const s of (sources ?? []) as any[]) {
     const domain = s.domain ?? "sconosciuto";
     const existing = domainMap.get(domain);
-    const runId = promptRunMap.get(s.prompt_executed_id) ?? "";
     const context = s.context ?? null;
     const sourceType = s.source_type ?? "other";
 
     if (existing) {
       existing.citations += (s.citation_count ?? 1);
-      if (runId && !existing.urls.includes(runId)) {
-        // Use a set-like approach for analysis count
-      }
       if (s.is_brand_owned) existing.isBrandOwned = true;
       if (s.url && !existing.urls.includes(s.url)) existing.urls.push(s.url);
       if (context && !existing.contexts.includes(context)) existing.contexts.push(context);
@@ -104,12 +111,18 @@ export default async function SourcesPage() {
     : 0;
 
   return (
-    <SourcesClient
-      domains={allDomains}
-      totalCitations={totalCitations}
-      brandOwnedPct={brandOwnedPct}
-      mediaPct={mediaPct}
-      brand={brand}
-    />
+    <div className="space-y-6 max-w-[1200px] animate-fade-in">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div />
+        <ProjectSelector projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))} />
+      </div>
+      <SourcesClient
+        domains={allDomains}
+        totalCitations={totalCitations}
+        brandOwnedPct={brandOwnedPct}
+        mediaPct={mediaPct}
+        brand={brand}
+      />
+    </div>
   );
 }

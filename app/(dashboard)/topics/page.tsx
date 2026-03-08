@@ -1,9 +1,14 @@
 import { createServerClient } from "@/lib/supabase/server";
+import { ProjectSelector, resolveProjectId } from "@/components/project-selector";
 import { Tag } from "lucide-react";
 
 export const metadata = { title: "Topic" };
 
-export default async function TopicsPage() {
+export default async function TopicsPage({
+  searchParams,
+}: {
+  searchParams: { projectId?: string };
+}) {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -16,12 +21,18 @@ export default async function TopicsPage() {
 
   const projectsList = (projects ?? []) as any[];
   const projectIds = projectsList.map((p) => p.id);
+  const selectedId = resolveProjectId(searchParams, projectIds);
+
+  // Filter to selected project only
+  const targetProjects = selectedId
+    ? projectsList.filter((p) => p.id === selectedId)
+    : projectsList;
 
   // For each project, get topic counts from response_analysis
   const projectTopics: { projectId: string; projectName: string; topics: [string, number][] }[] = [];
   const globalCounts = new Map<string, number>();
 
-  for (const proj of projectsList) {
+  for (const proj of targetProjects) {
     const { data: runs } = await supabase
       .from("analysis_runs")
       .select("id")
@@ -72,12 +83,15 @@ export default async function TopicsPage() {
 
   return (
     <div className="space-y-6 max-w-[1200px] animate-fade-in">
-      <div className="flex items-center gap-3">
-        <Tag className="w-6 h-6 text-accent" />
-        <div>
-          <h1 className="font-display font-bold text-2xl text-foreground">Topic</h1>
-          <p className="text-sm text-muted-foreground">Argomenti emersi dalle risposte AI</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <Tag className="w-6 h-6 text-accent" />
+          <div>
+            <h1 className="font-display font-bold text-2xl text-foreground">Topic</h1>
+            <p className="text-sm text-muted-foreground">Argomenti emersi dalle risposte AI</p>
+          </div>
         </div>
+        <ProjectSelector projects={projectsList.map((p) => ({ id: p.id, name: p.name }))} />
       </div>
 
       {globalList.length === 0 ? (
@@ -89,7 +103,7 @@ export default async function TopicsPage() {
         <>
           {/* Global Tag Cloud */}
           <div className="card p-6">
-            <h2 className="font-display font-semibold text-foreground mb-4">Tag Cloud Globale</h2>
+            <h2 className="font-display font-semibold text-foreground mb-4">Tag Cloud</h2>
             <div className="flex flex-wrap gap-x-4 gap-y-3 items-baseline justify-center py-4">
               {globalList.map(([name, count]) => (
                 <span

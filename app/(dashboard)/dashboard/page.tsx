@@ -1,12 +1,17 @@
 import { createServerClient } from "@/lib/supabase/server";
+import { ProjectSelector, resolveProjectId } from "@/components/project-selector";
 import { DashboardClient } from "./dashboard-client";
 
 export const metadata = { title: "Dashboard" };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { projectId?: string };
+}) {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <DashboardClient aviScore={null} aviTrend={null} stats={[]} trendData={[]} recentRuns={[]} competitorBarData={[]} />;
+  if (!user) return <DashboardClient aviScore={null} aviTrend={null} stats={[]} trendData={[]} recentRuns={[]} competitorBarData={[]} projects={[]} />;
 
   // Get all projects for this user
   const { data: projects } = await supabase
@@ -15,46 +20,50 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  const projectIds = (projects ?? []).map((p: any) => p.id);
-  const projectMap = new Map((projects ?? []).map((p: any) => [p.id, p]));
+  const projectsList = (projects ?? []) as any[];
+  const projectIds = projectsList.map((p: any) => p.id);
+  const selectedId = resolveProjectId(searchParams, projectIds);
+
+  const targetIds = selectedId ? [selectedId] : projectIds;
+  const projectMap = new Map(projectsList.map((p: any) => [p.id, p]));
 
   // Get all analysis runs
-  const { data: runs } = projectIds.length > 0
+  const { data: runs } = targetIds.length > 0
     ? await supabase
         .from("analysis_runs")
         .select("*")
-        .in("project_id", projectIds)
+        .in("project_id", targetIds)
         .order("created_at", { ascending: false })
     : { data: [] };
 
   // Get latest AVI (last completed analysis, not average)
-  const { data: lastAviRow } = projectIds.length > 0
+  const { data: lastAviRow } = targetIds.length > 0
     ? await supabase
         .from("avi_history")
         .select("*")
-        .in("project_id", projectIds)
+        .in("project_id", targetIds)
         .order("computed_at", { ascending: false })
         .limit(1)
         .maybeSingle()
     : { data: null };
 
   // Get previous AVI for trend delta
-  const { data: prevAviRow } = projectIds.length > 0
+  const { data: prevAviRow } = targetIds.length > 0
     ? await supabase
         .from("avi_history")
         .select("avi_score")
-        .in("project_id", projectIds)
+        .in("project_id", targetIds)
         .order("computed_at", { ascending: false })
         .range(1, 1)
         .maybeSingle()
     : { data: null };
 
   // Get all AVI history for trend chart
-  const { data: aviHistory } = projectIds.length > 0
+  const { data: aviHistory } = targetIds.length > 0
     ? await supabase
         .from("avi_history")
         .select("*")
-        .in("project_id", projectIds)
+        .in("project_id", targetIds)
         .order("computed_at", { ascending: true })
     : { data: [] };
 
@@ -68,11 +77,11 @@ export default async function DashboardPage() {
     : { count: 0 };
 
   // Get competitors count
-  const { count: competitorsCount } = projectIds.length > 0
+  const { count: competitorsCount } = targetIds.length > 0
     ? await supabase
         .from("competitors")
         .select("*", { count: "exact", head: true })
-        .in("project_id", projectIds)
+        .in("project_id", targetIds)
     : { count: 0 };
 
   // Get sources count
@@ -154,8 +163,8 @@ export default async function DashboardPage() {
   ];
 
   // Competitor bar data - count mentions per competitor
-  const { data: allCompetitors } = projectIds.length > 0
-    ? await supabase.from("competitors").select("name").in("project_id", projectIds)
+  const { data: allCompetitors } = targetIds.length > 0
+    ? await supabase.from("competitors").select("name").in("project_id", targetIds)
     : { data: [] };
 
   const compCounts = new Map<string, number>();
@@ -176,6 +185,7 @@ export default async function DashboardPage() {
       trendData={trendData}
       recentRuns={recentRuns}
       competitorBarData={competitorBarData}
+      projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))}
     />
   );
 }

@@ -1,9 +1,14 @@
 import { createServerClient } from "@/lib/supabase/server";
+import { ProjectSelector, resolveProjectId } from "@/components/project-selector";
 import { CompetitorsClient } from "./competitors-client";
 
 export const metadata = { title: "Competitor" };
 
-export default async function CompetitorsPage() {
+export default async function CompetitorsPage({
+  searchParams,
+}: {
+  searchParams: { projectId?: string };
+}) {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -11,17 +16,22 @@ export default async function CompetitorsPage() {
   const { data: projects } = await supabase
     .from("projects")
     .select("id, name, target_brand")
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
 
-  const projectIds = (projects ?? []).map((p: any) => p.id);
-  const projectMap = new Map((projects ?? []).map((p: any) => [p.id, p]));
+  const projectsList = (projects ?? []) as any[];
+  const projectIds = projectsList.map((p: any) => p.id);
+  const selectedId = resolveProjectId(searchParams, projectIds);
 
-  // Fetch competitors with new columns
-  const { data: competitors } = projectIds.length > 0
+  const targetIds = selectedId ? [selectedId] : projectIds;
+  const projectMap = new Map(projectsList.map((p: any) => [p.id, p]));
+
+  // Fetch competitors
+  const { data: competitors } = targetIds.length > 0
     ? await supabase
         .from("competitors")
         .select("*")
-        .in("project_id", projectIds)
+        .in("project_id", targetIds)
         .order("created_at", { ascending: true })
     : { data: [] };
 
@@ -29,20 +39,20 @@ export default async function CompetitorsPage() {
 
   // Fetch all runs, prompts, and response_analysis for mention counting + sentiment
   const runIds: string[] = [];
-  if (projectIds.length > 0) {
+  if (targetIds.length > 0) {
     const { data: runs } = await supabase
       .from("analysis_runs")
       .select("id")
-      .in("project_id", projectIds);
+      .in("project_id", targetIds);
     (runs ?? []).forEach((r: any) => runIds.push(r.id));
   }
 
   // Get latest brand AVI
-  const { data: lastAviRow } = projectIds.length > 0
+  const { data: lastAviRow } = targetIds.length > 0
     ? await supabase
         .from("avi_history")
         .select("avi_score")
-        .in("project_id", projectIds)
+        .in("project_id", targetIds)
         .order("computed_at", { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -71,7 +81,7 @@ export default async function CompetitorsPage() {
     const { data: allQueries } = await supabase
       .from("queries")
       .select("id, funnel_stage")
-      .in("project_id", projectIds);
+      .in("project_id", targetIds);
     const queryStageMap = new Map((allQueries ?? []).map((q: any) => [q.id, q.funnel_stage]));
 
     if (promptIds.length > 0) {
@@ -133,7 +143,6 @@ export default async function CompetitorsPage() {
       if (projInfo && !existing.projects.some((p) => p.id === projInfo.id)) {
         existing.projects.push(projInfo);
       }
-      // Merge topic_context from DB record
       for (const t of (c.topic_context ?? [])) {
         if (!existing.topics.includes(t)) existing.topics.push(t);
       }
@@ -185,7 +194,7 @@ export default async function CompetitorsPage() {
 
   // Fetch competitor AVI scores per project
   const compAviMap = new Map<string, number>();
-  for (const pid of projectIds) {
+  for (const pid of targetIds) {
     const { data: compAviRows } = await (supabase.from("competitor_avi") as any)
       .select("competitor_name, avi_score")
       .eq("project_id", pid)
@@ -220,15 +229,20 @@ export default async function CompetitorsPage() {
     .map(([topic, comps]) => ({ topic, competitors: comps.map((c) => c.name) }));
 
   return (
-    <CompetitorsClient
-      rows={rows.map((r) => ({
-        ...r,
-        aviScore: compAviMap.get(r.name) ?? null,
-        projects: r.projects.map((p) => ({ id: p.id, name: p.name, brand: p.brand })),
-      }))}
-      topicGroups={topicGroups}
-      projectIds={projectIds}
-      brandAviScore={brandAviScore}
-    />
+    <div className="space-y-6 max-w-[1200px] animate-fade-in">
+      <div className="flex items-center justify-end">
+        <ProjectSelector projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))} />
+      </div>
+      <CompetitorsClient
+        rows={rows.map((r) => ({
+          ...r,
+          aviScore: compAviMap.get(r.name) ?? null,
+          projects: r.projects.map((p) => ({ id: p.id, name: p.name, brand: p.brand })),
+        }))}
+        topicGroups={topicGroups}
+        projectIds={targetIds}
+        brandAviScore={brandAviScore}
+      />
+    </div>
   );
 }
