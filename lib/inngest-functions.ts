@@ -51,6 +51,7 @@ function safeDomain(url: string): string | null {
 
 async function callAIModel(prompt: string, model: string, browsing = false): Promise<AIModelResult> {
   const empty: AIModelResult = { text: "", sources: [] };
+  console.log("callAIModel browsing:", browsing, "model:", model);
   try {
     const modelDef = MODEL_MAP.get(model);
     const provider = modelDef?.provider ?? "openai";
@@ -85,6 +86,7 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
             return { url: uri, domain, title: chunk.web?.title };
           })
           .filter(Boolean) as BrowsingSource[];
+        console.log("Gemini grounding sources:", sources.length);
         return { text: result.response.text(), sources };
       }
       const geminiModel = genai.getGenerativeModel({ model });
@@ -108,24 +110,22 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
     // OpenAI (default)
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    // OpenAI with browsing: use responses API with web_search_preview
+    // OpenAI with browsing: use chat completions with web_search_preview tool
     if (browsing) {
-      const response = await (openai as any).responses.create({
-        model,
-        tools: [{ type: "web_search_preview" }],
-        input: prompt,
-      });
-      const outputItems = response.output ?? [];
-      const sources: BrowsingSource[] = outputItems
-        .filter((item: any) => item.type === "web_search_call")
-        .flatMap((item: any) => item.results ?? [])
-        .map((r: any) => {
-          const domain = safeDomain(r.url);
-          if (!domain) return null;
-          return { url: r.url, domain, title: r.title };
-        })
-        .filter(Boolean) as BrowsingSource[];
-      return { text: response.output_text ?? "", sources };
+      try {
+        const completion = await openai.chat.completions.create({
+          model,
+          messages: [{ role: "user", content: prompt }],
+          tools: [{ type: "web_search_preview" } as any],
+        } as any);
+        const text = completion.choices[0]?.message?.content ?? "";
+        console.log("OpenAI browsing response length:", text.length);
+        // Sources extracted from text via regex in executePrompt
+        return { text, sources: [] };
+      } catch (browsingErr) {
+        console.error("[callAIModel] OpenAI browsing failed, falling back:", browsingErr instanceof Error ? browsingErr.message : browsingErr);
+        // Fall through to normal completion
+      }
     }
 
     if (model.startsWith("o1") || model.startsWith("o3")) {
@@ -351,10 +351,12 @@ async function executePrompt(
   const extraction = await extractFromResponse(rawText, task.targetBrand, task.knownCompetitors);
 
   console.log("=== EXTRACTION DEBUG ===");
+  console.log("rawResponse sources:", aiResult.sources?.length ?? 0);
   console.log("topics raw:", JSON.stringify(extraction.topics));
   console.log("sources raw:", JSON.stringify(extraction.sources));
   console.log("competitors raw:", JSON.stringify(extraction.competitors_found));
   console.log("browsing sources:", aiResult.sources.length);
+  console.log("textSources:", extractUrlsFromText(rawText).length);
 
   // Save response_analysis
   await (supabase.from("response_analysis") as any)
@@ -408,6 +410,8 @@ async function executePrompt(
       source_type: "other", context: "citato nella risposta",
     });
   }
+
+  console.log("allSources (merged):", mergedSources.length);
 
   // Save all merged sources (upsert by project_id + domain)
   for (const source of mergedSources) {
