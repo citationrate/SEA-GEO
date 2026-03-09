@@ -8,7 +8,7 @@ export const metadata = { title: "Dashboard" };
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { projectId?: string };
+  searchParams: { projectId?: string; model?: string };
 }) {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -29,7 +29,7 @@ export default async function DashboardPage({
   const projectMap = new Map(projectsList.map((p: any) => [p.id, p]));
 
   // Get all analysis runs
-  const { data: runs } = targetIds.length > 0
+  const { data: allRuns } = targetIds.length > 0
     ? await supabase
         .from("analysis_runs")
         .select("*")
@@ -37,39 +37,36 @@ export default async function DashboardPage({
         .order("created_at", { ascending: false })
     : { data: [] };
 
-  // Get latest AVI (last completed analysis, not average)
-  const { data: lastAviRow } = targetIds.length > 0
+  // Extract available models
+  const modelsSet = new Set<string>();
+  (allRuns ?? []).forEach((r: any) => (r.models_used ?? []).forEach((m: string) => modelsSet.add(m)));
+  const availableModels = Array.from(modelsSet).sort();
+
+  // Filter runs by selected model
+  const selectedModel = searchParams.model || null;
+  const runs = (allRuns ?? []).filter((r: any) =>
+    !selectedModel || (r.models_used ?? []).includes(selectedModel)
+  );
+
+  const runIds = runs.map((r: any) => r.id);
+
+  // Get AVI history filtered by run
+  const { data: aviHistory } = runIds.length > 0
     ? await supabase
         .from("avi_history")
         .select("*")
-        .in("project_id", targetIds)
-        .order("computed_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-    : { data: null };
-
-  // Get previous AVI for trend delta
-  const { data: prevAviRow } = targetIds.length > 0
-    ? await supabase
-        .from("avi_history")
-        .select("avi_score")
-        .in("project_id", targetIds)
-        .order("computed_at", { ascending: false })
-        .range(1, 1)
-        .maybeSingle()
-    : { data: null };
-
-  // Get all AVI history for trend chart
-  const { data: aviHistory } = targetIds.length > 0
-    ? await supabase
-        .from("avi_history")
-        .select("*")
-        .in("project_id", targetIds)
+        .in("run_id", runIds)
         .order("computed_at", { ascending: true })
     : { data: [] };
 
+  const aviList = (aviHistory ?? []) as any[];
+  const lastAvi = aviList.length > 0 ? aviList[aviList.length - 1] : null;
+  const prevAvi = aviList.length > 1 ? aviList[aviList.length - 2] : null;
+
+  const aviScore = lastAvi?.avi_score ?? null;
+  const aviTrend = lastAvi && prevAvi ? lastAvi.avi_score - prevAvi.avi_score : null;
+
   // Get total prompts executed
-  const runIds = (runs ?? []).map((r: any) => r.id);
   const { count: totalPrompts } = runIds.length > 0
     ? await supabase
         .from("prompts_executed")
@@ -86,19 +83,12 @@ export default async function DashboardPage({
     : { count: 0 };
 
   // Get sources count
-  const { count: sourcesCount } = runIds.length > 0
+  const { count: sourcesCount } = targetIds.length > 0
     ? await supabase
         .from("sources")
         .select("*", { count: "exact", head: true })
-        .in("prompt_executed_id",
-          (await supabase.from("prompts_executed").select("id").in("run_id", runIds)).data?.map((p: any) => p.id) ?? ["__none__"]
-        )
+        .in("project_id", targetIds)
     : { count: 0 };
-
-  // Compute stats
-  const lastAvi = lastAviRow as any;
-  const aviScore = lastAvi?.avi_score ?? null;
-  const aviTrend = lastAvi && prevAviRow ? lastAvi.avi_score - (prevAviRow as any).avi_score : null;
 
   // Compute brand mention rate from response_analysis
   let mentionRate = "--";
@@ -129,7 +119,7 @@ export default async function DashboardPage({
   ] : undefined;
 
   // Build trend data
-  const trendData = (aviHistory ?? []).map((a: any, i: number) => ({
+  const trendData = aviList.map((a: any, i: number) => ({
     run: `v${i + 1}`,
     avi: Math.round(a.avi_score * 10) / 10,
     prominence: Math.round(a.presence_score * 100),
@@ -137,22 +127,16 @@ export default async function DashboardPage({
   }));
 
   // Build recent runs
-  const aviMap = new Map((aviHistory ?? []).map((a: any) => [a.run_id, a.avi_score]));
-  const recentRuns = (runs ?? []).slice(0, 5).map((r: any) => ({
+  const aviMap = new Map(aviList.map((a: any) => [a.run_id, a.avi_score]));
+  const recentRuns = runs.slice(0, 5).map((r: any) => ({
     id: r.id,
     project_id: r.project_id,
-    project_name: projectMap.get(r.project_id)?.name ?? "—",
+    project_name: projectMap.get(r.project_id)?.name ?? "\u2014",
     version: r.version,
     status: r.status,
     avi_score: aviMap.get(r.id) ?? null,
     date: new Date(r.completed_at ?? r.created_at).toLocaleDateString("it-IT"),
   }));
-
-  // Get unique models used
-  const modelsSet = new Set<string>();
-  (runs ?? []).forEach((r: any) => {
-    (r.models_used ?? []).forEach((m: string) => modelsSet.add(m));
-  });
 
   const stats = [
     { label: "Prompt Eseguiti",    value: String(totalPrompts ?? 0),       sub: "in tutte le run" },
@@ -160,7 +144,7 @@ export default async function DashboardPage({
     { label: "Competitor Trovati", value: String(competitorsCount ?? 0),   sub: "discovery automatica" },
     { label: "Fonti Estratte",     value: String(sourcesCount ?? 0),       sub: "totale estratte" },
     { label: "Modelli AI",         value: String(modelsSet.size),          sub: "integrazioni usate" },
-    { label: "Analisi Eseguite",   value: String((runs ?? []).length),     sub: "totale storico" },
+    { label: "Analisi Eseguite",   value: String(runs.length),            sub: "totale storico" },
   ];
 
   // Competitor bar data - count mentions per competitor
@@ -187,6 +171,7 @@ export default async function DashboardPage({
       recentRuns={recentRuns}
       competitorBarData={competitorBarData}
       projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))}
+      availableModels={availableModels}
     />
   );
 }

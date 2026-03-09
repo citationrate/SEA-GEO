@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
+import { ModelSelector } from "@/components/model-selector";
 import { resolveProjectId } from "@/lib/utils/resolve-project";
 import { CompetitorsClient } from "./competitors-client";
 
@@ -8,7 +9,7 @@ export const metadata = { title: "Competitor" };
 export default async function CompetitorsPage({
   searchParams,
 }: {
-  searchParams: { projectId?: string };
+  searchParams: { projectId?: string; model?: string };
 }) {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -27,6 +28,20 @@ export default async function CompetitorsPage({
   const targetIds = selectedId ? [selectedId] : projectIds;
   const projectMap = new Map(projectsList.map((p: any) => [p.id, p]));
 
+  // Get runs to extract available models + filter
+  const { data: allRuns } = targetIds.length > 0
+    ? await supabase.from("analysis_runs").select("id, models_used").in("project_id", targetIds)
+    : { data: [] };
+
+  const modelsSet = new Set<string>();
+  (allRuns ?? []).forEach((r: any) => (r.models_used ?? []).forEach((m: string) => modelsSet.add(m)));
+  const availableModels = Array.from(modelsSet).sort();
+
+  const selectedModel = searchParams.model || null;
+  const filteredRunIds = (allRuns ?? [])
+    .filter((r: any) => !selectedModel || (r.models_used ?? []).includes(selectedModel))
+    .map((r: any) => r.id);
+
   // Fetch competitors
   const { data: competitors } = targetIds.length > 0
     ? await supabase
@@ -38,15 +53,8 @@ export default async function CompetitorsPage({
 
   const compList = (competitors ?? []) as any[];
 
-  // Fetch all runs, prompts, and response_analysis for mention counting + sentiment
-  const runIds: string[] = [];
-  if (targetIds.length > 0) {
-    const { data: runs } = await supabase
-      .from("analysis_runs")
-      .select("id")
-      .in("project_id", targetIds);
-    (runs ?? []).forEach((r: any) => runIds.push(r.id));
-  }
+  // Use filtered run IDs for stats
+  const runIds = filteredRunIds;
 
   // Get latest brand AVI
   const { data: lastAviRow } = targetIds.length > 0
@@ -231,7 +239,8 @@ export default async function CompetitorsPage({
 
   return (
     <div className="space-y-6 max-w-[1200px] animate-fade-in">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-3">
+        <ModelSelector models={availableModels} />
         <ProjectSelector projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))} />
       </div>
       <CompetitorsClient

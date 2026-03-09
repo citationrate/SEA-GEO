@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
+import { ModelSelector } from "@/components/model-selector";
 import { resolveProjectId } from "@/lib/utils/resolve-project";
 import { Tag } from "lucide-react";
 
@@ -8,7 +9,7 @@ export const metadata = { title: "Topic" };
 export default async function TopicsPage({
   searchParams,
 }: {
-  searchParams: { projectId?: string };
+  searchParams: { projectId?: string; model?: string };
 }) {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -24,28 +25,40 @@ export default async function TopicsPage({
   const projectIds = projectsList.map((p) => p.id);
   const selectedId = resolveProjectId(searchParams, projectIds);
 
-  // Filter to selected project only
   const targetProjects = selectedId
     ? projectsList.filter((p) => p.id === selectedId)
     : projectsList;
 
-  // For each project, get topic counts from response_analysis
+  const targetIds = targetProjects.map((p: any) => p.id);
+
+  // Get runs to extract available models + filter
+  const { data: allRuns } = targetIds.length > 0
+    ? await supabase.from("analysis_runs").select("id, project_id, models_used").in("project_id", targetIds)
+    : { data: [] };
+
+  const modelsSet = new Set<string>();
+  (allRuns ?? []).forEach((r: any) => (r.models_used ?? []).forEach((m: string) => modelsSet.add(m)));
+  const availableModels = Array.from(modelsSet).sort();
+
+  const selectedModel = searchParams.model || null;
+  const filteredRunIds = (allRuns ?? [])
+    .filter((r: any) => !selectedModel || (r.models_used ?? []).includes(selectedModel))
+    .map((r: any) => r.id);
+
+  // For each project, get topic counts from response_analysis (filtered by model)
   const projectTopics: { projectId: string; projectName: string; topics: [string, number][] }[] = [];
   const globalCounts = new Map<string, number>();
 
   for (const proj of targetProjects) {
-    const { data: runs } = await supabase
-      .from("analysis_runs")
-      .select("id")
-      .eq("project_id", proj.id);
-
-    const runIds = (runs ?? []).map((r: any) => r.id);
-    if (runIds.length === 0) continue;
+    const projRunIds = filteredRunIds.length > 0
+      ? filteredRunIds.filter((rid: string) => (allRuns ?? []).find((r: any) => r.id === rid && r.project_id === proj.id))
+      : [];
+    if (projRunIds.length === 0) continue;
 
     const { data: prompts } = await supabase
       .from("prompts_executed")
       .select("id")
-      .in("run_id", runIds);
+      .in("run_id", projRunIds);
 
     const promptIds = (prompts ?? []).map((p: any) => p.id);
     if (promptIds.length === 0) continue;
@@ -92,7 +105,10 @@ export default async function TopicsPage({
             <p className="text-sm text-muted-foreground">Argomenti emersi dalle risposte AI</p>
           </div>
         </div>
-        <ProjectSelector projects={projectsList.map((p) => ({ id: p.id, name: p.name }))} />
+        <div className="flex items-center gap-3">
+          <ModelSelector models={availableModels} />
+          <ProjectSelector projects={projectsList.map((p) => ({ id: p.id, name: p.name }))} />
+        </div>
       </div>
 
       {globalList.length === 0 ? (

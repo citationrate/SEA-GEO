@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
+import { ModelSelector } from "@/components/model-selector";
 import { resolveProjectId } from "@/lib/utils/resolve-project";
 import { SourcesClient } from "./sources-client";
 
@@ -18,7 +19,7 @@ export interface SourceDomain {
 export default async function SourcesPage({
   searchParams,
 }: {
-  searchParams: { projectId?: string };
+  searchParams: { projectId?: string; model?: string };
 }) {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -38,20 +39,42 @@ export default async function SourcesPage({
   const selectedProject = projectsList.find((p: any) => p.id === selectedId);
   const brand = selectedProject?.target_brand ?? projectsList[0]?.target_brand ?? "";
 
-  // Get sources directly by project_id
-  const { data: sources, error: sourcesError } = targetIds.length > 0
-    ? await supabase
-        .from("sources")
-        .select("*")
-        .in("project_id", targetIds)
-    : { data: [], error: null };
+  // Get runs to extract available models + filter
+  const { data: allRuns } = targetIds.length > 0
+    ? await supabase.from("analysis_runs").select("id, models_used").in("project_id", targetIds)
+    : { data: [] };
 
-  console.log("sources query result:", sources?.length, "error:", sourcesError?.message ?? null);
+  const modelsSet = new Set<string>();
+  (allRuns ?? []).forEach((r: any) => (r.models_used ?? []).forEach((m: string) => modelsSet.add(m)));
+  const availableModels = Array.from(modelsSet).sort();
+
+  const selectedModel = searchParams.model || null;
+  const filteredRunIds = (allRuns ?? [])
+    .filter((r: any) => !selectedModel || (r.models_used ?? []).includes(selectedModel))
+    .map((r: any) => r.id);
+
+  // Get sources filtered by run_id
+  let sourcesList: any[] = [];
+  if (filteredRunIds.length > 0) {
+    const { data: sources } = await supabase
+      .from("sources")
+      .select("*")
+      .in("project_id", targetIds)
+      .in("run_id", filteredRunIds);
+    sourcesList = (sources ?? []) as any[];
+  } else if (!selectedModel && targetIds.length > 0) {
+    // No model filter + no runs = show all sources for project
+    const { data: sources } = await supabase
+      .from("sources")
+      .select("*")
+      .in("project_id", targetIds);
+    sourcesList = (sources ?? []) as any[];
+  }
 
   // Group by domain
   const domainMap = new Map<string, SourceDomain>();
 
-  for (const s of (sources ?? []) as any[]) {
+  for (const s of sourcesList) {
     const domain = s.domain ?? "sconosciuto";
     const existing = domainMap.get(domain);
     const context = s.context ?? null;
@@ -77,7 +100,7 @@ export default async function SourcesPage({
 
   // Count analysis per domain via run_id on source rows
   const domainRuns = new Map<string, Set<string>>();
-  for (const s of (sources ?? []) as any[]) {
+  for (const s of sourcesList) {
     const domain = s.domain ?? "sconosciuto";
     const runId = s.run_id ?? "";
     if (!runId) continue;
@@ -104,7 +127,10 @@ export default async function SourcesPage({
     <div className="space-y-6 max-w-[1200px] animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div />
-        <ProjectSelector projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))} />
+        <div className="flex items-center gap-3">
+          <ModelSelector models={availableModels} />
+          <ProjectSelector projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))} />
+        </div>
       </div>
       <SourcesClient
         domains={allDomains}
