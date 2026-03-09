@@ -544,8 +544,9 @@ export const runAnalysis = inngest.createFunction(
       }
     }
 
-    // Step 2: execute prompts in batches of 5
-    const batches = chunk(allTasks, 15);
+    // Step 2: execute prompts in batches (smaller when browsing to respect rate limits)
+    const batchSize = browsing ? 3 : 15;
+    const batches = chunk(allTasks, batchSize);
     const normCache = new Map<string, string | null>();
 
     for (let i = 0; i < batches.length; i++) {
