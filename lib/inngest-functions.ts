@@ -322,7 +322,15 @@ async function executePrompt(
 
   if (!promptRecord) return;
 
-  const aiResult = await callAIModel(promptText, task.model, task.browsing);
+  console.log("[executePrompt] about to call callAIModel — model:", task.model, "browsing:", task.browsing);
+  let aiResult: AIModelResult;
+  try {
+    aiResult = await callAIModel(promptText, task.model, task.browsing);
+    console.log("callAIModel success, text length:", aiResult?.text?.length);
+  } catch (e: any) {
+    console.error("callAIModel CRASHED:", e?.message, e?.stack);
+    aiResult = { text: "", sources: [] };
+  }
   console.log("browsing param:", task.browsing);
   console.log("rawResponse type:", typeof aiResult);
   console.log("rawResponse.sources:", aiResult?.sources?.length ?? "undefined");
