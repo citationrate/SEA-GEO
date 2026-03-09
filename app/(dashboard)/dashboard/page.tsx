@@ -121,18 +121,18 @@ export default async function DashboardPage({
 
   // Build AVI components for ring
   const aviComponents = lastAvi ? [
-    { label: "Prominence", v: lastAvi.presence_score != null ? lastAvi.presence_score * 100 : null },
-    { label: "Rank",       v: lastAvi.rank_score != null ? lastAvi.rank_score * 100 : null },
-    { label: "Sentiment",  v: lastAvi.sentiment_score != null ? lastAvi.sentiment_score * 100 : null },
-    { label: "Consistency", v: lastAvi.stability_score != null ? lastAvi.stability_score * 100 : null },
+    { label: "Prominence", v: lastAvi.presence_score != null ? Math.round(lastAvi.presence_score) : null },
+    { label: "Rank",       v: lastAvi.rank_score != null ? Math.round(lastAvi.rank_score) : null },
+    { label: "Sentiment",  v: lastAvi.sentiment_score != null ? Math.round(lastAvi.sentiment_score) : null },
+    { label: "Consistency", v: lastAvi.stability_score != null ? Math.round(lastAvi.stability_score) : null },
   ] : undefined;
 
   // Build trend data
   const trendData = aviList.map((a: any, i: number) => ({
     run: `v${i + 1}`,
     avi: Math.round(a.avi_score * 10) / 10,
-    prominence: Math.round(a.presence_score * 100),
-    sentiment: Math.round(a.sentiment_score * 100),
+    prominence: Math.round(a.presence_score),
+    sentiment: Math.round(a.sentiment_score),
   }));
 
   // Build recent runs

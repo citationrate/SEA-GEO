@@ -164,7 +164,8 @@ ${truncated}`;
         }
 
         results.push({ id: comp.id, name: comp.name, analysis });
-      } catch {
+      } catch (err) {
+        console.error(`[competitors/analyze] GPT error for "${comp.name}":`, err instanceof Error ? err.message : err);
         results.push({ id: comp.id, name: comp.name, analysis: { macro_themes: [], positioning_summary: "Errore durante l'analisi." } });
       }
     }
@@ -177,7 +178,8 @@ ${truncated}`;
     }
 
     return NextResponse.json({ success: true, analyzed: results.length });
-  } catch {
+  } catch (err) {
+    console.error("[competitors/analyze] error:", err instanceof Error ? err.message : err);
     return NextResponse.json({ error: "Errore interno" }, { status: 500 });
   }
 }

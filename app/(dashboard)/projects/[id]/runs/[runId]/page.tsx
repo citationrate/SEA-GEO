@@ -172,20 +172,20 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
             score={aviData.avi_score}
             trend={trend}
             components={[
-              { label: "Prominence", v: aviData.presence_score != null ? aviData.presence_score * 100 : null },
-              { label: "Rank",       v: aviData.rank_score != null ? aviData.rank_score * 100 : null },
-              { label: "Sentiment",  v: aviData.sentiment_score != null ? aviData.sentiment_score * 100 : null },
-              { label: "Consistency", v: aviData.stability_score != null ? aviData.stability_score * 100 : null },
+              { label: "Prominence", v: aviData.presence_score != null ? Math.round(aviData.presence_score) : null },
+              { label: "Rank",       v: aviData.rank_score != null ? Math.round(aviData.rank_score) : null },
+              { label: "Sentiment",  v: aviData.sentiment_score != null ? Math.round(aviData.sentiment_score) : null },
+              { label: "Consistency", v: aviData.stability_score != null ? Math.round(aviData.stability_score) : null },
             ]}
           />
           <div className="card p-5 space-y-4">
             <h2 className="font-display font-semibold text-foreground">Componenti AVI</h2>
             <div className="space-y-3">
               {[
-                { label: "Prominence", value: (aviData.presence_score ?? 0) * 100, color: "hsl(186, 100%, 50%)" },
-                { label: "Rank", value: (aviData.rank_score ?? 0) * 100, color: "hsl(38, 95%, 58%)" },
-                { label: "Sentiment", value: (aviData.sentiment_score ?? 0) * 100, color: "hsl(152, 68%, 46%)" },
-                { label: "Consistency", value: (aviData.stability_score ?? 0) * 100, color: "hsl(270, 70%, 60%)" },
+                { label: "Prominence", value: Math.round(aviData.presence_score ?? 0), color: "hsl(186, 100%, 50%)" },
+                { label: "Rank", value: Math.round(aviData.rank_score ?? 0), color: "hsl(38, 95%, 58%)" },
+                { label: "Sentiment", value: Math.round(aviData.sentiment_score ?? 0), color: "hsl(152, 68%, 46%)" },
+                { label: "Consistency", value: Math.round(aviData.stability_score ?? 0), color: "hsl(270, 70%, 60%)" },
               ].map((c) => (
                 <div key={c.label} className="space-y-1">
                   <div className="flex justify-between text-xs">
