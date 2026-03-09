@@ -387,6 +387,19 @@ async function executePrompt(
   const mergedSources = mergeSources(aiResult.sources, extractorSources, textFallbackSources);
   console.log("allSources total:", mergedSources.length);
 
+  // DEBUG: test insert to discover exact schema errors
+  const testTs = Date.now();
+  const { data: testData, error: testError } = await (supabase.from("sources") as any)
+    .insert({
+      project_id: task.projectId,
+      run_id: task.runId,
+      url: "https://test-" + testTs + ".com",
+      domain: "test-" + testTs + ".com",
+      source_type: "other",
+      context: "test",
+    });
+  console.log("TEST INSERT result:", JSON.stringify({ data: testData, error: testError }));
+
   // Save all merged sources (upsert by project_id + domain)
   for (const source of mergedSources) {
     if (!source.domain || !task.projectId) continue;
