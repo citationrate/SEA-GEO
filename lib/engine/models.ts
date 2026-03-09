@@ -13,7 +13,7 @@ export const AI_MODELS: AIModel[] = [
   { id: "o3-mini",      label: "o3 mini",            desc: "Ragionamento avanzato, risposte dettagliate",       provider: "openai" },
   { id: "o3",           label: "o3",                 desc: "Massima capacita di ragionamento",                  provider: "openai" },
   // Anthropic
-  { id: "claude-haiku-4-5",  label: "Claude Haiku 4.5",  desc: "Rapido e preciso nelle istruzioni",            provider: "anthropic" },
+  { id: "claude-haiku-4-5-20251001",  label: "Claude Haiku 4.5",  desc: "Rapido e preciso nelle istruzioni",            provider: "anthropic" },
   { id: "claude-sonnet-4-5", label: "Claude Sonnet 4.5", desc: "Eccellente comprensione del contesto",         provider: "anthropic" },
   { id: "claude-opus-4-5",   label: "Claude Opus 4.5",   desc: "Il piu sofisticato per analisi profonde",      provider: "anthropic" },
   // Google

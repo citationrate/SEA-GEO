@@ -5,6 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { extractFromResponse } from "./engine/extractor";
 import { MODEL_MAP } from "./engine/models";
+import { calculateAVI } from "./engine/avi";
 import {
   type ExtractedSource,
   extractFromAnnotations,
@@ -37,7 +38,6 @@ function buildPrompt(query: string, segmentContext: string, language: string): s
 
 async function callAIModel(prompt: string, model: string, browsing = false, brandDomain?: string | null): Promise<AIModelResult> {
   const empty: AIModelResult = { text: "", sources: [] };
-  console.log("callAIModel called with browsing:", browsing, "model:", model);
   try {
     const modelDef = MODEL_MAP.get(model);
     const provider = modelDef?.provider ?? "openai";
@@ -66,12 +66,9 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
           const text = result.response.text();
           const groundingSources = extractFromGrounding((result.response as any).candidates || [], brandDomain ?? undefined);
           const textSources = extractFromText(text, brandDomain ?? undefined);
-          const sources = mergeSources(groundingSources, textSources);
-          console.log(`[Gemini grounding] grounding sources: ${groundingSources.length}, text sources: ${textSources.length}`);
-          return { text, sources };
+          return { text, sources: mergeSources(groundingSources, textSources) };
         } catch (e: any) {
-          console.log("[Gemini grounding] failed:", e?.message);
-          // Fall through to normal completion
+          console.error("[Gemini grounding] failed:", e?.message);
         }
       }
       const geminiModel = genai.getGenerativeModel({ model });
@@ -97,7 +94,6 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
     // OpenAI (default)
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    // OpenAI with browsing: use Responses API with web_search_preview tool
     if (browsing) {
       try {
         const response = await openai.responses.create({
@@ -108,12 +104,9 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
         const text = response.output_text || "";
         const annotationSources = extractFromAnnotations(response.output || [], brandDomain ?? undefined);
         const textSources = extractFromText(text, brandDomain ?? undefined);
-        const sources = mergeSources(annotationSources, textSources);
-        console.log(`[OpenAI browsing] annotation sources: ${annotationSources.length}, text sources: ${textSources.length}`);
-        return { text, sources };
+        return { text, sources: mergeSources(annotationSources, textSources) };
       } catch (browsingErr) {
-        console.error("[callAIModel] OpenAI Responses API browsing failed, falling back:", browsingErr instanceof Error ? browsingErr.message : browsingErr);
-        // Fall through to normal completion
+        console.error("[callAIModel] OpenAI browsing failed, falling back:", browsingErr instanceof Error ? browsingErr.message : browsingErr);
       }
     }
 
@@ -197,9 +190,9 @@ async function normalizeCompetitorName(
   }
 }
 
-/* ─── AVI computation ─── */
+/* ─── AVI computation using canonical calculateAVI ─── */
 
-async function computeAndUpsertAVI(
+async function computeAndSaveAVI(
   supabase: SupabaseClient,
   runId: string,
   projectId: string,
@@ -223,53 +216,29 @@ async function computeAndUpsertAVI(
   const rows = (analyses ?? []) as any[];
   if (rows.length === 0) return;
 
-  const total = rows.length;
-  const presence_score = rows.filter((r: any) => r.brand_mentioned).length / total;
-
-  const rank_score = rows.reduce((s: number, r: any) => {
-    if (r.brand_rank === null || r.brand_rank <= 0) return s;
-    return s + Math.max(0, 1 - (r.brand_rank - 1) / 10);
-  }, 0) / total;
-
-  const withSent = rows.filter((r: any) => r.sentiment_score !== null);
-  const sentAvg = withSent.length > 0
-    ? withSent.reduce((s: number, r: any) => s + r.sentiment_score, 0) / withSent.length
-    : 0;
-  const sentiment_score = (sentAvg + 1) / 2;
-
-  const pairs = new Map<string, boolean[]>();
-  for (const r of rows) {
+  const analysisRows = rows.map((r: any) => {
     const pe = promptMap.get(r.prompt_executed_id);
-    if (!pe) continue;
-    const key = `${pe.query_id}__${pe.segment_id}`;
-    const group = pairs.get(key) ?? [];
-    group.push(r.brand_mentioned);
-    pairs.set(key, group);
-  }
-  let stability_score = 1;
-  if (pairs.size > 0) {
-    const scores: number[] = [];
-    for (const group of Array.from(pairs.values())) {
-      if (group.length <= 1) { scores.push(1); continue; }
-      const trueCount = group.filter(Boolean).length;
-      scores.push(Math.max(trueCount, group.length - trueCount) / group.length);
-    }
-    stability_score = scores.reduce((s, v) => s + v, 0) / scores.length;
-  }
+    return {
+      brand_mentioned: r.brand_mentioned,
+      brand_rank: r.brand_rank,
+      sentiment_score: r.sentiment_score,
+      run_number: pe?.run_number ?? 1,
+      query_id: pe?.query_id ?? "",
+      segment_id: pe?.segment_id ?? "",
+    };
+  });
 
-  const avi_score = Math.round(
-    (presence_score * 35 + rank_score * 25 + sentiment_score * 20 + stability_score * 20) * 10
-  ) / 10;
+  const result = calculateAVI(analysisRows);
 
   const { error: aviError } = await (supabase.from("avi_history") as any)
     .upsert({
       project_id: projectId,
       run_id: runId,
-      avi_score,
-      presence_score: Math.round(presence_score * 10000) / 100,
-      rank_score: Math.round(rank_score * 10000) / 100,
-      sentiment_score: Math.round(sentiment_score * 10000) / 100,
-      stability_score: Math.round(stability_score * 10000) / 100,
+      avi_score: result.avi_score,
+      presence_score: result.components.presence_score,
+      rank_score: result.components.rank_score,
+      sentiment_score: result.components.sentiment_score,
+      stability_score: result.components.stability_score,
       computed_at: new Date().toISOString(),
     }, { onConflict: "project_id,run_id" });
 
@@ -323,19 +292,14 @@ async function executePrompt(
 
   if (!promptRecord) return;
 
-  console.log("[executePrompt] about to call callAIModel — model:", task.model, "browsing:", task.browsing);
   let aiResult: AIModelResult;
   try {
     aiResult = await callAIModel(promptText, task.model, task.browsing, task.brandDomain);
-    console.log("callAIModel success, text length:", aiResult?.text?.length);
   } catch (e: any) {
-    console.error("callAIModel CRASHED:", e?.message, e?.stack);
+    console.error("[executePrompt] callAIModel crashed:", e?.message);
     aiResult = { text: "", sources: [] };
   }
-  console.log("browsing param:", task.browsing);
-  console.log("rawResponse type:", typeof aiResult);
-  console.log("rawResponse.sources:", aiResult?.sources?.length ?? "undefined");
-  console.log("rawResponse.text length:", aiResult?.text?.length ?? "undefined");
+
   const rawText = aiResult.text;
   const promptError: string | null = rawText ? null : "Risposta vuota dal modello";
 
@@ -349,16 +313,9 @@ async function executePrompt(
     })
     .eq("id", promptRecord.id);
 
-  // Extract structured data if we got a response
   if (!rawText) return;
 
   const extraction = await extractFromResponse(rawText, task.targetBrand, task.knownCompetitors);
-
-  console.log("=== EXTRACTION DEBUG ===");
-  console.log("API sources:", aiResult.sources.length);
-  console.log("topics:", extraction.topics?.length ?? 0);
-  console.log("extractor sources:", extraction.sources?.length ?? 0);
-  console.log("competitors:", extraction.competitors_found?.length ?? 0);
 
   // Save response_analysis
   await (supabase.from("response_analysis") as any)
@@ -374,7 +331,7 @@ async function executePrompt(
       avi_components: null,
     });
 
-  // Merge sources: API sources (highest priority) + extractor sources + text fallback
+  // Merge sources: API sources (highest priority) + extractor sources (no duplicate extractFromText)
   const extractorSources: ExtractedSource[] = (extraction.sources || []).map((s: any) => ({
     url: s.url || s.domain,
     domain: s.domain,
@@ -382,86 +339,76 @@ async function executePrompt(
     source_type: s.source_type || "other",
     context: s.context,
   }));
-  const textFallbackSources = extractFromText(rawText, task.brandDomain ?? undefined);
-  console.log("textSources found:", textFallbackSources.length);
-  console.log("textSources sample:", JSON.stringify(textFallbackSources.slice(0, 2)));
-  const mergedSources = mergeSources(aiResult.sources, extractorSources, textFallbackSources);
-  console.log("allSources total:", mergedSources.length);
+  const mergedSources = mergeSources(aiResult.sources, extractorSources);
 
-  // Save all merged sources (upsert by project_id + domain)
-  for (const source of mergedSources) {
-    if (!source.domain || !task.projectId) continue;
+  // Batch upsert sources
+  const sourceRows = mergedSources
+    .filter(s => s.domain && task.projectId)
+    .map(s => ({
+      project_id: task.projectId,
+      run_id: task.runId,
+      url: s.url || "https://" + s.domain,
+      domain: s.domain,
+      source_type: s.source_type || "other",
+      context: s.context || "",
+      citation_count: 1,
+    }));
+
+  if (sourceRows.length > 0) {
     const { error } = await (supabase.from("sources") as any)
-      .upsert({
-        project_id: task.projectId,
-        run_id: task.runId,
-        url: source.url || "https://" + source.domain,
-        domain: source.domain,
-        source_type: source.source_type || "other",
-        context: source.context || "",
-        citation_count: 1,
-      }, { onConflict: "project_id,domain" });
-
-    if (error) {
-      console.log("SOURCE UPSERT ERROR:", JSON.stringify(error));
-    } else {
-      console.log("SOURCE SAVED:", source.domain);
-    }
+      .upsert(sourceRows, { onConflict: "project_id,domain" });
+    if (error) console.error("Sources upsert error:", error.message);
   }
 
-  // Save discovered competitors (upsert with normalization)
+  // Batch upsert competitors (with normalization)
+  const compRows: any[] = [];
   for (const rawComp of extraction.competitors_found || []) {
     const normalizedName = await normalizeCompetitorName(rawComp, task.targetBrand, normCache);
     if (!normalizedName || normalizedName === task.targetBrand) continue;
+    compRows.push({
+      project_id: task.projectId,
+      name: normalizedName,
+      is_manual: false,
+      discovered_at_run_id: task.runId,
+      topic_context: extraction.topics ?? [],
+      query_type: task.queryFunnelStage ?? null,
+      mention_count: 1,
+    });
+  }
 
+  if (compRows.length > 0) {
     await (supabase.from("competitors") as any)
-      .upsert({
-        project_id: task.projectId,
-        name: normalizedName,
-        is_manual: false,
-        first_seen_run_id: task.runId,
-        discovered_at_run_id: task.runId,
-        topic_context: extraction.topics ?? [],
-        query_type: task.queryFunnelStage ?? null,
-        mention_count: 1,
-      }, {
-        onConflict: "project_id,name",
-        ignoreDuplicates: false,
+      .upsert(compRows, { onConflict: "project_id,name", ignoreDuplicates: false });
+    for (const c of compRows) {
+      await (supabase.rpc as any)("increment_competitor_count", {
+        p_project_id: task.projectId,
+        p_name: c.name,
       });
-
-    // Increment mention_count
-    await (supabase.rpc as any)("increment_competitor_count", {
-      p_project_id: task.projectId,
-      p_name: normalizedName,
-    });
+    }
   }
 
-  // Save discovered topics (upsert + increment frequency)
-  for (const topic of extraction.topics || []) {
-    const name = typeof topic === "string" ? topic : (topic as any).name;
-    if (!name) continue;
+  // Batch upsert topics
+  const topicNames = (extraction.topics || [])
+    .map((t: any) => typeof t === "string" ? t : t.name)
+    .filter(Boolean) as string[];
 
+  const topicRows = topicNames.map(name => ({
+    project_id: task.projectId,
+    name,
+    frequency: 1,
+    first_seen_run_id: task.runId,
+  }));
+
+  if (topicRows.length > 0) {
     await (supabase.from("topics") as any)
-      .upsert({
-        project_id: task.projectId,
-        name,
-        frequency: 1,
-        first_seen_run_id: task.runId,
-      }, {
-        onConflict: "project_id,name",
-        ignoreDuplicates: false,
+      .upsert(topicRows, { onConflict: "project_id,name", ignoreDuplicates: false });
+    for (const t of topicRows) {
+      await (supabase.rpc as any)("increment_topic_frequency", {
+        p_project_id: task.projectId,
+        p_name: t.name,
       });
-
-    await (supabase.rpc as any)("increment_topic_frequency", {
-      p_project_id: task.projectId,
-      p_name: name,
-    });
+    }
   }
-
-  console.log("Topics upsert done for:", extraction.topics?.length, "topics");
-
-  // Recalculate AVI
-  await computeAndUpsertAVI(supabase, task.runId, task.projectId);
 }
 
 /* ─── Inngest Function ─── */
@@ -480,8 +427,6 @@ export const runAnalysis = inngest.createFunction(
       runCount: number;
       browsing?: boolean;
     };
-
-    console.log("[Inngest] browsing from event:", browsing, "models:", modelsUsed);
 
     // Step 1: load project data
     const loadedData = await step.run("load-data", async () => {
@@ -544,7 +489,7 @@ export const runAnalysis = inngest.createFunction(
       }
     }
 
-    // Step 2: execute prompts in batches (smaller when browsing to respect rate limits)
+    // Step 2: execute prompts in batches
     const batchSize = browsing ? 3 : 15;
     const batches = chunk(allTasks, batchSize);
     const normCache = new Map<string, string | null>();
@@ -552,22 +497,20 @@ export const runAnalysis = inngest.createFunction(
     for (let i = 0; i < batches.length; i++) {
       await step.run(`batch-${i}`, async () => {
         const supabase = createServiceClient();
-        // Execute batch sequentially (AI calls can't be truly parallel per rate limits)
         for (const task of batches[i]) {
           await executePrompt(supabase, task, normCache);
         }
-        // Update progress
-        const completedSoFar = Math.min((i + 1) * 15, allTasks.length);
+        const completedSoFar = Math.min((i + 1) * batchSize, allTasks.length);
         await (supabase.from("analysis_runs") as any)
           .update({ completed_prompts: completedSoFar })
           .eq("id", runId);
       });
     }
 
-    // Step 3: compute AVI and mark completed
+    // Step 3: compute AVI once and mark completed
     await step.run("compute-avi", async () => {
       const supabase = createServiceClient();
-      await (supabase.rpc as any)("compute_and_save_avi", { p_run_id: runId });
+      await computeAndSaveAVI(supabase, runId, projectId);
       await (supabase.rpc as any)("compute_competitor_avi", { p_run_id: runId });
       await (supabase.from("analysis_runs") as any)
         .update({

@@ -102,7 +102,8 @@ export async function POST(request: Request) {
       status: "started",
     }, { status: 200 });
 
-  } catch {
+  } catch (err) {
+    console.error("[analysis/start] unexpected error:", err instanceof Error ? err.message : err);
     return NextResponse.json({ error: "Errore interno" }, { status: 500 });
   }
 }
