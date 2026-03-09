@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Play, X, Loader2, Cpu, AlertTriangle, Globe } from "lucide-react";
 import { AI_MODELS, PROVIDER_CONFIG } from "@/lib/engine/models";
@@ -28,6 +28,13 @@ export function AnalysisLauncher({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  // Allow external components to open the modal via custom event
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener("open-analysis-modal", handler);
+    return () => window.removeEventListener("open-analysis-modal", handler);
+  }, []);
   const [selected, setSelected] = useState<string[]>(["gpt-4o-mini"]);
   const [runCount, setRunCount] = useState(1);
   const [browsing, setBrowsing] = useState(true);

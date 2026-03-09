@@ -5,7 +5,7 @@ import { AnalysisLauncher } from "./analysis-launcher";
 import { AnalysisProgress } from "./analysis-progress";
 import { ProjectAVITrend } from "./project-avi-trend";
 import { DeleteProjectButton } from "./delete-project-button";
-import { RetryAnalysisButton } from "./retry-analysis-button";
+import { OpenAnalysisButton } from "./open-analysis-button";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const supabase = createServerClient();
@@ -146,11 +146,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                 : `Analisi parziale — completati ${(lastRun as any).completed_prompts}/${(lastRun as any).total_prompts} prompt prima dell'interruzione.`}
             </p>
           </div>
-          <RetryAnalysisButton
-            projectId={params.id}
-            modelsUsed={(lastRun as any).models_used ?? []}
-            runCount={(lastRun as any).run_count ?? 1}
-          />
+          <OpenAnalysisButton />
         </div>
       )}
 
