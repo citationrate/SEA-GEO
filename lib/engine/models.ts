@@ -17,9 +17,7 @@ export const AI_MODELS: AIModel[] = [
   { id: "claude-sonnet-4-5", label: "Claude Sonnet 4.5", desc: "Eccellente comprensione del contesto",         provider: "anthropic" },
   { id: "claude-opus-4-5",   label: "Claude Opus 4.5",   desc: "Il piu sofisticato per analisi profonde",      provider: "anthropic" },
   // Google
-  { id: "gemini-2.0-flash",   label: "Gemini 2.0 Flash",   desc: "Velocissimo con ottima qualita",              provider: "google" },
-  { id: "gemini-2.0-pro-exp", label: "Gemini 2.0 Pro",     desc: "Ampio contesto e alta accuratezza",           provider: "google" },
-  { id: "gemini-1.5-pro",     label: "Gemini 1.5 Pro",     desc: "Contesto esteso fino a 2M token",             provider: "google" },
+  { id: "gemini-2.5-flash",   label: "Gemini 2.5 Flash",   desc: "Velocissimo con ottima qualita",              provider: "google" },
   { id: "gemini-2.5-pro",     label: "Gemini 2.5 Pro",     desc: "Stato dell'arte di Google",                   provider: "google" },
   // xAI
   { id: "grok-2",  label: "Grok 2",  desc: "Accesso a dati recenti e web",            provider: "xai" },
