@@ -15,6 +15,7 @@ export default function NewProjectPage() {
   const [competitors, setCompetitors] = useState<string[]>([]);
   const [competitorInput, setCompetitorInput] = useState("");
   const [marketContext, setMarketContext] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [language, setLanguage] = useState<"it" | "en">("it");
   const [country, setCountry] = useState("");
 
@@ -44,6 +45,7 @@ export default function NewProjectPage() {
         body: JSON.stringify({
           name,
           target_brand: targetBrand,
+          website_url: websiteUrl || null,
           known_competitors: competitors,
           market_context: marketContext || null,
           language,
@@ -106,6 +108,19 @@ export default function NewProjectPage() {
             placeholder="Es. Acme Inc"
             className="input-base"
           />
+        </div>
+
+        {/* Sito web ufficiale */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Sito web ufficiale</label>
+          <input
+            type="text"
+            value={websiteUrl}
+            onChange={(e) => setWebsiteUrl(e.target.value)}
+            placeholder="Es. lavazza.it"
+            className="input-base"
+          />
+          <p className="text-xs text-muted-foreground">Dominio del brand per identificare le fonti di proprieta</p>
         </div>
 
         {/* Competitor conosciuti */}

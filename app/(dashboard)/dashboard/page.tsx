@@ -44,9 +44,18 @@ export default async function DashboardPage({
 
   // Filter runs by selected model
   const selectedModel = searchParams.model || null;
-  const runs = (allRuns ?? []).filter((r: any) =>
-    !selectedModel || (r.models_used ?? []).includes(selectedModel)
-  );
+  let runs: any[];
+  if (selectedModel && targetIds.length > 0) {
+    const { data: filtered } = await supabase
+      .from("analysis_runs")
+      .select("*")
+      .in("project_id", targetIds)
+      .contains("models_used", [selectedModel])
+      .order("created_at", { ascending: false });
+    runs = filtered ?? [];
+  } else {
+    runs = allRuns ?? [];
+  }
 
   const runIds = runs.map((r: any) => r.id);
 

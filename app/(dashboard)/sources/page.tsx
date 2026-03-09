@@ -49,9 +49,19 @@ export default async function SourcesPage({
   const availableModels = Array.from(modelsSet).sort();
 
   const selectedModel = searchParams.model || null;
-  const filteredRunIds = (allRuns ?? [])
-    .filter((r: any) => !selectedModel || (r.models_used ?? []).includes(selectedModel))
-    .map((r: any) => r.id);
+
+  // Filter runs by model at DB level if selected
+  let filteredRunIds: string[];
+  if (selectedModel && targetIds.length > 0) {
+    const { data: filtered } = await supabase
+      .from("analysis_runs")
+      .select("id")
+      .in("project_id", targetIds)
+      .contains("models_used", [selectedModel]);
+    filteredRunIds = (filtered ?? []).map((r: any) => r.id);
+  } else {
+    filteredRunIds = (allRuns ?? []).map((r: any) => r.id);
+  }
 
   // Get sources filtered by run_id
   let sourcesList: any[] = [];

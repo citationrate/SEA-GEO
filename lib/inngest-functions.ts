@@ -35,7 +35,7 @@ function buildPrompt(query: string, segmentContext: string, language: string): s
   return `${lang}\n\nContesto utente: ${segmentContext}\n\nDomanda: ${query}${sourceHint}`;
 }
 
-async function callAIModel(prompt: string, model: string, browsing = false): Promise<AIModelResult> {
+async function callAIModel(prompt: string, model: string, browsing = false, brandDomain?: string | null): Promise<AIModelResult> {
   const empty: AIModelResult = { text: "", sources: [] };
   console.log("callAIModel called with browsing:", browsing, "model:", model);
   try {
@@ -51,7 +51,7 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
       });
       const block = msg.content[0];
       const text = block.type === "text" ? block.text : "";
-      return { text, sources: extractFromText(text) };
+      return { text, sources: extractFromText(text, brandDomain ?? undefined) };
     }
 
     if (provider === "google") {
@@ -64,8 +64,8 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
           });
           const result = await geminiModel.generateContent(prompt);
           const text = result.response.text();
-          const groundingSources = extractFromGrounding((result.response as any).candidates || []);
-          const textSources = extractFromText(text);
+          const groundingSources = extractFromGrounding((result.response as any).candidates || [], brandDomain ?? undefined);
+          const textSources = extractFromText(text, brandDomain ?? undefined);
           const sources = mergeSources(groundingSources, textSources);
           console.log(`[Gemini grounding] grounding sources: ${groundingSources.length}, text sources: ${textSources.length}`);
           return { text, sources };
@@ -77,7 +77,7 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
       const geminiModel = genai.getGenerativeModel({ model });
       const result = await geminiModel.generateContent(prompt);
       const text = result.response.text();
-      return { text, sources: extractFromText(text) };
+      return { text, sources: extractFromText(text, brandDomain ?? undefined) };
     }
 
     if (provider === "xai") {
@@ -91,7 +91,7 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
         messages: [{ role: "user", content: prompt }],
       });
       const text = completion.choices[0]?.message?.content ?? "";
-      return { text, sources: extractFromText(text) };
+      return { text, sources: extractFromText(text, brandDomain ?? undefined) };
     }
 
     // OpenAI (default)
@@ -106,8 +106,8 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
           input: prompt,
         });
         const text = response.output_text || "";
-        const annotationSources = extractFromAnnotations(response.output || []);
-        const textSources = extractFromText(text);
+        const annotationSources = extractFromAnnotations(response.output || [], brandDomain ?? undefined);
+        const textSources = extractFromText(text, brandDomain ?? undefined);
         const sources = mergeSources(annotationSources, textSources);
         console.log(`[OpenAI browsing] annotation sources: ${annotationSources.length}, text sources: ${textSources.length}`);
         return { text, sources };
@@ -124,7 +124,7 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
         messages: [{ role: "user", content: prompt }],
       } as any);
       const text = completion.choices[0]?.message?.content ?? "";
-      return { text, sources: extractFromText(text) };
+      return { text, sources: extractFromText(text, brandDomain ?? undefined) };
     }
 
     const completion = await openai.chat.completions.create({
@@ -134,7 +134,7 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
       messages: [{ role: "user", content: prompt }],
     });
     const text = completion.choices[0]?.message?.content ?? "";
-    return { text, sources: extractFromText(text) };
+    return { text, sources: extractFromText(text, brandDomain ?? undefined) };
   } catch (err) {
     console.error(`[callAIModel] ${model} failed:`, err instanceof Error ? err.message : err);
     return empty;
@@ -291,6 +291,7 @@ interface PromptTask {
   model: string;
   runNumber: number;
   targetBrand: string;
+  brandDomain: string | null;
   knownCompetitors: string[];
   language: string;
   browsing: boolean;
@@ -325,7 +326,7 @@ async function executePrompt(
   console.log("[executePrompt] about to call callAIModel — model:", task.model, "browsing:", task.browsing);
   let aiResult: AIModelResult;
   try {
-    aiResult = await callAIModel(promptText, task.model, task.browsing);
+    aiResult = await callAIModel(promptText, task.model, task.browsing, task.brandDomain);
     console.log("callAIModel success, text length:", aiResult?.text?.length);
   } catch (e: any) {
     console.error("callAIModel CRASHED:", e?.message, e?.stack);
@@ -381,7 +382,7 @@ async function executePrompt(
     source_type: s.source_type || "other",
     context: s.context,
   }));
-  const textFallbackSources = extractFromText(rawText);
+  const textFallbackSources = extractFromText(rawText, task.brandDomain ?? undefined);
   console.log("textSources found:", textFallbackSources.length);
   console.log("textSources sample:", JSON.stringify(textFallbackSources.slice(0, 2)));
   const mergedSources = mergeSources(aiResult.sources, extractorSources, textFallbackSources);
@@ -512,6 +513,7 @@ export const runAnalysis = inngest.createFunction(
 
     const { project, queries, segments } = loadedData;
     const targetBrand = project.target_brand;
+    const brandDomain = project.website_url ?? null;
     const knownCompetitors = project.known_competitors ?? [];
     const language = project.language;
 
@@ -532,6 +534,7 @@ export const runAnalysis = inngest.createFunction(
               model,
               runNumber: runNum,
               targetBrand,
+              brandDomain,
               knownCompetitors,
               language,
               browsing,

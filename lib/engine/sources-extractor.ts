@@ -7,7 +7,7 @@ export interface ExtractedSource {
 }
 
 /** Estrae fonti da URL citation annotations (OpenAI Responses API) */
-export function extractFromAnnotations(output: any[]): ExtractedSource[] {
+export function extractFromAnnotations(output: any[], brandDomain?: string): ExtractedSource[] {
   const results: ExtractedSource[] = [];
   const seen = new Set<string>();
   try {
@@ -23,7 +23,7 @@ export function extractFromAnnotations(output: any[]): ExtractedSource[] {
                   url: annotation.url,
                   domain,
                   title: annotation.title,
-                  source_type: classifyDomain(domain),
+                  source_type: classifyDomain(domain, brandDomain),
                 });
               }
             }
@@ -38,7 +38,7 @@ export function extractFromAnnotations(output: any[]): ExtractedSource[] {
 }
 
 /** Estrae fonti da Gemini grounding metadata */
-export function extractFromGrounding(candidates: any[]): ExtractedSource[] {
+export function extractFromGrounding(candidates: any[], brandDomain?: string): ExtractedSource[] {
   const results: ExtractedSource[] = [];
   const seen = new Set<string>();
   try {
@@ -52,7 +52,7 @@ export function extractFromGrounding(candidates: any[]): ExtractedSource[] {
             url: chunk.web.uri,
             domain,
             title: chunk.web.title,
-            source_type: classifyDomain(domain),
+            source_type: classifyDomain(domain, brandDomain),
           });
         }
       }
@@ -64,7 +64,7 @@ export function extractFromGrounding(candidates: any[]): ExtractedSource[] {
 }
 
 /** Estrae domini e URL dal testo puro (fallback universale) */
-export function extractFromText(text: string): ExtractedSource[] {
+export function extractFromText(text: string, brandDomain?: string): ExtractedSource[] {
   const results: ExtractedSource[] = [];
   const seen = new Set<string>();
   const blacklist = new Set([
@@ -72,7 +72,7 @@ export function extractFromText(text: string): ExtractedSource[] {
     "package.json", "vercel.app",
   ]);
 
-  // URL completi
+  // URL completi — mantieni path completo
   const urlMatches = text.match(/https?:\/\/[^\s)\"'<>,\]]+/g) || [];
   for (const url of urlMatches) {
     const domain = safeDomain(url);
@@ -81,7 +81,7 @@ export function extractFromText(text: string): ExtractedSource[] {
       results.push({
         url,
         domain,
-        source_type: classifyDomain(domain),
+        source_type: classifyDomain(domain, brandDomain),
         context: "URL citato nella risposta",
       });
     }
@@ -97,7 +97,7 @@ export function extractFromText(text: string): ExtractedSource[] {
       results.push({
         url: "https://" + clean,
         domain: clean,
-        source_type: classifyDomain(clean),
+        source_type: classifyDomain(clean, brandDomain),
         context: "dominio menzionato",
       });
     }
@@ -106,7 +106,7 @@ export function extractFromText(text: string): ExtractedSource[] {
   return results;
 }
 
-/** Merge e deduplica fonti da più sorgenti (ordine = priorità) */
+/** Merge e deduplica fonti da piu sorgenti (ordine = priorita) */
 export function mergeSources(...sourceLists: ExtractedSource[][]): ExtractedSource[] {
   const seen = new Set<string>();
   const results: ExtractedSource[] = [];
@@ -129,10 +129,11 @@ function safeDomain(url: string): string | null {
   }
 }
 
-function classifyDomain(domain: string): ExtractedSource["source_type"] {
+function classifyDomain(domain: string, brandDomain?: string): ExtractedSource["source_type"] {
+  if (brandDomain && domain.includes(brandDomain.replace(/^www\./, "").toLowerCase())) return "brand_owned";
   if (/amazon|ebay|zalando|shopify|etsy|shop\./.test(domain)) return "ecommerce";
   if (/wikipedia\.org/.test(domain)) return "wikipedia";
   if (/instagram|facebook|twitter|tiktok|youtube|linkedin/.test(domain)) return "social";
   if (/trustpilot|tripadvisor|yelp|recensioni/.test(domain)) return "review";
-  return "other";
+  return "media";
 }

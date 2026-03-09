@@ -5,6 +5,7 @@ import { z } from "zod";
 const projectSchema = z.object({
   name: z.string().min(1),
   target_brand: z.string().min(1),
+  website_url: z.string().nullable().default(null),
   known_competitors: z.array(z.string()).default([]),
   market_context: z.string().nullable().default(null),
   language: z.enum(["it", "en"]),

@@ -20,7 +20,7 @@ const NAV = [
   {
     group: "Analisi",
     items: [
-      { href: "/analysis",    icon: Play,            label: "Nuova Analisi" },
+      { href: "/projects/new", icon: Play,            label: "Nuovo Progetto" },
       { href: "/results",     icon: BarChart3,       label: "Risultati"    },
       { href: "/compare",     icon: GitCompare,      label: "Confronto"    },
       { href: "/datasets",    icon: Database,        label: "Dataset"      },
