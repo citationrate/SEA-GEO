@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
 import { resolveProjectId } from "@/lib/utils/resolve-project";
+
 import { DashboardClient } from "./dashboard-client";
 
 export const metadata = { title: "Dashboard" };
