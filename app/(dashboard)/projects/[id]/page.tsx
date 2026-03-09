@@ -58,7 +58,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // Build trend data for chart
   const trendData = (aviHistory ?? []).map((a: any, i: number) => ({
     version: `v${i + 1}`,
-    avi: Math.round(a.avi_score),
+    avi: Math.round(a.avi_score * 10) / 10,
     presence: Math.round(a.presence_score),
     sentiment: Math.round(a.sentiment_score),
   }));

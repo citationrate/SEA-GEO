@@ -110,20 +110,20 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
     // OpenAI (default)
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    // OpenAI with browsing: use chat completions with web_search_preview tool
+    // OpenAI with browsing: use Responses API with web_search_preview tool
     if (browsing) {
       try {
-        const completion = await openai.chat.completions.create({
+        const response = await openai.responses.create({
           model,
-          messages: [{ role: "user", content: prompt }],
-          tools: [{ type: "web_search_preview" } as any],
-        } as any);
-        const text = completion.choices[0]?.message?.content ?? "";
+          tools: [{ type: "web_search_preview" }],
+          input: prompt,
+        });
+        const text = response.output_text;
         console.log("OpenAI browsing response length:", text.length);
-        // Sources extracted from text via regex in executePrompt
-        return { text, sources: [] };
+        const sources = extractUrlsFromText(text);
+        return { text, sources };
       } catch (browsingErr) {
-        console.error("[callAIModel] OpenAI browsing failed, falling back:", browsingErr instanceof Error ? browsingErr.message : browsingErr);
+        console.error("[callAIModel] OpenAI Responses API browsing failed, falling back:", browsingErr instanceof Error ? browsingErr.message : browsingErr);
         // Fall through to normal completion
       }
     }
@@ -267,8 +267,8 @@ async function computeAndUpsertAVI(
   }
 
   const avi_score = Math.round(
-    presence_score * 35 + rank_score * 25 + sentiment_score * 20 + stability_score * 20
-  );
+    (presence_score * 35 + rank_score * 25 + sentiment_score * 20 + stability_score * 20) * 10
+  ) / 10;
 
   const { error: aviError } = await (supabase.from("avi_history") as any)
     .upsert({

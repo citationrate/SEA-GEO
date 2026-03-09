@@ -131,7 +131,7 @@ export default async function DashboardPage({
   // Build trend data
   const trendData = (aviHistory ?? []).map((a: any, i: number) => ({
     run: `v${i + 1}`,
-    avi: Math.round(a.avi_score),
+    avi: Math.round(a.avi_score * 10) / 10,
     prominence: Math.round(a.presence_score * 100),
     sentiment: Math.round(a.sentiment_score * 100),
   }));

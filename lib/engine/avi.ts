@@ -83,11 +83,11 @@ export function calculateAVI(analyses: AnalysisRow[]): AVIResult {
 
   // --- AVI composito ---
   const avi_score = Math.round(
-    presence_score * 0.35 +
+    (presence_score * 0.35 +
     rank_score * 0.25 +
     sentiment_score * 0.20 +
-    stability_score * 0.20
-  );
+    stability_score * 0.20) * 10
+  ) / 10;
 
   return {
     avi_score: Math.max(0, Math.min(100, avi_score)),
