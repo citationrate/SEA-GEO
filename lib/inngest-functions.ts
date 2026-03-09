@@ -387,19 +387,6 @@ async function executePrompt(
   const mergedSources = mergeSources(aiResult.sources, extractorSources, textFallbackSources);
   console.log("allSources total:", mergedSources.length);
 
-  // DEBUG: test insert to discover exact schema errors
-  const testTs = Date.now();
-  const { data: testData, error: testError } = await (supabase.from("sources") as any)
-    .insert({
-      project_id: task.projectId,
-      run_id: task.runId,
-      url: "https://test-" + testTs + ".com",
-      domain: "test-" + testTs + ".com",
-      source_type: "other",
-      context: "test",
-    });
-  console.log("TEST INSERT result:", JSON.stringify({ data: testData, error: testError }));
-
   // Save all merged sources (upsert by project_id + domain)
   for (const source of mergedSources) {
     if (!source.domain || !task.projectId) continue;
@@ -415,14 +402,11 @@ async function executePrompt(
       }, { onConflict: "project_id,domain" });
 
     if (error) {
-      console.log("SOURCE UPSERT ERROR:", JSON.stringify(error), "domain:", source.domain, "project_id:", task.projectId);
+      console.log("SOURCE UPSERT ERROR:", JSON.stringify(error));
     } else {
       console.log("SOURCE SAVED:", source.domain);
     }
   }
-
-  console.log("Sources saved to DB:", mergedSources.length);
-  console.log("Sources breakdown — API:", aiResult.sources.length, "extractor:", extractorSources.length, "text:", textFallbackSources.length);
 
   // Save discovered competitors (upsert with normalization)
   for (const rawComp of extraction.competitors_found || []) {
