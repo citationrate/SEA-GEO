@@ -37,7 +37,7 @@ function buildPrompt(query: string, segmentContext: string, language: string): s
 
 async function callAIModel(prompt: string, model: string, browsing = false): Promise<AIModelResult> {
   const empty: AIModelResult = { text: "", sources: [] };
-  console.log("callAIModel browsing:", browsing, "model:", model);
+  console.log("callAIModel called with browsing:", browsing, "model:", model);
   try {
     const modelDef = MODEL_MAP.get(model);
     const provider = modelDef?.provider ?? "openai";
@@ -323,6 +323,10 @@ async function executePrompt(
   if (!promptRecord) return;
 
   const aiResult = await callAIModel(promptText, task.model, task.browsing);
+  console.log("browsing param:", task.browsing);
+  console.log("rawResponse type:", typeof aiResult);
+  console.log("rawResponse.sources:", aiResult?.sources?.length ?? "undefined");
+  console.log("rawResponse.text length:", aiResult?.text?.length ?? "undefined");
   const rawText = aiResult.text;
   const promptError: string | null = rawText ? null : "Risposta vuota dal modello";
 
@@ -370,9 +374,10 @@ async function executePrompt(
     context: s.context,
   }));
   const textFallbackSources = extractFromText(rawText);
+  console.log("textSources found:", textFallbackSources.length);
+  console.log("textSources sample:", JSON.stringify(textFallbackSources.slice(0, 2)));
   const mergedSources = mergeSources(aiResult.sources, extractorSources, textFallbackSources);
-
-  console.log("allSources (merged):", mergedSources.length);
+  console.log("allSources total:", mergedSources.length);
 
   // Save all merged sources (upsert by project_id + domain)
   for (const source of mergedSources) {
@@ -394,7 +399,8 @@ async function executePrompt(
       });
   }
 
-  console.log("Sources upsert done:", mergedSources.length, "(API:", aiResult.sources.length, "extractor:", extractorSources.length, "text:", textFallbackSources.length, ")");
+  console.log("Sources saved to DB:", mergedSources.length);
+  console.log("Sources breakdown — API:", aiResult.sources.length, "extractor:", extractorSources.length, "text:", textFallbackSources.length);
 
   // Save discovered competitors (upsert with normalization)
   for (const rawComp of extraction.competitors_found || []) {
@@ -467,6 +473,8 @@ export const runAnalysis = inngest.createFunction(
       runCount: number;
       browsing?: boolean;
     };
+
+    console.log("[Inngest] browsing from event:", browsing, "models:", modelsUsed);
 
     // Step 1: load project data
     const loadedData = await step.run("load-data", async () => {
