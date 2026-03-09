@@ -2,6 +2,13 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  // Skip auth entirely for API routes (Inngest callbacks, analysis, etc.)
+  if (path.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -21,12 +28,10 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const path = request.nextUrl.pathname;
   const isAuthRoute = path.startsWith("/login") || path.startsWith("/register");
   const isPublic = path === "/" || path.startsWith("/share/") || path.startsWith("/auth/");
-  const isApiRoute = path.startsWith("/api/");
 
-  if (!user && !isAuthRoute && !isPublic && !isApiRoute) {
+  if (!user && !isAuthRoute && !isPublic) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
   if (user && isAuthRoute) {
