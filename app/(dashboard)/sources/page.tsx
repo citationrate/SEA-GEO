@@ -38,26 +38,15 @@ export default async function SourcesPage({
   const selectedProject = projectsList.find((p: any) => p.id === selectedId);
   const brand = selectedProject?.target_brand ?? projectsList[0]?.target_brand ?? "";
 
-  // Get runs → prompts → sources
-  const { data: runs } = targetIds.length > 0
-    ? await supabase.from("analysis_runs").select("id, project_id").in("project_id", targetIds)
-    : { data: [] };
-
-  const runIds = (runs ?? []).map((r: any) => r.id);
-
-  const { data: prompts } = runIds.length > 0
-    ? await supabase.from("prompts_executed").select("id, run_id").in("run_id", runIds)
-    : { data: [] };
-
-  const promptRunMap = new Map((prompts ?? []).map((p: any) => [p.id, p.run_id]));
-  const promptIds = (prompts ?? []).map((p: any) => p.id);
-
-  const { data: sources } = promptIds.length > 0
+  // Get sources directly by project_id
+  const { data: sources, error: sourcesError } = targetIds.length > 0
     ? await supabase
         .from("sources")
         .select("*")
-        .in("prompt_executed_id", promptIds)
-    : { data: [] };
+        .in("project_id", targetIds)
+    : { data: [], error: null };
+
+  console.log("sources query result:", sources?.length, "error:", sourcesError?.message ?? null);
 
   // Group by domain
   const domainMap = new Map<string, SourceDomain>();
@@ -86,11 +75,11 @@ export default async function SourcesPage({
     }
   }
 
-  // Count analysis per domain via run tracking
+  // Count analysis per domain via run_id on source rows
   const domainRuns = new Map<string, Set<string>>();
   for (const s of (sources ?? []) as any[]) {
     const domain = s.domain ?? "sconosciuto";
-    const runId = promptRunMap.get(s.prompt_executed_id) ?? "";
+    const runId = s.run_id ?? "";
     if (!runId) continue;
     if (!domainRuns.has(domain)) domainRuns.set(domain, new Set());
     domainRuns.get(domain)!.add(runId);
