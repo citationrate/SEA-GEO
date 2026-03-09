@@ -1,10 +1,11 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle } from "lucide-react";
 import { AnalysisLauncher } from "./analysis-launcher";
 import { AnalysisProgress } from "./analysis-progress";
 import { ProjectAVITrend } from "./project-avi-trend";
 import { DeleteProjectButton } from "./delete-project-button";
+import { RetryAnalysisButton } from "./retry-analysis-button";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const supabase = createServerClient();
@@ -131,6 +132,28 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         </div>
       )}
 
+      {/* Failed run banner */}
+      {lastRun && (lastRun as any).status === "failed" && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3">
+          <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-destructive">
+              L&apos;ultima analisi non è andata a buon fine.
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {(lastRun as any).completed_prompts === 0
+                ? "Analisi interrotta prima di iniziare — probabilmente un problema di connessione."
+                : `Analisi parziale — completati ${(lastRun as any).completed_prompts}/${(lastRun as any).total_prompts} prompt prima dell'interruzione.`}
+            </p>
+          </div>
+          <RetryAnalysisButton
+            projectId={params.id}
+            modelsUsed={(lastRun as any).models_used ?? []}
+            runCount={(lastRun as any).run_count ?? 1}
+          />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Query TOFU */}
         <div className="card p-5 space-y-4">
@@ -214,31 +237,45 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           <div className="space-y-2">
             {(allRuns ?? []).map((run: any) => {
               const Icon = run.status === "completed" ? CheckCircle : run.status === "failed" ? XCircle : run.status === "running" ? Loader2 : Clock;
-              const badgeClass = run.status === "completed" ? "badge-success" : run.status === "running" ? "badge-primary" : "badge-muted";
+              const badgeClass = run.status === "completed"
+                ? "bg-green-500/15 text-green-500 border-green-500/30"
+                : run.status === "running"
+                ? "bg-yellow-500/15 text-yellow-500 border-yellow-500/30"
+                : run.status === "failed"
+                ? "bg-red-500/15 text-red-500 border-red-500/30"
+                : "badge-muted";
               const statusLabel = run.status === "completed" ? "Completata" : run.status === "running" ? "In corso" : run.status === "failed" ? "Fallita" : run.status;
               const aviScore = aviMap.get(run.id);
               return (
-                <a
-                  key={run.id}
-                  href={`/projects/${params.id}/runs/${run.id}`}
-                  className="flex items-center justify-between bg-muted rounded-lg px-4 py-3 border border-border hover:border-primary/30 transition-colors group"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="font-display font-semibold text-foreground group-hover:text-primary transition-colors">v{run.version}</span>
-                    {aviScore != null && (
-                      <span className="font-display font-bold text-primary text-sm">AVI {aviScore}</span>
-                    )}
-                    <span className="text-xs text-muted-foreground">{run.models_used?.join(", ")}</span>
-                    <span className="text-xs text-muted-foreground">{run.completed_prompts}/{run.total_prompts} prompt</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground">{new Date(run.completed_at ?? run.created_at).toLocaleDateString("it-IT")}</span>
-                    <span className={`badge ${badgeClass} flex items-center gap-1 text-[10px]`}>
-                      <Icon className={`w-3 h-3 ${run.status === "running" ? "animate-spin" : ""}`} />
-                      {statusLabel}
-                    </span>
-                  </div>
-                </a>
+                <div key={run.id} className="space-y-1">
+                  <a
+                    href={`/projects/${params.id}/runs/${run.id}`}
+                    className="flex items-center justify-between bg-muted rounded-lg px-4 py-3 border border-border hover:border-primary/30 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="font-display font-semibold text-foreground group-hover:text-primary transition-colors">v{run.version}</span>
+                      {aviScore != null && (
+                        <span className="font-display font-bold text-primary text-sm">AVI {aviScore}</span>
+                      )}
+                      <span className="text-xs text-muted-foreground">{run.models_used?.join(", ")}</span>
+                      <span className="text-xs text-muted-foreground">{run.completed_prompts}/{run.total_prompts} prompt</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground">{new Date(run.completed_at ?? run.created_at).toLocaleDateString("it-IT")}</span>
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${badgeClass}`}>
+                        <Icon className={`w-3 h-3 ${run.status === "running" ? "animate-spin" : ""}`} />
+                        {statusLabel}
+                      </span>
+                    </div>
+                  </a>
+                  {run.status === "failed" && (
+                    <p className="text-xs text-muted-foreground px-4">
+                      {run.completed_prompts === 0
+                        ? "Analisi interrotta prima di iniziare — probabilmente un problema di connessione."
+                        : `Analisi parziale — completati ${run.completed_prompts}/${run.total_prompts} prompt prima dell'interruzione.`}
+                    </p>
+                  )}
+                </div>
               );
             })}
           </div>

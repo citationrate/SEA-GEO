@@ -27,6 +27,13 @@ export async function POST(request: Request) {
 
     const { project_id, models_used, run_count, browsing } = parsed.data;
 
+    // Auto-fail stale running runs (older than 30 minutes)
+    await (supabase.from("analysis_runs") as any)
+      .update({ status: "failed" })
+      .eq("project_id", project_id)
+      .eq("status", "running")
+      .lt("created_at", new Date(Date.now() - 30 * 60 * 1000).toISOString());
+
     // Fetch project
     const { data: project } = await supabase
       .from("projects")
