@@ -5,19 +5,20 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { extractFromResponse } from "./engine/extractor";
 import { MODEL_MAP } from "./engine/models";
+import {
+  type ExtractedSource,
+  extractFromAnnotations,
+  extractFromGrounding,
+  extractFromText,
+  mergeSources,
+} from "./engine/sources-extractor";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /* ─── Helpers ─── */
 
-interface BrowsingSource {
-  url: string;
-  domain: string;
-  title?: string;
-}
-
 interface AIModelResult {
   text: string;
-  sources: BrowsingSource[];
+  sources: ExtractedSource[];
 }
 
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -28,25 +29,10 @@ function chunk<T>(arr: T[], size: number): T[][] {
 
 function buildPrompt(query: string, segmentContext: string, language: string): string {
   const lang = language === "it" ? "Rispondi in italiano." : "Answer in English.";
-  return `${lang}\n\nContesto utente: ${segmentContext}\n\nDomanda: ${query}`;
-}
-
-function extractUrlsFromText(text: string): BrowsingSource[] {
-  const urlRegex = /https?:\/\/[^\s)\"'<>]+/g;
-  const matches = text.match(urlRegex) || [];
-  const results: BrowsingSource[] = [];
-  for (const url of matches) {
-    try {
-      const domain = new URL(url).hostname.replace(/^www\./, "");
-      results.push({ url, domain });
-    } catch { /* skip invalid URLs */ }
-  }
-  return results;
-}
-
-function safeDomain(url: string): string | null {
-  try { return new URL(url).hostname.replace(/^www\./, ""); }
-  catch { return null; }
+  const sourceHint = language === "it"
+    ? "\n\nImportante: nella tua risposta cita esplicitamente i siti web, portali, blog o piattaforme rilevanti includendo il loro dominio (es: nike.com, amazon.it, trustpilot.com)."
+    : "\n\nImportant: in your response explicitly cite relevant websites, portals, blogs or platforms including their domain (e.g.: nike.com, amazon.com, trustpilot.com).";
+  return `${lang}\n\nContesto utente: ${segmentContext}\n\nDomanda: ${query}${sourceHint}`;
 }
 
 async function callAIModel(prompt: string, model: string, browsing = false): Promise<AIModelResult> {
@@ -64,34 +50,34 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
         messages: [{ role: "user", content: prompt }],
       });
       const block = msg.content[0];
-      return { text: block.type === "text" ? block.text : "", sources: [] };
+      const text = block.type === "text" ? block.text : "";
+      return { text, sources: extractFromText(text) };
     }
 
     if (provider === "google") {
       const genai = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY ?? "");
       if (browsing) {
-        const geminiModel = genai.getGenerativeModel({
-          model,
-          tools: [{ googleSearch: {} } as any],
-        });
-        const result = await geminiModel.generateContent(prompt);
-        const candidate = (result.response as any).candidates?.[0];
-        const groundingChunks = candidate?.groundingMetadata?.groundingChunks ?? [];
-        const sources: BrowsingSource[] = groundingChunks
-          .map((chunk: any) => {
-            const uri = chunk.web?.uri;
-            if (!uri) return null;
-            const domain = safeDomain(uri);
-            if (!domain) return null;
-            return { url: uri, domain, title: chunk.web?.title };
-          })
-          .filter(Boolean) as BrowsingSource[];
-        console.log("Gemini grounding sources:", sources.length);
-        return { text: result.response.text(), sources };
+        try {
+          const geminiModel = genai.getGenerativeModel({
+            model,
+            tools: [{ googleSearch: {} } as any],
+          });
+          const result = await geminiModel.generateContent(prompt);
+          const text = result.response.text();
+          const groundingSources = extractFromGrounding((result.response as any).candidates || []);
+          const textSources = extractFromText(text);
+          const sources = mergeSources(groundingSources, textSources);
+          console.log(`[Gemini grounding] grounding sources: ${groundingSources.length}, text sources: ${textSources.length}`);
+          return { text, sources };
+        } catch (e: any) {
+          console.log("[Gemini grounding] failed:", e?.message);
+          // Fall through to normal completion
+        }
       }
       const geminiModel = genai.getGenerativeModel({ model });
       const result = await geminiModel.generateContent(prompt);
-      return { text: result.response.text(), sources: [] };
+      const text = result.response.text();
+      return { text, sources: extractFromText(text) };
     }
 
     if (provider === "xai") {
@@ -104,7 +90,8 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
         max_tokens: 1500,
         messages: [{ role: "user", content: prompt }],
       });
-      return { text: completion.choices[0]?.message?.content ?? "", sources: [] };
+      const text = completion.choices[0]?.message?.content ?? "";
+      return { text, sources: extractFromText(text) };
     }
 
     // OpenAI (default)
@@ -118,9 +105,11 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
           tools: [{ type: "web_search_preview" }],
           input: prompt,
         });
-        const text = response.output_text;
-        console.log("OpenAI browsing response length:", text.length);
-        const sources = extractUrlsFromText(text);
+        const text = response.output_text || "";
+        const annotationSources = extractFromAnnotations(response.output || []);
+        const textSources = extractFromText(text);
+        const sources = mergeSources(annotationSources, textSources);
+        console.log(`[OpenAI browsing] annotation sources: ${annotationSources.length}, text sources: ${textSources.length}`);
         return { text, sources };
       } catch (browsingErr) {
         console.error("[callAIModel] OpenAI Responses API browsing failed, falling back:", browsingErr instanceof Error ? browsingErr.message : browsingErr);
@@ -134,7 +123,8 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
         max_completion_tokens: 1500,
         messages: [{ role: "user", content: prompt }],
       } as any);
-      return { text: completion.choices[0]?.message?.content ?? "", sources: [] };
+      const text = completion.choices[0]?.message?.content ?? "";
+      return { text, sources: extractFromText(text) };
     }
 
     const completion = await openai.chat.completions.create({
@@ -143,7 +133,8 @@ async function callAIModel(prompt: string, model: string, browsing = false): Pro
       max_tokens: 1500,
       messages: [{ role: "user", content: prompt }],
     });
-    return { text: completion.choices[0]?.message?.content ?? "", sources: [] };
+    const text = completion.choices[0]?.message?.content ?? "";
+    return { text, sources: extractFromText(text) };
   } catch (err) {
     console.error(`[callAIModel] ${model} failed:`, err instanceof Error ? err.message : err);
     return empty;
@@ -351,12 +342,10 @@ async function executePrompt(
   const extraction = await extractFromResponse(rawText, task.targetBrand, task.knownCompetitors);
 
   console.log("=== EXTRACTION DEBUG ===");
-  console.log("rawResponse sources:", aiResult.sources?.length ?? 0);
-  console.log("topics raw:", JSON.stringify(extraction.topics));
-  console.log("sources raw:", JSON.stringify(extraction.sources));
-  console.log("competitors raw:", JSON.stringify(extraction.competitors_found));
-  console.log("browsing sources:", aiResult.sources.length);
-  console.log("textSources:", extractUrlsFromText(rawText).length);
+  console.log("API sources:", aiResult.sources.length);
+  console.log("topics:", extraction.topics?.length ?? 0);
+  console.log("extractor sources:", extraction.sources?.length ?? 0);
+  console.log("competitors:", extraction.competitors_found?.length ?? 0);
 
   // Save response_analysis
   await (supabase.from("response_analysis") as any)
@@ -372,44 +361,16 @@ async function executePrompt(
       avi_components: null,
     });
 
-  // Merge sources: browsing API sources + URL-from-text extraction + extractor sources
-  const textUrlSources = extractUrlsFromText(rawText);
-  const allSourceDomains = new Set<string>();
-  const mergedSources: {
-    url: string; domain: string; label?: string;
-    source_type?: string; is_brand_owned?: boolean; context?: string;
-  }[] = [];
-
-  // 1. Browsing API sources (highest quality)
-  for (const s of aiResult.sources) {
-    if (!s.domain || allSourceDomains.has(s.domain)) continue;
-    allSourceDomains.add(s.domain);
-    mergedSources.push({
-      url: s.url, domain: s.domain, label: s.title,
-      source_type: "other", context: "fonte da web browsing AI",
-    });
-  }
-
-  // 2. Extractor sources (from AI extraction pipeline)
-  for (const s of extraction.sources || []) {
-    if (!s.domain || allSourceDomains.has(s.domain)) continue;
-    allSourceDomains.add(s.domain);
-    mergedSources.push({
-      url: s.url || s.domain, domain: s.domain, label: s.label ?? undefined,
-      source_type: s.source_type || "other",
-      is_brand_owned: s.is_brand_owned ?? undefined, context: s.context ?? undefined,
-    });
-  }
-
-  // 3. URL regex fallback from response text
-  for (const s of textUrlSources) {
-    if (!s.domain || allSourceDomains.has(s.domain)) continue;
-    allSourceDomains.add(s.domain);
-    mergedSources.push({
-      url: s.url, domain: s.domain,
-      source_type: "other", context: "citato nella risposta",
-    });
-  }
+  // Merge sources: API sources (highest priority) + extractor sources + text fallback
+  const extractorSources: ExtractedSource[] = (extraction.sources || []).map((s: any) => ({
+    url: s.url || s.domain,
+    domain: s.domain,
+    title: s.label,
+    source_type: s.source_type || "other",
+    context: s.context,
+  }));
+  const textFallbackSources = extractFromText(rawText);
+  const mergedSources = mergeSources(aiResult.sources, extractorSources, textFallbackSources);
 
   console.log("allSources (merged):", mergedSources.length);
 
@@ -422,9 +383,9 @@ async function executePrompt(
         prompt_executed_id: promptRecord.id,
         url: source.url,
         domain: source.domain,
-        label: source.label ?? null,
+        label: source.title ?? null,
         source_type: source.source_type || "other",
-        is_brand_owned: source.is_brand_owned ?? false,
+        is_brand_owned: source.source_type === "brand_owned",
         context: source.context ?? null,
         citation_count: 1,
       }, {
@@ -433,7 +394,7 @@ async function executePrompt(
       });
   }
 
-  console.log("Sources upsert done for:", mergedSources.length, "sources (browsing:", aiResult.sources.length, "extractor:", extraction.sources?.length ?? 0, "text:", textUrlSources.length, ")");
+  console.log("Sources upsert done:", mergedSources.length, "(API:", aiResult.sources.length, "extractor:", extractorSources.length, "text:", textFallbackSources.length, ")");
 
   // Save discovered competitors (upsert with normalization)
   for (const rawComp of extraction.competitors_found || []) {
