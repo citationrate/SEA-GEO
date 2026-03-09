@@ -7,7 +7,7 @@ export type FunnelStage   = "tofu" | "mofu" | "bofu";
 export type SourceType    = "brand_owned" | "competitor" | "media" | "review" | "social" | "ecommerce" | "wikipedia" | "other";
 export type SegmentName   = string;
 export type AnalysisStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
-export type AIModel       = "gpt-4o" | "gpt-4o-mini" | "claude-3-5-sonnet" | "gemini-1.5-pro" | "grok-2" | "perplexity-sonar" | "copilot";
+export type AIModel       = "gpt-4o" | "gpt-4o-mini" | "o1-mini" | "o3-mini" | "o3" | "claude-haiku-4-5" | "claude-sonnet-4-5" | "claude-opus-4-5" | "gemini-2.5-flash" | "gemini-2.5-pro" | "grok-2" | "grok-3";
 export type UserPlan      = "free" | "pro" | "agency";
 
 export interface Database {
