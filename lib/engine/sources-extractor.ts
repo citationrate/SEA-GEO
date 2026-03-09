@@ -32,7 +32,7 @@ export function extractFromAnnotations(output: any[], brandDomain?: string): Ext
       }
     }
   } catch (e) {
-    console.log("extractFromAnnotations error:", e);
+    console.error("extractFromAnnotations error:", e);
   }
   return results;
 }
@@ -58,7 +58,7 @@ export function extractFromGrounding(candidates: any[], brandDomain?: string): E
       }
     }
   } catch (e) {
-    console.log("extractFromGrounding error:", e);
+    console.error("extractFromGrounding error:", e);
   }
   return results;
 }
@@ -87,7 +87,7 @@ export function extractFromText(text: string, brandDomain?: string): ExtractedSo
     }
   }
 
-  // Domini senza http
+  // Domini senza http — url sintetico, domain per classificazione
   const domainMatches =
     text.match(/\b[a-zA-Z0-9][a-zA-Z0-9-]*\.(com|it|io|net|org|co\.uk|fr|de|es|ai|info|biz)\b/g) || [];
   for (const d of domainMatches) {
@@ -106,19 +106,19 @@ export function extractFromText(text: string, brandDomain?: string): ExtractedSo
   return results;
 }
 
-/** Merge e deduplica fonti da piu sorgenti (ordine = priorita) */
+/** Merge e deduplica fonti per domain, mantiene l'URL più specifico (path più lungo) */
 export function mergeSources(...sourceLists: ExtractedSource[][]): ExtractedSource[] {
-  const seen = new Set<string>();
-  const results: ExtractedSource[] = [];
+  const seen = new Map<string, ExtractedSource>();
   for (const list of sourceLists) {
     for (const source of list) {
-      if (source.domain && !seen.has(source.domain)) {
-        seen.add(source.domain);
-        results.push(source);
+      if (!source.domain) continue;
+      const existing = seen.get(source.domain);
+      if (!existing || source.url.length > existing.url.length) {
+        seen.set(source.domain, source);
       }
     }
   }
-  return results;
+  return Array.from(seen.values());
 }
 
 function safeDomain(url: string): string | null {

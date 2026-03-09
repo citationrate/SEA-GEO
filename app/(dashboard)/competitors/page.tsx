@@ -51,24 +51,14 @@ export default async function CompetitorsPage({
     filteredRunIds = (allRuns ?? []).map((r: any) => r.id);
   }
 
-  // Fetch competitors — filter by run when model is selected
-  let compQuery = targetIds.length > 0
-    ? supabase
+  // Fetch competitors by project_id (mentions filtered via response_analysis below)
+  const { data: competitors } = targetIds.length > 0
+    ? await supabase
         .from("competitors")
         .select("*")
         .in("project_id", targetIds)
         .order("created_at", { ascending: true })
-    : null;
-
-  if (compQuery && selectedModel && filteredRunIds.length > 0) {
-    compQuery = compQuery.in("discovered_at_run_id", filteredRunIds);
-  }
-
-  const { data: competitors, error: compError } = compQuery
-    ? await compQuery
-    : { data: [], error: null };
-
-  console.log("[competitors] query:", { targetIds, selectedModel, filteredRunIds: filteredRunIds.length, data: (competitors ?? []).length, error: compError });
+    : { data: [] };
 
   const compList = (competitors ?? []) as any[];
 

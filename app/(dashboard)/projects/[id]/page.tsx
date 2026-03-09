@@ -117,7 +117,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               ].map((c) => (
                 <div key={c.label} className="text-center">
                   <p className="text-xs text-muted-foreground">{c.label}</p>
-                  <p className="font-display font-semibold text-foreground">{Math.round((c.value || 0) * 100)}</p>
+                  <p className="font-display font-semibold text-foreground">{Math.round(c.value || 0)}</p>
                 </div>
               ))}
             </div>
