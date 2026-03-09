@@ -11,28 +11,46 @@ export async function POST(request: Request) {
   try {
     const supabase = createServiceClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+    if (!user) {
+      console.error("[competitors/analyze] No authenticated user");
+      return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+    }
 
     const body = await request.json();
     const parsed = bodySchema.safeParse(body);
-    if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
+    if (!parsed.success) {
+      console.error("[competitors/analyze] Invalid body:", parsed.error.flatten());
+      return NextResponse.json({ error: "Dati non validi", details: parsed.error.flatten() }, { status: 400 });
+    }
 
     const { project_id } = parsed.data;
+    console.log("[competitors/analyze] called for project:", project_id, "by user:", user.id);
 
     // Verify project ownership
-    const { data: project } = await supabase
+    const { data: project, error: projectError } = await supabase
       .from("projects")
       .select("id")
       .eq("id", project_id)
       .eq("user_id", user.id)
       .single();
-    if (!project) return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
+    if (projectError) {
+      console.error("[competitors/analyze] project query error:", projectError.message);
+    }
+    if (!project) {
+      console.error("[competitors/analyze] Project not found or not owned:", project_id);
+      return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
+    }
 
     // Get all competitors for this project
-    const { data: competitors } = await supabase
+    const { data: competitors, error: compError } = await supabase
       .from("competitors")
       .select("id, name")
       .eq("project_id", project_id);
+
+    if (compError) {
+      console.error("[competitors/analyze] competitors query error:", compError.message);
+    }
+    console.log("[competitors/analyze] competitors found:", competitors?.length ?? 0);
 
     if (!competitors?.length) {
       return NextResponse.json({ error: "Nessun competitor trovato" }, { status: 400 });
@@ -44,6 +62,7 @@ export async function POST(request: Request) {
       .select("id")
       .eq("project_id", project_id);
     const runIds = (runs ?? []).map((r: any) => r.id);
+    console.log("[competitors/analyze] runs found:", runIds.length);
 
     if (!runIds.length) {
       return NextResponse.json({ error: "Nessuna analisi eseguita" }, { status: 400 });
@@ -58,6 +77,7 @@ export async function POST(request: Request) {
 
     const promptIds = (prompts ?? []).map((p: any) => p.id);
     const promptResponseMap = new Map((prompts ?? []).map((p: any) => [p.id, p.raw_response as string]));
+    console.log("[competitors/analyze] prompts with responses:", promptIds.length);
 
     if (!promptIds.length) {
       return NextResponse.json({ error: "Nessuna risposta disponibile" }, { status: 400 });
@@ -69,25 +89,38 @@ export async function POST(request: Request) {
       .select("prompt_executed_id, competitors_found")
       .in("prompt_executed_id", promptIds);
 
-    // Build map: competitor name -> list of raw_response texts
+    console.log("[competitors/analyze] analyses found:", (analyses ?? []).length);
+
+    // Build map: competitor name -> list of raw_response texts (case-insensitive)
     const compTexts = new Map<string, string[]>();
     (analyses ?? []).forEach((a: any) => {
       const response = promptResponseMap.get(a.prompt_executed_id);
       if (!response) return;
       (a.competitors_found ?? []).forEach((name: string) => {
-        if (!compTexts.has(name)) compTexts.set(name, []);
-        compTexts.get(name)!.push(response);
+        const key = name.toLowerCase().trim();
+        if (!compTexts.has(key)) compTexts.set(key, []);
+        compTexts.get(key)!.push(response);
       });
     });
+
+    console.log("[competitors/analyze] compTexts keys:", Array.from(compTexts.keys()).slice(0, 5));
+
+    // Check OpenAI API key
+    if (!process.env.OPENAI_API_KEY) {
+      console.error("[competitors/analyze] OPENAI_API_KEY is not set!");
+      return NextResponse.json({ error: "API key OpenAI non configurata" }, { status: 500 });
+    }
 
     // Analyze each competitor with GPT-4o-mini
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const results: { id: string; name: string; analysis: any }[] = [];
 
     for (const comp of competitors as any[]) {
-      const texts = compTexts.get(comp.name);
+      const key = comp.name.toLowerCase().trim();
+      const texts = compTexts.get(key);
+      console.log(`[competitors/analyze] competitor "${comp.name}" (key="${key}"): ${texts?.length ?? 0} texts`);
+
       if (!texts?.length) {
-        // No texts found, skip
         results.push({ id: comp.id, name: comp.name, analysis: { macro_themes: [], positioning_summary: "Nessun contesto disponibile per l'analisi." } });
         continue;
       }
@@ -100,11 +133,11 @@ export async function POST(request: Request) {
       // Truncate each response to ~500 chars
       const truncated = sampledTexts.map((t, i) => `[Risposta ${i + 1}]: ${t.slice(0, 500)}`).join("\n\n");
 
-      const prompt = `Analizza questi testi in cui il brand "${comp.name}" viene menzionato e identifica i macro-temi ricorrenti per cui viene citato. Restituisci SOLO un JSON cos\u00EC:
+      const prompt = `Analizza questi testi in cui il brand "${comp.name}" viene menzionato e identifica i macro-temi ricorrenti per cui viene citato. Restituisci SOLO un JSON così:
 {
   "macro_themes": [
     {
-      "theme": "nome macro tema (es. Comfort e Vestibilit\u00E0)",
+      "theme": "nome macro tema (es. Comfort e Vestibilità)",
       "description": "breve descrizione di come il brand viene associato a questo tema",
       "keywords": ["parola1", "parola2", "parola3"],
       "frequency": numero da 1 a 10
@@ -118,6 +151,7 @@ Testi:
 ${truncated}`;
 
       try {
+        console.log(`[competitors/analyze] calling OpenAI for competitor: "${comp.name}"`);
         const completion = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           temperature: 0.3,
@@ -133,7 +167,8 @@ ${truncated}`;
         if (jsonMatch) {
           try {
             analysis = JSON.parse(jsonMatch[0]);
-          } catch {
+          } catch (parseErr) {
+            console.error(`[competitors/analyze] JSON parse error for "${comp.name}":`, parseErr instanceof Error ? parseErr.message : parseErr);
             analysis = { macro_themes: [], positioning_summary: raw.slice(0, 200) };
           }
         }
@@ -147,7 +182,6 @@ ${truncated}`;
               if (excerpts.length >= 3) break;
               const lower = text.toLowerCase();
               if (keywords.some((kw: string) => lower.includes(kw))) {
-                // Extract a ~200 char snippet around the first keyword match
                 for (const kw of keywords) {
                   const idx = lower.indexOf(kw);
                   if (idx >= 0) {
@@ -163,23 +197,34 @@ ${truncated}`;
           }
         }
 
+        console.log(`[competitors/analyze] success for "${comp.name}": ${analysis.macro_themes?.length ?? 0} themes`);
         results.push({ id: comp.id, name: comp.name, analysis });
       } catch (err) {
-        console.error(`[competitors/analyze] GPT error for "${comp.name}":`, err instanceof Error ? err.message : err);
-        results.push({ id: comp.id, name: comp.name, analysis: { macro_themes: [], positioning_summary: "Errore durante l'analisi." } });
+        console.error(`[competitors/analyze] OpenAI error for "${comp.name}":`, err instanceof Error ? err.message : err);
+        results.push({
+          id: comp.id,
+          name: comp.name,
+          analysis: { macro_themes: [], positioning_summary: `Errore: ${err instanceof Error ? err.message : "errore sconosciuto"}` },
+        });
       }
     }
 
     // Save results to DB
+    let saveErrors = 0;
     for (const result of results) {
-      await (supabase.from("competitors") as any)
+      const { error: updateErr } = await (supabase.from("competitors") as any)
         .update({ theme_analysis: result.analysis })
         .eq("id", result.id);
+      if (updateErr) {
+        console.error(`[competitors/analyze] DB update error for "${result.name}":`, updateErr.message);
+        saveErrors++;
+      }
     }
 
-    return NextResponse.json({ success: true, analyzed: results.length });
+    console.log(`[competitors/analyze] done: ${results.length} analyzed, ${saveErrors} save errors`);
+    return NextResponse.json({ success: true, analyzed: results.length, saveErrors });
   } catch (err) {
-    console.error("[competitors/analyze] error:", err instanceof Error ? err.message : err);
-    return NextResponse.json({ error: "Errore interno" }, { status: 500 });
+    console.error("[competitors/analyze] unexpected error:", err instanceof Error ? err.stack : err);
+    return NextResponse.json({ error: `Errore interno: ${err instanceof Error ? err.message : "errore sconosciuto"}` }, { status: 500 });
   }
 }

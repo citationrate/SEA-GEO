@@ -150,10 +150,13 @@ export default async function CompetitorsPage({
     themeAnalysis: ThemeAnalysis | null;
   }
 
+  // Case-insensitive lookup: normalizedName -> original display name
   const grouped = new Map<string, CompRow>();
+  const normalizedKeyMap = new Map<string, string>(); // lowercased -> display name
 
   for (const c of compList) {
-    const existing = grouped.get(c.name);
+    const key = c.name.toLowerCase().trim();
+    const existing = grouped.get(key);
     const proj = projectMap.get(c.project_id);
     const projInfo = proj ? { id: proj.id, name: proj.name, brand: proj.target_brand } : null;
 
@@ -170,7 +173,8 @@ export default async function CompetitorsPage({
       if (c.created_at < existing.firstSeen) existing.firstSeen = c.created_at;
       if (c.created_at > existing.lastSeen) existing.lastSeen = c.created_at;
     } else {
-      grouped.set(c.name, {
+      normalizedKeyMap.set(key, c.name);
+      grouped.set(key, {
         name: c.name,
         projects: projInfo ? [projInfo] : [],
         mentions: 0,
@@ -185,9 +189,10 @@ export default async function CompetitorsPage({
     }
   }
 
-  // Merge stats from response_analysis
+  // Merge stats from response_analysis (case-insensitive join)
   for (const [name, stats] of Array.from(compStats.entries())) {
-    const row = grouped.get(name);
+    const key = name.toLowerCase().trim();
+    const row = grouped.get(key);
     if (row) {
       row.mentions = stats.mentions;
       row.analysisCount = stats.runIds.size;
@@ -195,7 +200,7 @@ export default async function CompetitorsPage({
       Array.from(stats.topics).forEach((t) => { if (!row.topics.includes(t)) row.topics.push(t); });
       Array.from(stats.queryTypes).forEach((qt) => { if (!row.queryTypes.includes(qt)) row.queryTypes.push(qt); });
     } else {
-      grouped.set(name, {
+      grouped.set(key, {
         name,
         projects: [],
         mentions: stats.mentions,
@@ -210,7 +215,12 @@ export default async function CompetitorsPage({
     }
   }
 
-  // Fetch competitor AVI scores per project
+  console.log("[competitors] competitors from DB:", compList.length);
+  console.log("[competitors] compStats keys:", Array.from(compStats.keys()).slice(0, 5));
+  console.log("[competitors] grouped keys:", Array.from(grouped.keys()).slice(0, 5));
+  console.log("[competitors] matched stats:", Array.from(compStats.keys()).filter(n => grouped.has(n.toLowerCase().trim())).length, "/", compStats.size);
+
+  // Fetch competitor AVI scores per project (case-insensitive keys)
   const compAviMap = new Map<string, number>();
   for (const pid of targetIds) {
     const { data: compAviRows } = await (supabase.from("competitor_avi") as any)
@@ -219,8 +229,9 @@ export default async function CompetitorsPage({
       .order("computed_at", { ascending: false });
 
     for (const row of (compAviRows ?? []) as any[]) {
-      if (!compAviMap.has(row.competitor_name)) {
-        compAviMap.set(row.competitor_name, Math.round(row.avi_score * 10) / 10);
+      const key = row.competitor_name.toLowerCase().trim();
+      if (!compAviMap.has(key)) {
+        compAviMap.set(key, Math.round(row.avi_score * 10) / 10);
       }
     }
   }
@@ -229,8 +240,8 @@ export default async function CompetitorsPage({
   const brandAviScore = lastAviRow ? Math.round((lastAviRow as any).avi_score * 10) / 10 : null;
 
   const rows = Array.from(grouped.values()).sort((a, b) => {
-    const aviA = compAviMap.get(a.name) ?? 0;
-    const aviB = compAviMap.get(b.name) ?? 0;
+    const aviA = compAviMap.get(a.name.toLowerCase().trim()) ?? 0;
+    const aviB = compAviMap.get(b.name.toLowerCase().trim()) ?? 0;
     return aviB - aviA || b.mentions - a.mentions;
   });
 
@@ -255,7 +266,7 @@ export default async function CompetitorsPage({
       <CompetitorsClient
         rows={rows.map((r) => ({
           ...r,
-          aviScore: compAviMap.get(r.name) ?? null,
+          aviScore: compAviMap.get(r.name.toLowerCase().trim()) ?? null,
           projects: r.projects.map((p) => ({ id: p.id, name: p.name, brand: p.brand })),
         }))}
         topicGroups={topicGroups}
