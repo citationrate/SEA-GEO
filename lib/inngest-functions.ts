@@ -389,22 +389,23 @@ async function executePrompt(
 
   // Save all merged sources (upsert by project_id + domain)
   for (const source of mergedSources) {
-    await (supabase.from("sources") as any)
+    if (!source.domain || !task.projectId) continue;
+    const { error } = await (supabase.from("sources") as any)
       .upsert({
         project_id: task.projectId,
         run_id: task.runId,
-        prompt_executed_id: promptRecord.id,
-        url: source.url,
+        url: source.url || "https://" + source.domain,
         domain: source.domain,
-        label: source.title ?? null,
         source_type: source.source_type || "other",
-        is_brand_owned: source.source_type === "brand_owned",
-        context: source.context ?? null,
+        context: source.context || "",
         citation_count: 1,
-      }, {
-        onConflict: "project_id,domain",
-        ignoreDuplicates: false,
-      });
+      }, { onConflict: "project_id,domain" });
+
+    if (error) {
+      console.log("SOURCE UPSERT ERROR:", JSON.stringify(error), "domain:", source.domain, "project_id:", task.projectId);
+    } else {
+      console.log("SOURCE SAVED:", source.domain);
+    }
   }
 
   console.log("Sources saved to DB:", mergedSources.length);
