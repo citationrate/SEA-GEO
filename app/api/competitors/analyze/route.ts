@@ -42,15 +42,16 @@ export async function POST(request: Request) {
     }
 
     // Get all competitors for this project
+    console.log("[competitors/analyze] projectId received:", project_id);
     const { data: competitors, error: compError } = await supabase
       .from("competitors")
-      .select("id, name")
+      .select("*")
       .eq("project_id", project_id);
 
     if (compError) {
-      console.error("[competitors/analyze] competitors query error:", compError.message);
+      console.error("[competitors/analyze] competitors query error:", compError.message, compError);
     }
-    console.log("[competitors/analyze] competitors found:", competitors?.length ?? 0);
+    console.log("[competitors/analyze] competitors query result:", competitors?.length, competitors?.map((c: any) => c.name));
 
     if (!competitors?.length) {
       return NextResponse.json({ error: "Nessun competitor trovato" }, { status: 400 });
