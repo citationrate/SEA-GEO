@@ -56,15 +56,21 @@ Se la risposta cita categorie di siti senza nominarli esplicitamente (es. 'siti 
 Restituisci array di oggetti: [{url: 'dominio.com', domain: 'dominio.com', label: null, source_type: 'media|review|ecommerce|social|brand_owned|competitor|wikipedia|other', is_brand_owned: boolean, context: 'breve spiegazione'}]
 Se non ci sono fonti restituisci [].
 
-REGOLE ASSOLUTE per competitors_found:
-- Restituisci SOLO il nome commerciale del brand (es. "Esselunga", "Coop", "Nike", "Barilla")
-- MAI aggiungere descrizioni, categorie o suffissi (NO: "Esselunga è un brand", "Nike (sportivo)", "Coop - supermercato")
-- Se vedi "Brand + Prodotto" (es. "Adidas Ultraboost", "Nike Air Max 90"), estrai SOLO il brand ("Adidas", "Nike")
+REGOLE per competitors_found:
+Estrai tutti i brand, aziende, insegne o entità commerciali che compaiono come alternative al brand principale.
+
+INCLUDI: qualsiasi entità con un nome proprio specifico — supermercati, distributori, e-commerce, produttori artigianali con nome proprio, catene, marketplace. Esempi: "Esselunga", "Coop", "Biscottificio Artigianale Rossi", "Penny Market", "NaturaSì".
+
+ESCLUDI:
+- Descrizioni generiche senza nome proprio ("biscottificio artigianale", "produttore locale", "negozio di quartiere", "brand sportivo", "competitor locale")
+- Entità che non hanno un nome che un utente potrebbe cercare su Google
+- Il brand target "${targetBrand}"
+
+FORMATO:
+- Restituisci SOLO il nome commerciale (es. "Esselunga", non "Esselunga è un supermercato")
+- Se vedi "Brand + Prodotto" (es. "Nike Air Max 90"), estrai SOLO il brand ("Nike")
 - Se non sei sicuro del nome esatto, usa il nome più comunemente conosciuto
-- NON estrarre il brand target "${targetBrand}" come competitor
-- MAI estrarre generici come "scarpe da running", "brand sportivo", "competitor locale"
-- Il competitor deve essere un'azienda reale e identificabile
-- Formato: array di stringhe con SOLO i nomi, es. ["Esselunga", "Coop", "Lidl"]`;
+- Array di stringhe: ["Esselunga", "Coop", "Lidl"]`;
 
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const completion = await openai.chat.completions.create({
