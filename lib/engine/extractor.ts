@@ -10,7 +10,12 @@ export interface ExtractionResult {
   recommendation_score: number | null;
   brand_adjectives: string[];
   topics: string[];
-  competitors_found: string[];
+  competitors_found: {
+    name: string;
+    rank: number | null;
+    sentiment: number | null;
+    recommendation: number | null;
+  }[];
   sources: {
     url: string | null;
     domain: string | null;
@@ -51,7 +56,7 @@ Schema JSON richiesto:
   "recommendation_score": number,
   "brand_adjectives": string[],
   "topics": string[],
-  "competitors_found": string[],
+  "competitors_found": [{ "name": string, "rank": number, "sentiment": number, "recommendation": number }],
   "sources": [{ "url": string|null, "domain": string, "label": string|null, "source_type": string, "is_brand_owned": boolean, "context": string }]
 }
 
@@ -65,14 +70,20 @@ Regole:
   IMPORTANTE: Se brand_mentioned è true, brand_rank NON può essere null. Anche se non c'è una lista esplicita, valuta l'ordine in cui il brand appare rispetto ai concorrenti (1 se è il primo o unico citato).
 - brand_occurrences: numero di volte che il brand appare nel testo
 - competitors_count: quanti competitor totali sono citati nella risposta (NON includere il brand target)
-- tone_score: Analizza il tono linguistico con cui l'AI descrive il brand.
-  Considera aggettivi, verbi e costruzioni usate.
-  +1.0 = linguaggio molto positivo (eccellente, leader, migliore)
-  +0.5 = linguaggio positivo (buono, valido, affidabile)
-  0.0 = linguaggio neutro o descrittivo
-  -0.5 = linguaggio con riserve (discreto, ma non eccezionale)
-  -1.0 = linguaggio negativo (sconsigliato, problematico)
-  Granularità 0.1. NON usare sempre valori tondi come 0.5.
+- tone_score: Analizza il linguaggio specifico usato per descrivere il brand.
+  Identifica prima 2-3 aggettivi o frasi chiave, poi assegna il score.
+  Esempi concreti:
+  - 'iconico, amatissimo, eccellente qualità' → +0.8
+  - 'buono, affidabile, valido' → +0.5
+  - 'conosciuto, disponibile, tra i più venduti' → +0.2
+  - 'nella media, non particolarmente distintivo' → -0.1
+  - 'criticato, controverso, problematico' → -0.6
+  - 'sconsigliato, di bassa qualità' → -0.9
+  IMPORTANTE:
+  - Usa l'intera scala da -1.0 a +1.0 con granularità 0.1
+  - NON usare 0.5 come default — ragiona sul testo
+  - Se il brand non è descritto con aggettivi specifici usa 0.2 (neutro-positivo) o 0.0 (puramente neutro)
+  - 0.5 è riservato a linguaggio genuinamente positivo con aggettivi chiari
   Se brand_mentioned è false, usa 0.0.
 - brand_adjectives: elenca 2-3 aggettivi/frasi chiave usati per descrivere il brand. Array vuoto se brand_mentioned è false.
 - recommendation_score: L'AI raccomanda esplicitamente il brand?
@@ -83,7 +94,12 @@ Regole:
   -1.0 = sconsigliato esplicitamente
   Se brand_mentioned è false, usa 0.0.
 - topics: argomenti principali trattati nella risposta (max 5)
-- competitors_found: brand/aziende concorrenti menzionati (escluso il target)
+- competitors_found: per ogni competitor trovato estrai:
+  - name: nome del brand
+  - rank: posizione in cui appare nella risposta (1=primo citato)
+  - sentiment: tono con cui l'AI descrive il competitor (-1.0/+1.0)
+  - recommendation: l'AI lo raccomanda? (+1=sì, 0=neutro, -1=sconsigliato)
+  Stesse regole del tone_score per granularità e no-default-0.5.
 
 REGOLA CRITICA: Se brand_mentioned è true, brand_rank, tone_score e recommendation_score sono OBBLIGATORI e non possono essere null.
 
@@ -107,7 +123,7 @@ FORMATO:
 - Restituisci SOLO il nome commerciale (es. "Esselunga", non "Esselunga è un supermercato")
 - Se vedi "Brand + Prodotto" (es. "Nike Air Max 90"), estrai SOLO il brand ("Nike")
 - Se non sei sicuro del nome esatto, usa il nome più comunemente conosciuto
-- Array di stringhe: ["Esselunga", "Coop", "Lidl"]`;
+- Array di oggetti: [{"name": "Esselunga", "rank": 1, "sentiment": 0.6, "recommendation": 0.5}]`;
 
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const completion = await openai.chat.completions.create({
@@ -165,7 +181,14 @@ FORMATO:
       recommendation_score: recScore,
       brand_adjectives: Array.isArray(parsed.brand_adjectives) ? parsed.brand_adjectives : [],
       topics: Array.isArray(parsed.topics) ? parsed.topics : [],
-      competitors_found: Array.isArray(parsed.competitors_found) ? parsed.competitors_found : [],
+      competitors_found: (() => {
+        const competitorsRaw = Array.isArray(parsed.competitors_found) ? parsed.competitors_found : [];
+        return competitorsRaw.map((c: any) =>
+          typeof c === 'string'
+            ? { name: c, rank: null, sentiment: null, recommendation: null }
+            : { name: c.name, rank: c.rank ?? null, sentiment: c.sentiment ?? null, recommendation: c.recommendation ?? null }
+        );
+      })(),
       sources: Array.isArray(parsed.sources)
         ? parsed.sources.map((s: any) => ({
             url: s.url ?? null,
@@ -188,7 +211,7 @@ FORMATO:
       recommendation_score: null,
       brand_adjectives: [],
       topics: [],
-      competitors_found: [],
+      competitors_found: [] as ExtractionResult["competitors_found"],
       sources: [],
     };
   }

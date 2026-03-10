@@ -283,6 +283,79 @@ async function computeAndSaveAVI(
   }
 }
 
+/* ─── Competitor AVI computation from competitor_mentions ─── */
+
+async function computeCompetitorAVI(
+  supabase: SupabaseClient,
+  runId: string,
+  projectId: string,
+  totalPrompts: number,
+) {
+  const { data: mentions } = await (supabase.from("competitor_mentions") as any)
+    .select("*")
+    .eq("run_id", runId);
+
+  const rows = (mentions ?? []) as any[];
+  if (rows.length === 0) return;
+
+  // Group by competitor name
+  const byCompetitor = new Map<string, any[]>();
+  for (const m of rows) {
+    const name = m.competitor_name;
+    if (!byCompetitor.has(name)) byCompetitor.set(name, []);
+    byCompetitor.get(name)!.push(m);
+  }
+
+  const upsertRows: any[] = [];
+  for (const [name, mentionRows] of Array.from(byCompetitor.entries())) {
+    const count = mentionRows.length;
+
+    // Prominence: % of prompts where competitor appears
+    const prominence = Math.min(100, (count / totalPrompts) * 100);
+
+    // Rank score: average rank converted to 0-100
+    const withRank = mentionRows.filter((m: any) => m.rank != null && m.rank > 0);
+    const avgRank = withRank.length > 0
+      ? withRank.reduce((s: number, m: any) => s + m.rank, 0) / withRank.length
+      : 3; // default if no rank data
+    const rankScore = Math.max(0, 100 - ((avgRank - 1) * 25));
+
+    // Sentiment score: average sentiment converted to 0-100
+    const withSentiment = mentionRows.filter((m: any) => m.sentiment != null);
+    const avgSentiment = withSentiment.length > 0
+      ? withSentiment.reduce((s: number, m: any) => s + m.sentiment, 0) / withSentiment.length
+      : 0;
+    const sentimentScore = ((avgSentiment + 1) / 2) * 100;
+
+    // Consistency: check how stable mentions are across different prompt_executed_ids
+    const uniquePrompts = new Set(mentionRows.map((m: any) => m.prompt_executed_id)).size;
+    const consistency = Math.min(100, (uniquePrompts / Math.max(1, totalPrompts)) * 100);
+
+    // AVI formula
+    const aviScore = Math.round(
+      (prominence * 0.4) + (rankScore * 0.3) + (sentimentScore * 0.2) + (consistency * 0.1)
+    );
+
+    upsertRows.push({
+      project_id: projectId,
+      run_id: runId,
+      competitor_name: name,
+      avi_score: Math.min(100, Math.max(0, aviScore)),
+      prominence,
+      rank_score: rankScore,
+      sentiment_score: sentimentScore,
+      consistency,
+      mention_count: count,
+    });
+  }
+
+  if (upsertRows.length > 0) {
+    const { error } = await (supabase.from("competitor_avi") as any)
+      .upsert(upsertRows, { onConflict: "project_id,run_id,competitor_name" });
+    if (error) console.error("[inngest] competitor_avi upsert error:", error.message);
+  }
+}
+
 /* ─── Single prompt execution ─── */
 
 interface PromptTask {
@@ -365,10 +438,26 @@ async function executePrompt(
       position_score: extraction.position_score,
       recommendation_score: extraction.recommendation_score,
       topics: extraction.topics,
-      competitors_found: extraction.competitors_found,
+      competitors_found: extraction.competitors_found.map(c => c.name),
       avi_score: null,
       avi_components: null,
     });
+
+  // Save competitor_mentions
+  if (extraction.competitors_found.length > 0) {
+    const mentions = extraction.competitors_found.map((c) => ({
+      run_id: task.runId,
+      project_id: task.projectId,
+      competitor_name: c.name,
+      prompt_executed_id: promptRecord.id,
+      rank: c.rank ?? null,
+      sentiment: c.sentiment ?? null,
+      recommendation: c.recommendation ?? null,
+    }));
+    const { error: mentionErr } = await (supabase.from("competitor_mentions") as any)
+      .insert(mentions);
+    if (mentionErr) console.error("[inngest] competitor_mentions insert error:", mentionErr.message);
+  }
 
   // Merge sources: API sources (highest priority) + extractor sources (no duplicate extractFromText)
   const extractorSources: ExtractedSource[] = (extraction.sources || []).map((s: any) => ({
@@ -402,7 +491,7 @@ async function executePrompt(
   // Batch upsert competitors (with normalization)
   const compRows: any[] = [];
   for (const rawComp of extraction.competitors_found || []) {
-    const normalizedName = normalizeCompetitorName(rawComp, task.targetBrand, normCache);
+    const normalizedName = normalizeCompetitorName(rawComp.name, task.targetBrand, normCache);
     if (!normalizedName || normalizedName === task.targetBrand) continue;
     compRows.push({
       project_id: task.projectId,
@@ -565,7 +654,7 @@ export const runAnalysis = inngest.createFunction(
     await step.run("compute-avi", async () => {
       const supabase = createServiceClient();
       await computeAndSaveAVI(supabase, runId, projectId);
-      await (supabase.rpc as any)("compute_competitor_avi", { p_run_id: runId });
+      await computeCompetitorAVI(supabase, runId, projectId, allTasks.length);
       await (supabase.from("analysis_runs") as any)
         .update({
           status: "completed",
