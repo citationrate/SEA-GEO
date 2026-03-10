@@ -302,7 +302,7 @@ async function executePrompt(
     .insert({
       run_id: task.runId,
       query_id: task.queryId,
-      segment_id: task.segmentId,
+      segment_id: task.segmentId === "00000000-0000-0000-0000-000000000000" ? null : task.segmentId,
       model: task.model,
       run_number: task.runNumber,
       full_prompt_text: promptText,
@@ -500,7 +500,7 @@ export const runAnalysis = inngest.createFunction(
     // If no segments configured, use a default generic audience fallback
     const effectiveSegments = segments.length > 0
       ? segments
-      : [{ id: "default", prompt_context: "Rispondi come se ti stesse chiedendo un utente del pubblico generale, senza un profilo demografico specifico." }];
+      : [{ id: "00000000-0000-0000-0000-000000000000", prompt_context: "Rispondi come se ti stesse chiedendo un utente del pubblico generale, senza un profilo demografico specifico." }];
 
     const allTasks: PromptTask[] = [];
     for (const query of queries) {
