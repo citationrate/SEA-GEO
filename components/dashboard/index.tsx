@@ -124,6 +124,7 @@ interface TrendDataPoint {
   avi: number | null;
   prominence: number | null;
   sentiment: number | null;
+  [key: string]: any;
 }
 
 const TOOLTIP_STYLE = {
@@ -134,8 +135,30 @@ const TOOLTIP_STYLE = {
   color: "var(--white)",
 };
 
-export function AVITrend({ data }: { data?: TrendDataPoint[] }) {
+const MODEL_COLORS: Record<string, string> = {};
+function getModelColor(model: string): string {
+  if (model.startsWith("gpt")) return "#e8956d";
+  if (model.startsWith("claude")) return "#c4a882";
+  if (model.startsWith("gemini")) return "#7eb3d4";
+  if (model.startsWith("grok")) return "#9d9890";
+  return "#9d9890";
+}
+
+function shortModelName(model: string): string {
+  if (model.includes("gpt-4o-mini")) return "GPT-4o mini";
+  if (model.includes("gpt-4o")) return "GPT-4o";
+  if (model.includes("gpt-4.1-mini")) return "GPT-4.1 mini";
+  if (model.includes("gpt-4.1")) return "GPT-4.1";
+  if (model.includes("claude")) return "Claude";
+  if (model.includes("gemini")) return "Gemini";
+  if (model.includes("grok")) return "Grok";
+  return model;
+}
+
+export function AVITrend({ data, models }: { data?: TrendDataPoint[]; models?: string[] }) {
   const trendData = data ?? [];
+  const modelKeys = (models ?? []).filter((m) => trendData.some((d) => d[m] != null));
+  const showModels = modelKeys.length > 1;
 
   if (trendData.length === 0) {
     return (
@@ -148,6 +171,13 @@ export function AVITrend({ data }: { data?: TrendDataPoint[] }) {
     );
   }
 
+  const legendItems = [
+    { label: "AVI",        color: "#7eb89a" },
+    { label: "Prominence", color: "#e8956d" },
+    { label: "Sentiment",  color: "#7eb3d4" },
+    ...(showModels ? modelKeys.map((m) => ({ label: shortModelName(m), color: getModelColor(m) })) : []),
+  ];
+
   return (
     <div className="card p-5">
       <div className="flex items-center justify-between mb-4">
@@ -155,12 +185,8 @@ export function AVITrend({ data }: { data?: TrendDataPoint[] }) {
           <h3 className="font-display text-sm text-foreground" style={{ fontWeight: 300 }}>AVI nel Tempo</h3>
           <p className="font-mono text-[10px] text-cream-dim mt-0.5">Punteggio di visibilita tra le analisi</p>
         </div>
-        <div className="flex items-center gap-4 font-mono text-[10px] text-cream-dim">
-          {[
-            { label: "AVI",        color: "#7eb89a" },
-            { label: "Prominence", color: "#e8956d" },
-            { label: "Sentiment",  color: "#7eb3d4" },
-          ].map(l => (
+        <div className="flex items-center gap-4 font-mono text-[10px] text-cream-dim flex-wrap">
+          {legendItems.map(l => (
             <span key={l.label} className="flex items-center gap-1.5">
               <span className="w-4 h-0.5 rounded-sm inline-block" style={{ background: l.color }} />
               {l.label}
@@ -177,6 +203,20 @@ export function AVITrend({ data }: { data?: TrendDataPoint[] }) {
           <Line type="monotone" dataKey="avi"        stroke="#7eb89a" strokeWidth={3} dot={{ r: 5, fill: "#7eb89a" }} connectNulls activeDot={{ r: 7 }}/>
           <Line type="monotone" dataKey="prominence" stroke="#e8956d" strokeWidth={1.5} dot={{ r: 3, fill: "#e8956d" }} connectNulls activeDot={{ r: 5 }}/>
           <Line type="monotone" dataKey="sentiment"  stroke="#7eb3d4" strokeWidth={1.5} dot={{ r: 3, fill: "#7eb3d4" }} connectNulls activeDot={{ r: 5 }}/>
+          {showModels && modelKeys.map((m) => (
+            <Line
+              key={m}
+              type="monotone"
+              dataKey={m}
+              name={shortModelName(m)}
+              stroke={getModelColor(m)}
+              strokeWidth={1.5}
+              strokeDasharray="4 3"
+              dot={{ r: 3, fill: getModelColor(m) }}
+              connectNulls
+              activeDot={{ r: 5 }}
+            />
+          ))}
         </LineChart>
       </ResponsiveContainer>
     </div>

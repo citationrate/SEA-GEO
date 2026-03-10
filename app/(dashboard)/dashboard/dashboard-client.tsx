@@ -7,10 +7,11 @@ interface DashboardClientProps {
   aviTrend: number | null;
   aviComponents?: { label: string; v: number | null }[];
   stats: { label: string; value: string; sub: string }[];
-  trendData: { run: string; avi: number | null; prominence: number | null; sentiment: number | null }[];
+  trendData: { run: string; avi: number | null; prominence: number | null; sentiment: number | null; [key: string]: any }[];
   recentRuns: { id: string; project_id: string; project_name: string; version: number; status: string; avi_score: number | null; date: string }[];
   competitorBarData: { name: string; count: number }[];
   projects?: { id: string; name: string }[];
+  models?: string[];
 }
 
 export function DashboardClient({
@@ -22,6 +23,7 @@ export function DashboardClient({
   recentRuns,
   competitorBarData,
   projects,
+  models,
 }: DashboardClientProps) {
   return (
     <div className="space-y-6 animate-fade-in max-w-[1400px]">
@@ -42,7 +44,7 @@ export function DashboardClient({
       </div>
 
       {/* Trend chart */}
-      <AVITrend data={trendData} />
+      <AVITrend data={trendData} models={models} />
 
       {/* Bottom row: Competitors + Recent Runs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

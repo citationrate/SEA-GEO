@@ -74,11 +74,10 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     .eq("project_id", params.id)
     .eq("discovered_at_run_id", params.runId);
 
-  // Fetch competitor AVI scores for this run
-  const { data: competitorAvi } = await (supabase.from("competitor_avi") as any)
-    .select("competitor_name, avi_score")
+  // Fetch competitor mentions for this run
+  const { data: competitorMentions } = await (supabase.from("competitor_mentions") as any)
+    .select("*")
     .eq("run_id", params.runId);
-  const compAviMap = new Map<string, number>((competitorAvi ?? []).map((c: any) => [c.competitor_name, c.avi_score as number]));
 
   const { data: topics } = await supabase
     .from("topics")
@@ -94,6 +93,27 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
       allCompetitors.set(c, (allCompetitors.get(c) ?? 0) + 1);
     });
   });
+
+  // Compute competitor AVI from mentions for benchmark
+  const mentionsList = (competitorMentions ?? []) as any[];
+  const mentionGrouped = new Map<string, any[]>();
+  mentionsList.forEach((m: any) => {
+    if (!mentionGrouped.has(m.competitor_name)) mentionGrouped.set(m.competitor_name, []);
+    mentionGrouped.get(m.competitor_name)!.push(m);
+  });
+  const compAviMap = new Map<string, number>();
+  const totalP = (prompts ?? []).length;
+  Array.from(mentionGrouped.entries()).forEach(([name, mentions]) => {
+    const prominence = totalP > 0 ? (mentions.length / totalP) * 100 : 0;
+    const withRank = mentions.filter((m: any) => m.rank != null && m.rank > 0);
+    const avgR = withRank.length > 0 ? withRank.reduce((s: number, m: any) => s + m.rank, 0) / withRank.length : 3;
+    const rankScore = Math.max(0, 100 - ((avgR - 1) * 25));
+    const withSent = mentions.filter((m: any) => m.sentiment != null);
+    const avgS = withSent.length > 0 ? withSent.reduce((s: number, m: any) => s + m.sentiment, 0) / withSent.length : 0;
+    const sentimentScore = ((avgS + 1) / 2) * 100;
+    compAviMap.set(name, Math.round(((prominence * 0.4) + (rankScore * 0.3) + (sentimentScore * 0.3)) * 10) / 10);
+  });
+
   const competitorList = Array.from(allCompetitors.entries()).sort((a, b) => {
     const aviA = compAviMap.get(a[0]) ?? 0;
     const aviB = compAviMap.get(b[0]) ?? 0;
@@ -103,8 +123,29 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
   // Unique models for filter pills
   const models = Array.from(new Set((prompts ?? []).map((p: any) => p.model as string)));
 
-  // Convert compAviMap to plain object for client component
-  const compAviObj = Object.fromEntries(compAviMap);
+  // Compute per-model AVI (for multi-model runs)
+  const perModelAvi: { model: string; avi: number }[] = [];
+  if (models.length > 1 && analysesList.length > 0) {
+    const promptsList = (prompts ?? []) as any[];
+    for (const model of models) {
+      const modelPromptIds = new Set(promptsList.filter((p: any) => p.model === model).map((p: any) => p.id));
+      const modelAnalyses = analysesList.filter((a: any) => modelPromptIds.has(a.prompt_executed_id));
+      if (modelAnalyses.length === 0) continue;
+      const mentioned = modelAnalyses.filter((a: any) => a.brand_mentioned).length;
+      const presence = (mentioned / modelAnalyses.length) * 100;
+      const rankVals = modelAnalyses.map((a: any) => {
+        if (!a.brand_mentioned || !a.brand_rank || a.brand_rank <= 0) return 0;
+        return 1 / a.brand_rank;
+      });
+      const avgRankInv = rankVals.reduce((s: number, v: number) => s + v, 0) / rankVals.length;
+      const rankS = avgRankInv * 100;
+      const withSent = modelAnalyses.filter((a: any) => a.sentiment_score != null);
+      const sentAvg = withSent.length > 0 ? withSent.reduce((s: number, a: any) => s + a.sentiment_score, 0) / withSent.length : 0.5;
+      const sentS = ((sentAvg + 1) / 2) * 100;
+      const modelAvi = Math.round((presence * 0.35 + rankS * 0.25 + sentS * 0.20 + 100 * 0.20) * 10) / 10;
+      perModelAvi.push({ model, avi: Math.max(0, Math.min(100, modelAvi)) });
+    }
+  }
 
   const statusInfo = STATUS_MAP[r.status] ?? STATUS_MAP.pending;
   const StatusIcon = statusInfo.icon;
@@ -164,16 +205,28 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
       {/* AVI Score: Ring + Component Bars */}
       {aviData && (
         <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6">
-          <RunAVIRing
-            score={aviData.avi_score}
-            trend={trend}
-            components={[
-              { label: "Prominence", v: aviData.presence_score != null ? Math.round(aviData.presence_score) : null },
-              { label: "Rank",       v: aviData.rank_score != null ? Math.round(aviData.rank_score) : null },
-              { label: "Sentiment",  v: aviData.sentiment_score != null ? Math.round(aviData.sentiment_score) : null },
-              { label: "Consistency", v: aviData.stability_score != null ? Math.round(aviData.stability_score) : null },
-            ]}
-          />
+          <div className="space-y-3">
+            <RunAVIRing
+              score={aviData.avi_score}
+              trend={trend}
+              components={[
+                { label: "Prominence", v: aviData.presence_score != null ? Math.round(aviData.presence_score) : null },
+                { label: "Rank",       v: aviData.rank_score != null ? Math.round(aviData.rank_score) : null },
+                { label: "Sentiment",  v: aviData.sentiment_score != null ? Math.round(aviData.sentiment_score) : null },
+                { label: "Consistency", v: aviData.stability_score != null ? Math.round(aviData.stability_score) : null },
+              ]}
+            />
+            {perModelAvi.length > 1 && (
+              <div className="card p-3 flex items-center justify-center gap-4">
+                {perModelAvi.map((m) => (
+                  <span key={m.model} className="flex items-center gap-1.5 font-mono text-[0.6rem] tracking-wide uppercase text-muted-foreground">
+                    <span>{m.model.replace(/^(gpt-|claude-|gemini-)/, (p) => p.split("-")[0].toUpperCase() + " ").trim()}</span>
+                    <span className="font-display font-bold text-foreground text-sm">{Math.round(m.avi)}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="card p-5 space-y-4">
             <h2 className="font-display font-semibold text-foreground">Componenti AVI</h2>
             <div className="space-y-3">
@@ -252,7 +305,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         analyses={analyses ?? []}
         sources={sources ?? []}
         models={models}
-        compAviMap={compAviObj}
+        competitorMentions={mentionsList}
       />
     </div>
   );

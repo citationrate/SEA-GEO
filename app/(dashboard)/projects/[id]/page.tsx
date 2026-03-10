@@ -56,13 +56,65 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
   const aviMap = new Map((aviHistory ?? []).map((a: any) => [a.run_id, a.avi_score]));
 
+  // Get all unique models across runs
+  const allModels = Array.from(new Set((allRuns ?? []).flatMap((r: any) => r.models_used ?? [])));
+
+  // Build per-model AVI for trend chart
+  const perModelAviByRun = new Map<string, Record<string, number>>();
+  if (allModels.length > 1) {
+    for (const run of (allRuns ?? []) as any[]) {
+      if (run.status !== "completed") continue;
+      const { data: runPrompts } = await supabase
+        .from("prompts_executed")
+        .select("id, model, query_id, segment_id, run_number")
+        .eq("run_id", run.id);
+      const rPrompts = (runPrompts ?? []) as any[];
+      const rPromptIds = rPrompts.map((p: any) => p.id);
+      if (rPromptIds.length === 0) continue;
+      const { data: runAnalyses } = await supabase
+        .from("response_analysis")
+        .select("prompt_executed_id, brand_mentioned, brand_rank, sentiment_score")
+        .in("prompt_executed_id", rPromptIds);
+      const rAnalyses = (runAnalyses ?? []) as any[];
+      const promptMap = new Map(rPrompts.map((p: any) => [p.id, p]));
+      const modelAvis: Record<string, number> = {};
+      for (const model of (run.models_used ?? []) as string[]) {
+        const modelPromptIds = new Set(rPrompts.filter((p: any) => p.model === model).map((p: any) => p.id));
+        const modelAnalyses = rAnalyses.filter((a: any) => modelPromptIds.has(a.prompt_executed_id));
+        if (modelAnalyses.length === 0) continue;
+        const mentioned = modelAnalyses.filter((a: any) => a.brand_mentioned).length;
+        const presence = (mentioned / modelAnalyses.length) * 100;
+        const rankVals = modelAnalyses.map((a: any) => {
+          if (!a.brand_mentioned || !a.brand_rank || a.brand_rank <= 0) return 0;
+          return 1 / a.brand_rank;
+        });
+        const avgRankInv = rankVals.reduce((s: number, v: number) => s + v, 0) / rankVals.length;
+        const rankS = avgRankInv * 100;
+        const withSent = modelAnalyses.filter((a: any) => a.sentiment_score != null);
+        const sentAvg = withSent.length > 0 ? withSent.reduce((s: number, a: any) => s + a.sentiment_score, 0) / withSent.length : 0.5;
+        const sentS = ((sentAvg + 1) / 2) * 100;
+        modelAvis[model] = Math.round((presence * 0.35 + rankS * 0.25 + sentS * 0.20 + 100 * 0.20) * 10) / 10;
+      }
+      perModelAviByRun.set(run.id, modelAvis);
+    }
+  }
+
   // Build trend data for chart
-  const trendData = (aviHistory ?? []).map((a: any, i: number) => ({
-    version: `v${i + 1}`,
-    avi: Math.round(a.avi_score * 10) / 10,
-    presence: Math.round(a.presence_score),
-    sentiment: Math.round(a.sentiment_score),
-  }));
+  const trendData = (aviHistory ?? []).map((a: any, i: number) => {
+    const point: any = {
+      version: `v${i + 1}`,
+      avi: Math.round(a.avi_score * 10) / 10,
+      presence: Math.round(a.presence_score),
+      sentiment: Math.round(a.sentiment_score),
+    };
+    const modelAvis = perModelAviByRun.get(a.run_id);
+    if (modelAvis) {
+      for (const [model, score] of Object.entries(modelAvis)) {
+        point[model] = score;
+      }
+    }
+    return point;
+  });
 
   const tofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "tofu");
   const mofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "mofu");
@@ -289,7 +341,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
       {/* AVI Trend Chart */}
       {trendData.length > 0 && (
-        <ProjectAVITrend data={trendData} />
+        <ProjectAVITrend data={trendData} models={allModels} />
       )}
 
       {/* Azioni */}

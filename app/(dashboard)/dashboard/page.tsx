@@ -130,17 +130,62 @@ export default async function DashboardPage({
     { label: "Consistency", v: lastAvi.stability_score != null ? Math.round(lastAvi.stability_score) : null },
   ] : undefined;
 
+  // Extract unique models for per-model trend lines
+  const allModelsList = Array.from(modelsSet);
+
+  // Compute per-model AVI per run for trend chart
+  const perModelAviByRun = new Map<string, Record<string, number>>();
+  if (allModelsList.length > 1 && runIds.length > 0) {
+    for (const run of runs) {
+      if (run.status !== "completed") continue;
+      const { data: rp } = await supabase
+        .from("prompts_executed")
+        .select("id, model")
+        .eq("run_id", run.id);
+      const rpList = (rp ?? []) as any[];
+      const rpIds = rpList.map((p: any) => p.id);
+      if (rpIds.length === 0) continue;
+      const { data: ra } = await supabase
+        .from("response_analysis")
+        .select("prompt_executed_id, brand_mentioned, brand_rank, sentiment_score")
+        .in("prompt_executed_id", rpIds);
+      const raList = (ra ?? []) as any[];
+      const modelAvis: Record<string, number> = {};
+      for (const model of (run.models_used ?? []) as string[]) {
+        const mIds = new Set(rpList.filter((p: any) => p.model === model).map((p: any) => p.id));
+        const mAnalyses = raList.filter((a: any) => mIds.has(a.prompt_executed_id));
+        if (mAnalyses.length === 0) continue;
+        const mentioned = mAnalyses.filter((a: any) => a.brand_mentioned).length;
+        const presence = (mentioned / mAnalyses.length) * 100;
+        const rankVals = mAnalyses.map((a: any) => (!a.brand_mentioned || !a.brand_rank || a.brand_rank <= 0) ? 0 : 1 / a.brand_rank);
+        const rankS = (rankVals.reduce((s: number, v: number) => s + v, 0) / rankVals.length) * 100;
+        const withS = mAnalyses.filter((a: any) => a.sentiment_score != null);
+        const sentAvg = withS.length > 0 ? withS.reduce((s: number, a: any) => s + a.sentiment_score, 0) / withS.length : 0.5;
+        const sentS = ((sentAvg + 1) / 2) * 100;
+        modelAvis[model] = Math.round((presence * 0.35 + rankS * 0.25 + sentS * 0.20 + 100 * 0.20) * 10) / 10;
+      }
+      perModelAviByRun.set(run.id, modelAvis);
+    }
+  }
+
   // Build trend data with real dates (null-safe)
   const trendData = aviList.map((a: any, i: number) => {
     const dateStr = a.computed_at
       ? new Date(a.computed_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })
       : `v${i + 1}`;
-    return {
+    const point: any = {
       run: dateStr,
       avi: a.avi_score != null ? Math.round(a.avi_score * 10) / 10 : null,
       prominence: a.presence_score != null ? Math.round(a.presence_score) : null,
       sentiment: a.sentiment_score != null ? Math.round(a.sentiment_score) : null,
     };
+    const modelAvis = perModelAviByRun.get(a.run_id);
+    if (modelAvis) {
+      for (const [model, score] of Object.entries(modelAvis)) {
+        point[model] = score;
+      }
+    }
+    return point;
   });
   console.log("[dashboard] trendData:", JSON.stringify(trendData));
 
@@ -196,6 +241,7 @@ export default async function DashboardPage({
       recentRuns={recentRuns}
       competitorBarData={competitorBarData}
       projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))}
+      models={allModelsList}
     />
   );
 }

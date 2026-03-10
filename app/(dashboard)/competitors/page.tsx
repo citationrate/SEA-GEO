@@ -255,6 +255,9 @@ export default async function CompetitorsPage({
     .sort((a, b) => b[1].length - a[1].length)
     .map(([topic, comps]) => ({ topic, competitors: comps.map((c) => c.name) }));
 
+  // Extract all available models from runs
+  const availableModels = Array.from(new Set((allRuns ?? []).flatMap((r: any) => r.models_used ?? []))) as string[];
+
   return (
     <div className="space-y-6 max-w-[1200px] animate-fade-in">
       <div className="flex items-center justify-end gap-3">
@@ -269,6 +272,8 @@ export default async function CompetitorsPage({
         topicGroups={topicGroups}
         projectIds={targetIds}
         brandAviScore={brandAviScore}
+        availableModels={availableModels}
+        selectedModel={selectedModel}
       />
     </div>
   );

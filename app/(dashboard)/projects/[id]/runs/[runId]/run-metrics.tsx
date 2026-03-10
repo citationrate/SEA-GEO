@@ -8,10 +8,10 @@ interface RunMetricsProps {
   analyses: any[];
   sources: any[];
   models: string[];
-  compAviMap: Record<string, number>;
+  competitorMentions: any[];
 }
 
-export function RunMetrics({ prompts, analyses, sources, models, compAviMap }: RunMetricsProps) {
+export function RunMetrics({ prompts, analyses, sources, models, competitorMentions }: RunMetricsProps) {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -63,9 +63,42 @@ export function RunMetrics({ prompts, analyses, sources, models, compAviMap }: R
         competitorsMap.set(c, (competitorsMap.get(c) ?? 0) + 1);
       });
     });
+
+    // Compute competitor AVI from competitor_mentions filtered by model
+    const filteredMentions = selectedModel
+      ? competitorMentions.filter((m) => {
+          const prompt = prompts.find((p: any) => p.id === m.prompt_executed_id);
+          return prompt?.model === selectedModel;
+        })
+      : competitorMentions;
+
+    const mentionGrouped = new Map<string, any[]>();
+    filteredMentions.forEach((m: any) => {
+      if (!mentionGrouped.has(m.competitor_name)) mentionGrouped.set(m.competitor_name, []);
+      mentionGrouped.get(m.competitor_name)!.push(m);
+    });
+
+    const computedCompAviMap: Record<string, number> = {};
+    Array.from(mentionGrouped.entries()).forEach(([name, mentions]) => {
+      const totalP = filteredPrompts.length;
+      const prominence = totalP > 0 ? (mentions.length / totalP) * 100 : 0;
+      const withRank = mentions.filter((m: any) => m.rank != null && m.rank > 0);
+      const avgR = withRank.length > 0
+        ? withRank.reduce((s: number, m: any) => s + m.rank, 0) / withRank.length
+        : 3;
+      const rankScore = Math.max(0, 100 - ((avgR - 1) * 25));
+      const withSent = mentions.filter((m: any) => m.sentiment != null);
+      const avgS = withSent.length > 0
+        ? withSent.reduce((s: number, m: any) => s + m.sentiment, 0) / withSent.length
+        : 0;
+      const sentimentScore = ((avgS + 1) / 2) * 100;
+      const avi = (prominence * 0.4) + (rankScore * 0.3) + (sentimentScore * 0.3);
+      computedCompAviMap[name] = Math.round(avi * 10) / 10;
+    });
+
     const competitorList = Array.from(competitorsMap.entries()).sort((a, b) => {
-      const aviA = compAviMap[a[0]] ?? 0;
-      const aviB = compAviMap[b[0]] ?? 0;
+      const aviA = computedCompAviMap[a[0]] ?? 0;
+      const aviB = computedCompAviMap[b[0]] ?? 0;
       return aviB - aviA || b[1] - a[1];
     });
 
@@ -91,10 +124,11 @@ export function RunMetrics({ prompts, analyses, sources, models, compAviMap }: R
       avgPosition,
       avgRec,
       totalOccurrences,
+      computedCompAviMap,
       competitorList,
       topicList,
     };
-  }, [selectedModel, prompts, analyses, sources, compAviMap]);
+  }, [selectedModel, prompts, analyses, sources, competitorMentions]);
 
   const {
     filteredPrompts,
@@ -110,6 +144,7 @@ export function RunMetrics({ prompts, analyses, sources, models, compAviMap }: R
     avgPosition,
     avgRec,
     totalOccurrences,
+    computedCompAviMap,
     competitorList,
     topicList,
   } = filtered;
@@ -232,7 +267,7 @@ export function RunMetrics({ prompts, analyses, sources, models, compAviMap }: R
           ) : (
             <div className="flex flex-wrap gap-2">
               {competitorList.map(([name, count]) => {
-                const cAvi = compAviMap[name];
+                const cAvi = computedCompAviMap[name];
                 const aviColor = cAvi != null
                   ? cAvi >= 70 ? "text-success" : cAvi >= 40 ? "text-amber-500" : "text-destructive"
                   : "";

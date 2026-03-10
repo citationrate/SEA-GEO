@@ -73,11 +73,15 @@ export function CompetitorsClient({
   topicGroups,
   projectIds,
   brandAviScore,
+  availableModels,
+  selectedModel,
 }: {
   rows: CompRow[];
   topicGroups: TopicGroup[];
   projectIds: string[];
   brandAviScore?: number | null;
+  availableModels?: string[];
+  selectedModel?: string | null;
 }) {
   const router = useRouter();
   const [view, setView] = useState<"competitor" | "ambito">("competitor");
@@ -158,6 +162,45 @@ export function CompetitorsClient({
           </div>
         </div>
       </div>
+
+      {/* Model filter pills */}
+      {(availableModels ?? []).length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => {
+              const params = new URLSearchParams(window.location.search);
+              params.delete("model");
+              router.push(`?${params.toString()}`);
+            }}
+            className="font-mono text-[0.6rem] tracking-wide uppercase px-3 py-1.5 rounded-full border transition-colors"
+            style={
+              !selectedModel
+                ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
+                : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
+            }
+          >
+            Tutti
+          </button>
+          {(availableModels ?? []).map((model) => (
+            <button
+              key={model}
+              onClick={() => {
+                const params = new URLSearchParams(window.location.search);
+                params.set("model", model);
+                router.push(`?${params.toString()}`);
+              }}
+              className="font-mono text-[0.6rem] tracking-wide uppercase px-3 py-1.5 rounded-full border transition-colors"
+              style={
+                selectedModel === model
+                  ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
+                  : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
+              }
+            >
+              {model}
+            </button>
+          ))}
+        </div>
+      )}
 
       {analyzeError && <p className="text-sm text-destructive">{analyzeError}</p>}
 
