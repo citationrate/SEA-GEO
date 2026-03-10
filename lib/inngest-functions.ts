@@ -88,25 +88,37 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
         return "";
       }
 
-      if (browsing) {
+      let lastError: any;
+      for (let attempt = 1; attempt <= 2; attempt++) {
         try {
-          const geminiModel = genai.getGenerativeModel({
-            model,
-            tools: [{ googleSearch: {} } as any],
-          });
+          if (browsing) {
+            try {
+              const geminiModel = genai.getGenerativeModel({
+                model,
+                tools: [{ googleSearch: {} } as any],
+              });
+              const result = await geminiModel.generateContent(prompt);
+              const text = extractGeminiText(result);
+              if (text) {
+                const groundingSources = extractFromGrounding((result.response as any).candidates || [], brandDomain ?? undefined);
+                const textSources = extractFromText(text, brandDomain ?? undefined);
+                return { text, sources: mergeSources(groundingSources, textSources) };
+              }
+            } catch (e: any) {
+              console.error("[Gemini grounding] failed:", e?.message);
+            }
+          }
+          const geminiModel = genai.getGenerativeModel({ model });
           const result = await geminiModel.generateContent(prompt);
           const text = extractGeminiText(result);
-          const groundingSources = extractFromGrounding((result.response as any).candidates || [], brandDomain ?? undefined);
-          const textSources = extractFromText(text, brandDomain ?? undefined);
-          return { text, sources: mergeSources(groundingSources, textSources) };
+          if (text) return { text, sources: extractFromText(text, brandDomain ?? undefined) };
         } catch (e: any) {
-          console.error("[Gemini grounding] failed:", e?.message);
+          lastError = e;
+          if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
         }
       }
-      const geminiModel = genai.getGenerativeModel({ model });
-      const result = await geminiModel.generateContent(prompt);
-      const text = extractGeminiText(result);
-      return { text, sources: extractFromText(text, brandDomain ?? undefined) };
+      console.error("[Gemini] failed after 2 attempts:", lastError?.message ?? lastError);
+      return empty;
     }
 
     if (provider === "xai") {

@@ -182,10 +182,10 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
             <h2 className="font-display font-semibold text-foreground">Componenti AVI</h2>
             <div className="space-y-3">
               {[
-                { label: "Prominence", value: Math.round(aviData.presence_score ?? 0), color: "hsl(186, 100%, 50%)" },
-                { label: "Rank", value: Math.round(aviData.rank_score ?? 0), color: "hsl(38, 95%, 58%)" },
-                { label: "Sentiment", value: Math.round(aviData.sentiment_score ?? 0), color: "hsl(152, 68%, 46%)" },
-                { label: "Consistency", value: Math.round(aviData.stability_score ?? 0), color: "hsl(270, 70%, 60%)" },
+                { label: "Prominence", value: Math.round(aviData.presence_score ?? 0), color: "#e8956d" },
+                { label: "Rank", value: Math.round(aviData.rank_score ?? 0), color: "#7eb3d4" },
+                { label: "Sentiment", value: Math.round(aviData.sentiment_score ?? 0), color: "#7eb89a" },
+                { label: "Consistency", value: Math.round(aviData.stability_score ?? 0), color: "#c4a882" },
               ].map((c) => (
                 <div key={c.label} className="space-y-1">
                   <div className="flex justify-between text-xs">
