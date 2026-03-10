@@ -169,11 +169,11 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
 
       {/* Loading banner when running */}
       {r.status === "running" && (
-        <div className="flex flex-col items-center justify-center py-12 gap-4">
+        <div className="flex flex-col items-center justify-center py-8 gap-4">
           <img
             src="/loading.gif"
             alt="loading"
-            className="w-40 h-40 object-contain"
+            className="w-full max-w-2xl object-contain"
           />
           <p className="text-sm text-muted-foreground animate-pulse">
             Analisi in corso...
