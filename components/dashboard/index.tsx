@@ -167,9 +167,9 @@ export function AVITrend({ data }: { data?: TrendDataPoint[] }) {
           <XAxis dataKey="run" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}/>
           <YAxis domain={[0,100]} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}/>
           <Tooltip contentStyle={TOOLTIP_STYLE}/>
-          <Line type="monotone" dataKey="avi"       stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3, fill: "hsl(var(--primary))" }}/>
-          <Line type="monotone" dataKey="sentiment" stroke="hsl(var(--accent))"  strokeWidth={2} dot={{ r: 3, fill: "hsl(var(--accent))"  }}/>
-          <Line type="monotone" dataKey="prominence" stroke="hsl(var(--success))" strokeWidth={2} dot={{ r: 3, fill: "hsl(var(--success))" }}/>
+          <Line type="monotone" dataKey="avi"        stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--primary))" }} connectNulls activeDot={{ r: 6 }}/>
+          <Line type="monotone" dataKey="sentiment"  stroke="hsl(var(--accent))"  strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--accent))"  }} connectNulls activeDot={{ r: 6 }}/>
+          <Line type="monotone" dataKey="prominence" stroke="hsl(var(--success))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--success))" }} connectNulls activeDot={{ r: 6 }}/>
         </LineChart>
       </ResponsiveContainer>
     </div>

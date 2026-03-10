@@ -129,12 +129,18 @@ export default async function DashboardPage({
   ] : undefined;
 
   // Build trend data with real dates
-  const trendData = aviList.map((a: any) => ({
-    run: new Date(a.computed_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }),
-    avi: Math.round(a.avi_score * 10) / 10,
-    prominence: Math.round(a.presence_score),
-    sentiment: Math.round(a.sentiment_score),
-  }));
+  const trendData = aviList.map((a: any, i: number) => {
+    const dateStr = a.computed_at
+      ? new Date(a.computed_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })
+      : `v${i + 1}`;
+    return {
+      run: dateStr,
+      avi: Math.round(a.avi_score * 10) / 10,
+      prominence: Math.round(a.presence_score),
+      sentiment: Math.round(a.sentiment_score),
+    };
+  });
+  console.log("[dashboard] trendData:", JSON.stringify(trendData));
 
   // Build recent runs
   const aviMap = new Map(aviList.map((a: any) => [a.run_id, a.avi_score]));
