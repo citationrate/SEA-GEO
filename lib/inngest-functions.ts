@@ -136,11 +136,11 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
 
 /* ─── Competitor normalization ─── */
 
-async function normalizeCompetitorName(
+function normalizeCompetitorName(
   rawName: string,
   targetBrand: string,
   normCache: Map<string, string | null>,
-): Promise<string | null> {
+): string | null {
   const trimmed = rawName.trim();
   if (!trimmed) return null;
 
@@ -152,48 +152,34 @@ async function normalizeCompetitorName(
     return null;
   }
 
-  const genericPatterns = /^(brand|competitor|aziend|prodott|servizi|scarpe|telefon|auto |il |la |un |una )/i;
+  // Reject generic descriptions that aren't brand names
+  const genericPatterns = /^(brand|competitor|aziend|prodott|servizi|scarpe|telefon|auto |il |la |un |una |i |le |gli )/i;
   if (genericPatterns.test(trimmed)) {
     normCache.set(cacheKey, null);
     return null;
   }
 
-  try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0,
-      max_tokens: 50,
-      messages: [{
-        role: "user",
-        content: `Dato il testo "${trimmed}", restituisci SOLO il nome del brand/azienda. Rimuovi qualsiasi descrizione, spiegazione o suffisso. Esempi: "Esselunga È Un Brand/azienda" → "Esselunga", "Iper È Un Brand" → "Iper", "Nike (azienda sportiva)" → "Nike", "De Cecco" → "De Cecco". Rispondi SOLO con il nome, nessun altro testo.`,
-      }],
-    });
+  // Strip AI noise: "Esselunga È Un Brand/azienda" → "Esselunga"
+  let cleaned = trimmed
+    .replace(/\s+(è un|è una|è il|is a|is an|brand padre|il brand|\/azienda|azienda|\(.*?\)).*$/i, "")
+    .replace(/\s*[–—-]\s+.*$/, "")
+    .replace(/^["']+|["']+$/g, "")
+    .replace(/\.$/, "")
+    .trim();
 
-    let normalized = (completion.choices[0]?.message?.content ?? trimmed).trim();
-    normalized = normalized.replace(/^["']+|["']+$/g, "").replace(/\.$/, "").trim();
-
-    // Post-processing: strip common AI noise patterns
-    normalized = normalized
-      .replace(/\s+(è un|è un brand|è una|brand padre|il brand|\/azienda|azienda|\(.*?\)).*$/i, "")
-      .replace(/\s*[–—-]\s+.*$/, "")
-      .trim();
-
-    if (!normalized || normalized.toLowerCase() === targetBrand.toLowerCase()) {
-      normCache.set(cacheKey, null);
-      return null;
-    }
-
-    const proper = normalized.split(/\s+/).map(
-      (w) => w.charAt(0).toUpperCase() + w.slice(1)
-    ).join(" ");
-
-    normCache.set(cacheKey, proper);
-    return proper;
-  } catch {
-    normCache.set(cacheKey, trimmed);
-    return trimmed;
+  if (!cleaned || cleaned.length < 2) {
+    normCache.set(cacheKey, null);
+    return null;
   }
+
+  // Capitalize properly (preserve existing casing for acronyms like "H&M", "IKEA")
+  const isAllCaps = cleaned === cleaned.toUpperCase() && cleaned.length > 3;
+  const proper = isAllCaps
+    ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase()
+    : cleaned;
+
+  normCache.set(cacheKey, proper);
+  return proper;
 }
 
 /* ─── AVI computation using canonical calculateAVI ─── */
@@ -369,7 +355,7 @@ async function executePrompt(
   // Batch upsert competitors (with normalization)
   const compRows: any[] = [];
   for (const rawComp of extraction.competitors_found || []) {
-    const normalizedName = await normalizeCompetitorName(rawComp, task.targetBrand, normCache);
+    const normalizedName = normalizeCompetitorName(rawComp, task.targetBrand, normCache);
     if (!normalizedName || normalizedName === task.targetBrand) continue;
     compRows.push({
       project_id: task.projectId,
