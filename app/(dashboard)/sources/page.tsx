@@ -1,6 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
-import { ModelSelector } from "@/components/model-selector";
+
 import { resolveProjectId } from "@/lib/utils/resolve-project";
 import { SourcesClient } from "./sources-client";
 
@@ -45,9 +45,6 @@ export default async function SourcesPage({
     ? await supabase.from("analysis_runs").select("id, models_used").in("project_id", targetIds)
     : { data: [] };
 
-  const modelsSet = new Set<string>();
-  (allRuns ?? []).forEach((r: any) => (r.models_used ?? []).forEach((m: string) => modelsSet.add(m)));
-  const availableModels = Array.from(modelsSet).sort();
 
   const selectedModel = searchParams.model || null;
 
@@ -139,7 +136,6 @@ export default async function SourcesPage({
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div />
         <div className="flex items-center gap-3">
-          <ModelSelector models={availableModels} />
           <ProjectSelector projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))} />
         </div>
       </div>

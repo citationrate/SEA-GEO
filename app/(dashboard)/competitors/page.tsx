@@ -1,6 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
-import { ModelSelector } from "@/components/model-selector";
+
 import { resolveProjectId } from "@/lib/utils/resolve-project";
 import { CompetitorsClient } from "./competitors-client";
 
@@ -34,9 +34,6 @@ export default async function CompetitorsPage({
     ? await supabase.from("analysis_runs").select("id, models_used").in("project_id", targetIds)
     : { data: [] };
 
-  const modelsSet = new Set<string>();
-  (allRuns ?? []).forEach((r: any) => (r.models_used ?? []).forEach((m: string) => modelsSet.add(m)));
-  const availableModels = Array.from(modelsSet).sort();
 
   const selectedModel = searchParams.model || null;
 
@@ -261,7 +258,6 @@ export default async function CompetitorsPage({
   return (
     <div className="space-y-6 max-w-[1200px] animate-fade-in">
       <div className="flex items-center justify-end gap-3">
-        <ModelSelector models={availableModels} />
         <ProjectSelector projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))} />
       </div>
       <CompetitorsClient

@@ -1,6 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
-import { ModelSelector } from "@/components/model-selector";
+
 import { resolveProjectId } from "@/lib/utils/resolve-project";
 import { Tag } from "lucide-react";
 
@@ -37,9 +37,6 @@ export default async function TopicsPage({
     ? await supabase.from("analysis_runs").select("id, project_id, models_used").in("project_id", targetIds)
     : { data: [] };
 
-  const modelsSet = new Set<string>();
-  (allRuns ?? []).forEach((r: any) => (r.models_used ?? []).forEach((m: string) => modelsSet.add(m)));
-  const availableModels = Array.from(modelsSet).sort();
 
   const selectedModel = searchParams.model || null;
 
@@ -116,7 +113,6 @@ export default async function TopicsPage({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <ModelSelector models={availableModels} />
           <ProjectSelector projects={projectsList.map((p) => ({ id: p.id, name: p.name }))} />
         </div>
       </div>

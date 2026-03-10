@@ -36,11 +36,12 @@ export interface Database {
           market_context: string | null;
           language: "it" | "en";
           country: string | null;
+          models_config: string[];
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<Database["public"]["Tables"]["projects"]["Row"], "id" | "created_at" | "updated_at" | "deleted_at">;
+        Insert: Omit<Database["public"]["Tables"]["projects"]["Row"], "id" | "created_at" | "updated_at" | "deleted_at" | "models_config"> & { models_config?: string[] };
         Update: Partial<Database["public"]["Tables"]["projects"]["Insert"]>;
       };
       queries: {

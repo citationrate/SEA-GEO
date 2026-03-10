@@ -42,7 +42,7 @@ export default async function DashboardPage({
   // Extract available models
   const modelsSet = new Set<string>();
   (allRuns ?? []).forEach((r: any) => (r.models_used ?? []).forEach((m: string) => modelsSet.add(m)));
-  const availableModels = Array.from(modelsSet).sort();
+  // modelsSet.size is used in stats below
 
   // Filter runs by selected model
   const selectedModel = searchParams.model || null;
@@ -196,7 +196,6 @@ export default async function DashboardPage({
       recentRuns={recentRuns}
       competitorBarData={competitorBarData}
       projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))}
-      availableModels={availableModels}
     />
   );
 }

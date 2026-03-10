@@ -1,9 +1,16 @@
-// v2
+// v3
 "use client";
 
 import { useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, X, Loader2 } from "lucide-react";
+
+const MODEL_OPTIONS = [
+  { id: "gpt-4o-mini",   label: "GPT-4o mini",        provider: "OpenAI",    available: true },
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google",    available: true },
+  { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5", provider: "Anthropic", available: true },
+  { id: "grok-3",        label: "Grok 3",              provider: "xAI",       available: true },
+] as const;
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -18,6 +25,17 @@ export default function NewProjectPage() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [language, setLanguage] = useState<"it" | "en">("it");
   const [country, setCountry] = useState("");
+  const [selectedModels, setSelectedModels] = useState<string[]>(["gpt-4o-mini"]);
+
+  function toggleModel(id: string) {
+    setSelectedModels((prev) => {
+      if (prev.includes(id)) {
+        if (prev.length === 1) return prev; // minimo 1
+        return prev.filter((m) => m !== id);
+      }
+      return [...prev, id];
+    });
+  }
 
   function handleCompetitorKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key !== "Enter") return;
@@ -50,6 +68,7 @@ export default function NewProjectPage() {
           market_context: marketContext || null,
           language,
           country: country || null,
+          models_config: selectedModels,
         }),
       });
 
@@ -186,6 +205,40 @@ export default function NewProjectPage() {
               placeholder="Es. Italia"
               className="input-base"
             />
+          </div>
+        </div>
+
+        {/* Modelli AI */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Modelli AI</label>
+          <p className="text-xs text-muted-foreground">Seleziona i modelli da usare per tutte le analisi di questo progetto (minimo 1)</p>
+          <div className="space-y-1.5">
+            {MODEL_OPTIONS.map((model) => (
+              <button
+                key={model.id}
+                type="button"
+                onClick={() => model.available && toggleModel(model.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-sm border transition-all text-left ${
+                  selectedModels.includes(model.id)
+                    ? "border-primary/50 bg-primary/5"
+                    : "border-border hover:border-border/80"
+                } ${!model.available ? "opacity-40 cursor-not-allowed" : ""}`}
+              >
+                <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${
+                  selectedModels.includes(model.id) ? "border-primary bg-primary" : "border-muted-foreground"
+                }`}>
+                  {selectedModels.includes(model.id) && (
+                    <svg className="w-2.5 h-2.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium text-foreground">{model.label}</span>
+                  <span className="text-[11px] text-cream-dim ml-2">{model.provider}</span>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
 

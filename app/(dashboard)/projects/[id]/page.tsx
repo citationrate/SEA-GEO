@@ -1,6 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Cpu } from "lucide-react";
 import { AnalysisLauncher } from "./analysis-launcher";
 import { AnalysisProgress } from "./analysis-progress";
 import { ProjectAVITrend } from "./project-avi-trend";
@@ -95,8 +95,18 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             hasSegments={(segments ?? []).length > 0}
             queryCount={(queries ?? []).length}
             segmentCount={(segments ?? []).length}
+            modelsConfig={(proj.models_config as string[]) ?? ["gpt-4o-mini"]}
           />
         </div>
+      </div>
+
+      {/* Modelli AI configurati */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Cpu className="w-3.5 h-3.5 text-cream-dim" />
+        <span className="font-mono text-[11px] text-cream-dim">Modelli AI:</span>
+        {((proj.models_config as string[]) ?? ["gpt-4o-mini"]).map((m: string) => (
+          <span key={m} className="badge badge-primary text-[10px]">{m}</span>
+        ))}
       </div>
 
       {/* AVI Score + Last Run */}

@@ -2,8 +2,6 @@
 
 import { AVIRing, StatsRow, AVITrend, CompetitorBar, RecentRuns } from "@/components/dashboard/index";
 import { ProjectSelector } from "@/components/project-selector";
-import { ModelSelector } from "@/components/model-selector";
-
 interface DashboardClientProps {
   aviScore: number | null;
   aviTrend: number | null;
@@ -13,7 +11,6 @@ interface DashboardClientProps {
   recentRuns: { id: string; project_id: string; project_name: string; version: number; status: string; avi_score: number | null; date: string }[];
   competitorBarData: { name: string; count: number }[];
   projects?: { id: string; name: string }[];
-  availableModels?: string[];
 }
 
 export function DashboardClient({
@@ -25,7 +22,6 @@ export function DashboardClient({
   recentRuns,
   competitorBarData,
   projects,
-  availableModels,
 }: DashboardClientProps) {
   return (
     <div className="space-y-6 animate-fade-in max-w-[1400px]">
@@ -35,7 +31,6 @@ export function DashboardClient({
           <p className="text-sm text-muted-foreground mt-0.5">Panoramica della visibilita AI dei tuoi brand</p>
         </div>
         <div className="flex items-center gap-3">
-          {availableModels && <ModelSelector models={availableModels} />}
           {projects && <ProjectSelector projects={projects} />}
         </div>
       </div>

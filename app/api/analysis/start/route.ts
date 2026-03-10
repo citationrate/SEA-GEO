@@ -6,10 +6,6 @@ import { inngest } from "@/lib/inngest";
 
 const startSchema = z.object({
   project_id: z.string().uuid(),
-  models_used: z.array(z.string()).min(1).refine(
-    (ids) => ids.every((id) => ALL_MODEL_IDS.includes(id)),
-    { message: "Modello non supportato" }
-  ),
   run_count: z.number().int().min(1).max(3).default(1),
   browsing: z.boolean().default(true),
 });
@@ -25,7 +21,7 @@ export async function POST(request: Request) {
     const parsed = startSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { project_id, models_used, run_count, browsing } = parsed.data;
+    const { project_id, run_count, browsing } = parsed.data;
 
     // Auto-fail stale running runs (older than 30 minutes)
     await (supabase.from("analysis_runs") as any)
@@ -42,6 +38,11 @@ export async function POST(request: Request) {
       .is("deleted_at", null)
       .single();
     if (!project) return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
+
+    // Read models from project config
+    const models_used: string[] = (project as any).models_config ?? ["gpt-4o-mini"];
+    const validModels = models_used.filter((id: string) => ALL_MODEL_IDS.includes(id));
+    if (!validModels.length) return NextResponse.json({ error: "Nessun modello valido configurato" }, { status: 400 });
 
     // Fetch queries and active segments
     const { data: queries } = await supabase
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
       .select("*", { count: "exact", head: true })
       .eq("project_id", project_id);
 
-    const totalPrompts = queries.length * segments.length * models_used.length * run_count;
+    const totalPrompts = queries.length * segments.length * validModels.length * run_count;
 
     // Create analysis run
     const { data: run, error: runError } = await (supabase.from("analysis_runs") as any)
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
         project_id,
         version: (existingRuns ?? 0) + 1,
         status: "running",
-        models_used,
+        models_used: validModels,
         run_count,
         total_prompts: totalPrompts,
         completed_prompts: 0,
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
       data: {
         runId: run.id,
         projectId: project_id,
-        modelsUsed: models_used,
+        modelsUsed: validModels,
         runCount: run_count,
         browsing,
       },

@@ -10,6 +10,7 @@ const projectSchema = z.object({
   market_context: z.string().nullable().default(null),
   language: z.enum(["it", "en"]),
   country: z.string().nullable().default(null),
+  models_config: z.array(z.string()).min(1).default(["gpt-4o-mini"]),
 });
 
 export async function POST(request: Request) {
