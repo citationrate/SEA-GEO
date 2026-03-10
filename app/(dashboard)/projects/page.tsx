@@ -18,7 +18,7 @@ export default async function ProjectsPage() {
           <h1 className="font-display font-bold text-2xl text-foreground">Progetti</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Gestisci i tuoi brand</p>
         </div>
-        <a href="/projects/new" className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-lg">
+        <a href="/projects/new" className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-[2px]">
           <Plus className="w-4 h-4" />
           Nuovo Progetto
         </a>

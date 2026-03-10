@@ -75,9 +75,9 @@ export function AnalysisProgress({
 
         {/* Progress bar */}
         <div className="space-y-2">
-          <div className="h-3 rounded-full bg-muted overflow-hidden">
+          <div className="h-3 rounded-[2px] bg-muted overflow-hidden">
             <div
-              className="h-full rounded-full bg-primary transition-all duration-700 ease-out"
+              className="h-full rounded-[2px] bg-primary transition-all duration-700 ease-out"
               style={{ width: `${pct}%` }}
             />
           </div>

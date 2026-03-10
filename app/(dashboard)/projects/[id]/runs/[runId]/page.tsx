@@ -192,8 +192,8 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
                     <span className="text-muted-foreground">{c.label}</span>
                     <span className="font-medium text-foreground">{Math.round(c.value)}</span>
                   </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, c.value)}%`, backgroundColor: c.color }} />
+                  <div className="h-2 rounded-[2px] bg-muted overflow-hidden">
+                    <div className="h-full rounded-[2px] transition-all duration-700" style={{ width: `${Math.min(100, c.value)}%`, backgroundColor: c.color }} />
                   </div>
                 </div>
               ))}

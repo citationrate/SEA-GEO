@@ -258,7 +258,7 @@ export default function SegmentsPage() {
           </h2>
           <button
             onClick={() => setDrawerOpen(true)}
-            className="flex items-center justify-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-primary/85 transition-colors mx-auto sm:mx-0"
+            className="flex items-center justify-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-3 py-1.5 rounded-[2px] hover:bg-primary/85 transition-colors mx-auto sm:mx-0"
           >
             <Plus className="w-4 h-4" /> Crea Persona Custom
           </button>
@@ -353,7 +353,7 @@ function CustomChipInput({ placeholder, onAdd }: { placeholder?: string; onAdd: 
         className="input-base flex-1 !py-1.5 !text-xs"
       />
       <button onClick={submit}
-        className="flex items-center justify-center w-8 h-8 rounded-lg border border-primary/40 text-primary hover:bg-primary/10 transition-colors shrink-0">
+        className="flex items-center justify-center w-8 h-8 rounded-[2px] border border-primary/40 text-primary hover:bg-primary/10 transition-colors shrink-0">
         <Plus className="w-4 h-4" />
       </button>
     </div>
@@ -631,7 +631,7 @@ function PersonaDrawer({
           <button
             onClick={handleSave}
             disabled={saving || !name.trim()}
-            className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-primary/85 transition-colors disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Salva Persona

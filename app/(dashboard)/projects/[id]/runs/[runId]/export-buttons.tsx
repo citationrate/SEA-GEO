@@ -37,7 +37,7 @@ export function ExportButtons({ runId }: { runId: string }) {
       <button
         onClick={downloadExcel}
         disabled={loadingExcel}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] text-xs font-semibold border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
       >
         {loadingExcel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
         Esporta Excel
@@ -45,7 +45,7 @@ export function ExportButtons({ runId }: { runId: string }) {
       <button
         onClick={openPdf}
         disabled={loadingPdf}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] text-xs font-semibold border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
       >
         {loadingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
         Esporta PDF

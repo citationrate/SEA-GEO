@@ -30,7 +30,7 @@ export function DeleteProjectButton({ projectId, projectName }: { projectId: str
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 text-sm text-destructive hover:text-destructive/80 transition-colors px-4 py-2 border border-destructive/30 rounded-lg hover:bg-destructive/10"
+        className="flex items-center gap-2 text-sm text-destructive hover:text-destructive/80 transition-colors px-4 py-2 border border-destructive/30 rounded-[2px] hover:bg-destructive/10"
       >
         <Trash2 className="w-4 h-4" />
         Elimina Progetto
@@ -54,7 +54,7 @@ export function DeleteProjectButton({ projectId, projectName }: { projectId: str
               <button
                 onClick={handleDelete}
                 disabled={loading}
-                className="px-4 py-2 text-sm font-semibold bg-destructive text-white rounded-lg hover:bg-destructive/90 transition-colors disabled:opacity-50"
+                className="px-4 py-2 text-sm font-semibold bg-destructive text-white rounded-[2px] hover:bg-destructive/90 transition-colors disabled:opacity-50"
               >
                 {loading ? "Eliminazione..." : "Elimina"}
               </button>

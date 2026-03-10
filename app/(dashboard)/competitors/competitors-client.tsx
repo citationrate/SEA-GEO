@@ -130,7 +130,7 @@ export function CompetitorsClient({
             <button
               onClick={analyzeContexts}
               disabled={analyzing}
-              className="flex items-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-3.5 py-2 rounded-lg hover:bg-primary/85 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-3.5 py-2 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
             >
               {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
               {analyzing ? "Analisi in corso..." : "Analizza Contesti con AI"}
@@ -138,10 +138,10 @@ export function CompetitorsClient({
           )}
 
           {/* View toggle */}
-          <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+          <div className="flex items-center gap-1 bg-muted rounded-[2px] p-0.5">
             <button
               onClick={() => setView("competitor")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] text-xs font-medium transition-colors ${
                 view === "competitor" ? "bg-surface text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -149,7 +149,7 @@ export function CompetitorsClient({
             </button>
             <button
               onClick={() => setView("ambito")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] text-xs font-medium transition-colors ${
                 view === "ambito" ? "bg-surface text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -264,14 +264,14 @@ function CompetitorCard({
       {/* Top: name + mentions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
+          <span className="flex items-center justify-center w-7 h-7 rounded-[2px] bg-primary/10 text-primary text-xs font-bold shrink-0">
             {rank}
           </span>
           <h3 className="font-display font-bold text-lg text-foreground">{row.name}</h3>
         </div>
         <div className="flex items-center gap-2">
           {row.aviScore != null && (
-            <span className={`font-display font-bold text-sm px-2 py-0.5 rounded-md ${
+            <span className={`font-display font-bold text-sm px-2 py-0.5 rounded-[2px] ${
               row.aviScore >= 70 ? "bg-success/10 text-success" : row.aviScore >= 40 ? "bg-amber-500/10 text-amber-500" : "bg-destructive/10 text-destructive"
             }`}>
               AVI {Math.round(row.aviScore * 10) / 10}
@@ -299,7 +299,7 @@ function CompetitorCard({
               <button
                 key={t.theme}
                 onClick={() => onThemeClick(row.name, t)}
-                className="group flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border hover:border-primary/40 transition-all cursor-pointer"
+                className="group flex items-center gap-2 px-3 py-1.5 rounded-[2px] bg-muted/50 border border-border hover:border-primary/40 transition-all cursor-pointer"
               >
                 <BarChart3 className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                 <span className="text-xs font-medium text-foreground group-hover:text-primary transition-colors">
@@ -310,7 +310,7 @@ function CompetitorCard({
                   {Array.from({ length: 5 }).map((_, i) => (
                     <span
                       key={i}
-                      className={`w-1 h-3 rounded-full ${
+                      className={`w-1 h-3 rounded-[2px] ${
                         i < Math.ceil(t.frequency / 2) ? "bg-primary" : "bg-border"
                       }`}
                     />
@@ -326,7 +326,7 @@ function CompetitorCard({
       {row.topics.length > 0 && themes.length === 0 && (
         <div className="flex flex-wrap gap-1.5">
           {row.topics.map((t) => (
-            <span key={t} className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-primary/10 text-primary border border-primary/20">
+            <span key={t} className="px-2 py-0.5 rounded-[2px] text-[11px] font-medium bg-primary/10 text-primary border border-primary/20">
               {t}
             </span>
           ))}
@@ -392,7 +392,7 @@ function AmbitoView({ topicGroups, rows }: { topicGroups: TopicGroup[]; rows: Co
               const comp = rowMap.get(name);
               return (
                 <div key={name}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 border border-border hover:border-primary/30 transition-colors">
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-[2px] bg-muted/50 border border-border hover:border-primary/30 transition-colors">
                   <span className="text-sm font-medium text-foreground">{name}</span>
                   <span className="text-[10px] text-muted-foreground font-medium">
                     {comp?.mentions ?? 0}x
@@ -452,9 +452,9 @@ function ThemeDrawer({
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Frequenza</h4>
             <div className="flex items-center gap-2">
-              <div className="flex-1 h-2 bg-border rounded-full overflow-hidden">
+              <div className="flex-1 h-2 bg-border rounded-[2px] overflow-hidden">
                 <div
-                  className="h-full bg-primary rounded-full transition-all"
+                  className="h-full bg-primary rounded-[2px] transition-all"
                   style={{ width: `${(theme.frequency / 10) * 100}%` }}
                 />
               </div>

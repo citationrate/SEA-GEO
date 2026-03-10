@@ -165,9 +165,9 @@ export default async function TopicsPage({
                     {pt.topics.slice(0, 10).map(([name, count]) => (
                       <div key={name} className="flex items-center gap-3">
                         <span className="text-sm text-foreground w-40 truncate">{name}</span>
-                        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                        <div className="flex-1 h-2 rounded-[2px] bg-muted overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all duration-500 ${top5.has(name) ? "bg-primary" : "bg-muted-foreground/40"}`}
+                            className={`h-full rounded-[2px] transition-all duration-500 ${top5.has(name) ? "bg-primary" : "bg-muted-foreground/40"}`}
                             style={{ width: `${(count / projMax) * 100}%` }}
                           />
                         </div>

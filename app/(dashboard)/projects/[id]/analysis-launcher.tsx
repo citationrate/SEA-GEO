@@ -72,7 +72,7 @@ export function AnalysisLauncher({
     <>
       <button
         onClick={() => canStart ? setOpen(true) : setError("Configura almeno una query prima di lanciare")}
-        className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-lg hover:bg-primary/85 transition-colors"
+        className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-primary/85 transition-colors"
       >
         <Play className="w-4 h-4" />
         Lancia Analisi

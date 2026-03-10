@@ -56,11 +56,11 @@ export default async function SettingsPage({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-xs text-muted-foreground uppercase tracking-wide">Email</label>
-            <p className="mt-1 text-sm text-foreground bg-muted/30 rounded-md px-3 py-2">{user.email}</p>
+            <p className="mt-1 text-sm text-foreground bg-muted/30 rounded-[2px] px-3 py-2">{user.email}</p>
           </div>
           <div>
             <label className="text-xs text-muted-foreground uppercase tracking-wide">ID Utente</label>
-            <p className="mt-1 text-sm text-foreground bg-muted/30 rounded-md px-3 py-2 font-mono text-xs truncate">{user.id}</p>
+            <p className="mt-1 text-sm text-foreground bg-muted/30 rounded-[2px] px-3 py-2 font-mono text-xs truncate">{user.id}</p>
           </div>
         </div>
       </div>
@@ -75,15 +75,15 @@ export default async function SettingsPage({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="text-xs text-muted-foreground uppercase tracking-wide">Nome progetto</label>
-              <p className="mt-1 text-sm text-foreground bg-muted/30 rounded-md px-3 py-2">{selectedProject.name}</p>
+              <p className="mt-1 text-sm text-foreground bg-muted/30 rounded-[2px] px-3 py-2">{selectedProject.name}</p>
             </div>
             <div>
               <label className="text-xs text-muted-foreground uppercase tracking-wide">Brand target</label>
-              <p className="mt-1 text-sm text-foreground bg-muted/30 rounded-md px-3 py-2">{selectedProject.target_brand}</p>
+              <p className="mt-1 text-sm text-foreground bg-muted/30 rounded-[2px] px-3 py-2">{selectedProject.target_brand}</p>
             </div>
             <div>
               <label className="text-xs text-muted-foreground uppercase tracking-wide">Lingua</label>
-              <p className="mt-1 text-sm text-foreground bg-muted/30 rounded-md px-3 py-2">{selectedProject.language === "it" ? "Italiano" : "English"}</p>
+              <p className="mt-1 text-sm text-foreground bg-muted/30 rounded-[2px] px-3 py-2">{selectedProject.language === "it" ? "Italiano" : "English"}</p>
             </div>
           </div>
         </div>
@@ -103,7 +103,7 @@ export default async function SettingsPage({
                 <p className={`text-sm font-semibold mb-2 ${config?.color ?? "text-foreground"}`}>{config?.label ?? provider}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {models.map((m) => (
-                    <label key={m.id} className="flex items-start gap-2 bg-muted/20 rounded-md px-3 py-2 cursor-default">
+                    <label key={m.id} className="flex items-start gap-2 bg-muted/20 rounded-[2px] px-3 py-2 cursor-default">
                       <input type="checkbox" defaultChecked className="mt-1 accent-primary" disabled />
                       <div>
                         <span className="text-sm text-foreground">{m.label}</span>
@@ -124,12 +124,12 @@ export default async function SettingsPage({
           <CreditCard className="w-5 h-5 text-primary" />
           <h2 className="font-display font-semibold text-foreground">Abbonamento</h2>
         </div>
-        <div className="flex items-center justify-between bg-muted/20 rounded-md px-4 py-3">
+        <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
           <div>
             <p className="text-sm font-semibold text-foreground">Piano Free</p>
             <p className="text-xs text-muted-foreground">Analisi limitate — upgrade per sbloccare tutto</p>
           </div>
-          <button className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium opacity-50 cursor-not-allowed" disabled>
+          <button className="px-4 py-2 bg-primary text-primary-foreground rounded-[2px] text-sm font-medium opacity-50 cursor-not-allowed" disabled>
             Upgrade
           </button>
         </div>

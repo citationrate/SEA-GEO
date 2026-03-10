@@ -57,7 +57,7 @@ function ProjectSelectorInner({ projects }: { projects: Project[] }) {
       <select
         value={selected}
         onChange={(e) => handleChange(e.target.value)}
-        className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer"
+        className="bg-muted border border-border rounded-[2px] px-3 py-1.5 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer"
       >
         {projects.map((p) => (
           <option key={p.id} value={p.id}>{p.name}</option>

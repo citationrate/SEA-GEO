@@ -143,7 +143,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
       {/* Failed run banner */}
       {lastRun && (lastRun as any).status === "failed" && (
-        <div className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3">
+        <div className="flex items-center gap-3 rounded-[2px] border border-destructive/30 bg-destructive/10 px-4 py-3">
           <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-destructive">
@@ -177,7 +177,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           ) : (
             <ul className="space-y-2">
               {tofuQueries.map((q: any) => (
-                <li key={q.id} className="text-sm text-foreground bg-muted rounded-lg px-3 py-2 border border-border">{q.text}</li>
+                <li key={q.id} className="text-sm text-foreground bg-muted rounded-[2px] px-3 py-2 border border-border">{q.text}</li>
               ))}
             </ul>
           )}
@@ -200,7 +200,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           ) : (
             <ul className="space-y-2">
               {mofuQueries.map((q: any) => (
-                <li key={q.id} className="text-sm text-foreground bg-muted rounded-lg px-3 py-2 border border-border">{q.text}</li>
+                <li key={q.id} className="text-sm text-foreground bg-muted rounded-[2px] px-3 py-2 border border-border">{q.text}</li>
               ))}
             </ul>
           )}
@@ -222,7 +222,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {(segments ?? []).map((s: any) => (
-              <div key={s.id} className="bg-muted rounded-lg px-3 py-2 border border-border">
+              <div key={s.id} className="bg-muted rounded-[2px] px-3 py-2 border border-border">
                 <p className="text-sm font-medium text-foreground">{s.label}</p>
                 <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{s.prompt_context}</p>
               </div>
@@ -255,7 +255,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                 <div key={run.id} className="space-y-1">
                   <a
                     href={`/projects/${params.id}/runs/${run.id}`}
-                    className="flex items-center justify-between bg-muted rounded-lg px-4 py-3 border border-border hover:border-primary/30 transition-colors group"
+                    className="flex items-center justify-between bg-muted rounded-[2px] px-4 py-3 border border-border hover:border-primary/30 transition-colors group"
                   >
                     <div className="flex items-center gap-3">
                       <span className="font-display font-semibold text-foreground group-hover:text-primary transition-colors">v{run.version}</span>
@@ -297,14 +297,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         <div className="flex gap-3">
           <a
             href={`/projects/${params.id}/queries`}
-            className="flex items-center gap-2 bg-surface border border-border text-foreground text-sm font-semibold px-4 py-2 rounded-lg hover:border-primary/30 transition-colors"
+            className="flex items-center gap-2 bg-surface border border-border text-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:border-primary/30 transition-colors"
           >
             <Plus className="w-4 h-4" />
             Nuova Query
           </a>
           <a
             href={`/projects/${params.id}/segments`}
-            className="flex items-center gap-2 bg-surface border border-border text-foreground text-sm font-semibold px-4 py-2 rounded-lg hover:border-primary/30 transition-colors"
+            className="flex items-center gap-2 bg-surface border border-border text-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:border-primary/30 transition-colors"
           >
             <Users className="w-4 h-4" />
             Segmenti

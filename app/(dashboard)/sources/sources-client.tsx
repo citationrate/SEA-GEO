@@ -142,7 +142,7 @@ export function SourcesClient({
       <div className="flex flex-wrap gap-1.5">
         <button
           onClick={() => setFilter(null)}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+          className={`px-3 py-1.5 rounded-[2px] text-xs font-medium border transition-all ${
             filter === null
               ? "border-primary text-primary bg-primary/15"
               : "border-border text-muted-foreground hover:border-foreground/40"
@@ -158,7 +158,7 @@ export function SourcesClient({
             <button
               key={type}
               onClick={() => setFilter(filter === type ? null : type)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+              className={`px-3 py-1.5 rounded-[2px] text-xs font-medium border transition-all ${
                 filter === type
                   ? "border-primary text-primary bg-primary/15"
                   : "border-border text-muted-foreground hover:border-foreground/40"
@@ -377,7 +377,7 @@ function AnalyzeDrawer({
             {!analysis && !loading && (
               <button
                 onClick={runAnalysis}
-                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-primary/85 transition-colors"
+                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors"
               >
                 <Search className="w-4 h-4" /> Analizza con AI
               </button>

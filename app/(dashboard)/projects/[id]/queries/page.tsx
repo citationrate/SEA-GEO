@@ -112,7 +112,7 @@ export default function QueriesPage() {
             <button
               onClick={() => addQuery(tofuText, "tofu")}
               disabled={submitting || !tofuText.trim()}
-              className="bg-primary text-primary-foreground p-2.5 rounded-lg hover:bg-primary/85 transition-colors disabled:opacity-50"
+              className="bg-primary text-primary-foreground p-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             </button>
@@ -124,7 +124,7 @@ export default function QueriesPage() {
           ) : (
             <ul className="space-y-2">
               {tofuQueries.map((q) => (
-                <li key={q.id} className="flex items-start justify-between gap-2 bg-muted rounded-lg px-3 py-2 border border-border group">
+                <li key={q.id} className="flex items-start justify-between gap-2 bg-muted rounded-[2px] px-3 py-2 border border-border group">
                   <span className="text-sm text-foreground">{q.text}</span>
                   <button
                     onClick={() => deleteQuery(q.id)}
@@ -158,7 +158,7 @@ export default function QueriesPage() {
             <button
               onClick={() => addQuery(mofuText, "mofu")}
               disabled={submitting || !mofuText.trim()}
-              className="bg-primary text-primary-foreground p-2.5 rounded-lg hover:bg-primary/85 transition-colors disabled:opacity-50"
+              className="bg-primary text-primary-foreground p-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             </button>
@@ -170,7 +170,7 @@ export default function QueriesPage() {
           ) : (
             <ul className="space-y-2">
               {mofuQueries.map((q) => (
-                <li key={q.id} className="flex items-start justify-between gap-2 bg-muted rounded-lg px-3 py-2 border border-border group">
+                <li key={q.id} className="flex items-start justify-between gap-2 bg-muted rounded-[2px] px-3 py-2 border border-border group">
                   <span className="text-sm text-foreground">{q.text}</span>
                   <button
                     onClick={() => deleteQuery(q.id)}
