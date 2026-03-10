@@ -57,8 +57,14 @@ export function AnalysisLauncher({
         throw new Error(data.error || "Errore durante l'avvio");
       }
 
+      const data = await res.json();
+      const runId = data.run_id ?? data.runId;
       setOpen(false);
-      router.refresh();
+      if (runId) {
+        router.push(`/projects/${projectId}/runs/${runId}`);
+      } else {
+        router.refresh();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore sconosciuto");
     } finally {
