@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+
 
 const MESSAGES = [
   "Interrogando i modelli AI...",
@@ -62,7 +62,7 @@ export function AnalysisProgress({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
       <div className="relative card p-8 w-full max-w-md border-primary/30 shadow-xl shadow-primary/5 space-y-6 text-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
+        <img src="/loading.gif" alt="loading" className="w-20 h-20 mx-auto object-contain rounded-[2px]" />
 
         <div>
           <h2 className="font-display font-bold text-xl text-foreground animate-pulse">
