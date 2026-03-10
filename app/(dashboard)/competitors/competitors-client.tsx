@@ -171,7 +171,6 @@ export function CompetitorsClient({
           {/* Benchmark vs Brand */}
           {brandAviScore != null && rows.length > 0 && (() => {
             const top5 = rows.slice(0, 5);
-            const maxScore = Math.max(brandAviScore, ...top5.map((r) => r.aviScore ?? 0), 1);
             return (
               <div className="card p-5 space-y-4">
                 <h2 className="font-display font-semibold text-foreground text-sm">Benchmark</h2>
@@ -179,28 +178,31 @@ export function CompetitorsClient({
                   {/* Brand row */}
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-bold text-primary w-32 truncate">Il tuo brand</span>
-                    <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
+                    <div className="flex-1 h-2.5 bg-muted rounded-[2px] overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-primary transition-all"
-                        style={{ width: `${(brandAviScore / Math.max(maxScore, 1)) * 100}%` }}
+                        className="h-full rounded-[2px] transition-all duration-700"
+                        style={{ width: `${(brandAviScore / 100) * 100}%`, background: "#7eb89a" }}
                       />
                     </div>
                     <span className="text-xs font-bold text-primary w-14 text-right">AVI {Math.round(brandAviScore * 10) / 10}</span>
                   </div>
                   {/* Competitor rows */}
                   {top5.map((r) => {
-                    const diff = (r.aviScore ?? 0) - brandAviScore;
+                    const score = r.aviScore ?? 0;
+                    const beats = score > brandAviScore;
+                    const barBg = score >= 70 ? "rgba(126,184,154,0.5)" : score >= 40 ? "rgba(232,226,214,0.3)" : "rgba(192,97,74,0.3)";
+                    const textColor = beats ? "text-destructive" : score >= 70 ? "text-primary" : score >= 40 ? "text-cream" : "text-destructive";
                     return (
                       <div key={r.name} className="flex items-center gap-3">
                         <span className="text-sm font-medium text-foreground w-32 truncate">{r.name}</span>
-                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="flex-1 h-2 bg-muted rounded-[2px] overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all ${diff > 0 ? "bg-destructive/60" : "bg-success/60"}`}
-                            style={{ width: `${((r.aviScore ?? 0) / Math.max(maxScore, 1)) * 100}%` }}
+                            className="h-full rounded-[2px] transition-all duration-700"
+                            style={{ width: `${(score / 100) * 100}%`, background: barBg }}
                           />
                         </div>
-                        <span className={`text-xs font-bold w-14 text-right ${diff > 0 ? "text-destructive" : "text-success"}`}>
-                          AVI {Math.round((r.aviScore ?? 0) * 10) / 10}
+                        <span className={`text-xs font-bold w-14 text-right ${score > 0 ? textColor : "text-muted-foreground"}`}>
+                          {score > 0 ? `AVI ${Math.round(score * 10) / 10}` : "—"}
                         </span>
                       </div>
                     );
