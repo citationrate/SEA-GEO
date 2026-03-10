@@ -497,10 +497,10 @@ export const runAnalysis = inngest.createFunction(
     const language = project.language;
 
     // Build all prompt tasks
-    // If no segments configured, use a default generic context
+    // If no segments configured, use a default generic audience fallback
     const effectiveSegments = segments.length > 0
       ? segments
-      : [{ id: "default", prompt_context: "Utente generico." }];
+      : [{ id: "default", prompt_context: "Rispondi come se ti stesse chiedendo un utente del pubblico generale, senza un profilo demografico specifico." }];
 
     const allTasks: PromptTask[] = [];
     for (const query of queries) {

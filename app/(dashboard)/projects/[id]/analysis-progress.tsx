@@ -15,10 +15,12 @@ const MESSAGES = [
 
 export function AnalysisProgress({
   runId,
+  projectId,
   completedPrompts: initialCompleted,
   totalPrompts,
 }: {
   runId: string;
+  projectId: string;
   completedPrompts: number;
   totalPrompts: number;
 }) {
@@ -42,14 +44,17 @@ export function AnalysisProgress({
         if (!res.ok) return;
         const data = await res.json();
         setCompleted(data.completed_prompts ?? completed);
-        if (data.status === "completed" || data.status === "failed") {
+        if (data.status === "completed") {
+          clearInterval(interval);
+          router.push(`/projects/${projectId}/runs/${runId}`);
+        } else if (data.status === "failed") {
           clearInterval(interval);
           router.refresh();
         }
       } catch { /* ignore */ }
     }, 3000);
     return () => clearInterval(interval);
-  }, [runId, router, completed]);
+  }, [runId, projectId, router, completed]);
 
   const pct = totalPrompts > 0 ? Math.round((completed / totalPrompts) * 100) : 0;
 

@@ -169,9 +169,9 @@ export function CompetitorsClient({
       ) : view === "competitor" ? (
         <>
           {/* Benchmark vs Brand */}
-          {brandAviScore != null && rows.some((r) => r.aviScore != null) && (() => {
-            const top5 = rows.filter((r) => r.aviScore != null).slice(0, 5);
-            const maxScore = Math.max(brandAviScore, ...top5.map((r) => r.aviScore ?? 0));
+          {brandAviScore != null && rows.length > 0 && (() => {
+            const top5 = rows.slice(0, 5);
+            const maxScore = Math.max(brandAviScore, ...top5.map((r) => r.aviScore ?? 0), 1);
             return (
               <div className="card p-5 space-y-4">
                 <h2 className="font-display font-semibold text-foreground text-sm">Benchmark</h2>

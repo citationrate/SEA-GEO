@@ -316,6 +316,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       {runningRun && (
         <AnalysisProgress
           runId={runningRun.id}
+          projectId={params.id}
           completedPrompts={runningRun.completed_prompts ?? 0}
           totalPrompts={runningRun.total_prompts ?? 1}
         />
