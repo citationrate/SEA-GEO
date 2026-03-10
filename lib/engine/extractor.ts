@@ -44,11 +44,24 @@ Schema JSON richiesto:
 
 Regole:
 - brand_mentioned: true se il brand target appare nella risposta
-- brand_rank: posizione del brand se c'è una lista/classifica (1=primo), null se non c'è lista
+- brand_rank: posizione in cui il brand appare nella risposta rispetto ad altri brand/alternative.
+  1 = citato per primo o come principale raccomandazione.
+  2 = citato come seconda opzione.
+  3+ = citato dopo altri brand.
+  null = SOLO se brand_mentioned è false.
+  IMPORTANTE: Se brand_mentioned è true, brand_rank NON può essere null. Anche se non c'è una lista esplicita, valuta l'ordine in cui il brand appare rispetto ai concorrenti (1 se è il primo o unico citato).
 - brand_occurrences: numero di volte che il brand appare nel testo
-- sentiment_score: da -1.0 (molto negativo) a 1.0 (molto positivo) verso il brand, null se non menzionato
+- sentiment_score: valore numerico da -1.0 (molto negativo) a +1.0 (molto positivo) che indica il sentiment verso il brand nella risposta.
+  +1.0 = molto positivo (raccomandato, elogiato).
+  +0.5 = positivo.
+  0 = neutro o brand non menzionato.
+  -0.5 = negativo.
+  -1.0 = molto negativo (sconsigliato, criticato).
+  IMPORTANTE: Se brand_mentioned è true, sentiment_score NON può essere null. Restituisci 0 se il tono è neutro. Se brand_mentioned è false, restituisci 0.
 - topics: argomenti principali trattati nella risposta (max 5)
 - competitors_found: brand/aziende concorrenti menzionati (escluso il target)
+
+REGOLA CRITICA: Se brand_mentioned è true, brand_rank e sentiment_score sono OBBLIGATORI e non possono essere null.
 
 FONTI: Estrai TUTTI i siti web, domini, URL, blog, riviste, piattaforme citati o menzionati nella risposta, anche implicitamente.
 Esempi: se dice 'secondo Gambero Rosso' → estrai 'gamberorosso.it', se dice 'disponibile su Amazon' → estrai 'amazon.it', se dice 'recensioni su Trustpilot' → estrai 'trustpilot.com'.
@@ -87,12 +100,32 @@ FORMATO:
 
   try {
     const parsed = JSON.parse(raw);
-    console.log("Sources extracted:", JSON.stringify(parsed.sources));
+    console.log("[extractor] result:", JSON.stringify(parsed));
+
+    const brandMentioned = Boolean(parsed.brand_mentioned);
+
+    // Enforce brand_rank and sentiment_score when brand is mentioned
+    let brandRank: number | null = parsed.brand_rank != null ? Number(parsed.brand_rank) : null;
+    let sentimentScore: number | null = parsed.sentiment_score != null ? Number(parsed.sentiment_score) : null;
+
+    if (brandMentioned) {
+      if (brandRank == null) {
+        console.log("[extractor] WARN: brand_mentioned=true but brand_rank is null, defaulting to 1");
+        brandRank = 1;
+      }
+      if (sentimentScore == null) {
+        console.log("[extractor] WARN: brand_mentioned=true but sentiment_score is null, defaulting to 0");
+        sentimentScore = 0;
+      }
+    } else {
+      sentimentScore = sentimentScore ?? 0;
+    }
+
     return {
-      brand_mentioned: Boolean(parsed.brand_mentioned),
-      brand_rank: parsed.brand_rank ?? null,
+      brand_mentioned: brandMentioned,
+      brand_rank: brandRank,
       brand_occurrences: Number(parsed.brand_occurrences) || 0,
-      sentiment_score: parsed.sentiment_score ?? null,
+      sentiment_score: sentimentScore,
       topics: Array.isArray(parsed.topics) ? parsed.topics : [],
       competitors_found: Array.isArray(parsed.competitors_found) ? parsed.competitors_found : [],
       sources: Array.isArray(parsed.sources)
