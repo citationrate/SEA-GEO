@@ -114,9 +114,9 @@ export function StatsRow({ stats }: { stats?: StatItem[] }) {
 /* ─── AVI Trend chart ─── */
 interface TrendDataPoint {
   run: string;
-  avi: number;
-  prominence: number;
-  sentiment: number;
+  avi: number | null;
+  prominence: number | null;
+  sentiment: number | null;
 }
 
 const TOOLTIP_STYLE = {
