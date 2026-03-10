@@ -252,13 +252,13 @@ export default function SegmentsPage() {
 
       {/* SECTION B: My Personas */}
       <section>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
           <h2 className="font-display font-semibold text-lg text-foreground flex items-center gap-2">
             <Users className="w-4 h-4 text-primary" /> I Miei Personas
           </h2>
           <button
             onClick={() => setDrawerOpen(true)}
-            className="flex items-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-primary/85 transition-colors"
+            className="flex items-center justify-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-primary/85 transition-colors mx-auto sm:mx-0"
           >
             <Plus className="w-4 h-4" /> Crea Persona Custom
           </button>

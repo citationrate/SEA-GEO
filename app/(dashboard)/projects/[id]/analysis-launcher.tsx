@@ -127,10 +127,10 @@ export function AnalysisLauncher({
                     key={opt.value}
                     onClick={() => setRunCount(opt.value)}
                     disabled={loading}
-                    className={`px-3 py-2.5 rounded-sm border transition-all text-center ${
+                    className={`px-3 py-2.5 rounded-sm transition-all text-center ${
                       runCount === opt.value
-                        ? "border-primary/50 bg-primary/5"
-                        : "border-border hover:border-border/80"
+                        ? "border-2 border-sage bg-[rgba(126,184,154,0.12)]"
+                        : "border border-border hover:border-border/80"
                     }`}
                   >
                     <p className="text-sm font-medium text-foreground">{opt.label}</p>
