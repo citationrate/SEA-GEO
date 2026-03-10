@@ -11,6 +11,7 @@ interface RunMetricsProps {
   competitorMentions: any[];
   brandAviScore: number;
   targetBrand: string;
+  perModelAvi?: { model: string; avi: number }[];
 }
 
 function sentimentSign(v: number): string {
@@ -23,7 +24,7 @@ function sentimentColor(v: number): string {
   return "text-muted-foreground";
 }
 
-export function RunMetrics({ prompts, analyses, sources, models, competitorMentions, brandAviScore, targetBrand }: RunMetricsProps) {
+export function RunMetrics({ prompts, analyses, sources, models, competitorMentions, brandAviScore, targetBrand, perModelAvi }: RunMetricsProps) {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -203,20 +204,26 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           >
             Tutti
           </button>
-          {models.map((model) => (
-            <button
-              key={model}
-              onClick={() => setSelectedModel(model)}
-              className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
-              style={
-                selectedModel === model
-                  ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
-                  : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
-              }
-            >
-              {model}
-            </button>
-          ))}
+          {models.map((model) => {
+            const modelAvi = perModelAvi?.find((m) => m.model === model);
+            return (
+              <button
+                key={model}
+                onClick={() => setSelectedModel(model)}
+                className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
+                style={
+                  selectedModel === model
+                    ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
+                    : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
+                }
+              >
+                {model}
+                {modelAvi != null && (
+                  <span className="ml-1.5 opacity-70">{Math.round(modelAvi.avi)}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 

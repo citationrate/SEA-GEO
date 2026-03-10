@@ -184,16 +184,6 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
                 { label: "Consistency", v: aviData.stability_score != null ? Math.round(aviData.stability_score) : null },
               ]}
             />
-            {perModelAvi.length > 1 && (
-              <div className="card p-3 flex items-center justify-center gap-4">
-                {perModelAvi.map((m) => (
-                  <span key={m.model} className="flex items-center gap-1.5 font-mono text-[0.6rem] tracking-wide uppercase text-muted-foreground">
-                    <span>{m.model.replace(/^(gpt-|claude-|gemini-)/, (p) => p.split("-")[0].toUpperCase() + " ").trim()}</span>
-                    <span className="font-display font-bold text-foreground text-sm">{Math.round(m.avi)}</span>
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
           <div className="card p-5 space-y-4">
             <h2 className="font-display font-semibold text-foreground">Componenti AVI</h2>
@@ -228,6 +218,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         competitorMentions={mentionsList}
         brandAviScore={aviData?.avi_score ?? 0}
         targetBrand={proj?.target_brand ?? ""}
+        perModelAvi={perModelAvi}
       />
     </div>
   );
