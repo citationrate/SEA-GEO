@@ -56,6 +56,38 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
 
     if (provider === "google") {
       const genai = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY ?? "");
+
+      const extractGeminiText = (result: any): string => {
+        const resp = result.response;
+        const candidate = resp.candidates?.[0];
+        const finishReason = candidate?.finishReason;
+
+        if (finishReason && finishReason !== "STOP") {
+          console.error(`[Gemini] blocked: finishReason=${finishReason}`, JSON.stringify(candidate?.safetyRatings ?? []));
+          return "";
+        }
+
+        // Try SDK .text() first, fallback to manual extraction
+        try {
+          const text = resp.text();
+          if (text) return text;
+        } catch { /* .text() throws if no text candidates */ }
+
+        // Manual extraction: candidates[0].content.parts[0].text
+        const parts = candidate?.content?.parts;
+        if (parts?.length > 0) {
+          const text = parts.map((p: any) => p.text ?? "").join("");
+          if (text) return text;
+        }
+
+        console.error("[Gemini] empty response. Raw:", JSON.stringify({
+          finishReason,
+          candidatesCount: resp.candidates?.length,
+          parts: parts?.map((p: any) => ({ type: Object.keys(p), len: p.text?.length })),
+        }));
+        return "";
+      }
+
       if (browsing) {
         try {
           const geminiModel = genai.getGenerativeModel({
@@ -63,7 +95,7 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
             tools: [{ googleSearch: {} } as any],
           });
           const result = await geminiModel.generateContent(prompt);
-          const text = result.response.text();
+          const text = extractGeminiText(result);
           const groundingSources = extractFromGrounding((result.response as any).candidates || [], brandDomain ?? undefined);
           const textSources = extractFromText(text, brandDomain ?? undefined);
           return { text, sources: mergeSources(groundingSources, textSources) };
@@ -73,7 +105,7 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
       }
       const geminiModel = genai.getGenerativeModel({ model });
       const result = await geminiModel.generateContent(prompt);
-      const text = result.response.text();
+      const text = extractGeminiText(result);
       return { text, sources: extractFromText(text, brandDomain ?? undefined) };
     }
 
