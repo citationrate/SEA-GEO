@@ -21,6 +21,13 @@ export function AVIRing({ score, trend, components }: AVIRingProps) {
   const trendColor = trend == null ? "text-cream-dim"
     : trend > 0 ? "text-success" : "text-destructive";
 
+  const COMP_COLORS: Record<string, string> = {
+    Prominence:  "#e8956d",
+    Rank:        "#7eb3d4",
+    Sentiment:   "#7eb89a",
+    Consistency: "#c4a882",
+  };
+
   const comps = components ?? [
     { label: "Prominence", v: null },
     { label: "Rank",       v: null },
@@ -67,8 +74,8 @@ export function AVIRing({ score, trend, components }: AVIRingProps) {
             <div key={c.label} className="flex items-center gap-2">
               <span className="font-mono text-[10px] text-cream-dim w-16 shrink-0">{c.label}</span>
               <div className="flex-1 h-1 bg-ink-3 rounded-sm overflow-hidden">
-                <div className="h-full bg-sage/50 rounded-sm transition-all duration-700"
-                  style={{ width: c.v != null ? `${c.v}%` : "0%" }} />
+                <div className="h-full rounded-sm transition-all duration-700"
+                  style={{ width: c.v != null ? `${c.v}%` : "0%", backgroundColor: COMP_COLORS[c.label] ?? "var(--sage)" }} />
               </div>
               <span className="font-mono text-[10px] text-cream-dim w-5 text-right">{c.v != null ? Math.round(c.v) : "--"}</span>
             </div>
@@ -150,9 +157,9 @@ export function AVITrend({ data }: { data?: TrendDataPoint[] }) {
         </div>
         <div className="flex items-center gap-4 font-mono text-[10px] text-cream-dim">
           {[
-            { label: "AVI",        color: "var(--sage)" },
-            { label: "Sentiment",  color: "var(--cream)"  },
-            { label: "Prominence", color: "var(--success)" },
+            { label: "AVI",        color: "#7eb89a" },
+            { label: "Prominence", color: "#e8956d" },
+            { label: "Sentiment",  color: "#7eb3d4" },
           ].map(l => (
             <span key={l.label} className="flex items-center gap-1.5">
               <span className="w-4 h-0.5 rounded-sm inline-block" style={{ background: l.color }} />
@@ -167,9 +174,9 @@ export function AVITrend({ data }: { data?: TrendDataPoint[] }) {
           <XAxis dataKey="run" tick={{ fontSize: 11, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false}/>
           <YAxis domain={[0,100]} tick={{ fontSize: 11, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false}/>
           <Tooltip contentStyle={TOOLTIP_STYLE}/>
-          <Line type="monotone" dataKey="avi"        stroke="var(--sage)"    strokeWidth={2} dot={{ r: 4, fill: "var(--sage)" }}    connectNulls activeDot={{ r: 6 }}/>
-          <Line type="monotone" dataKey="sentiment"  stroke="var(--cream)"   strokeWidth={2} dot={{ r: 4, fill: "var(--cream)" }}   connectNulls activeDot={{ r: 6 }}/>
-          <Line type="monotone" dataKey="prominence" stroke="var(--success)" strokeWidth={2} dot={{ r: 4, fill: "var(--success)" }} connectNulls activeDot={{ r: 6 }}/>
+          <Line type="monotone" dataKey="avi"        stroke="#7eb89a" strokeWidth={3} dot={{ r: 5, fill: "#7eb89a" }} connectNulls activeDot={{ r: 7 }}/>
+          <Line type="monotone" dataKey="prominence" stroke="#e8956d" strokeWidth={1.5} dot={{ r: 3, fill: "#e8956d" }} connectNulls activeDot={{ r: 5 }}/>
+          <Line type="monotone" dataKey="sentiment"  stroke="#7eb3d4" strokeWidth={1.5} dot={{ r: 3, fill: "#7eb3d4" }} connectNulls activeDot={{ r: 5 }}/>
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -204,7 +211,10 @@ export function CompetitorBar({ data }: { data?: CompetitorData[] }) {
           <XAxis type="number" tick={{ fontSize: 10, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false} allowDecimals={false}/>
           <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false} width={90}/>
           <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => [`${value} menzioni`, "Menzioni"]}/>
-          <Bar dataKey="count" fill="var(--sage-dim)" radius={[0,2,2,0]}>
+          <Bar dataKey="count" radius={[0,2,2,0]}>
+            {compData.map((_, i) => (
+              <Cell key={i} fill={i === 0 ? "#e8956d" : i === 1 ? "#c4a882" : "rgba(196,168,130,0.5)"} />
+            ))}
             <LabelList dataKey="count" position="right" style={{ fontSize: 11, fill: "var(--cream-dim)" }}/>
           </Bar>
         </BarChart>
