@@ -450,7 +450,7 @@ function PersonaDrawer({
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
 
       {/* Drawer */}
-      <div className="fixed top-0 right-0 h-full w-full max-w-lg bg-[hsl(var(--surface))] border-l border-border z-50 flex flex-col animate-slide-in-right">
+      <div className="fixed top-0 right-0 h-full w-full max-w-lg border-l border-border z-50 flex flex-col animate-slide-in-right" style={{ background: "var(--ink-2)" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <h2 className="font-display font-bold text-lg text-foreground">Crea Persona</h2>
@@ -460,7 +460,7 @@ function PersonaDrawer({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
           {/* Name */}
           <FieldLabel>Nome persona *</FieldLabel>
           <input
@@ -626,7 +626,7 @@ function PersonaDrawer({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-border shrink-0 space-y-2">
+        <div className="px-5 py-4 border-t border-border shrink-0 space-y-2" style={{ background: "var(--ink-2)" }}>
           {error && <p className="text-xs text-destructive">{error}</p>}
           <button
             onClick={handleSave}
