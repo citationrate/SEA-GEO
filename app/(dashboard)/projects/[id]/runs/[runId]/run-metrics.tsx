@@ -40,6 +40,21 @@ export function RunMetrics({ prompts, analyses, sources, models, compAviMap }: R
       ? (withSentiment.reduce((s: number, a: any) => s + a.sentiment_score, 0) / withSentiment.length).toFixed(2)
       : "—";
 
+    const withTone = filteredAnalyses.filter((a) => a.tone_score != null);
+    const avgTone = withTone.length > 0
+      ? withTone.reduce((s: number, a: any) => s + a.tone_score, 0) / withTone.length
+      : null;
+
+    const withPosition = filteredAnalyses.filter((a) => a.position_score != null);
+    const avgPosition = withPosition.length > 0
+      ? withPosition.reduce((s: number, a: any) => s + a.position_score, 0) / withPosition.length
+      : null;
+
+    const withRec = filteredAnalyses.filter((a) => a.recommendation_score != null);
+    const avgRec = withRec.length > 0
+      ? withRec.reduce((s: number, a: any) => s + a.recommendation_score, 0) / withRec.length
+      : null;
+
     const totalOccurrences = filteredAnalyses.reduce((s: number, a: any) => s + (a.brand_occurrences ?? 0), 0);
 
     const competitorsMap = new Map<string, number>();
@@ -72,6 +87,9 @@ export function RunMetrics({ prompts, analyses, sources, models, compAviMap }: R
       ranked,
       avgRank,
       avgSentiment,
+      avgTone,
+      avgPosition,
+      avgRec,
       totalOccurrences,
       competitorList,
       topicList,
@@ -88,6 +106,9 @@ export function RunMetrics({ prompts, analyses, sources, models, compAviMap }: R
     ranked,
     avgRank,
     avgSentiment,
+    avgTone,
+    avgPosition,
+    avgRec,
     totalOccurrences,
     competitorList,
     topicList,
@@ -150,6 +171,51 @@ export function RunMetrics({ prompts, analyses, sources, models, compAviMap }: R
           <p className="font-display font-bold text-2xl text-foreground">{avgSentiment}</p>
           <p className="text-xs text-muted-foreground mt-0.5">Sentiment Medio</p>
           <p className="text-[10px] text-muted-foreground">scala -1 / +1</p>
+          {avgTone !== null && avgPosition !== null && avgRec !== null && (
+            <div className="space-y-1 mt-2">
+              {/* Tone */}
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[0.5rem] text-muted-foreground w-16">TONE</span>
+                <div className="flex-1 h-1 bg-muted rounded-[2px] overflow-hidden">
+                  <div className="h-full rounded-[2px]"
+                       style={{
+                         width: `${Math.abs(avgTone) * 100}%`,
+                         backgroundColor: avgTone >= 0 ? '#7eb89a' : '#c0614a',
+                         marginLeft: avgTone < 0 ? `${(1 + avgTone) * 100}%` : '0'
+                       }}
+                  />
+                </div>
+                <span className="font-mono text-[0.5rem] text-muted-foreground w-8 text-right">
+                  {avgTone > 0 ? '+' : ''}{avgTone.toFixed(2)}
+                </span>
+              </div>
+              {/* Position */}
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[0.5rem] text-muted-foreground w-16">POSITION</span>
+                <div className="flex-1 h-1 bg-muted rounded-[2px] overflow-hidden">
+                  <div className="h-full rounded-[2px] bg-[#7eb3d4]"
+                       style={{ width: `${avgPosition * 100}%` }} />
+                </div>
+                <span className="font-mono text-[0.5rem] text-muted-foreground w-8 text-right">
+                  {avgPosition.toFixed(2)}
+                </span>
+              </div>
+              {/* Recommendation */}
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[0.5rem] text-muted-foreground w-16">REC</span>
+                <div className="flex-1 h-1 bg-muted rounded-[2px] overflow-hidden">
+                  <div className="h-full rounded-[2px]"
+                       style={{
+                         width: `${Math.abs(avgRec) * 100}%`,
+                         backgroundColor: avgRec >= 0 ? '#c4a882' : '#c0614a'
+                       }} />
+                </div>
+                <span className="font-mono text-[0.5rem] text-muted-foreground w-8 text-right">
+                  {avgRec > 0 ? '+' : ''}{avgRec.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
