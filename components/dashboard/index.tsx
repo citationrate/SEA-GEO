@@ -18,7 +18,7 @@ export function AVIRing({ score, trend, components }: AVIRingProps) {
   const dash = score != null ? (score / 100) * C : 0;
 
   const Icon = trend == null ? Minus : trend > 0 ? TrendingUp : TrendingDown;
-  const trendColor = trend == null ? "text-muted-foreground"
+  const trendColor = trend == null ? "text-cream-dim"
     : trend > 0 ? "text-success" : "text-destructive";
 
   const comps = components ?? [
@@ -30,47 +30,47 @@ export function AVIRing({ score, trend, components }: AVIRingProps) {
 
   return (
     <div className="card p-5 h-full flex flex-col items-center gap-3">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cream-dim">
         AI Visibility Index
       </p>
 
       <div className="relative w-[140px] h-[140px]">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r={R} fill="none" stroke="hsl(var(--border))" strokeWidth="7"/>
+          <circle cx="60" cy="60" r={R} fill="none" stroke="var(--line)" strokeWidth="7"/>
           <circle cx="60" cy="60" r={R} fill="none"
-            stroke="hsl(var(--primary))" strokeWidth="7"
+            stroke="var(--sage)" strokeWidth="7"
             strokeLinecap="round"
             strokeDasharray={C}
             strokeDashoffset={score != null ? C - dash : C}
             style={{ transition: "stroke-dashoffset 1.2s ease-out",
-                     filter: "drop-shadow(0 0 6px hsl(var(--primary) / 0.5))" }}
+                     filter: "drop-shadow(0 0 6px var(--sage-glow))" }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-display font-bold text-[32px] text-foreground leading-none">
+          <span className="font-display text-[32px] text-foreground leading-none" style={{ fontWeight: 300 }}>
             {score != null ? Math.round(score) : "--"}
           </span>
-          {score != null && <span className="text-xs text-muted-foreground">/100</span>}
+          {score != null && <span className="font-mono text-[10px] text-cream-dim">/100</span>}
         </div>
       </div>
 
-      <div className={`flex items-center gap-1.5 text-xs ${trendColor}`}>
+      <div className={`flex items-center gap-1.5 text-xs font-sans ${trendColor}`}>
         <Icon className="w-3 h-3" />
         {trend != null
           ? <span>{trend > 0 ? "+" : ""}{trend.toFixed(1)} vs ultima run</span>
-          : <span className="text-muted-foreground">Nessun dato precedente</span>}
+          : <span className="text-cream-dim">Nessun dato precedente</span>}
       </div>
 
       {score != null && (
         <div className="w-full space-y-2 pt-2 border-t border-border">
           {comps.map(c => (
             <div key={c.label} className="flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground w-16 shrink-0">{c.label}</span>
-              <div className="flex-1 h-1 bg-border rounded-full overflow-hidden">
-                <div className="h-full bg-primary/60 rounded-full transition-all duration-700"
+              <span className="font-mono text-[10px] text-cream-dim w-16 shrink-0">{c.label}</span>
+              <div className="flex-1 h-1 bg-ink-3 rounded-sm overflow-hidden">
+                <div className="h-full bg-sage/50 rounded-sm transition-all duration-700"
                   style={{ width: c.v != null ? `${c.v}%` : "0%" }} />
               </div>
-              <span className="text-[10px] text-muted-foreground w-5 text-right">{c.v != null ? Math.round(c.v) : "--"}</span>
+              <span className="font-mono text-[10px] text-cream-dim w-5 text-right">{c.v != null ? Math.round(c.v) : "--"}</span>
             </div>
           ))}
         </div>
@@ -100,10 +100,10 @@ export function StatsRow({ stats }: { stats?: StatItem[] }) {
     <div className="grid grid-cols-3 gap-3 h-full">
       {items.map(s => (
         <div key={s.label} className="card p-4 flex flex-col justify-between">
-          <p className="text-xs text-muted-foreground">{s.label}</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.04em] text-cream-dim">{s.label}</p>
           <div className="mt-2">
-            <p className="font-display font-bold text-2xl text-foreground">{s.value}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">{s.sub}</p>
+            <p className="font-display text-2xl text-foreground" style={{ fontWeight: 300 }}>{s.value}</p>
+            <p className="font-mono text-[10px] text-cream-dim mt-0.5">{s.sub}</p>
           </div>
         </div>
       ))}
@@ -120,11 +120,11 @@ interface TrendDataPoint {
 }
 
 const TOOLTIP_STYLE = {
-  background: "hsl(var(--surface-2))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: 8,
+  background: "var(--ink-3)",
+  border: "1px solid var(--line)",
+  borderRadius: 2,
   fontSize: 12,
-  color: "hsl(var(--foreground))",
+  color: "var(--white)",
 };
 
 export function AVITrend({ data }: { data?: TrendDataPoint[] }) {
@@ -133,9 +133,9 @@ export function AVITrend({ data }: { data?: TrendDataPoint[] }) {
   if (trendData.length === 0) {
     return (
       <div className="card p-5">
-        <h3 className="font-display font-semibold text-sm text-foreground mb-4">AVI nel Tempo</h3>
+        <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>AVI nel Tempo</h3>
         <div className="flex items-center justify-center py-8">
-          <p className="text-xs text-muted-foreground">Esegui almeno un&apos;analisi per vedere il trend</p>
+          <p className="font-mono text-[11px] text-cream-dim">Esegui almeno un&apos;analisi per vedere il trend</p>
         </div>
       </div>
     );
@@ -145,17 +145,17 @@ export function AVITrend({ data }: { data?: TrendDataPoint[] }) {
     <div className="card p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="font-display font-semibold text-sm text-foreground">AVI nel Tempo</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Punteggio di visibilita tra le analisi</p>
+          <h3 className="font-display text-sm text-foreground" style={{ fontWeight: 300 }}>AVI nel Tempo</h3>
+          <p className="font-mono text-[10px] text-cream-dim mt-0.5">Punteggio di visibilita tra le analisi</p>
         </div>
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        <div className="flex items-center gap-4 font-mono text-[10px] text-cream-dim">
           {[
-            { label: "AVI",        color: "hsl(var(--primary))" },
-            { label: "Sentiment",  color: "hsl(var(--accent))"  },
-            { label: "Prominence", color: "hsl(var(--success))" },
+            { label: "AVI",        color: "var(--sage)" },
+            { label: "Sentiment",  color: "var(--cream)"  },
+            { label: "Prominence", color: "var(--success)" },
           ].map(l => (
             <span key={l.label} className="flex items-center gap-1.5">
-              <span className="w-4 h-0.5 rounded-full inline-block" style={{ background: l.color }} />
+              <span className="w-4 h-0.5 rounded-sm inline-block" style={{ background: l.color }} />
               {l.label}
             </span>
           ))}
@@ -163,13 +163,13 @@ export function AVITrend({ data }: { data?: TrendDataPoint[] }) {
       </div>
       <ResponsiveContainer width="100%" height={170}>
         <LineChart data={trendData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false}/>
-          <XAxis dataKey="run" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}/>
-          <YAxis domain={[0,100]} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}/>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false}/>
+          <XAxis dataKey="run" tick={{ fontSize: 11, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false}/>
+          <YAxis domain={[0,100]} tick={{ fontSize: 11, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false}/>
           <Tooltip contentStyle={TOOLTIP_STYLE}/>
-          <Line type="monotone" dataKey="avi"        stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--primary))" }} connectNulls activeDot={{ r: 6 }}/>
-          <Line type="monotone" dataKey="sentiment"  stroke="hsl(var(--accent))"  strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--accent))"  }} connectNulls activeDot={{ r: 6 }}/>
-          <Line type="monotone" dataKey="prominence" stroke="hsl(var(--success))" strokeWidth={2} dot={{ r: 4, fill: "hsl(var(--success))" }} connectNulls activeDot={{ r: 6 }}/>
+          <Line type="monotone" dataKey="avi"        stroke="var(--sage)"    strokeWidth={2} dot={{ r: 4, fill: "var(--sage)" }}    connectNulls activeDot={{ r: 6 }}/>
+          <Line type="monotone" dataKey="sentiment"  stroke="var(--cream)"   strokeWidth={2} dot={{ r: 4, fill: "var(--cream)" }}   connectNulls activeDot={{ r: 6 }}/>
+          <Line type="monotone" dataKey="prominence" stroke="var(--success)" strokeWidth={2} dot={{ r: 4, fill: "var(--success)" }} connectNulls activeDot={{ r: 6 }}/>
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -188,9 +188,9 @@ export function CompetitorBar({ data }: { data?: CompetitorData[] }) {
   if (compData.length === 0) {
     return (
       <div className="card p-5">
-        <h3 className="font-display font-semibold text-sm text-foreground mb-4">Top Competitor</h3>
+        <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>Top Competitor</h3>
         <div className="flex items-center justify-center py-8">
-          <p className="text-xs text-muted-foreground">Nessun competitor trovato</p>
+          <p className="font-mono text-[11px] text-cream-dim">Nessun competitor trovato</p>
         </div>
       </div>
     );
@@ -198,14 +198,14 @@ export function CompetitorBar({ data }: { data?: CompetitorData[] }) {
 
   return (
     <div className="card p-5">
-      <h3 className="font-display font-semibold text-sm text-foreground mb-4">Top Competitor</h3>
+      <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>Top Competitor</h3>
       <ResponsiveContainer width="100%" height={Math.max(80, compData.length * 35)}>
         <BarChart data={compData} layout="vertical">
-          <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false}/>
-          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={90}/>
+          <XAxis type="number" tick={{ fontSize: 10, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false} allowDecimals={false}/>
+          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false} width={90}/>
           <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => [`${value} menzioni`, "Menzioni"]}/>
-          <Bar dataKey="count" fill="hsl(var(--primary) / 0.65)" radius={[0,4,4,0]}>
-            <LabelList dataKey="count" position="right" style={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}/>
+          <Bar dataKey="count" fill="var(--sage-dim)" radius={[0,2,2,0]}>
+            <LabelList dataKey="count" position="right" style={{ fontSize: 11, fill: "var(--cream-dim)" }}/>
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -226,7 +226,7 @@ interface RunItem {
 
 const RUN_ICONS: Record<string, React.ReactNode> = {
   completed: <CheckCircle2 className="w-3.5 h-3.5 text-success" />,
-  running:   <Clock className="w-3.5 h-3.5 text-primary animate-pulse" />,
+  running:   <Clock className="w-3.5 h-3.5 text-sage animate-pulse" />,
   failed:    <AlertCircle className="w-3.5 h-3.5 text-destructive" />,
 };
 
@@ -235,32 +235,32 @@ export function RecentRuns({ runs }: { runs?: RunItem[] }) {
 
   return (
     <div className="card p-5">
-      <h3 className="font-display font-semibold text-sm text-foreground mb-4">Ultime Analisi</h3>
+      <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>Ultime Analisi</h3>
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <p className="text-xs text-muted-foreground">Nessuna analisi ancora.</p>
-          <a href="/projects" className="text-xs text-primary hover:text-primary/70 transition-colors mt-2">
+          <p className="font-mono text-[11px] text-cream-dim">Nessuna analisi ancora.</p>
+          <a href="/projects" className="font-mono text-[11px] text-sage hover:text-sage/70 transition-colors mt-2">
             Vai ai progetti →
           </a>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-1">
           {items.map(r => (
             <a
               key={r.id}
               href={`/projects/${r.project_id}/runs/${r.id}`}
-              className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-muted/50 transition-colors group"
+              className="flex items-center justify-between px-3 py-2 rounded-sm hover:bg-ink-3 transition-colors group"
             >
               <div className="flex items-center gap-2">
                 {RUN_ICONS[r.status] ?? RUN_ICONS.failed}
-                <span className="text-sm text-foreground group-hover:text-primary transition-colors">{r.project_name}</span>
-                <span className="text-xs text-muted-foreground">v{r.version}</span>
+                <span className="text-sm font-sans text-foreground group-hover:text-sage transition-colors">{r.project_name}</span>
+                <span className="font-mono text-[10px] text-cream-dim">v{r.version}</span>
               </div>
               <div className="flex items-center gap-3">
                 {r.avi_score != null && (
-                  <span className="font-display font-bold text-sm text-primary">{r.avi_score}</span>
+                  <span className="font-display text-sm text-sage" style={{ fontWeight: 300 }}>{r.avi_score}</span>
                 )}
-                <span className="text-xs text-muted-foreground">{r.date}</span>
+                <span className="font-mono text-[10px] text-cream-dim">{r.date}</span>
               </div>
             </a>
           ))}

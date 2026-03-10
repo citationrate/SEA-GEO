@@ -1,21 +1,22 @@
 import type { Metadata } from "next";
-import { Outfit, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { Cormorant_Garamond, Syne, DM_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
-const outfit = Outfit({
+const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
   variable: "--font-display",
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["300", "400"],
+  style: ["normal", "italic"],
 });
 
-const dmSans = DM_Sans({
+const syne = Syne({
   subsets: ["latin"],
   variable: "--font-sans",
-  weight: ["300", "400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const jetbrains = JetBrains_Mono({
+const dmMono = DM_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
   weight: ["300", "400", "500"],
@@ -33,16 +34,17 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="it" suppressHydrationWarning>
-      <body className={`${outfit.variable} ${dmSans.variable} ${jetbrains.variable} font-sans antialiased`}>
+      <body className={`${cormorant.variable} ${syne.variable} ${dmMono.variable} font-sans antialiased`}>
         {children}
         <Toaster
           position="bottom-right"
           toastOptions={{
             style: {
-              background: "hsl(218 20% 9%)",
-              border: "1px solid hsl(220 12% 17%)",
-              color: "hsl(210 18% 92%)",
+              background: "var(--ink-2)",
+              border: "1px solid var(--line)",
+              color: "var(--white)",
               fontSize: "13px",
+              borderRadius: "2px",
             },
           }}
         />

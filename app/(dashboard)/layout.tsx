@@ -12,7 +12,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .from("profiles").select("*").eq("id", user.id).single();
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen bg-ink overflow-hidden">
       <Sidebar profile={profile} />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar profile={profile} />
