@@ -92,7 +92,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           <AnalysisLauncher
             projectId={params.id}
             hasQueries={(queries ?? []).length > 0}
-            hasSegments={(segments ?? []).length > 0}
             queryCount={(queries ?? []).length}
             segmentCount={(segments ?? []).length}
             modelsConfig={(proj.models_config as string[]) ?? ["gpt-4o-mini"]}

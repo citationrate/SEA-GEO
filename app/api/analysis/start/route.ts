@@ -57,7 +57,6 @@ export async function POST(request: Request) {
       .eq("is_active", true);
 
     if (!queries?.length) return NextResponse.json({ error: "Nessuna query configurata" }, { status: 400 });
-    if (!segments?.length) return NextResponse.json({ error: "Nessun segmento attivo" }, { status: 400 });
 
     // Count existing runs for version number
     const { count: existingRuns } = await supabase
@@ -65,7 +64,7 @@ export async function POST(request: Request) {
       .select("*", { count: "exact", head: true })
       .eq("project_id", project_id);
 
-    const totalPrompts = queries.length * segments.length * validModels.length * run_count;
+    const totalPrompts = queries.length * Math.max((segments ?? []).length, 1) * validModels.length * run_count;
 
     // Create analysis run
     const { data: run, error: runError } = await (supabase.from("analysis_runs") as any)

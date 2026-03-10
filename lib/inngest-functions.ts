@@ -497,9 +497,14 @@ export const runAnalysis = inngest.createFunction(
     const language = project.language;
 
     // Build all prompt tasks
+    // If no segments configured, use a default generic context
+    const effectiveSegments = segments.length > 0
+      ? segments
+      : [{ id: "default", prompt_context: "Utente generico." }];
+
     const allTasks: PromptTask[] = [];
     for (const query of queries) {
-      for (const segment of segments) {
+      for (const segment of effectiveSegments) {
         for (const model of modelsUsed) {
           for (let runNum = 1; runNum <= runCount; runNum++) {
             allTasks.push({

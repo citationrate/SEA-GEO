@@ -13,14 +13,12 @@ const RUN_OPTIONS = [
 export function AnalysisLauncher({
   projectId,
   hasQueries,
-  hasSegments,
   queryCount,
   segmentCount,
   modelsConfig,
 }: {
   projectId: string;
   hasQueries: boolean;
-  hasSegments: boolean;
   queryCount: number;
   segmentCount: number;
   modelsConfig: string[];
@@ -40,7 +38,7 @@ export function AnalysisLauncher({
   const [error, setError] = useState("");
 
   const totalPrompts = useMemo(() => {
-    return modelsConfig.length * queryCount * segmentCount * runCount;
+    return modelsConfig.length * queryCount * Math.max(segmentCount, 1) * runCount;
   }, [modelsConfig.length, queryCount, segmentCount, runCount]);
 
   async function startAnalysis() {
@@ -68,12 +66,12 @@ export function AnalysisLauncher({
     }
   }
 
-  const canStart = hasQueries && hasSegments;
+  const canStart = hasQueries;
 
   return (
     <>
       <button
-        onClick={() => canStart ? setOpen(true) : setError("Configura query e segmenti prima di lanciare")}
+        onClick={() => canStart ? setOpen(true) : setError("Configura almeno una query prima di lanciare")}
         className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-lg hover:bg-primary/85 transition-colors"
       >
         <Play className="w-4 h-4" />
