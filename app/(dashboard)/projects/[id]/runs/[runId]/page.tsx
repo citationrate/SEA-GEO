@@ -167,6 +167,20 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         {r.completed_at && <div><span className="text-muted-foreground">Fine:</span>{" "}<span className="text-foreground">{new Date(r.completed_at).toLocaleString("it-IT")}</span></div>}
       </div>
 
+      {/* Loading banner when running */}
+      {r.status === "running" && (
+        <div className="flex flex-col items-center justify-center py-8 gap-4">
+          <img
+            src="/loading.gif"
+            alt="loading"
+            className="w-20 h-20 object-contain rounded-[2px]"
+          />
+          <p className="text-sm text-muted-foreground animate-pulse">
+            Analisi in corso...
+          </p>
+        </div>
+      )}
+
       {/* AVI Score: Ring + Component Bars */}
       {aviData && (
         <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6">
