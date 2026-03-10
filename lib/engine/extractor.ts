@@ -5,6 +5,10 @@ export interface ExtractionResult {
   brand_rank: number | null;
   brand_occurrences: number;
   sentiment_score: number | null;
+  tone_score: number | null;
+  position_score: number | null;
+  recommendation_score: number | null;
+  brand_adjectives: string[];
   topics: string[];
   competitors_found: string[];
   sources: {
@@ -18,6 +22,12 @@ export interface ExtractionResult {
 }
 
 const VALID_SOURCE_TYPES = ["brand_owned", "competitor", "media", "review", "social", "ecommerce", "wikipedia", "other"];
+
+function positionScore(rank: number | null, nCompetitors: number): number {
+  if (!rank || rank === 0) return 0.5; // presente ma non classificabile
+  if (nCompetitors === 0) return 0.7;  // unico citato, nessun confronto
+  return Math.max(0, 1 - ((rank - 1) / nCompetitors));
+}
 
 export async function extractFromResponse(
   response: string,
@@ -36,7 +46,10 @@ Schema JSON richiesto:
   "brand_mentioned": boolean,
   "brand_rank": number | null,
   "brand_occurrences": number,
-  "sentiment_score": number | null,
+  "competitors_count": number,
+  "tone_score": number,
+  "recommendation_score": number,
+  "brand_adjectives": string[],
   "topics": string[],
   "competitors_found": string[],
   "sources": [{ "url": string|null, "domain": string, "label": string|null, "source_type": string, "is_brand_owned": boolean, "context": string }]
@@ -51,17 +64,28 @@ Regole:
   null = SOLO se brand_mentioned è false.
   IMPORTANTE: Se brand_mentioned è true, brand_rank NON può essere null. Anche se non c'è una lista esplicita, valuta l'ordine in cui il brand appare rispetto ai concorrenti (1 se è il primo o unico citato).
 - brand_occurrences: numero di volte che il brand appare nel testo
-- sentiment_score: valore numerico da -1.0 (molto negativo) a +1.0 (molto positivo) che indica il sentiment verso il brand nella risposta.
-  +1.0 = molto positivo (raccomandato, elogiato).
-  +0.5 = positivo.
-  0 = neutro o brand non menzionato.
-  -0.5 = negativo.
-  -1.0 = molto negativo (sconsigliato, criticato).
-  IMPORTANTE: Se brand_mentioned è true, sentiment_score NON può essere null. Restituisci 0 se il tono è neutro. Se brand_mentioned è false, restituisci 0.
+- competitors_count: quanti competitor totali sono citati nella risposta (NON includere il brand target)
+- tone_score: Analizza il tono linguistico con cui l'AI descrive il brand.
+  Considera aggettivi, verbi e costruzioni usate.
+  +1.0 = linguaggio molto positivo (eccellente, leader, migliore)
+  +0.5 = linguaggio positivo (buono, valido, affidabile)
+  0.0 = linguaggio neutro o descrittivo
+  -0.5 = linguaggio con riserve (discreto, ma non eccezionale)
+  -1.0 = linguaggio negativo (sconsigliato, problematico)
+  Granularità 0.1. NON usare sempre valori tondi come 0.5.
+  Se brand_mentioned è false, usa 0.0.
+- brand_adjectives: elenca 2-3 aggettivi/frasi chiave usati per descrivere il brand. Array vuoto se brand_mentioned è false.
+- recommendation_score: L'AI raccomanda esplicitamente il brand?
+  +1.0 = raccomandato esplicitamente come prima/unica scelta
+  +0.5 = citato positivamente, dipende dal caso
+  0.0 = non esprime raccomandazione
+  -0.5 = sconsigliato con riserve
+  -1.0 = sconsigliato esplicitamente
+  Se brand_mentioned è false, usa 0.0.
 - topics: argomenti principali trattati nella risposta (max 5)
 - competitors_found: brand/aziende concorrenti menzionati (escluso il target)
 
-REGOLA CRITICA: Se brand_mentioned è true, brand_rank e sentiment_score sono OBBLIGATORI e non possono essere null.
+REGOLA CRITICA: Se brand_mentioned è true, brand_rank, tone_score e recommendation_score sono OBBLIGATORI e non possono essere null.
 
 FONTI: Estrai TUTTI i siti web, domini, URL, blog, riviste, piattaforme citati o menzionati nella risposta, anche implicitamente.
 Esempi: se dice 'secondo Gambero Rosso' → estrai 'gamberorosso.it', se dice 'disponibile su Amazon' → estrai 'amazon.it', se dice 'recensioni su Trustpilot' → estrai 'trustpilot.com'.
@@ -104,28 +128,42 @@ FORMATO:
 
     const brandMentioned = Boolean(parsed.brand_mentioned);
 
-    // Enforce brand_rank and sentiment_score when brand is mentioned
+    // Enforce brand_rank when brand is mentioned
     let brandRank: number | null = parsed.brand_rank != null ? Number(parsed.brand_rank) : null;
-    let sentimentScore: number | null = parsed.sentiment_score != null ? Number(parsed.sentiment_score) : null;
 
     if (brandMentioned) {
       if (brandRank == null) {
         console.log("[extractor] WARN: brand_mentioned=true but brand_rank is null, defaulting to 1");
         brandRank = 1;
       }
-      if (sentimentScore == null) {
-        console.log("[extractor] WARN: brand_mentioned=true but sentiment_score is null, defaulting to 0");
-        sentimentScore = 0;
-      }
-    } else {
-      sentimentScore = sentimentScore ?? 0;
     }
+
+    // Multidimensional sentiment
+    const toneScore = parsed.tone_score ?? 0;
+    const posScore = positionScore(brandRank, parsed.competitors_count ?? 0);
+    const recScore = parsed.recommendation_score ?? 0;
+
+    // Formula pesata con recommendation come componente additiva
+    const base = (toneScore * 0.3) + (posScore * 0.5) + (recScore * 0.2);
+    const sentimentFinal = Math.max(-1, Math.min(1, base)); // clamp -1/+1
+
+    console.log("[extractor] sentiment breakdown:", {
+      tone: toneScore,
+      position: posScore,
+      recommendation: recScore,
+      final: sentimentFinal,
+      adjectives: Array.isArray(parsed.brand_adjectives) ? parsed.brand_adjectives : [],
+    });
 
     return {
       brand_mentioned: brandMentioned,
       brand_rank: brandRank,
       brand_occurrences: Number(parsed.brand_occurrences) || 0,
-      sentiment_score: sentimentScore,
+      sentiment_score: sentimentFinal,
+      tone_score: toneScore,
+      position_score: posScore,
+      recommendation_score: recScore,
+      brand_adjectives: Array.isArray(parsed.brand_adjectives) ? parsed.brand_adjectives : [],
       topics: Array.isArray(parsed.topics) ? parsed.topics : [],
       competitors_found: Array.isArray(parsed.competitors_found) ? parsed.competitors_found : [],
       sources: Array.isArray(parsed.sources)
@@ -145,6 +183,10 @@ FORMATO:
       brand_rank: null,
       brand_occurrences: 0,
       sentiment_score: null,
+      tone_score: null,
+      position_score: null,
+      recommendation_score: null,
+      brand_adjectives: [],
       topics: [],
       competitors_found: [],
       sources: [],
