@@ -13,6 +13,16 @@ interface RunMetricsProps {
   targetBrand: string;
 }
 
+function sentimentSign(v: number): string {
+  return v > 0.1 ? "+" : "";
+}
+
+function sentimentColor(v: number): string {
+  if (v > 0.1) return "text-success";
+  if (v < -0.1) return "text-destructive";
+  return "text-muted-foreground";
+}
+
 export function RunMetrics({ prompts, analyses, sources, models, competitorMentions, brandAviScore, targetBrand }: RunMetricsProps) {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
@@ -38,9 +48,13 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       : "—";
 
     const withSentiment = filteredAnalyses.filter((a) => a.sentiment_score !== null);
-    const avgSentiment = withSentiment.length > 0
-      ? (withSentiment.reduce((s: number, a: any) => s + a.sentiment_score, 0) / withSentiment.length).toFixed(2)
+    const avgSentimentNum = withSentiment.length > 0
+      ? withSentiment.reduce((s: number, a: any) => s + a.sentiment_score, 0) / withSentiment.length
+      : null;
+    const avgSentiment = avgSentimentNum != null
+      ? `${sentimentSign(avgSentimentNum)}${avgSentimentNum.toFixed(2)}`
       : "—";
+    const avgSentimentColor = avgSentimentNum != null ? sentimentColor(avgSentimentNum) : "text-foreground";
 
     const withTone = filteredAnalyses.filter((a) => a.tone_score != null);
     const avgTone = withTone.length > 0
@@ -140,6 +154,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       ranked,
       avgRank,
       avgSentiment,
+      avgSentimentColor,
       avgTone,
       avgPosition,
       avgRec,
@@ -161,6 +176,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
     ranked,
     avgRank,
     avgSentiment,
+    avgSentimentColor,
     avgTone,
     avgPosition,
     avgRec,
@@ -225,7 +241,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
         </div>
         <div className="card p-4 text-center">
           <TrendingDown className="w-5 h-5 text-primary mx-auto mb-2" />
-          <p className="font-display font-bold text-2xl text-foreground">{avgSentiment}</p>
+          <p className={`font-display font-bold text-2xl ${avgSentimentColor}`}>{avgSentiment}</p>
           <p className="text-xs text-muted-foreground mt-0.5">Sentiment Medio</p>
           <p className="text-[10px] text-muted-foreground">scala -1 / +1</p>
           {avgTone !== null && avgPosition !== null && avgRec !== null && (
@@ -242,8 +258,8 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                        }}
                   />
                 </div>
-                <span className="font-mono text-[0.5rem] text-muted-foreground w-8 text-right">
-                  {avgTone > 0 ? '+' : ''}{avgTone.toFixed(2)}
+                <span className={`font-mono text-[0.5rem] w-8 text-right ${sentimentColor(avgTone)}`}>
+                  {sentimentSign(avgTone)}{avgTone.toFixed(2)}
                 </span>
               </div>
               {/* Position */}
@@ -267,8 +283,8 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                          backgroundColor: avgRec >= 0 ? '#c4a882' : '#c0614a'
                        }} />
                 </div>
-                <span className="font-mono text-[0.5rem] text-muted-foreground w-8 text-right">
-                  {avgRec > 0 ? '+' : ''}{avgRec.toFixed(2)}
+                <span className={`font-mono text-[0.5rem] w-8 text-right ${sentimentColor(avgRec)}`}>
+                  {sentimentSign(avgRec)}{avgRec.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -452,8 +468,8 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                       <td className="py-2 pr-3 text-foreground">{analysis?.brand_rank ?? "-"}</td>
                       <td className="py-2 pr-3">
                         {analysis?.sentiment_score != null ? (
-                          <span className={analysis.sentiment_score > 0 ? "text-success" : analysis.sentiment_score < 0 ? "text-destructive" : "text-muted-foreground"}>
-                            {analysis.sentiment_score > 0 ? "+" : ""}{analysis.sentiment_score.toFixed(2)}
+                          <span className={sentimentColor(analysis.sentiment_score)}>
+                            {sentimentSign(analysis.sentiment_score)}{analysis.sentiment_score.toFixed(2)}
                           </span>
                         ) : "-"}
                       </td>
