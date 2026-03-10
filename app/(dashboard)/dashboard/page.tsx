@@ -128,9 +128,9 @@ export default async function DashboardPage({
     { label: "Consistency", v: lastAvi.stability_score != null ? Math.round(lastAvi.stability_score) : null },
   ] : undefined;
 
-  // Build trend data
-  const trendData = aviList.map((a: any, i: number) => ({
-    run: `v${i + 1}`,
+  // Build trend data with real dates
+  const trendData = aviList.map((a: any) => ({
+    run: new Date(a.computed_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short" }),
     avi: Math.round(a.avi_score * 10) / 10,
     prominence: Math.round(a.presence_score),
     sentiment: Math.round(a.sentiment_score),
@@ -157,19 +157,26 @@ export default async function DashboardPage({
     { label: "Analisi Eseguite",   value: String(runs.length),            sub: "totale storico" },
   ];
 
-  // Competitor bar data - count mentions per competitor
+  // Competitor bar data - use mention_count from DB
   const { data: allCompetitors } = targetIds.length > 0
-    ? await supabase.from("competitors").select("name").in("project_id", targetIds)
+    ? await supabase.from("competitors").select("name, mention_count").in("project_id", targetIds)
     : { data: [] };
 
   const compCounts = new Map<string, number>();
   (allCompetitors ?? []).forEach((c: any) => {
-    compCounts.set(c.name, (compCounts.get(c.name) ?? 0) + 1);
+    const key = c.name.toLowerCase().trim();
+    compCounts.set(key, (compCounts.get(key) ?? 0) + (c.mention_count ?? 1));
+  });
+  // Keep original casing from first occurrence
+  const compNameMap = new Map<string, string>();
+  (allCompetitors ?? []).forEach((c: any) => {
+    const key = c.name.toLowerCase().trim();
+    if (!compNameMap.has(key)) compNameMap.set(key, c.name);
   });
   const competitorBarData = Array.from(compCounts.entries())
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
-    .map(([name, count]) => ({ name, count }));
+    .slice(0, 8)
+    .map(([key, count]) => ({ name: compNameMap.get(key) ?? key, count }));
 
   return (
     <DashboardClient

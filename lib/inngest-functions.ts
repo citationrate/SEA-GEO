@@ -166,12 +166,18 @@ async function normalizeCompetitorName(
       max_tokens: 50,
       messages: [{
         role: "user",
-        content: `È "${trimmed}" un brand/azienda o un prodotto specifico? Se è un prodotto, dimmi solo il nome del brand padre. Rispondi SOLO con il nome corretto del brand, nessun altro testo.`,
+        content: `Dato il testo "${trimmed}", restituisci SOLO il nome del brand/azienda. Rimuovi qualsiasi descrizione, spiegazione o suffisso. Esempi: "Esselunga È Un Brand/azienda" → "Esselunga", "Iper È Un Brand" → "Iper", "Nike (azienda sportiva)" → "Nike", "De Cecco" → "De Cecco". Rispondi SOLO con il nome, nessun altro testo.`,
       }],
     });
 
     let normalized = (completion.choices[0]?.message?.content ?? trimmed).trim();
     normalized = normalized.replace(/^["']+|["']+$/g, "").replace(/\.$/, "").trim();
+
+    // Post-processing: strip common AI noise patterns
+    normalized = normalized
+      .replace(/\s+(è un|è un brand|è una|brand padre|il brand|\/azienda|azienda|\(.*?\)).*$/i, "")
+      .replace(/\s*[–—-]\s+.*$/, "")
+      .trim();
 
     if (!normalized || normalized.toLowerCase() === targetBrand.toLowerCase()) {
       normCache.set(cacheKey, null);

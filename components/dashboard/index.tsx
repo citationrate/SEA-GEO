@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  LineChart, Line, BarChart, Bar,
+  LineChart, Line, BarChart, Bar, Cell, LabelList,
   XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from "recharts";
 import { TrendingUp, TrendingDown, Minus, Clock, CheckCircle2, AlertCircle } from "lucide-react";
@@ -183,7 +183,7 @@ interface CompetitorData {
 }
 
 export function CompetitorBar({ data }: { data?: CompetitorData[] }) {
-  const compData = data ?? [];
+  const compData = (data ?? []).sort((a, b) => b.count - a.count);
 
   if (compData.length === 0) {
     return (
@@ -201,10 +201,12 @@ export function CompetitorBar({ data }: { data?: CompetitorData[] }) {
       <h3 className="font-display font-semibold text-sm text-foreground mb-4">Top Competitor</h3>
       <ResponsiveContainer width="100%" height={Math.max(80, compData.length * 35)}>
         <BarChart data={compData} layout="vertical">
-          <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}/>
-          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={80}/>
-          <Tooltip contentStyle={TOOLTIP_STYLE}/>
-          <Bar dataKey="count" fill="hsl(var(--primary) / 0.65)" radius={[0,4,4,0]}/>
+          <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false}/>
+          <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={90}/>
+          <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => [`${value} menzioni`, "Menzioni"]}/>
+          <Bar dataKey="count" fill="hsl(var(--primary) / 0.65)" radius={[0,4,4,0]}>
+            <LabelList dataKey="count" position="right" style={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}/>
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>
