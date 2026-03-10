@@ -377,8 +377,10 @@ async function executePrompt(
   }
 
   if (compRows.length > 0) {
-    await (supabase.from("competitors") as any)
+    console.log("[inngest] saving competitors for project_id:", task.projectId, "count:", compRows.length, "names:", compRows.map(c => c.name));
+    const { error: compUpsertErr } = await (supabase.from("competitors") as any)
       .upsert(compRows, { onConflict: "project_id,name", ignoreDuplicates: false });
+    if (compUpsertErr) console.error("[inngest] competitors upsert error:", compUpsertErr.message, compUpsertErr);
     for (const c of compRows) {
       await (supabase.rpc as any)("increment_competitor_count", {
         p_project_id: task.projectId,
