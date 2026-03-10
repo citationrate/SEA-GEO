@@ -62,7 +62,7 @@ export function AnalysisProgress({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
       <div className="relative card p-8 w-full max-w-md border-primary/30 shadow-xl shadow-primary/5 space-y-6 text-center">
-        <img src="/loading.gif" alt="loading" className="w-20 h-20 mx-auto object-contain rounded-[2px]" />
+        <img src="/loading.gif" alt="loading" className="w-20 h-20 mx-auto object-contain" />
 
         <div>
           <h2 className="font-display font-bold text-xl text-foreground animate-pulse">
