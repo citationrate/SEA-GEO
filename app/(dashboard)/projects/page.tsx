@@ -8,6 +8,7 @@ export default async function ProjectsPage() {
   const { data: projects } = await supabase
     .from("projects")
     .select("id, name, target_brand, language, created_at")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   return (

@@ -32,6 +32,7 @@ export async function POST(request: Request) {
       .select("id")
       .eq("id", project_id)
       .eq("user_id", user.id)
+      .is("deleted_at", null)
       .single();
     if (projectError) {
       console.error("[competitors/analyze] project query error:", projectError.message);

@@ -34,11 +34,12 @@ export async function POST(request: Request) {
       .eq("status", "running")
       .lt("created_at", new Date(Date.now() - 30 * 60 * 1000).toISOString());
 
-    // Fetch project
+    // Fetch project (exclude soft-deleted)
     const { data: project } = await supabase
       .from("projects")
       .select("*")
       .eq("id", project_id)
+      .is("deleted_at", null)
       .single();
     if (!project) return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
 

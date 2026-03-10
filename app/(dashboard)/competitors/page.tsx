@@ -19,6 +19,7 @@ export default async function CompetitorsPage({
     .from("projects")
     .select("id, name, target_brand")
     .eq("user_id", user.id)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   const projectsList = (projects ?? []) as any[];

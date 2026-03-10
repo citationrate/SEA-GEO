@@ -449,6 +449,16 @@ export const runAnalysis = inngest.createFunction(
     });
 
     const { project, queries, segments } = loadedData;
+
+    // Abort if project was soft-deleted
+    if (project.deleted_at) {
+      const supabase = createServiceClient();
+      await (supabase.from("analysis_runs") as any)
+        .update({ status: "cancelled", completed_at: new Date().toISOString() })
+        .eq("id", runId);
+      return { runId, status: "cancelled", reason: "project deleted" };
+    }
+
     const targetBrand = project.target_brand;
     const brandDomain = project.website_url ?? null;
     const knownCompetitors = project.known_competitors ?? [];

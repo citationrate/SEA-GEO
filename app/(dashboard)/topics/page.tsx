@@ -19,6 +19,7 @@ export default async function TopicsPage({
     .from("projects")
     .select("id, name")
     .eq("user_id", user.id)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   const projectsList = (projects ?? []) as any[];
