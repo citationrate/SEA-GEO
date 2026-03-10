@@ -5,43 +5,49 @@
 @layer base {
   :root {
     /* CitationRate Design System */
-    --ink:             #0b0d0f;
-    --ink-2:           #111416;
-    --ink-3:           #181c1f;
-    --surface:         #1e2328;
-    --line:            rgba(255,255,255,0.07);
-    --sage:            #7eb89a;
-    --sage-dim:        #4a7a61;
-    --sage-glow:       rgba(126,184,154,0.12);
-    --white:           #f4f2ee;
-    --cream:           #e8e2d6;
-    --cream-dim:       #9d9890;
-    --red-note:        #c0614a;
+    --background:         #0b0d0f;
+    --surface:            #111416;
+    --surface-2:          #181c1f;
+    --primary:            #7eb89a;
+    --primary-hover:      #4a7a61;
+    --primary-glow:       rgba(126,184,154,0.10);
+    --foreground:         #f4f2ee;
+    --cream:              #e8e2d6;
+    --muted-foreground:   #9d9890;
+    --destructive:        #c0614a;
+    --border:             rgba(255,255,255,0.07);
+    --border-light:       rgba(255,255,255,0.04);
 
-    /* Mapped tokens (used by Tailwind via hsl() or var()) */
-    --background:      var(--ink);
-    --foreground:      var(--white);
-    --primary:         var(--sage);
-    --primary-foreground: var(--ink);
-    --accent:          var(--cream);
-    --accent-foreground: var(--ink);
-    --muted:           var(--ink-3);
-    --muted-foreground: var(--cream-dim);
-    --success:         #5ba97b;
-    --warning:         #d4a94e;
-    --destructive:     var(--red-note);
+    /* Aliases for Tailwind compatibility */
+    --ink:                var(--background);
+    --ink-2:              var(--surface);
+    --ink-3:              var(--surface-2);
+    --line:               var(--border);
+    --sage:               var(--primary);
+    --sage-dim:           var(--primary-hover);
+    --sage-glow:          var(--primary-glow);
+    --white:              var(--foreground);
+    --cream-dim:          var(--muted-foreground);
+    --red-note:           var(--destructive);
+
+    --primary-foreground: var(--background);
+    --accent:             var(--cream);
+    --accent-foreground:  var(--background);
+    --muted:              var(--surface-2);
+    --success:            #5ba97b;
+    --warning:            #d4a94e;
 
     --radius: 2px;
   }
 
   * {
     box-sizing: border-box;
-    border-color: var(--line);
+    border-color: var(--border);
   }
 
   body {
-    background-color: var(--ink);
-    color: var(--white);
+    background-color: var(--background);
+    color: var(--foreground);
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
@@ -53,79 +59,83 @@
 
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--cream-dim); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
 }
 
 @layer components {
   .bg-dots {
-    background-image: radial-gradient(circle, var(--line) 1px, transparent 1px);
+    background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
     background-size: 28px 28px;
   }
 
   .glow-primary {
-    box-shadow: 0 0 20px var(--sage-glow), 0 0 40px var(--sage-glow);
+    box-shadow: 0 0 20px var(--primary-glow), 0 0 40px var(--primary-glow);
   }
 
   .shimmer {
-    background: linear-gradient(90deg, var(--ink-2) 0%, var(--ink-3) 50%, var(--ink-2) 100%);
+    background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%);
     background-size: 200% 100%;
     animation: shimmer 1.8s linear infinite;
   }
 
+  /* Card */
   .card {
-    background-color: var(--ink);
-    border: 1px solid var(--line);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 2px;
-    transition: background-color 0.15s ease;
+    padding: 24px;
+    transition: border-color 0.2s ease, transform 0.2s ease;
   }
 
   .card:hover {
-    background-color: var(--ink-3);
+    border-color: rgba(126,184,154,0.25);
+    transform: translateY(-2px);
   }
 
+  /* Input */
   .input-base {
     width: 100%;
-    background-color: var(--ink-2);
-    border: 1px solid var(--line);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 2px;
-    padding: 0.625rem 0.75rem;
+    padding: 13px 16px;
     font-size: 0.875rem;
     font-family: var(--font-sans);
-    color: var(--white);
+    color: var(--cream);
     outline: none;
-    transition: all 0.15s;
+    transition: border-color 0.15s ease;
   }
 
   .input-base:focus {
-    border-color: var(--sage-dim);
-    box-shadow: 0 0 0 2px var(--sage-glow);
+    border-color: var(--primary-hover);
   }
 
   .input-base::placeholder {
-    color: var(--cream-dim);
+    color: var(--muted-foreground);
   }
 
-  /* Buttons */
+  /* Button Primary */
   .btn-primary {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
-    background-color: var(--sage);
-    color: var(--ink);
+    background-color: var(--primary);
+    color: var(--background);
     font-family: var(--font-sans);
     font-weight: 600;
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 0.5rem 1rem;
+    letter-spacing: 0.05em;
+    padding: 0.625rem 1.25rem;
     border-radius: 2px;
     transition: all 0.15s ease;
   }
 
   .btn-primary:hover {
+    background-color: var(--cream);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px var(--sage-glow);
   }
 
   .btn-primary:disabled {
@@ -133,26 +143,62 @@
     transform: none;
   }
 
+  /* Button Secondary */
   .btn-secondary {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
-    background-color: transparent;
-    color: var(--sage);
-    font-family: var(--font-mono);
-    font-weight: 400;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 0.5rem 1rem;
-    border: 1px solid var(--sage-dim);
+    background-color: var(--surface);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.625rem 1.25rem;
+    border: 1px solid var(--border);
     border-radius: 2px;
     transition: all 0.15s ease;
   }
 
   .btn-secondary:hover {
-    background-color: var(--sage-glow);
-    border-color: var(--sage);
+    background-color: var(--surface-2);
+  }
+
+  /* Filter Pill */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+
+  .pill-active {
+    border-color: var(--primary);
+    background-color: var(--primary-glow);
+    color: var(--primary);
+  }
+
+  /* Tab underline */
+  .tab-item {
+    padding-bottom: 0.5rem;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+    border-bottom: 1.5px solid transparent;
+    transition: all 0.15s ease;
+  }
+
+  .tab-item-active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
   }
 
   /* Badges */
@@ -163,22 +209,22 @@
     padding: 0.125rem 0.5rem;
     border-radius: 2px;
     font-family: var(--font-mono);
-    font-size: 0.6875rem;
+    font-size: 0.6rem;
     font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
   }
 
   .badge-primary {
-    background-color: var(--sage-glow);
-    color: var(--sage);
-    border: 1px solid var(--sage-dim);
+    background-color: var(--primary-glow);
+    color: var(--primary);
+    border: 1px solid var(--primary-hover);
   }
 
   .badge-muted {
-    background-color: var(--ink-3);
-    color: var(--cream-dim);
-    border: 1px solid var(--line);
+    background-color: var(--surface-2);
+    color: var(--muted-foreground);
+    border: 1px solid var(--border);
   }
 
   .badge-success {

@@ -37,30 +37,31 @@ export function LoginForm() {
       <button
         onClick={onGoogle}
         disabled={gLoading}
-        className="w-full flex items-center justify-center gap-3 bg-surface-2 hover:bg-border border border-border rounded-lg px-4 py-2.5 text-sm text-foreground font-medium transition-all disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-3 border border-border rounded-[2px] px-4 py-2.5 text-sm text-foreground font-sans font-medium transition-all disabled:opacity-50 hover:bg-surface-2"
+        style={{ background: "var(--surface-2)" }}
       >
         {gLoading ? <Spinner /> : <GoogleLogo />}
         Continua con Google
       </button>
 
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-border-subtle" />
-        <span className="text-xs text-muted-foreground">oppure</span>
-        <div className="flex-1 h-px bg-border-subtle" />
+        <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+        <span className="text-xs text-muted-foreground font-mono">oppure</span>
+        <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
       </div>
 
       {/* Email + Password */}
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
-          <label className="block text-xs text-muted-foreground mb-1.5 font-medium">Email</label>
+          <label className="block text-xs text-muted-foreground mb-1.5 font-sans font-medium">Email</label>
           <input type="email" required placeholder="nome@azienda.com"
             value={email} onChange={e => setEmail(e.target.value)}
             className="input-base" />
         </div>
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs text-muted-foreground font-medium">Password</label>
-            <a href="/forgot-password" className="text-xs text-primary hover:text-primary/70 transition-colors">Password dimenticata?</a>
+            <label className="text-xs text-muted-foreground font-sans font-medium">Password</label>
+            <a href="/forgot-password" className="text-xs text-primary hover:text-primary-hover transition-colors font-sans">Password dimenticata?</a>
           </div>
           <input type="password" required placeholder="••••••••"
             value={password} onChange={e => setPassword(e.target.value)}
@@ -68,7 +69,10 @@ export function LoginForm() {
         </div>
         <button
           type="submit" disabled={loading}
-          className="w-full bg-primary hover:bg-primary/85 text-primary-foreground font-semibold rounded-lg px-4 py-2.5 text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-1"
+          className="w-full font-sans font-semibold uppercase tracking-wide rounded-[2px] px-4 py-2.5 text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-1"
+          style={{ background: "var(--primary)", color: "var(--background)" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--cream)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.transform = "none"; }}
         >
           {loading && <Spinner />}
           Accedi

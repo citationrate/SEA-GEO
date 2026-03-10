@@ -468,7 +468,7 @@ function ThemeDrawer({
               </h4>
               <div className="flex flex-wrap gap-1.5">
                 {theme.keywords.map((kw) => (
-                  <span key={kw} className="px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                  <span key={kw} className="px-2.5 py-1 rounded-[2px] text-xs font-medium bg-primary/10 text-primary border border-primary/20">
                     {kw}
                   </span>
                 ))}

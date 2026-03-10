@@ -320,7 +320,7 @@ function Chip({ label, active, custom, onClick }: { label: string; active: boole
     <button
       type="button"
       onClick={onClick}
-      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+      className={`px-4 py-2 rounded-[2px] text-sm font-medium transition-all ${
         active
           ? custom
             ? "border border-dashed border-primary text-primary bg-primary/15"

@@ -267,7 +267,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-muted-foreground">{new Date(run.completed_at ?? run.created_at).toLocaleDateString("it-IT")}</span>
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${badgeClass}`}>
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-[2px] border ${badgeClass}`}>
                         <Icon className={`w-3 h-3 ${run.status === "running" ? "animate-spin" : ""}`} />
                         {statusLabel}
                       </span>
