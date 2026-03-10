@@ -9,9 +9,11 @@ interface RunMetricsProps {
   sources: any[];
   models: string[];
   competitorMentions: any[];
+  brandAviScore: number;
+  targetBrand: string;
 }
 
-export function RunMetrics({ prompts, analyses, sources, models, competitorMentions }: RunMetricsProps) {
+export function RunMetrics({ prompts, analyses, sources, models, competitorMentions, brandAviScore, targetBrand }: RunMetricsProps) {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -102,6 +104,24 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       return aviB - aviA || b[1] - a[1];
     });
 
+    // Compute brand AVI for selected model
+    let brandModelScore: number | null = null;
+    if (selectedModel && filteredAnalyses.length > 0) {
+      const mentioned = filteredAnalyses.filter((a: any) => a.brand_mentioned).length;
+      const presence = (mentioned / filteredAnalyses.length) * 100;
+      const rankVals = filteredAnalyses.map((a: any) => {
+        if (!a.brand_mentioned || !a.brand_rank || a.brand_rank <= 0) return 0;
+        return 1 / a.brand_rank;
+      });
+      const avgRankInv = rankVals.reduce((s: number, v: number) => s + v, 0) / rankVals.length;
+      const rankS = avgRankInv * 100;
+      const wSent = filteredAnalyses.filter((a: any) => a.sentiment_score != null);
+      const sentAvg = wSent.length > 0 ? wSent.reduce((s: number, a: any) => s + a.sentiment_score, 0) / wSent.length : 0.5;
+      const sentS = ((sentAvg + 1) / 2) * 100;
+      brandModelScore = Math.round((presence * 0.35 + rankS * 0.25 + sentS * 0.20 + 100 * 0.20) * 10) / 10;
+      brandModelScore = Math.max(0, Math.min(100, brandModelScore));
+    }
+
     const topicsMap = new Map<string, number>();
     filteredAnalyses.forEach((a) => {
       (a.topics ?? []).forEach((t: string) => {
@@ -125,6 +145,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       avgRec,
       totalOccurrences,
       computedCompAviMap,
+      brandModelScore,
       competitorList,
       topicList,
     };
@@ -145,6 +166,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
     avgRec,
     totalOccurrences,
     computedCompAviMap,
+    brandModelScore,
     competitorList,
     topicList,
   } = filtered;
@@ -253,6 +275,51 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           )}
         </div>
       </div>
+
+      {/* Benchmark vs Competitors */}
+      {competitorList.length > 0 && (() => {
+        const effectiveBrandScore = brandModelScore ?? brandAviScore;
+        const top5 = competitorList.slice(0, 5).map(([name]) => ({
+          name,
+          avi: computedCompAviMap[name] ?? 0,
+        }));
+        return (
+          <div className="card p-5 space-y-4">
+            <h2 className="font-display font-semibold text-foreground text-sm">Benchmark</h2>
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold text-primary w-32 truncate">{targetBrand || "Il tuo brand"}</span>
+                <div className="flex-1 h-2.5 bg-muted rounded-[2px] overflow-hidden">
+                  <div
+                    className="h-full rounded-[2px] transition-all duration-700"
+                    style={{ width: `${effectiveBrandScore}%`, background: "#7eb89a" }}
+                  />
+                </div>
+                <span className="text-xs font-bold text-primary w-14 text-right">AVI {Math.round(effectiveBrandScore * 10) / 10}</span>
+              </div>
+              {top5.map((c) => {
+                const beats = c.avi > effectiveBrandScore;
+                const barBg = c.avi >= 70 ? "rgba(126,184,154,0.5)" : c.avi >= 40 ? "rgba(232,226,214,0.3)" : "rgba(192,97,74,0.3)";
+                const textColor = beats ? "text-destructive" : c.avi >= 70 ? "text-primary" : c.avi >= 40 ? "text-cream" : "text-destructive";
+                return (
+                  <div key={c.name} className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-foreground w-32 truncate">{c.name}</span>
+                    <div className="flex-1 h-2 bg-muted rounded-[2px] overflow-hidden">
+                      <div
+                        className="h-full rounded-[2px] transition-all duration-700"
+                        style={{ width: `${c.avi}%`, background: barBg }}
+                      />
+                    </div>
+                    <span className={`text-xs font-bold w-14 text-right ${c.avi > 0 ? textColor : "text-muted-foreground"}`}>
+                      {c.avi > 0 ? `AVI ${Math.round(c.avi * 10) / 10}` : "\u2014"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Competitors & Topics */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

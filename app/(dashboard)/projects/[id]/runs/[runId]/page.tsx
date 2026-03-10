@@ -85,40 +85,8 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     .eq("project_id", params.id)
     .eq("first_seen_run_id", params.runId);
 
-  // For benchmark section (global, not filtered)
-  const analysesList = (analyses ?? []) as any[];
-  const allCompetitors = new Map<string, number>();
-  analysesList.forEach((a) => {
-    (a.competitors_found ?? []).forEach((c: string) => {
-      allCompetitors.set(c, (allCompetitors.get(c) ?? 0) + 1);
-    });
-  });
-
-  // Compute competitor AVI from mentions for benchmark
   const mentionsList = (competitorMentions ?? []) as any[];
-  const mentionGrouped = new Map<string, any[]>();
-  mentionsList.forEach((m: any) => {
-    if (!mentionGrouped.has(m.competitor_name)) mentionGrouped.set(m.competitor_name, []);
-    mentionGrouped.get(m.competitor_name)!.push(m);
-  });
-  const compAviMap = new Map<string, number>();
-  const totalP = (prompts ?? []).length;
-  Array.from(mentionGrouped.entries()).forEach(([name, mentions]) => {
-    const prominence = totalP > 0 ? (mentions.length / totalP) * 100 : 0;
-    const withRank = mentions.filter((m: any) => m.rank != null && m.rank > 0);
-    const avgR = withRank.length > 0 ? withRank.reduce((s: number, m: any) => s + m.rank, 0) / withRank.length : 3;
-    const rankScore = Math.max(0, 100 - ((avgR - 1) * 25));
-    const withSent = mentions.filter((m: any) => m.sentiment != null);
-    const avgS = withSent.length > 0 ? withSent.reduce((s: number, m: any) => s + m.sentiment, 0) / withSent.length : 0;
-    const sentimentScore = ((avgS + 1) / 2) * 100;
-    compAviMap.set(name, Math.round(((prominence * 0.4) + (rankScore * 0.3) + (sentimentScore * 0.3)) * 10) / 10);
-  });
-
-  const competitorList = Array.from(allCompetitors.entries()).sort((a, b) => {
-    const aviA = compAviMap.get(a[0]) ?? 0;
-    const aviB = compAviMap.get(b[0]) ?? 0;
-    return aviB - aviA || b[1] - a[1];
-  });
+  const analysesList = (analyses ?? []) as any[];
 
   // Unique models for filter pills
   const models = Array.from(new Set((prompts ?? []).map((p: any) => p.model as string)));
@@ -251,54 +219,6 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         </div>
       )}
 
-      {/* Benchmark vs Competitors */}
-      {aviData && competitorList.length > 0 && (() => {
-        const brandScore = aviData.avi_score;
-        const top5 = competitorList.slice(0, 5).map(([name]) => ({
-          name,
-          avi: compAviMap.get(name) ?? 0,
-        }));
-        // width is score/100, no maxScore needed
-        return (
-          <div className="card p-5 space-y-4">
-            <h2 className="font-display font-semibold text-foreground text-sm">Benchmark</h2>
-            <div className="space-y-2.5">
-              {/* Brand row */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-bold text-primary w-32 truncate">{proj?.target_brand ?? "Il tuo brand"}</span>
-                <div className="flex-1 h-2.5 bg-muted rounded-[2px] overflow-hidden">
-                  <div
-                    className="h-full rounded-[2px] transition-all duration-700"
-                    style={{ width: `${(brandScore / 100) * 100}%`, background: "#7eb89a" }}
-                  />
-                </div>
-                <span className="text-xs font-bold text-primary w-14 text-right">AVI {Math.round(brandScore * 10) / 10}</span>
-              </div>
-              {/* Competitor rows */}
-              {top5.map((c) => {
-                const beats = c.avi > brandScore;
-                const barBg = c.avi >= 70 ? "rgba(126,184,154,0.5)" : c.avi >= 40 ? "rgba(232,226,214,0.3)" : "rgba(192,97,74,0.3)";
-                const textColor = beats ? "text-destructive" : c.avi >= 70 ? "text-primary" : c.avi >= 40 ? "text-cream" : "text-destructive";
-                return (
-                  <div key={c.name} className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-foreground w-32 truncate">{c.name}</span>
-                    <div className="flex-1 h-2 bg-muted rounded-[2px] overflow-hidden">
-                      <div
-                        className="h-full rounded-[2px] transition-all duration-700"
-                        style={{ width: `${(c.avi / 100) * 100}%`, background: barBg }}
-                      />
-                    </div>
-                    <span className={`text-xs font-bold w-14 text-right ${c.avi > 0 ? textColor : "text-muted-foreground"}`}>
-                      {c.avi > 0 ? `AVI ${Math.round(c.avi * 10) / 10}` : "—"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
-
       {/* Filterable metrics, competitors, topics, sources, prompts */}
       <RunMetrics
         prompts={prompts ?? []}
@@ -306,6 +226,8 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         sources={sources ?? []}
         models={models}
         competitorMentions={mentionsList}
+        brandAviScore={aviData?.avi_score ?? 0}
+        targetBrand={proj?.target_brand ?? ""}
       />
     </div>
   );
