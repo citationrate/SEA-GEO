@@ -370,8 +370,6 @@ async function executePrompt(
       name: normalizedName,
       is_manual: false,
       discovered_at_run_id: task.runId,
-      topic_context: extraction.topics ?? [],
-      query_type: task.queryFunnelStage ?? null,
       mention_count: 1,
     });
   }
