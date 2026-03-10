@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, Globe, Tag, Users, ExternalLink, Eye, Hash, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { RunAVIRing } from "./run-avi-ring";
 import { ExportButtons } from "./export-buttons";
+import { RunAutoRefresh } from "./run-auto-refresh";
 
 const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = {
   pending:   { label: "In attesa",   class: "badge-muted",    icon: Clock },
@@ -132,6 +133,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
 
   return (
     <div className="space-y-6 max-w-[1400px] animate-fade-in">
+      <RunAutoRefresh status={r.status} />
       {/* Header */}
       <div>
         <a
