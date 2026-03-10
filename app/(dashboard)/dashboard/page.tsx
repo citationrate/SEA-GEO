@@ -65,11 +65,12 @@ export default async function DashboardPage({
   const { data: aviHistory } = runIds.length > 0
     ? await supabase
         .from("avi_history")
-        .select("*")
+        .select("avi_score, presence_score, rank_score, sentiment_score, stability_score, computed_at, run_id")
         .in("run_id", runIds)
         .order("computed_at", { ascending: true })
     : { data: [] };
 
+  console.log("[AVI chart] raw data:", JSON.stringify(aviHistory, null, 2));
   const aviList = (aviHistory ?? []) as any[];
   const lastAvi = aviList.length > 0 ? aviList[aviList.length - 1] : null;
   const prevAvi = aviList.length > 1 ? aviList[aviList.length - 2] : null;
