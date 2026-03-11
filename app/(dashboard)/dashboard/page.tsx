@@ -212,9 +212,9 @@ export default async function DashboardPage({
     { label: "Analisi Eseguite",   value: String(runs.length),            sub: "totale storico" },
   ];
 
-  // Competitor bar data - use mention_count from DB
-  const { data: allCompetitors } = targetIds.length > 0
-    ? await supabase.from("competitors").select("name, mention_count").in("project_id", targetIds)
+  // Competitor bar data - only from active (non-archived) runs
+  const { data: allCompetitors } = runIds.length > 0
+    ? await supabase.from("competitors").select("name, mention_count").in("project_id", targetIds).in("discovered_at_run_id", runIds)
     : { data: [] };
 
   const compCounts = new Map<string, number>();
