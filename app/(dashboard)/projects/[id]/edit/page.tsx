@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Loader2, Cpu, Info } from "lucide-react";
 import { toast } from "sonner";
+import { SuggestedQueriesEdit } from "@/components/suggested-queries";
 
 const SECTOR_OPTIONS = [
+  "Turismo",
   "Alimentare",
   "Bevande",
   "Tech",
@@ -47,6 +49,7 @@ export default function EditProjectPage() {
   const [language, setLanguage] = useState<"it" | "en">("it");
   const [country, setCountry] = useState("");
   const [modelsConfig, setModelsConfig] = useState<string[]>([]);
+  const [existingQueries, setExistingQueries] = useState<{ text: string; funnel_stage: string }[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -67,9 +70,21 @@ export default function EditProjectPage() {
       setCountry(project.country ?? "");
       setModelsConfig(project.models_config ?? []);
       setLoading(false);
+
+      // Fetch existing queries
+      const qRes = await fetch(`/api/queries?project_id=${projectId}`);
+      if (qRes.ok) {
+        const queries = await qRes.json();
+        setExistingQueries(queries);
+      }
     }
     load();
   }, [projectId]);
+
+  async function refreshQueries() {
+    const res = await fetch(`/api/queries?project_id=${projectId}`);
+    if (res.ok) setExistingQueries(await res.json());
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -200,6 +215,16 @@ export default function EditProjectPage() {
             </select>
           </div>
         </div>
+
+        {/* Query suggerite per settore */}
+        {sector && (
+          <SuggestedQueriesEdit
+            sector={sector}
+            projectId={projectId}
+            existingQueries={existingQueries}
+            onQueryAdded={refreshQueries}
+          />
+        )}
 
         {/* Lingua e Paese */}
         <div className="grid grid-cols-2 gap-4">

@@ -4,6 +4,7 @@
 import { useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, X, Loader2 } from "lucide-react";
+import { SuggestedQueriesNew, type SuggestedQuery } from "@/components/suggested-queries";
 
 interface ModelOption {
   id: string;
@@ -86,6 +87,7 @@ export default function NewProjectPage() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [language, setLanguage] = useState<"it" | "en">("it");
   const [country, setCountry] = useState("");
+  const [selectedQueries, setSelectedQueries] = useState<SuggestedQuery[]>([]);
 
   // Track which providers are active and which model is selected per provider
   const [activeProviders, setActiveProviders] = useState<Set<string>>(new Set(["openai"]));
@@ -159,9 +161,22 @@ export default function NewProjectPage() {
         }),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || "Errore durante il salvataggio");
+      }
+
+      // Save selected suggested queries
+      if (selectedQueries.length > 0 && data.id) {
+        await Promise.all(
+          selectedQueries.map((q) =>
+            fetch("/api/queries", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ project_id: data.id, text: q.text, funnel_stage: q.stage }),
+            })
+          )
+        );
       }
 
       router.push("/projects");
@@ -220,13 +235,16 @@ export default function NewProjectPage() {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground">Settore</label>
-            <input
-              type="text"
+            <select
               value={sector}
-              onChange={(e) => setSector(e.target.value)}
-              placeholder="es. Alimentare, Moda, Finanza, Automotive..."
+              onChange={(e) => { setSector(e.target.value); setSelectedQueries([]); }}
               className="input-base"
-            />
+            >
+              <option value="">Seleziona...</option>
+              {["Turismo", "Alimentare", "Bevande", "Tech", "Moda", "Finance", "Automotive", "Pharma", "Energia", "Altro"].map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground">Tipo Brand</label>
@@ -247,6 +265,15 @@ export default function NewProjectPage() {
             </select>
           </div>
         </div>
+
+        {/* Query suggerite per settore */}
+        {sector && (
+          <SuggestedQueriesNew
+            sector={sector}
+            selectedQueries={selectedQueries}
+            onSelectionChange={setSelectedQueries}
+          />
+        )}
 
         {/* Sito web ufficiale */}
         <div className="space-y-1.5">
