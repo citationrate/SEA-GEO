@@ -125,6 +125,7 @@ export async function extractFromResponse(
 
   // If brand not present, use a lighter prompt for competitors/topics/sources only
   if (!brandMentionedLiteral) {
+    console.log("[extractor] brand not found, running partial extraction for:", response.substring(0, 100));
     const partialResult = await extractCompetitorsTopicsSources(
       response, targetBrand, knownCompetitors
     );
