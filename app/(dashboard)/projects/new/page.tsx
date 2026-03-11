@@ -6,12 +6,12 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, X, Loader2 } from "lucide-react";
 
 const MODEL_OPTIONS = [
-  { id: "gpt-4o-mini",   label: "GPT-4o Mini",        provider: "OpenAI",     description: "Veloce ed economico",         available: true },
-  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google",    description: "Richiede billing attivo",     available: true },
-  { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5", provider: "Anthropic", description: "Veloce e preciso", available: true },
-  { id: "perplexity-sonar", label: "Sonar Large",      provider: "Perplexity", description: "Con web search nativo",      available: true },
-  { id: "copilot-gpt4",  label: "Copilot GPT-4",       provider: "Microsoft",  description: "Via Azure OpenAI",           available: true },
-  { id: "grok-3",        label: "Grok 3",              provider: "xAI",        description: "Modello xAI",                available: true },
+  { id: "gpt-4o-mini",   label: "GPT-4o Mini",        provider: "OpenAI",     description: "Veloce ed economico",         available: true,  comingSoon: false },
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google",    description: "Richiede billing attivo",     available: true,  comingSoon: false },
+  { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5", provider: "Anthropic", description: "Veloce e preciso", available: true,  comingSoon: false },
+  { id: "perplexity-sonar", label: "Sonar Large",      provider: "Perplexity", description: "Con web search nativo",      available: true,  comingSoon: false },
+  { id: "copilot-gpt4",  label: "Copilot GPT-4",       provider: "Microsoft",  description: "Prossimamente disponibile",  available: false, comingSoon: true },
+  { id: "grok-3",        label: "Grok 3",              provider: "xAI",        description: "Modello xAI",                available: true,  comingSoon: false },
 ] as const;
 
 export default function NewProjectPage() {
@@ -224,7 +224,7 @@ export default function NewProjectPage() {
                   selectedModels.includes(model.id)
                     ? "border-primary/50 bg-primary/10"
                     : "border-border hover:border-border/80"
-                } ${!model.available ? "opacity-40 cursor-not-allowed" : ""}`}
+                } ${!model.available ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${
                   selectedModels.includes(model.id) ? "border-primary bg-primary" : "border-muted-foreground"
@@ -239,6 +239,9 @@ export default function NewProjectPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-foreground">{model.label}</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-muted text-muted-foreground">{model.provider}</span>
+                    {model.comingSoon && (
+                      <span className="font-mono text-[0.55rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">SOON</span>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{model.description}</p>
                 </div>
