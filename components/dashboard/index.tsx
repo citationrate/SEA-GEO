@@ -5,6 +5,7 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from "recharts";
 import { TrendingUp, TrendingDown, Minus, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 /* ─── AVI Ring ─── */
 interface AVIRingProps {
@@ -26,6 +27,13 @@ export function AVIRing({ score, trend, components }: AVIRingProps) {
     Rank:        "#7eb3d4",
     Sentiment:   "#7eb89a",
     Consistency: "#c4a882",
+  };
+
+  const COMP_TOOLTIPS: Record<string, string> = {
+    Prominence:  "Quanto spesso il brand appare nelle risposte AI",
+    Rank:        "Posizione media del brand quando viene citato",
+    Sentiment:   "Tono con cui l'AI descrive il brand (positivo/negativo)",
+    Consistency: "Quanto le risposte sono coerenti tra diversi modelli e run",
   };
 
   const comps = components ?? [
@@ -72,7 +80,10 @@ export function AVIRing({ score, trend, components }: AVIRingProps) {
         <div className="w-full space-y-2 pt-2 border-t border-border">
           {comps.map(c => (
             <div key={c.label} className="flex items-center gap-2">
-              <span className="font-mono text-[10px] text-cream-dim w-16 shrink-0">{c.label}</span>
+              <span className="font-mono text-[10px] text-cream-dim w-16 shrink-0 flex items-center gap-1">
+                {c.label}
+                {COMP_TOOLTIPS[c.label] && <InfoTooltip text={COMP_TOOLTIPS[c.label]} />}
+              </span>
               <div className="flex-1 h-1 bg-ink-3 rounded-sm overflow-hidden">
                 <div className="h-full rounded-sm transition-all duration-700"
                   style={{ width: c.v != null ? `${c.v}%` : "0%", backgroundColor: COMP_COLORS[c.label] ?? "var(--sage)" }} />

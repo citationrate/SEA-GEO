@@ -5,6 +5,7 @@ import { useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, X, Loader2 } from "lucide-react";
 import { SuggestedQueriesNew, type SuggestedQuery } from "@/components/suggested-queries";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 interface ModelOption {
   id: string;
@@ -220,13 +221,16 @@ export default function NewProjectPage() {
 
         {/* Brand target */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Brand target</label>
+          <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+            Brand target
+            <InfoTooltip text="Il brand che verrà cercato nelle risposte AI" />
+          </label>
           <input
             type="text"
             required
             value={targetBrand}
             onChange={(e) => setTargetBrand(e.target.value)}
-            placeholder="Es. Acme Inc"
+            placeholder="Es. Lumora"
             className="input-base"
           />
         </div>
@@ -234,7 +238,10 @@ export default function NewProjectPage() {
         {/* Settore e Tipo Brand */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Settore</label>
+            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+              Settore
+              <InfoTooltip text="Usato per suggerire query rilevanti per il tuo mercato" />
+            </label>
             <select
               value={sector}
               onChange={(e) => { setSector(e.target.value); setSelectedQueries([]); }}
@@ -247,7 +254,10 @@ export default function NewProjectPage() {
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Tipo Brand</label>
+            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+              Tipo Brand
+              <InfoTooltip text="Aiuta l'AI a classificare correttamente i competitor" />
+            </label>
             <select
               value={brandType}
               onChange={(e) => setBrandType(e.target.value)}
@@ -277,15 +287,17 @@ export default function NewProjectPage() {
 
         {/* Sito web ufficiale */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Sito web ufficiale</label>
+          <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+            Sito web ufficiale
+            <InfoTooltip text="Usato per rilevare le fonti owned nei risultati" />
+          </label>
           <input
             type="text"
             value={websiteUrl}
             onChange={(e) => setWebsiteUrl(e.target.value)}
-            placeholder="Es. lavazza.it"
+            placeholder="Es. lumora.it"
             className="input-base"
           />
-          <p className="text-xs text-muted-foreground">Dominio del brand per identificare le fonti di proprieta</p>
         </div>
 
         {/* Competitor conosciuti */}
@@ -343,7 +355,10 @@ export default function NewProjectPage() {
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Paese</label>
+            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+              Paese
+              <InfoTooltip text="Determina la lingua e il contesto geografico dell'analisi" />
+            </label>
             <input
               type="text"
               value={country}

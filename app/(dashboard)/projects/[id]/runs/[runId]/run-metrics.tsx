@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Globe, Tag, Users, ExternalLink, Eye, Hash, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 interface RunMetricsProps {
   prompts: any[];
@@ -262,7 +263,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
         <div className="card p-4 text-center">
           <Eye className="w-5 h-5 text-primary mx-auto mb-2" />
           <p className="font-display font-bold text-2xl text-foreground">{mentionRate}%</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Menzioni Brand</p>
+          <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">Menzioni Brand <InfoTooltip text="Percentuale di risposte AI in cui il brand viene citato" /></p>
           <p className="text-[10px] text-muted-foreground">{mentionCount}/{totalAnalysed} prompt</p>
         </div>
         <div className="card p-4 text-center">
@@ -273,13 +274,13 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
         <div className="card p-4 text-center">
           <TrendingUp className="w-5 h-5 text-success mx-auto mb-2" />
           <p className="font-display font-bold text-2xl text-foreground">{avgRank}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Rank Medio</p>
+          <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">Rank Medio <InfoTooltip text="Posizione media del brand nelle liste AI (1 = primo citato)" /></p>
           <p className="text-[10px] text-muted-foreground">{ranked.length} risposte con rank</p>
         </div>
         <div className="card p-4 text-center">
           <TrendingDown className="w-5 h-5 text-primary mx-auto mb-2" />
           <p className={`font-display font-bold text-2xl ${avgSentimentColor}`}>{avgSentiment}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Sentiment Medio</p>
+          <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">Sentiment Medio <InfoTooltip text="Tono con cui l'AI descrive il brand, da -1 (negativo) a +1 (positivo)" /></p>
           <p className="text-[10px] text-muted-foreground">scala -1 / +1</p>
           {avgTone !== null && avgPosition !== null && avgRec !== null && (
             <div className="space-y-1 mt-2">

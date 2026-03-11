@@ -206,7 +206,7 @@ export default function GenerateQueriesPage() {
               type="text"
               value={categoria}
               onChange={(e) => setCategoria(e.target.value)}
-              placeholder="es. crociere nel Mediterraneo"
+              placeholder="es. skincare naturale"
               className="input-base w-full"
             />
           </div>
@@ -231,7 +231,7 @@ export default function GenerateQueriesPage() {
             setInput={setUseCaseInput}
             onAdd={() => addTag(useCases, setUseCases, useCaseInput, setUseCaseInput)}
             onRemove={(i) => removeTag(useCases, setUseCases, i)}
-            placeholder="es. vacanza famiglia"
+            placeholder="es. routine quotidiana"
           />
 
           {/* Criteri */}
@@ -242,7 +242,7 @@ export default function GenerateQueriesPage() {
             setInput={setCriteriInput}
             onAdd={() => addTag(criteri, setCriteri, criteriInput, setCriteriInput)}
             onRemove={(i) => removeTag(criteri, setCriteri, i)}
-            placeholder="es. prezzo, destinazioni"
+            placeholder="es. ingredienti, prezzo"
           />
 
           {/* Must-have */}
@@ -253,7 +253,7 @@ export default function GenerateQueriesPage() {
             setInput={setMustHaveInput}
             onAdd={() => addTag(mustHave, setMustHave, mustHaveInput, setMustHaveInput)}
             onRemove={(i) => removeTag(mustHave, setMustHave, i)}
-            placeholder="es. cabine per famiglie"
+            placeholder="es. certificazione bio"
           />
 
           {/* Vincoli */}
@@ -263,7 +263,7 @@ export default function GenerateQueriesPage() {
               type="text"
               value={vincoli}
               onChange={(e) => setVincoli(e.target.value)}
-              placeholder="es. budget limitato, prima crociera"
+              placeholder="es. budget limitato, pelle sensibile"
               className="input-base w-full"
             />
           </div>
@@ -275,7 +275,7 @@ export default function GenerateQueriesPage() {
               type="text"
               value={obiezioni}
               onChange={(e) => setObiezioni(e.target.value)}
-              placeholder="es. costi nascosti, qualità del servizio"
+              placeholder="es. troppo costoso, efficacia dubbia"
               className="input-base w-full"
             />
           </div>
@@ -287,7 +287,7 @@ export default function GenerateQueriesPage() {
               type="text"
               value={linguaggioMercato}
               onChange={(e) => setLinguaggioMercato(e.target.value)}
-              placeholder="es. crocieristi, armatore"
+              placeholder="es. INCI, dermocosmesi"
               className="input-base w-full"
             />
           </div>
@@ -392,30 +392,30 @@ export default function GenerateQueriesPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">Zona</label>
-                        <input type="text" value={p.zona || ""} onChange={(e) => updatePersona(idx, { zona: e.target.value })} placeholder="es. del Nord Italia" className="input-base w-full" />
+                        <input type="text" value={p.zona || ""} onChange={(e) => updatePersona(idx, { zona: e.target.value })} placeholder="es. urbano, 25-35 anni" className="input-base w-full" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">Contesto d&apos;uso</label>
-                        <input type="text" value={p.contesto_uso || ""} onChange={(e) => updatePersona(idx, { contesto_uso: e.target.value })} placeholder="es. vacanza famiglia" className="input-base w-full" />
+                        <input type="text" value={p.contesto_uso || ""} onChange={(e) => updatePersona(idx, { contesto_uso: e.target.value })} placeholder="es. uso quotidiano" className="input-base w-full" />
                       </div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">Ruolo</label>
-                        <input type="text" value={p.ruolo || ""} onChange={(e) => updatePersona(idx, { ruolo: e.target.value })} placeholder="es. travel manager" className="input-base w-full" />
+                        <input type="text" value={p.ruolo || ""} onChange={(e) => updatePersona(idx, { ruolo: e.target.value })} placeholder="es. responsabile acquisti" className="input-base w-full" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">Priorità</label>
-                        <input type="text" value={p.priorita || ""} onChange={(e) => updatePersona(idx, { priorita: e.target.value })} placeholder="es. rapporto qualità prezzo" className="input-base w-full" />
+                        <input type="text" value={p.priorita || ""} onChange={(e) => updatePersona(idx, { priorita: e.target.value })} placeholder="es. efficacia comprovata" className="input-base w-full" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">Must-have</label>
-                        <input type="text" value={p.must_have || ""} onChange={(e) => updatePersona(idx, { must_have: e.target.value })} placeholder="es. cabine per famiglie" className="input-base w-full" />
+                        <input type="text" value={p.must_have || ""} onChange={(e) => updatePersona(idx, { must_have: e.target.value })} placeholder="es. certificazione bio" className="input-base w-full" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs text-muted-foreground">No-go</label>
-                        <input type="text" value={p.no_go || ""} onChange={(e) => updatePersona(idx, { no_go: e.target.value })} placeholder="es. costi nascosti" className="input-base w-full" />
+                        <input type="text" value={p.no_go || ""} onChange={(e) => updatePersona(idx, { no_go: e.target.value })} placeholder="es. ingredienti sintetici" className="input-base w-full" />
                       </div>
                     </div>
                   )}

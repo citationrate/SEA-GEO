@@ -10,40 +10,40 @@ interface SuggestedQuery {
 
 const SUGGESTED_QUERIES: Record<string, SuggestedQuery[]> = {
   Turismo: [
-    { text: "quali compagnie di crociere scegliere per una vacanza nel Mediterraneo?", stage: "tofu" },
-    { text: "vacanze in crociera: cosa considerare prima di prenotare?", stage: "tofu" },
-    { text: "Costa Crociere o MSC: quale scegliere per una crociera?", stage: "mofu" },
-    { text: "migliori compagnie di crociere per famiglie con bambini", stage: "mofu" },
+    { text: "quali tour operator scegliere per una vacanza nel Mediterraneo?", stage: "tofu" },
+    { text: "vacanze organizzate: cosa considerare prima di prenotare?", stage: "tofu" },
+    { text: "come scelgo tra i principali tour operator per una vacanza?", stage: "mofu" },
+    { text: "migliori tour operator per famiglie con bambini", stage: "mofu" },
   ],
   Alimentare: [
     { text: "quali sono i migliori prodotti da colazione italiani?", stage: "tofu" },
     { text: "biscotti e merendine: quali scegliere per i bambini?", stage: "tofu" },
-    { text: "Barilla o De Cecco: quale pasta scegliere?", stage: "mofu" },
+    { text: "come scelgo tra le principali marche di pasta italiana?", stage: "mofu" },
     { text: "prodotti lattiero-caseari italiani: quali marchi sono i migliori?", stage: "mofu" },
   ],
   Bevande: [
     { text: "quali bibite analcoliche scegliere per una festa?", stage: "tofu" },
     { text: "migliori acque minerali italiane: quale comprare?", stage: "tofu" },
-    { text: "Coca-Cola o Pepsi: quale scegliere?", stage: "mofu" },
+    { text: "come scelgo tra le principali marche di bibite gassate?", stage: "mofu" },
     { text: "succhi di frutta: quale marca è la più naturale?", stage: "mofu" },
   ],
   Tech: [
-    { text: "quale smartphone comprare nel 2025 qualità prezzo?", stage: "tofu" },
-    { text: "migliori laptop per lavoro e studio", stage: "tofu" },
-    { text: "iPhone o Samsung: quale scegliere nel 2025?", stage: "mofu" },
-    { text: "Apple MacBook o Dell XPS: quale laptop è meglio?", stage: "mofu" },
+    { text: "quali software di gestione progetti scegliere per team remoti?", stage: "tofu" },
+    { text: "migliori strumenti di collaborazione per il lavoro da remoto", stage: "tofu" },
+    { text: "come scelgo tra i principali software di project management?", stage: "mofu" },
+    { text: "quale strumento di gestione progetti è meglio per team di 10 persone?", stage: "mofu" },
   ],
   Moda: [
     { text: "migliori brand di abbigliamento italiano di qualità", stage: "tofu" },
     { text: "scarpe casual italiane: quali marchi scegliere?", stage: "tofu" },
-    { text: "Zara o H&M: quale scegliere per il rapporto qualità prezzo?", stage: "mofu" },
-    { text: "Nike o Adidas: quale brand di sneaker è meglio?", stage: "mofu" },
+    { text: "come scelgo tra i principali brand di fast fashion?", stage: "mofu" },
+    { text: "quale brand di sneaker è meglio per il rapporto qualità prezzo?", stage: "mofu" },
   ],
   Finance: [
-    { text: "migliori banche online italiane nel 2025", stage: "tofu" },
+    { text: "migliori banche online italiane nel 2026", stage: "tofu" },
     { text: "quale conto corrente aprire in Italia?", stage: "tofu" },
-    { text: "Fineco o Directa: quale broker scegliere?", stage: "mofu" },
-    { text: "N26 o Revolut: quale conto digitale è meglio?", stage: "mofu" },
+    { text: "come scelgo tra le principali piattaforme di trading online?", stage: "mofu" },
+    { text: "quale conto digitale è meglio per uso quotidiano?", stage: "mofu" },
   ],
 };
 

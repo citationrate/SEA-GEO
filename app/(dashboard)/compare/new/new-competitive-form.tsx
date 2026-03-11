@@ -108,7 +108,7 @@ export function NewCompetitiveForm({
             required
             value={brandB}
             onChange={(e) => setBrandB(e.target.value)}
-            placeholder="Es. MSC Crociere"
+            placeholder="Es. Vexio"
             className="input-base"
           />
         </div>

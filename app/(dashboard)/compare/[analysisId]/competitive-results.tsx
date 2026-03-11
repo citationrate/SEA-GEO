@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ArrowLeft, Swords, Trophy, Eye, BarChart3, Loader2, MessageSquare } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 interface Analysis {
   id: string;
@@ -120,6 +121,7 @@ export function CompetitiveResults({
               <div className="flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-primary" />
                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Win Rate</h3>
+                <InfoTooltip text="Percentuale di risposte in cui l'AI preferisce un brand rispetto all'altro" />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -148,6 +150,7 @@ export function CompetitiveResults({
               <div className="flex items-center gap-2">
                 <Eye className="w-4 h-4 text-primary" />
                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">First Mention</h3>
+                <InfoTooltip text="Quale brand viene menzionato per primo nella risposta AI" />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -176,6 +179,7 @@ export function CompetitiveResults({
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-primary" />
                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">CompScore</h3>
+                <InfoTooltip text="Punteggio competitivo complessivo calcolato da Win Rate e First Mention Rate" />
               </div>
               <div className="text-center pt-1">
                 <p className={`font-display font-bold text-4xl ${label.cls}`}>

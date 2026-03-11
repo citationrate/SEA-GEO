@@ -212,7 +212,7 @@ export default function QueriesPage() {
               value={tofuText}
               onChange={(e) => setTofuText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addQuery(tofuText, "tofu"))}
-              placeholder="Es. Cos'è il marketing AI?"
+              placeholder="Es. Quali sono le tendenze nel mio settore?"
               className="input-base flex-1"
             />
             <button
@@ -250,7 +250,7 @@ export default function QueriesPage() {
               value={mofuText}
               onChange={(e) => setMofuText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addQuery(mofuText, "mofu"))}
-              placeholder="Es. Quali sono i migliori tool di..."
+              placeholder="Es. Qual è il miglior prodotto per..."
               className="input-base flex-1"
             />
             <button

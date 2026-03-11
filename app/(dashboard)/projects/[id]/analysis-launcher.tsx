@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Play, X, Loader2, Cpu, Globe } from "lucide-react";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 const RUN_OPTIONS = [
   { value: 1, label: "1 run", desc: "Veloce" },
@@ -126,7 +127,10 @@ export function AnalysisLauncher({
 
             {/* Run count selector */}
             <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Numero di Run</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                Numero di Run
+                <InfoTooltip text="Ogni run ripete le query per misurare la consistenza delle risposte AI. Più run = dati più affidabili." />
+              </p>
               <div className="grid grid-cols-3 gap-2">
                 {RUN_OPTIONS.map((opt) => (
                   <button
@@ -148,7 +152,10 @@ export function AnalysisLauncher({
 
             {/* Browsing toggle */}
             <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Web Browsing</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                Web Browsing
+                <InfoTooltip text="Abilita la navigazione web per i modelli AI. Produce risposte più aggiornate e più fonti, ma è più lento." />
+              </p>
               <button
                 onClick={() => setBrowsing(!browsing)}
                 disabled={loading}
