@@ -244,8 +244,8 @@ function DomainCard({ domain: d, onAnalyze }: { domain: SourceDomain; onAnalyze:
 
       {/* Context preview */}
       {d.contexts.length > 0 && (
-        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 italic">
-          &ldquo;{d.contexts[0]}&rdquo;
+        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 font-mono text-[0.6rem] tracking-wide">
+          {d.contexts[0]}
         </p>
       )}
 
@@ -297,10 +297,10 @@ function AnalyzeDrawer({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
-      <div className="fixed top-0 right-0 h-full w-full max-w-lg bg-[hsl(var(--surface))] border-l border-border z-50 flex flex-col animate-slide-in-right">
+      <div className="fixed inset-0 bg-black/70 z-40" onClick={onClose} />
+      <div className="fixed top-0 right-0 h-full w-full max-w-lg bg-[#111416] border-l border-[rgba(255,255,255,0.08)] z-50 flex flex-col animate-slide-in-right">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[rgba(255,255,255,0.08)] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -339,7 +339,7 @@ function AnalyzeDrawer({
           {/* URLs */}
           {d.urls.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">URL trovati</h4>
+              <h4 className="font-mono text-[0.55rem] font-semibold uppercase tracking-widest text-muted-foreground mb-2">URL TROVATI</h4>
               <div className="space-y-1">
                 {d.urls.slice(0, 5).map((url) => (
                   <a key={url} href={url} target="_blank" rel="noopener noreferrer"
@@ -355,13 +355,13 @@ function AnalyzeDrawer({
           {/* Contexts */}
           {d.contexts.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-                Contesti di citazione ({d.contexts.length})
+              <h4 className="font-mono text-[0.55rem] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+                CONTESTI DI CITAZIONE ({d.contexts.length})
               </h4>
               <div className="space-y-2">
                 {d.contexts.map((ctx, i) => (
                   <div key={i} className="pl-3 border-l-2 border-primary/30">
-                    <p className="text-sm text-foreground/80 italic leading-relaxed">&ldquo;{ctx}&rdquo;</p>
+                    <p className="font-mono text-[0.6rem] tracking-wide text-muted-foreground leading-relaxed">{ctx}</p>
                   </div>
                 ))}
               </div>
