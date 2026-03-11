@@ -226,9 +226,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               L&apos;ultima analisi non è andata a buon fine.
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {(lastRun as any).completed_prompts === 0
-                ? "Analisi interrotta prima di iniziare — probabilmente un problema di connessione."
-                : `Analisi parziale — completati ${(lastRun as any).completed_prompts}/${(lastRun as any).total_prompts} prompt prima dell'interruzione.`}
+              {(lastRun as any).error_message
+                ? (lastRun as any).error_message
+                : (lastRun as any).completed_prompts === 0
+                  ? "Analisi interrotta prima di iniziare — probabilmente un problema di connessione."
+                  : `Analisi parziale — completati ${(lastRun as any).completed_prompts}/${(lastRun as any).total_prompts} prompt prima dell'interruzione.`}
             </p>
           </div>
           <OpenAnalysisButton />

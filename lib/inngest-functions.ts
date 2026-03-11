@@ -472,7 +472,7 @@ interface PromptTask {
   queryId: string;
   queryText: string;
   queryFunnelStage: string | null;
-  segmentId: string;
+  segmentId: string | null;
   segmentContext: string;
   model: string;
   runNumber: number;
@@ -497,7 +497,7 @@ async function executePrompt(
     .insert({
       run_id: task.runId,
       query_id: task.queryId,
-      segment_id: task.segmentId === "00000000-0000-0000-0000-000000000000" ? null : task.segmentId,
+      segment_id: task.segmentId || null,
       model: task.model,
       run_number: task.runNumber,
       full_prompt_text: promptText,
@@ -657,6 +657,25 @@ export const runAnalysis = inngest.createFunction(
   {
     id: "run-analysis",
     retries: 3,
+    onFailure: async ({ event: failEvent }) => {
+      // Last-resort handler: if all retries exhausted, mark run as failed
+      try {
+        const originalData = (failEvent.data as any)?.event?.data;
+        if (!originalData?.runId) return;
+        const supabase = createServiceClient();
+        const errorMsg = (failEvent.data as any)?.error?.message ?? "Errore sconosciuto (retries esauriti)";
+        await (supabase.from("analysis_runs") as any)
+          .update({
+            status: "failed",
+            error_message: errorMsg.substring(0, 1000),
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", originalData.runId);
+        console.error(`[inngest/onFailure] run ${originalData.runId} marked failed:`, errorMsg);
+      } catch (e) {
+        console.error("[inngest/onFailure] could not update run status:", e);
+      }
+    },
   },
   { event: "analysis/start" },
   async ({ event, step }) => {
@@ -715,10 +734,12 @@ export const runAnalysis = inngest.createFunction(
     const brandTypeVal = project.brand_type ?? null;
 
     // Build all prompt tasks
-    // If no segments configured, use a default generic audience fallback
-    const effectiveSegments = segments.length > 0
-      ? segments
-      : [{ id: "00000000-0000-0000-0000-000000000000", prompt_context: "Rispondi come se ti stesse chiedendo un utente del pubblico generale, senza un profilo demografico specifico." }];
+    // If no segments configured, use a default generic audience fallback (null segment_id)
+    const DEFAULT_SEGMENT = {
+      id: null as string | null,
+      prompt_context: "Pubblico generale, senza un profilo demografico specifico.",
+    };
+    const effectiveSegments = segments.length > 0 ? segments : [DEFAULT_SEGMENT];
 
     const allTasks: PromptTask[] = [];
     for (const query of queries) {
