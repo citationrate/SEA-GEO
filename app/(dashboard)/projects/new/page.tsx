@@ -1,18 +1,75 @@
-// v3
+// v4
 "use client";
 
 import { useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, X, Loader2 } from "lucide-react";
 
-const MODEL_OPTIONS = [
-  { id: "gpt-4o-mini",   label: "GPT-4o Mini",        provider: "OpenAI",     description: "Veloce ed economico",         available: true,  comingSoon: false },
-  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google",    description: "Richiede billing attivo",     available: true,  comingSoon: false },
-  { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5", provider: "Anthropic", description: "Veloce e preciso", available: true,  comingSoon: false },
-  { id: "perplexity-sonar", label: "Sonar Large",      provider: "Perplexity", description: "Con web search nativo",      available: true,  comingSoon: false },
-  { id: "copilot-gpt4",  label: "Copilot GPT-4",       provider: "Microsoft",  description: "Prossimamente disponibile",  available: false, comingSoon: true },
-  { id: "grok-3",        label: "Grok 3",              provider: "xAI",        description: "Modello xAI",                available: true,  comingSoon: false },
-] as const;
+interface ModelOption {
+  id: string;
+  label: string;
+  description: string;
+}
+
+interface ProviderOption {
+  id: string;
+  label: string;
+  comingSoon?: boolean;
+  models: ModelOption[];
+}
+
+const AVAILABLE_PROVIDERS: ProviderOption[] = [
+  {
+    id: "openai",
+    label: "OpenAI",
+    models: [
+      { id: "gpt-4o-mini", label: "GPT-4o Mini", description: "Veloce, risposte concise" },
+      { id: "gpt-4o", label: "GPT-4o", description: "Preciso, risposte elaborate" },
+      { id: "o1-mini", label: "o1 Mini", description: "Ragionamento approfondito" },
+    ],
+  },
+  {
+    id: "google",
+    label: "Google",
+    models: [
+      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", description: "Veloce, aggiornato" },
+      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", description: "Massima precisione" },
+    ],
+  },
+  {
+    id: "perplexity",
+    label: "Perplexity",
+    models: [
+      { id: "perplexity-sonar", label: "Sonar", description: "Web search in tempo reale" },
+      { id: "perplexity-sonar-pro", label: "Sonar Pro", description: "Web search avanzato, fonti più ricche" },
+    ],
+  },
+  {
+    id: "anthropic",
+    label: "Anthropic",
+    models: [
+      { id: "claude-haiku", label: "Claude Haiku 4.5", description: "Veloce e diretto" },
+      { id: "claude-sonnet", label: "Claude Sonnet 4.5", description: "Bilanciato e preciso" },
+      { id: "claude-opus", label: "Claude Opus 4.5", description: "Massima qualità" },
+    ],
+  },
+  {
+    id: "xai",
+    label: "xAI",
+    models: [
+      { id: "grok-3", label: "Grok 3", description: "Preciso e aggiornato" },
+      { id: "grok-3-mini", label: "Grok 3 Mini", description: "Veloce e diretto" },
+    ],
+  },
+  {
+    id: "microsoft",
+    label: "Microsoft",
+    comingSoon: true,
+    models: [
+      { id: "copilot-gpt4", label: "Copilot GPT-4", description: "Prossimamente disponibile" },
+    ],
+  },
+];
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -27,16 +84,40 @@ export default function NewProjectPage() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [language, setLanguage] = useState<"it" | "en">("it");
   const [country, setCountry] = useState("");
-  const [selectedModels, setSelectedModels] = useState<string[]>(["gpt-4o-mini"]);
 
-  function toggleModel(id: string) {
-    setSelectedModels((prev) => {
-      if (prev.includes(id)) {
-        if (prev.length === 1) return prev; // minimo 1
-        return prev.filter((m) => m !== id);
+  // Track which providers are active and which model is selected per provider
+  const [activeProviders, setActiveProviders] = useState<Set<string>>(new Set(["openai"]));
+  const [selectedModelPerProvider, setSelectedModelPerProvider] = useState<Record<string, string>>({
+    openai: "gpt-4o-mini",
+  });
+
+  function toggleProvider(provider: ProviderOption) {
+    if (provider.comingSoon) return;
+    setActiveProviders((prev) => {
+      const next = new Set(prev);
+      if (next.has(provider.id)) {
+        if (next.size === 1) return prev; // minimo 1 provider
+        next.delete(provider.id);
+      } else {
+        next.add(provider.id);
+        // Set default model if none selected
+        if (!selectedModelPerProvider[provider.id]) {
+          setSelectedModelPerProvider((m) => ({ ...m, [provider.id]: provider.models[0].id }));
+        }
       }
-      return [...prev, id];
+      return next;
     });
+  }
+
+  function selectModel(providerId: string, modelId: string) {
+    setSelectedModelPerProvider((prev) => ({ ...prev, [providerId]: modelId }));
+  }
+
+  // Build models_config array from active providers
+  function getModelsConfig(): string[] {
+    return AVAILABLE_PROVIDERS
+      .filter((p) => activeProviders.has(p.id) && !p.comingSoon)
+      .map((p) => selectedModelPerProvider[p.id] ?? p.models[0].id);
   }
 
   function handleCompetitorKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -70,7 +151,7 @@ export default function NewProjectPage() {
           market_context: marketContext || null,
           language,
           country: country || null,
-          models_config: selectedModels,
+          models_config: getModelsConfig(),
         }),
       });
 
@@ -210,43 +291,84 @@ export default function NewProjectPage() {
           </div>
         </div>
 
-        {/* Modelli AI */}
+        {/* Modelli AI - Two-level provider → model */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Modelli AI</label>
-          <p className="text-xs text-muted-foreground">Seleziona i modelli da usare per tutte le analisi di questo progetto (minimo 1)</p>
-          <div className="space-y-1.5">
-            {MODEL_OPTIONS.map((model) => (
-              <button
-                key={model.id}
-                type="button"
-                onClick={() => model.available && toggleModel(model.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-sm border transition-all text-left ${
-                  selectedModels.includes(model.id)
-                    ? "border-primary/50 bg-primary/10"
-                    : "border-border hover:border-border/80"
-                } ${!model.available ? "opacity-50 cursor-not-allowed" : ""}`}
-              >
-                <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${
-                  selectedModels.includes(model.id) ? "border-primary bg-primary" : "border-muted-foreground"
-                }`}>
-                  {selectedModels.includes(model.id) && (
-                    <svg className="w-2.5 h-2.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-foreground">{model.label}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-muted text-muted-foreground">{model.provider}</span>
-                    {model.comingSoon && (
+          <p className="text-xs text-muted-foreground">Seleziona i provider e il modello specifico per ogni analisi (minimo 1)</p>
+          <div className="space-y-2">
+            {AVAILABLE_PROVIDERS.map((provider) => {
+              const isActive = activeProviders.has(provider.id);
+              const isDisabled = !!provider.comingSoon;
+              const currentModel = selectedModelPerProvider[provider.id] ?? provider.models[0].id;
+
+              return (
+                <div
+                  key={provider.id}
+                  className={`rounded-sm border transition-all ${
+                    isDisabled
+                      ? "opacity-50 cursor-not-allowed border-border"
+                      : isActive
+                        ? "border-primary/50 bg-primary/5"
+                        : "border-border"
+                  }`}
+                >
+                  {/* Provider header */}
+                  <button
+                    type="button"
+                    onClick={() => toggleProvider(provider)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${
+                      isDisabled ? "cursor-not-allowed" : "cursor-pointer"
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${
+                      isActive && !isDisabled ? "border-primary bg-primary" : "border-muted-foreground"
+                    }`}>
+                      {isActive && !isDisabled && (
+                        <svg className="w-2.5 h-2.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">{provider.label}</span>
+                    <span className="font-mono text-[0.55rem] tracking-wide text-muted-foreground">{provider.id.toUpperCase()}</span>
+                    {provider.comingSoon && (
                       <span className="font-mono text-[0.55rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">SOON</span>
                     )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{model.description}</p>
+                  </button>
+
+                  {/* Model radio buttons */}
+                  {isActive && !isDisabled && (
+                    <div className="px-4 pb-3 pt-0 space-y-0.5">
+                      {provider.models.map((model) => (
+                        <label
+                          key={model.id}
+                          onClick={() => selectModel(provider.id, model.id)}
+                          className={`flex items-center gap-2 p-2 rounded-[2px] cursor-pointer transition-colors ${
+                            currentModel === model.id
+                              ? "bg-primary/10"
+                              : "hover:bg-muted/30"
+                          }`}
+                        >
+                          <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                            currentModel === model.id ? "border-primary" : "border-muted-foreground"
+                          }`}>
+                            {currentModel === model.id && (
+                              <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className={`text-sm font-medium ${
+                              currentModel === model.id ? "text-primary" : "text-foreground"
+                            }`}>{model.label}</span>
+                            <p className="text-xs text-muted-foreground">{model.description}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         </div>
 

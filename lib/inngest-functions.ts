@@ -37,8 +37,19 @@ function buildPrompt(query: string, segmentContext: string, language: string): s
   return `${lang}\n\nContesto utente: ${segmentContext}\n\nDomanda: ${query}${sourceHint}`;
 }
 
+// Map short model IDs to actual API model identifiers
+const API_MODEL_ID: Record<string, string> = {
+  "claude-haiku": "claude-haiku-4-5-20251001",
+  "claude-sonnet": "claude-sonnet-4-5",
+  "claude-opus": "claude-opus-4-5",
+  "gemini-2.5-pro": "gemini-2.5-pro-preview-03-25",
+  "perplexity-sonar": "llama-3.1-sonar-large-128k-online",
+  "perplexity-sonar-pro": "llama-3.1-sonar-huge-128k-online",
+};
+
 async function callAIModel(prompt: string, model: string, browsing = false, brandDomain?: string | null): Promise<AIModelResult> {
   const empty: AIModelResult = { text: "", sources: [] };
+  const apiModel = API_MODEL_ID[model] ?? model;
   try {
     const modelDef = MODEL_MAP.get(model);
     const provider = modelDef?.provider ?? "openai";
@@ -46,7 +57,7 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
     if (provider === "anthropic") {
       const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
       const msg = await anthropic.messages.create({
-        model,
+        model: apiModel,
         max_tokens: 1500,
         messages: [{ role: "user", content: prompt }],
       });
@@ -95,7 +106,7 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
           if (browsing) {
             try {
               const geminiModel = genai.getGenerativeModel({
-                model,
+                model: apiModel,
                 tools: [{ googleSearch: {} } as any],
               });
               const result = await geminiModel.generateContent(prompt);
@@ -109,7 +120,7 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
               console.error("[Gemini grounding] failed:", e?.message);
             }
           }
-          const geminiModel = genai.getGenerativeModel({ model });
+          const geminiModel = genai.getGenerativeModel({ model: apiModel });
           const result = await geminiModel.generateContent(prompt);
           const text = extractGeminiText(result);
           if (text) return { text, sources: extractFromText(text, brandDomain ?? undefined) };
@@ -134,7 +145,7 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              model: "llama-3.1-sonar-large-128k-online",
+              model: apiModel,
               messages: [{ role: "user", content: prompt }],
               max_tokens: 1500,
               temperature: 0.7,
@@ -211,7 +222,7 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
             baseURL: "https://api.x.ai/v1",
           });
           const completion = await client.chat.completions.create({
-            model,
+            model: apiModel,
             max_tokens: 1500,
             messages: [{ role: "user", content: prompt }],
           });
@@ -236,7 +247,7 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
     if (browsing) {
       try {
         const response = await openai.responses.create({
-          model,
+          model: apiModel,
           tools: [{ type: "web_search_preview" }],
           input: prompt,
         });
@@ -251,7 +262,7 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
 
     if (model.startsWith("o1") || model.startsWith("o3")) {
       const completion = await openai.chat.completions.create({
-        model,
+        model: apiModel,
         max_completion_tokens: 1500,
         messages: [{ role: "user", content: prompt }],
       } as any);
@@ -260,7 +271,7 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
     }
 
     const completion = await openai.chat.completions.create({
-      model,
+      model: apiModel,
       temperature: 0.7,
       max_tokens: 1500,
       messages: [{ role: "user", content: prompt }],
