@@ -6,10 +6,12 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, X, Loader2 } from "lucide-react";
 
 const MODEL_OPTIONS = [
-  { id: "gpt-4o-mini",   label: "GPT-4o mini",        provider: "OpenAI",    available: true },
-  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google",    available: true },
-  { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5", provider: "Anthropic", available: true },
-  { id: "grok-3",        label: "Grok 3",              provider: "xAI",       available: true },
+  { id: "gpt-4o-mini",   label: "GPT-4o Mini",        provider: "OpenAI",     description: "Veloce ed economico",         available: true },
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", provider: "Google",    description: "Richiede billing attivo",     available: true },
+  { id: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5", provider: "Anthropic", description: "Veloce e preciso", available: true },
+  { id: "perplexity-sonar", label: "Sonar Large",      provider: "Perplexity", description: "Con web search nativo",      available: true },
+  { id: "copilot-gpt4",  label: "Copilot GPT-4",       provider: "Microsoft",  description: "Via Azure OpenAI",           available: true },
+  { id: "grok-3",        label: "Grok 3",              provider: "xAI",        description: "Modello xAI",                available: true },
 ] as const;
 
 export default function NewProjectPage() {
@@ -220,7 +222,7 @@ export default function NewProjectPage() {
                 onClick={() => model.available && toggleModel(model.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-sm border transition-all text-left ${
                   selectedModels.includes(model.id)
-                    ? "border-primary/50 bg-primary/5"
+                    ? "border-primary/50 bg-primary/10"
                     : "border-border hover:border-border/80"
                 } ${!model.available ? "opacity-40 cursor-not-allowed" : ""}`}
               >
@@ -234,8 +236,11 @@ export default function NewProjectPage() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-foreground">{model.label}</span>
-                  <span className="text-[11px] text-cream-dim ml-2">{model.provider}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">{model.label}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-muted text-muted-foreground">{model.provider}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{model.description}</p>
                 </div>
               </button>
             ))}

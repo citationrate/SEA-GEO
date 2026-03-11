@@ -24,6 +24,23 @@ function sentimentColor(v: number): string {
   return "text-muted-foreground";
 }
 
+const MODEL_LABELS: Record<string, string> = {
+  "gpt-4o-mini": "GPT-4o Mini",
+  "gpt-4o": "GPT-4o",
+  "o1-mini": "o1 Mini",
+  "o3-mini": "o3 Mini",
+  "o3": "o3",
+  "claude-haiku-4-5-20251001": "Claude Haiku 4.5",
+  "claude-sonnet-4-5": "Claude Sonnet 4.5",
+  "claude-opus-4-5": "Claude Opus 4.5",
+  "gemini-2.5-flash": "Gemini 2.5 Flash",
+  "gemini-2.5-pro": "Gemini 2.5 Pro",
+  "grok-2": "Grok 2",
+  "grok-3": "Grok 3",
+  "perplexity-sonar": "Sonar Large",
+  "copilot-gpt4": "Copilot GPT-4",
+};
+
 function classifyError(error: string | null): string {
   if (!error) return "";
   const lower = error.toLowerCase();
@@ -225,7 +242,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                     : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
                 }
               >
-                {model}
+                {MODEL_LABELS[model] ?? model}
                 {modelAvi != null && (
                   <span className="ml-1.5 opacity-70">{Math.round(modelAvi.avi)}</span>
                 )}

@@ -123,18 +123,111 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
       return { ...empty, error: `[Gemini] ${errMsg}` };
     }
 
+    if (provider === "perplexity") {
+      let lastError: any;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const res = await fetch("https://api.perplexity.ai/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "llama-3.1-sonar-large-128k-online",
+              messages: [{ role: "user", content: prompt }],
+              max_tokens: 1500,
+              temperature: 0.7,
+            }),
+          });
+          if (!res.ok) {
+            const status = res.status;
+            const body = await res.text().catch(() => "");
+            const err = new Error(`Perplexity ${status}: ${body}`);
+            if (status === 429 && attempt < 2) { lastError = err; await new Promise(r => setTimeout(r, 3000)); continue; }
+            if ((status === 500 || status === 503) && attempt < 2) { lastError = err; await new Promise(r => setTimeout(r, 2000)); continue; }
+            throw err;
+          }
+          const data = await res.json();
+          const text = data.choices?.[0]?.message?.content ?? "";
+          return { text, sources: extractFromText(text, brandDomain ?? undefined) };
+        } catch (e: any) {
+          lastError = e;
+          if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+      const errMsg = lastError?.message ?? "Errore sconosciuto Perplexity";
+      console.error("[Perplexity] failed after 2 attempts:", errMsg);
+      return { ...empty, error: `[Perplexity] ${errMsg}` };
+    }
+
+    if (provider === "azure") {
+      let lastError: any;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const endpoint = process.env.AZURE_OPENAI_ENDPOINT ?? "";
+          const res = await fetch(
+            `${endpoint}/openai/deployments/gpt-4o/chat/completions?api-version=2024-02-01`,
+            {
+              method: "POST",
+              headers: {
+                "api-key": process.env.AZURE_OPENAI_KEY ?? "",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                messages: [{ role: "user", content: prompt }],
+                max_tokens: 1500,
+                temperature: 0.7,
+              }),
+            },
+          );
+          if (!res.ok) {
+            const status = res.status;
+            const body = await res.text().catch(() => "");
+            const err = new Error(`Azure ${status}: ${body}`);
+            if (status === 429 && attempt < 2) { lastError = err; await new Promise(r => setTimeout(r, 3000)); continue; }
+            if ((status === 500 || status === 503) && attempt < 2) { lastError = err; await new Promise(r => setTimeout(r, 2000)); continue; }
+            throw err;
+          }
+          const data = await res.json();
+          const text = data.choices?.[0]?.message?.content ?? "";
+          return { text, sources: extractFromText(text, brandDomain ?? undefined) };
+        } catch (e: any) {
+          lastError = e;
+          if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+      const errMsg = lastError?.message ?? "Errore sconosciuto Azure";
+      console.error("[Azure] failed after 2 attempts:", errMsg);
+      return { ...empty, error: `[Azure] ${errMsg}` };
+    }
+
     if (provider === "xai") {
-      const client = new OpenAI({
-        apiKey: process.env.XAI_API_KEY ?? "",
-        baseURL: "https://api.x.ai/v1",
-      });
-      const completion = await client.chat.completions.create({
-        model,
-        max_tokens: 1500,
-        messages: [{ role: "user", content: prompt }],
-      });
-      const text = completion.choices[0]?.message?.content ?? "";
-      return { text, sources: extractFromText(text, brandDomain ?? undefined) };
+      let lastError: any;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const client = new OpenAI({
+            apiKey: process.env.XAI_API_KEY ?? "",
+            baseURL: "https://api.x.ai/v1",
+          });
+          const completion = await client.chat.completions.create({
+            model,
+            max_tokens: 1500,
+            messages: [{ role: "user", content: prompt }],
+          });
+          const text = completion.choices[0]?.message?.content ?? "";
+          return { text, sources: extractFromText(text, brandDomain ?? undefined) };
+        } catch (e: any) {
+          lastError = e;
+          const msg = e?.message ?? "";
+          if (msg.includes("429") && attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
+          if ((msg.includes("500") || msg.includes("503")) && attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
+          if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+      const errMsg = lastError?.message ?? "Errore sconosciuto xAI";
+      console.error("[xAI] failed after 2 attempts:", errMsg);
+      return { ...empty, error: `[xAI] ${errMsg}` };
     }
 
     // OpenAI (default)

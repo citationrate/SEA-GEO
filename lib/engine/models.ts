@@ -2,7 +2,7 @@ export interface AIModel {
   id: string;
   label: string;
   desc: string;
-  provider: "openai" | "anthropic" | "google" | "xai";
+  provider: "openai" | "anthropic" | "google" | "xai" | "perplexity" | "azure";
 }
 
 export const AI_MODELS: AIModel[] = [
@@ -22,6 +22,10 @@ export const AI_MODELS: AIModel[] = [
   // xAI
   { id: "grok-2",  label: "Grok 2",  desc: "Accesso a dati recenti e web",            provider: "xai" },
   { id: "grok-3",  label: "Grok 3",  desc: "Massima capacita xAI con reasoning",      provider: "xai" },
+  // Perplexity
+  { id: "perplexity-sonar",  label: "Sonar Large",  desc: "Con web search nativo",   provider: "perplexity" },
+  // Azure (Microsoft Copilot)
+  { id: "copilot-gpt4",  label: "Copilot GPT-4",  desc: "Via Azure OpenAI",   provider: "azure" },
 ];
 
 export const MODEL_MAP = new Map(AI_MODELS.map((m) => [m.id, m]));
@@ -29,8 +33,10 @@ export const MODEL_MAP = new Map(AI_MODELS.map((m) => [m.id, m]));
 export const ALL_MODEL_IDS = AI_MODELS.map((m) => m.id);
 
 export const PROVIDER_CONFIG: Record<string, { label: string; color: string }> = {
-  openai:    { label: "OpenAI",    color: "text-green-500" },
-  anthropic: { label: "Anthropic", color: "text-orange-500" },
-  google:    { label: "Google",    color: "text-blue-500" },
-  xai:       { label: "xAI",       color: "text-gray-400" },
+  openai:     { label: "OpenAI",     color: "text-green-500" },
+  anthropic:  { label: "Anthropic",  color: "text-orange-500" },
+  google:     { label: "Google",     color: "text-blue-500" },
+  xai:        { label: "xAI",        color: "text-gray-400" },
+  perplexity: { label: "Perplexity", color: "text-cyan-500" },
+  azure:      { label: "Microsoft",  color: "text-sky-500" },
 };
