@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { GitCompare, Plus, Clock, CheckCircle, XCircle, Loader2, Swords, Lock } from "lucide-react";
+import { isProUser } from "@/lib/utils/is-pro";
 
 export const metadata = { title: "Confronto Competitivo" };
 
@@ -26,8 +27,7 @@ export default async function ComparePage({
     .eq("id", user.id)
     .single();
 
-  const plan = (profile as any)?.plan ?? "free";
-  const isPro = plan === "pro" || plan === "agency";
+  const isPro = isProUser(profile as any, user.user_metadata);
 
   // Paywall for non-Pro users
   if (!isPro) {

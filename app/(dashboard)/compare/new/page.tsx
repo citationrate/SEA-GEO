@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ArrowLeft, GitCompare } from "lucide-react";
+import { isProUser } from "@/lib/utils/is-pro";
 import { NewCompetitiveForm } from "./new-competitive-form";
 
 export const metadata = { title: "Nuova Analisi Competitiva" };
@@ -17,8 +18,7 @@ export default async function NewCompetitivePage() {
     .eq("id", user.id)
     .single();
 
-  const plan = (profile as any)?.plan ?? "free";
-  if (plan !== "pro" && plan !== "agency") redirect("/compare?upgrade=1");
+  if (!isProUser(profile as any, user.user_metadata)) redirect("/compare?upgrade=1");
 
   // Get user projects
   const { data: projects } = await supabase
