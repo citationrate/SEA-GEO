@@ -114,10 +114,16 @@ Estrai tutti i brand, aziende, insegne o entità commerciali che compaiono come 
 
 INCLUDI: qualsiasi entità con un nome proprio specifico — supermercati, distributori, e-commerce, produttori artigianali con nome proprio, catene, marketplace. Esempi: "Esselunga", "Coop", "Biscottificio Artigianale Rossi", "Penny Market", "NaturaSì".
 
-ESCLUDI:
+ESCLUDI ASSOLUTAMENTE:
+- Varianti, linee di prodotto o sub-brand del brand target.
+  Esempi: se target è 'Coca-Cola', escludi 'Coca-Cola Zero', 'Coca-Cola Light', 'Coca-Cola Cherry', 'Coca-Cola Vanilla'.
+  Se target è 'Pepsi', escludi 'Pepsi Max', 'Pepsi Light', 'Pepsi Zero'.
+- Prodotti dello stesso gruppo aziendale del brand target
+- Il brand target "${targetBrand}" stesso in qualsiasi forma
 - Descrizioni generiche senza nome proprio ("biscottificio artigianale", "produttore locale", "negozio di quartiere", "brand sportivo", "competitor locale")
 - Entità che non hanno un nome che un utente potrebbe cercare su Google
-- Il brand target "${targetBrand}"
+
+INCLUDI solo brand/aziende completamente distinte dal target.
 
 FORMATO:
 - Restituisci SOLO il nome commerciale (es. "Esselunga", non "Esselunga è un supermercato")
