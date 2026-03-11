@@ -227,6 +227,7 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
             messages: [{ role: "user", content: prompt }],
           });
           const text = completion.choices[0]?.message?.content ?? "";
+          console.log("[xAI] raw response:", text.substring(0, 300));
           return { text, sources: extractFromText(text, brandDomain ?? undefined) };
         } catch (e: any) {
           lastError = e;

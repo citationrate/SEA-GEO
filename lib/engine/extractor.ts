@@ -39,6 +39,18 @@ async function extractCompetitorsTopicsSources(
   targetBrand: string,
   knownCompetitors: string[],
 ): Promise<Pick<ExtractionResult, "topics" | "competitors_found" | "sources">> {
+  console.log("[extractor] partial extraction called, response length:", response.length, "first 200 chars:", response.substring(0, 200));
+
+  // Clean control characters that may break Claude parsing
+  const cleanResponse = response
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+    .trim();
+
+  if (!cleanResponse || cleanResponse.length < 50) {
+    console.log("[extractor] response too short or empty, skip extraction");
+    return { topics: [], competitors_found: [], sources: [] };
+  }
+
   const prompt = `Sei un analista AI. Il brand "${targetBrand}" NON è presente in questa risposta.
 Competitor conosciuti: ${knownCompetitors.length > 0 ? knownCompetitors.join(", ") : "nessuno specificato"}
 
@@ -68,7 +80,7 @@ source_type: media|review|ecommerce|social|brand_owned|competitor|wikipedia|othe
 
 Analizza questa risposta:
 
-${response}`;
+${cleanResponse}`;
 
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
