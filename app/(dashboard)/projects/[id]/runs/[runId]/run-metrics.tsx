@@ -421,8 +421,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                 <tr className="border-b border-border text-xs text-muted-foreground">
                   <th className="text-left py-2 pr-4 font-medium">URL / Dominio</th>
                   <th className="text-left py-2 pr-4 font-medium">Label</th>
-                  <th className="text-left py-2 pr-4 font-medium">Tipo</th>
-                  <th className="text-left py-2 font-medium">Brand</th>
+                  <th className="text-left py-2 font-medium">Tipo</th>
                 </tr>
               </thead>
               <tbody>
@@ -437,8 +436,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                       ) : s.domain ?? "-"}
                     </td>
                     <td className="py-2 pr-4 text-muted-foreground">{s.label ?? "-"}</td>
-                    <td className="py-2 pr-4"><span className="badge badge-muted text-[10px]">{s.source_type}</span></td>
-                    <td className="py-2">{s.is_brand_owned ? <span className="badge badge-primary text-[10px]">Owned</span> : "-"}</td>
+                    <td className="py-2"><span className="badge badge-muted text-[10px]">{s.source_type}</span></td>
                   </tr>
                 ))}
               </tbody>

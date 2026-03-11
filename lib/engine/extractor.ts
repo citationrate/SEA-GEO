@@ -106,7 +106,8 @@ REGOLA CRITICA: Se brand_mentioned è true, brand_rank, tone_score e recommendat
 FONTI: Estrai TUTTI i siti web, domini, URL, blog, riviste, piattaforme citati o menzionati nella risposta, anche implicitamente.
 Esempi: se dice 'secondo Gambero Rosso' → estrai 'gamberorosso.it', se dice 'disponibile su Amazon' → estrai 'amazon.it', se dice 'recensioni su Trustpilot' → estrai 'trustpilot.com'.
 Se la risposta cita categorie di siti senza nominarli esplicitamente (es. 'siti di recensioni', 'e-commerce'), estrai i domini più probabili per quel contesto.
-Restituisci array di oggetti: [{url: 'dominio.com', domain: 'dominio.com', label: null, source_type: 'media|review|ecommerce|social|brand_owned|competitor|wikipedia|other', is_brand_owned: boolean, context: 'breve spiegazione'}]
+Se la risposta cita una pagina specifica, estrai l'URL completo con path (es. 'gamberorosso.it/prodotti/biscotti' non solo 'gamberorosso.it'). Se hai solo il dominio usa domain, se hai il path completo usa url.
+Restituisci array di oggetti: [{url: 'dominio.com/path' o null, domain: 'dominio.com', label: null, source_type: 'media|review|ecommerce|social|brand_owned|competitor|wikipedia|other', is_brand_owned: boolean, context: 'breve spiegazione'}]
 Se non ci sono fonti restituisci [].
 
 REGOLE per competitors_found:
