@@ -53,24 +53,25 @@ export default async function CompetitorsPage({
   // Active (non-archived) run IDs
   const activeRunIds = (allRuns ?? []).map((r: any) => r.id);
 
-  // Fetch competitors discovered in active runs only
-  const { data: competitors } = activeRunIds.length > 0
+  // Fetch competitors discovered in filtered runs (respects model filter)
+  const effectiveRunIds = filteredRunIds.length > 0 ? filteredRunIds : activeRunIds;
+  const { data: competitors } = effectiveRunIds.length > 0
     ? await supabase
         .from("competitors")
         .select("*")
         .in("project_id", targetIds)
-        .in("discovered_at_run_id", activeRunIds)
+        .in("discovered_at_run_id", effectiveRunIds)
         .order("created_at", { ascending: true })
     : { data: [] };
 
   const compList = (competitors ?? []) as any[];
 
-  // Fetch total historical mention counts from competitor_mentions (only active runs)
-  const { data: allMentionRows } = activeRunIds.length > 0
+  // Fetch mention counts from competitor_mentions (respects model filter)
+  const { data: allMentionRows } = effectiveRunIds.length > 0
     ? await (supabase.from("competitor_mentions") as any)
         .select("competitor_name, competitor_type")
         .in("project_id", targetIds)
-        .in("run_id", activeRunIds)
+        .in("run_id", effectiveRunIds)
     : { data: [] };
 
   const totalMentionMap = new Map<string, number>();
@@ -85,13 +86,13 @@ export default async function CompetitorsPage({
   // Use filtered run IDs for stats
   const runIds = filteredRunIds;
 
-  // Get latest brand AVI (only from active runs)
-  const { data: lastAviRow } = activeRunIds.length > 0
+  // Get latest brand AVI (from effective runs)
+  const { data: lastAviRow } = effectiveRunIds.length > 0
     ? await supabase
         .from("avi_history")
         .select("avi_score")
         .in("project_id", targetIds)
-        .in("run_id", activeRunIds)
+        .in("run_id", effectiveRunIds)
         .order("computed_at", { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -107,6 +108,8 @@ export default async function CompetitorsPage({
     queryTypes: Set<string>;
   }>();
 
+  let totalPrompts = 0;
+
   if (runIds.length > 0) {
     const { data: prompts } = await supabase
       .from("prompts_executed")
@@ -115,6 +118,7 @@ export default async function CompetitorsPage({
 
     const promptMap = new Map((prompts ?? []).map((p: any) => [p.id, p]));
     const promptIds = (prompts ?? []).map((p: any) => p.id);
+    totalPrompts = promptIds.length;
 
     // Get query funnel stages
     const { data: allQueries } = await supabase
@@ -272,8 +276,8 @@ export default async function CompetitorsPage({
   const brandAviScore = lastAviRow ? Math.round((lastAviRow as any).avi_score * 10) / 10 : null;
 
   const rows = Array.from(grouped.values()).sort((a, b) => {
-    const aviA = compAviMap.get(a.name.toLowerCase().trim()) ?? 0;
-    const aviB = compAviMap.get(b.name.toLowerCase().trim()) ?? 0;
+    const aviA = compAviMap.get(a.name.toLowerCase().trim()) ?? (totalPrompts > 0 ? (a.mentions / totalPrompts) * 100 : 0);
+    const aviB = compAviMap.get(b.name.toLowerCase().trim()) ?? (totalPrompts > 0 ? (b.mentions / totalPrompts) * 100 : 0);
     return aviB - aviA || b.mentions - a.mentions;
   });
 
@@ -301,6 +305,7 @@ export default async function CompetitorsPage({
         rows={rows.map((r) => ({
           ...r,
           aviScore: compAviMap.get(r.name.toLowerCase().trim()) ?? null,
+          mentionScore: totalPrompts > 0 ? Math.round((r.mentions / totalPrompts) * 1000) / 10 : null,
           competitorType: r.competitorType,
           projects: r.projects.map((p) => ({ id: p.id, name: p.name, brand: p.brand })),
         }))}

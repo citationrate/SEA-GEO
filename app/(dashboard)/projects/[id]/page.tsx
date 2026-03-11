@@ -1,6 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Cpu } from "lucide-react";
+import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Cpu, Settings } from "lucide-react";
 import { AnalysisLauncher } from "./analysis-launcher";
 import { AnalysisProgress } from "./analysis-progress";
 import { ProjectAVITrend } from "./project-avi-trend";
@@ -155,13 +155,23 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               {" "}&middot; {(proj.language as string).toUpperCase()}
             </p>
           </div>
-          <AnalysisLauncher
-            projectId={params.id}
-            hasQueries={(queries ?? []).length > 0}
-            queryCount={(queries ?? []).length}
-            segmentCount={(segments ?? []).length}
-            modelsConfig={(proj.models_config as string[]) ?? ["gpt-4o-mini"]}
-          />
+          <div className="flex items-center gap-2">
+            <a
+              href={`/projects/${params.id}/edit`}
+              className="flex items-center gap-1.5 bg-surface border border-border text-muted-foreground text-sm font-medium px-3 py-2 rounded-[2px] hover:border-primary/30 hover:text-foreground transition-colors"
+              title="Modifica Progetto"
+            >
+              <Settings className="w-4 h-4" />
+              Modifica
+            </a>
+            <AnalysisLauncher
+              projectId={params.id}
+              hasQueries={(queries ?? []).length > 0}
+              queryCount={(queries ?? []).length}
+              segmentCount={(segments ?? []).length}
+              modelsConfig={(proj.models_config as string[]) ?? ["gpt-4o-mini"]}
+            />
+          </div>
         </div>
       </div>
 

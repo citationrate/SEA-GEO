@@ -33,6 +33,7 @@ interface CompRow {
   lastSeen: string;
   themeAnalysis: ThemeAnalysis | null;
   aviScore: number | null;
+  mentionScore: number | null;
   competitorType: string;
 }
 
@@ -271,7 +272,8 @@ export function CompetitorsClient({
                   </div>
                   {/* Competitor rows */}
                   {top5.map((r) => {
-                    const score = r.aviScore ?? 0;
+                    const score = r.aviScore ?? r.mentionScore ?? 0;
+                    const isEstimate = r.aviScore == null && r.mentionScore != null;
                     const beats = score > brandAviScore;
                     const barBg = score >= 70 ? "rgba(126,184,154,0.5)" : score >= 40 ? "rgba(232,226,214,0.3)" : "rgba(192,97,74,0.3)";
                     const textColor = beats ? "text-destructive" : score >= 70 ? "text-primary" : score >= 40 ? "text-cream" : "text-destructive";
@@ -281,11 +283,11 @@ export function CompetitorsClient({
                         <div className="flex-1 h-2 bg-muted rounded-[2px] overflow-hidden">
                           <div
                             className="h-full rounded-[2px] transition-all duration-700"
-                            style={{ width: `${(score / 100) * 100}%`, background: barBg }}
+                            style={{ width: `${(Math.min(score, 100) / 100) * 100}%`, background: barBg }}
                           />
                         </div>
                         <span className={`text-xs font-bold w-14 text-right ${score > 0 ? textColor : "text-muted-foreground"}`}>
-                          {score > 0 ? `AVI ${Math.round(score * 10) / 10}` : "—"}
+                          {score > 0 ? `${isEstimate ? "" : "AVI "}${Math.round(score * 10) / 10}${isEstimate ? "%" : ""}` : "—"}
                         </span>
                       </div>
                     );
