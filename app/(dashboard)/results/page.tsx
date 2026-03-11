@@ -33,6 +33,7 @@ export default async function ResultsPage() {
   const { data: runs } = await supabase
     .from("analysis_runs")
     .select("*")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   // Get project info for each run

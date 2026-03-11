@@ -29,9 +29,9 @@ export default async function CompetitorsPage({
   const targetIds = selectedId ? [selectedId] : projectIds;
   const projectMap = new Map(projectsList.map((p: any) => [p.id, p]));
 
-  // Get runs to extract available models + filter
+  // Get runs to extract available models + filter (exclude archived)
   const { data: allRuns } = targetIds.length > 0
-    ? await supabase.from("analysis_runs").select("id, models_used").in("project_id", targetIds)
+    ? await supabase.from("analysis_runs").select("id, models_used").in("project_id", targetIds).is("deleted_at", null)
     : { data: [] };
 
 
@@ -43,6 +43,7 @@ export default async function CompetitorsPage({
       .from("analysis_runs")
       .select("id")
       .in("project_id", targetIds)
+      .is("deleted_at", null)
       .contains("models_used", [selectedModel]);
     filteredRunIds = (filtered ?? []).map((r: any) => r.id);
   } else {
@@ -60,11 +61,13 @@ export default async function CompetitorsPage({
 
   const compList = (competitors ?? []) as any[];
 
-  // Fetch total historical mention counts from competitor_mentions (all runs)
-  const { data: allMentionRows } = targetIds.length > 0
+  // Fetch total historical mention counts from competitor_mentions (only active runs)
+  const activeRunIds = (allRuns ?? []).map((r: any) => r.id);
+  const { data: allMentionRows } = activeRunIds.length > 0
     ? await (supabase.from("competitor_mentions") as any)
         .select("competitor_name")
         .in("project_id", targetIds)
+        .in("run_id", activeRunIds)
     : { data: [] };
 
   const totalMentionMap = new Map<string, number>();
@@ -76,12 +79,13 @@ export default async function CompetitorsPage({
   // Use filtered run IDs for stats
   const runIds = filteredRunIds;
 
-  // Get latest brand AVI
-  const { data: lastAviRow } = targetIds.length > 0
+  // Get latest brand AVI (only from active runs)
+  const { data: lastAviRow } = activeRunIds.length > 0
     ? await supabase
         .from("avi_history")
         .select("avi_score")
         .in("project_id", targetIds)
+        .in("run_id", activeRunIds)
         .order("computed_at", { ascending: false })
         .limit(1)
         .maybeSingle()

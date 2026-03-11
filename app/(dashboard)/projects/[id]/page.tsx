@@ -6,6 +6,7 @@ import { AnalysisProgress } from "./analysis-progress";
 import { ProjectAVITrend } from "./project-avi-trend";
 import { DeleteProjectButton } from "./delete-project-button";
 import { OpenAnalysisButton } from "./open-analysis-button";
+import { ArchivedRunsSection } from "./archived-runs-section";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const supabase = createServerClient();
@@ -31,38 +32,51 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     .eq("is_active", true)
     .order("created_at", { ascending: true });
 
-  const { data: allRuns } = await supabase
+  // Fetch all runs (active + archived)
+  const { data: allRunsRaw } = await supabase
     .from("analysis_runs")
     .select("*")
     .eq("project_id", params.id)
     .order("created_at", { ascending: false });
 
-  const lastRun = (allRuns ?? [])[0] ?? null;
+  const allRuns = (allRunsRaw ?? []).filter((r: any) => !r.deleted_at);
+  const archivedRuns = (allRunsRaw ?? []).filter((r: any) => r.deleted_at);
 
-  const { data: lastAvi } = await supabase
-    .from("avi_history")
-    .select("*")
-    .eq("project_id", params.id)
-    .order("computed_at", { ascending: false })
-    .limit(1)
-    .single();
+  const lastRun = allRuns[0] ?? null;
 
-  // Fetch all AVI history for trend chart + run scores
-  const { data: aviHistory } = await supabase
-    .from("avi_history")
-    .select("*")
-    .eq("project_id", params.id)
-    .order("computed_at", { ascending: true });
+  // AVI history: only from active runs
+  const activeRunIds = allRuns.map((r: any) => r.id);
+
+  const { data: lastAvi } = activeRunIds.length > 0
+    ? await supabase
+        .from("avi_history")
+        .select("*")
+        .eq("project_id", params.id)
+        .in("run_id", activeRunIds)
+        .order("computed_at", { ascending: false })
+        .limit(1)
+        .single()
+    : { data: null };
+
+  // Fetch AVI history for trend chart (only active runs)
+  const { data: aviHistory } = activeRunIds.length > 0
+    ? await supabase
+        .from("avi_history")
+        .select("*")
+        .eq("project_id", params.id)
+        .in("run_id", activeRunIds)
+        .order("computed_at", { ascending: true })
+    : { data: [] };
 
   const aviMap = new Map((aviHistory ?? []).map((a: any) => [a.run_id, a.avi_score]));
 
   // Get all unique models across runs
-  const allModels = Array.from(new Set((allRuns ?? []).flatMap((r: any) => r.models_used ?? [])));
+  const allModels = Array.from(new Set(allRuns.flatMap((r: any) => r.models_used ?? [])));
 
   // Build per-model AVI for trend chart
   const perModelAviByRun = new Map<string, Record<string, number>>();
   if (allModels.length > 1) {
-    for (const run of (allRuns ?? []) as any[]) {
+    for (const run of allRuns as any[]) {
       if (run.status !== "completed") continue;
       const { data: runPrompts } = await supabase
         .from("prompts_executed")
@@ -120,7 +134,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const mofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "mofu");
 
   const proj = project as any;
-  const runningRun = (allRuns ?? []).find((r: any) => r.status === "running") as any | undefined;
+  const runningRun = allRuns.find((r: any) => r.status === "running") as any | undefined;
 
   return (
     <div className="space-y-6 max-w-[1400px] animate-fade-in">
@@ -284,15 +298,15 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       </div>
 
       {/* Analisi eseguite */}
-      {(allRuns ?? []).length > 0 && (
+      {allRuns.length > 0 && (
         <div className="card p-5 space-y-4">
           <div className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-primary" />
             <h2 className="font-display font-semibold text-foreground">Analisi Eseguite</h2>
-            <span className="badge badge-muted text-[10px]">{(allRuns ?? []).length}</span>
+            <span className="badge badge-muted text-[10px]">{allRuns.length}</span>
           </div>
           <div className="space-y-2">
-            {(allRuns ?? []).map((run: any) => {
+            {allRuns.map((run: any) => {
               const Icon = run.status === "completed" ? CheckCircle : run.status === "failed" ? XCircle : run.status === "running" ? Loader2 : Clock;
               const badgeClass = run.status === "completed"
                 ? "bg-green-500/15 text-green-500 border-green-500/30"
@@ -342,6 +356,22 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       {/* AVI Trend Chart */}
       {trendData.length > 0 && (
         <ProjectAVITrend data={trendData} models={allModels} />
+      )}
+
+      {/* Archived runs */}
+      {archivedRuns.length > 0 && (
+        <ArchivedRunsSection
+          runs={archivedRuns.map((run: any) => ({
+            id: run.id,
+            version: run.version,
+            status: run.status,
+            models_used: run.models_used,
+            completed_prompts: run.completed_prompts,
+            total_prompts: run.total_prompts,
+            date: new Date(run.completed_at ?? run.created_at).toLocaleDateString("it-IT"),
+          }))}
+          projectId={params.id}
+        />
       )}
 
       {/* Azioni */}

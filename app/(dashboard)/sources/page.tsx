@@ -40,9 +40,9 @@ export default async function SourcesPage({
   const selectedProject = projectsList.find((p: any) => p.id === selectedId);
   const brand = selectedProject?.target_brand ?? projectsList[0]?.target_brand ?? "";
 
-  // Get runs to extract available models + filter
+  // Get runs to extract available models + filter (exclude archived)
   const { data: allRuns } = targetIds.length > 0
-    ? await supabase.from("analysis_runs").select("id, models_used").in("project_id", targetIds)
+    ? await supabase.from("analysis_runs").select("id, models_used").in("project_id", targetIds).is("deleted_at", null)
     : { data: [] };
 
 
@@ -55,6 +55,7 @@ export default async function SourcesPage({
       .from("analysis_runs")
       .select("id")
       .in("project_id", targetIds)
+      .is("deleted_at", null)
       .contains("models_used", [selectedModel]);
     filteredRunIds = (filtered ?? []).map((r: any) => r.id);
   } else {

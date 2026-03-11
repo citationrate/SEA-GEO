@@ -30,12 +30,13 @@ export default async function DashboardPage({
   const targetIds = selectedId ? [selectedId] : projectIds;
   const projectMap = new Map(projectsList.map((p: any) => [p.id, p]));
 
-  // Get all analysis runs
+  // Get all analysis runs (exclude archived)
   const { data: allRuns } = targetIds.length > 0
     ? await supabase
         .from("analysis_runs")
         .select("*")
         .in("project_id", targetIds)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
     : { data: [] };
 
@@ -52,6 +53,7 @@ export default async function DashboardPage({
       .from("analysis_runs")
       .select("*")
       .in("project_id", targetIds)
+      .is("deleted_at", null)
       .contains("models_used", [selectedModel])
       .order("created_at", { ascending: false });
     runs = filtered ?? [];

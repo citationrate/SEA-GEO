@@ -1,10 +1,11 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, Archive } from "lucide-react";
 import { RunAVIRing } from "./run-avi-ring";
 import { ExportButtons } from "./export-buttons";
 import { RunAutoRefresh } from "./run-auto-refresh";
 import { RunMetrics } from "./run-metrics";
+import { DeleteRunButton, RestoreRunButton } from "./run-actions";
 
 const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = {
   pending:   { label: "In attesa",   class: "badge-muted",    icon: Clock },
@@ -38,15 +39,26 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     .eq("run_id", params.runId)
     .single();
 
-  // Trend vs previous run
+  // Trend vs previous run (exclude archived runs)
   let trend: number | null = null;
   if (avi) {
-    const { data: allAvi } = await supabase
-      .from("avi_history")
-      .select("avi_score, computed_at")
+    // Get run IDs of non-deleted runs
+    const { data: activeRuns } = await supabase
+      .from("analysis_runs")
+      .select("id")
       .eq("project_id", params.id)
-      .order("computed_at", { ascending: false })
-      .limit(2);
+      .is("deleted_at", null);
+    const activeRunIds = (activeRuns ?? []).map((r: any) => r.id);
+
+    const { data: allAvi } = activeRunIds.length > 0
+      ? await supabase
+          .from("avi_history")
+          .select("avi_score, computed_at")
+          .eq("project_id", params.id)
+          .in("run_id", activeRunIds)
+          .order("computed_at", { ascending: false })
+          .limit(2)
+      : { data: [] };
     if (allAvi && allAvi.length >= 2) {
       trend = (allAvi[0] as any).avi_score - (allAvi[1] as any).avi_score;
     }
@@ -141,6 +153,19 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     <div className="space-y-6 max-w-[1400px] animate-fade-in">
       <RunAutoRefresh status={r.status} />
 
+      {/* Archived banner */}
+      {r.deleted_at && (
+        <div className="card border-muted bg-muted/30 p-3 flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <Archive className="w-4 h-4 text-muted-foreground" />
+            <span className="text-muted-foreground">
+              Questa analisi &egrave; archiviata e non viene inclusa nei calcoli AVI.
+            </span>
+          </div>
+          <RestoreRunButton runId={params.runId} />
+        </div>
+      )}
+
       {/* Error banner */}
       {errorCount > 0 && (
         <div className="card border-destructive/30 bg-destructive/5 p-3 flex items-center gap-2 text-sm">
@@ -170,6 +195,9 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
           </div>
           <div className="flex items-center gap-2">
             {r.status === "completed" && <ExportButtons runId={params.runId} />}
+            {(r.status === "completed" || r.status === "failed" || r.status === "cancelled") && !r.deleted_at && (
+              <DeleteRunButton runId={params.runId} projectId={params.id} />
+            )}
             <span className={`badge ${statusInfo.class} flex items-center gap-1`}>
               <StatusIcon className={`w-3.5 h-3.5 ${r.status === "running" ? "animate-spin" : ""}`} />
               {statusInfo.label}

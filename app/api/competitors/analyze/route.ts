@@ -58,11 +58,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Nessun competitor trovato" }, { status: 400 });
     }
 
-    // Get all runs for this project
+    // Get all active runs for this project
     const { data: runs } = await supabase
       .from("analysis_runs")
       .select("id")
-      .eq("project_id", project_id);
+      .eq("project_id", project_id)
+      .is("deleted_at", null);
     const runIds = (runs ?? []).map((r: any) => r.id);
     console.log("[competitors/analyze] runs found:", runIds.length);
 
