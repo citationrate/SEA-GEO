@@ -1,6 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Cpu, Settings } from "lucide-react";
+import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Cpu, Settings, Sparkles } from "lucide-react";
 import { AnalysisLauncher } from "./analysis-launcher";
 import { AnalysisProgress } from "./analysis-progress";
 import { ProjectAVITrend } from "./project-avi-trend";
@@ -255,7 +255,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           ) : (
             <ul className="space-y-2">
               {tofuQueries.map((q: any) => (
-                <li key={q.id} className="text-sm text-foreground bg-muted rounded-[2px] px-3 py-2 border border-border">{q.text}</li>
+                <QueryBadgeItem key={q.id} query={q} />
               ))}
             </ul>
           )}
@@ -278,7 +278,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           ) : (
             <ul className="space-y-2">
               {mofuQueries.map((q: any) => (
-                <li key={q.id} className="text-sm text-foreground bg-muted rounded-[2px] px-3 py-2 border border-border">{q.text}</li>
+                <QueryBadgeItem key={q.id} query={q} />
               ))}
             </ul>
           )}
@@ -397,6 +397,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             Nuova Query
           </a>
           <a
+            href={`/projects/${params.id}/queries/generate`}
+            className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-primary/85 transition-colors"
+          >
+            <Sparkles className="w-4 h-4" />
+            Genera con AI
+          </a>
+          <a
             href={`/projects/${params.id}/segments`}
             className="flex items-center gap-2 bg-surface border border-border text-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:border-primary/30 transition-colors"
           >
@@ -416,5 +423,26 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         />
       )}
     </div>
+  );
+}
+
+const SET_TYPE_BADGE: Record<string, { label: string; cls: string }> = {
+  generale: { label: "GEN", cls: "border-muted-foreground/30 text-muted-foreground" },
+  verticale: { label: "VERT", cls: "border-blue-500/30 text-blue-400" },
+  persona: { label: "PERS", cls: "border-purple-500/30 text-purple-400" },
+};
+
+function QueryBadgeItem({ query }: { query: any }) {
+  const setType = query.set_type || "manual";
+  const badge = SET_TYPE_BADGE[setType];
+  return (
+    <li className="flex items-start justify-between gap-2 text-sm text-foreground bg-muted rounded-[2px] px-3 py-2 border border-border">
+      <span className="flex-1 min-w-0">{query.text}</span>
+      {badge && (
+        <span className={`font-mono text-[0.5rem] tracking-wide uppercase px-1 py-0.5 rounded-[2px] border shrink-0 mt-0.5 ${badge.cls}`}>
+          {badge.label}
+        </span>
+      )}
+    </li>
   );
 }
