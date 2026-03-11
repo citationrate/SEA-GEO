@@ -4,6 +4,7 @@ export interface ExtractedSource {
   title?: string;
   source_type: "brand_owned" | "competitor" | "media" | "review" | "social" | "ecommerce" | "wikipedia" | "other";
   context?: string;
+  associated_brand?: string;
 }
 
 /** Estrae fonti da URL citation annotations (OpenAI Responses API) */
@@ -63,58 +64,90 @@ export function extractFromGrounding(candidates: any[], brandDomain?: string): E
   return results;
 }
 
-/** Estrae domini e URL dal testo puro (fallback universale) */
+const BLACKLIST = new Set([
+  "next.js", "node.js", "react.js", "type.ts", "index.js",
+  "package.json", "vercel.app", "example.com", "e.g",
+]);
+
+/**
+ * Estrae fonti organiche dal testo della risposta AI.
+ * Cattura: markdown links, plain URLs, footnotes, inline domain references.
+ */
 export function extractFromText(text: string, brandDomain?: string): ExtractedSource[] {
   const results: ExtractedSource[] = [];
   const seen = new Set<string>();
-  const blacklist = new Set([
-    "next.js", "node.js", "react.js", "type.ts", "index.js",
-    "package.json", "vercel.app",
-  ]);
 
-  // URL completi — mantieni path completo
-  const urlMatches = text.match(/https?:\/\/[^\s)\"'<>,\]]+/g) || [];
-  for (const url of urlMatches) {
-    const domain = safeDomain(url);
-    if (domain && !seen.has(domain) && !blacklist.has(domain)) {
-      seen.add(domain);
-      results.push({
-        url,
-        domain,
-        source_type: classifyDomain(domain, brandDomain),
-        context: "URL citato nella risposta",
-      });
-    }
+  function addSource(url: string, title?: string, context?: string) {
+    const domain = safeDomain(url) ?? extractBareDomain(url);
+    if (!domain || seen.has(domain) || BLACKLIST.has(domain) || domain.length < 4) return;
+    seen.add(domain);
+    results.push({
+      url: url.startsWith("http") ? url : "https://" + url,
+      domain,
+      title: title || domainToTitle(domain),
+      source_type: classifyDomain(domain, brandDomain),
+      context: context || "fonte citata nella risposta",
+    });
   }
 
-  // Domini senza http — url sintetico, domain per classificazione
-  const domainMatches =
-    text.match(/\b[a-zA-Z0-9][a-zA-Z0-9-]*\.(com|it|io|net|org|co\.uk|fr|de|es|ai|info|biz)\b/g) || [];
-  for (const d of domainMatches) {
-    const clean = d.replace(/^www\./, "").toLowerCase();
-    if (!seen.has(clean) && !blacklist.has(clean) && clean.length > 4) {
-      seen.add(clean);
-      results.push({
-        url: "https://" + clean,
-        domain: clean,
-        source_type: classifyDomain(clean, brandDomain),
-        context: "dominio menzionato",
-      });
-    }
+  // 1. Markdown links: [title](url)
+  const mdLinkRe = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  let m: RegExpExecArray | null;
+  while ((m = mdLinkRe.exec(text)) !== null) {
+    addSource(m[2], m[1], "markdown link");
+  }
+
+  // 2. Plain URLs: https://... or http://...
+  const urlRe = /(?<!\()https?:\/\/[^\s)\"'<>,\]]+/g;
+  while ((m = urlRe.exec(text)) !== null) {
+    addSource(m[0], undefined, "URL citato nella risposta");
+  }
+
+  // 3. Footnote patterns: [1] https://... or [1]: https://... or ¹ https://...
+  const footnoteRe = /(?:\[\d+\][\s:]*|[¹²³⁴⁵⁶⁷⁸⁹⁰]+[\s:]*)(https?:\/\/[^\s)\"'<>,]+)/g;
+  while ((m = footnoteRe.exec(text)) !== null) {
+    addSource(m[1], undefined, "footnote");
+  }
+
+  // 4. Inline domain references in brackets: [domain.com] or (domain.com)
+  const bracketDomainRe = /[\[(]((?:www\.)?[a-zA-Z0-9][a-zA-Z0-9-]+\.(?:com|it|io|net|org|co\.uk|fr|de|es|ai|info|biz|eu|ch|at|nl|be|pt|se|no|dk|fi|pl|cz|ru|jp|cn|au|ca|us|uk|me)(?:\/[^\s)\]]*)?)[)\]]/g;
+  while ((m = bracketDomainRe.exec(text)) !== null) {
+    const raw = m[1].replace(/^www\./, "");
+    addSource(raw, undefined, "dominio inline");
+  }
+
+  // 5. Bare domains in text (not inside URLs already captured)
+  const bareDomainRe = /\b((?:www\.)?[a-zA-Z0-9][a-zA-Z0-9-]+\.(?:com|it|io|net|org|co\.uk|fr|de|es|ai|info|biz|eu|ch|at|nl|be|pt|se|no|dk|fi|pl|cz|me))\b/g;
+  while ((m = bareDomainRe.exec(text)) !== null) {
+    const clean = m[1].replace(/^www\./, "").toLowerCase();
+    addSource(clean, undefined, "dominio menzionato");
   }
 
   return results;
 }
 
-/** Merge e deduplica fonti per domain, mantiene l'URL più specifico (path più lungo) */
+/** Merge e deduplica fonti per domain, mantiene l'URL più specifico (path più lungo) e il title migliore */
 export function mergeSources(...sourceLists: ExtractedSource[][]): ExtractedSource[] {
   const seen = new Map<string, ExtractedSource>();
   for (const list of sourceLists) {
     for (const source of list) {
       if (!source.domain) continue;
       const existing = seen.get(source.domain);
-      if (!existing || source.url.length > existing.url.length) {
+      if (!existing) {
         seen.set(source.domain, source);
+      } else {
+        // Keep longer URL (more specific path)
+        if (source.url.length > existing.url.length) {
+          existing.url = source.url;
+        }
+        // Keep title if existing doesn't have one
+        if (!existing.title && source.title) {
+          existing.title = source.title;
+        }
+        // Keep associated_brand
+        if (!existing.associated_brand && source.associated_brand) {
+          existing.associated_brand = source.associated_brand;
+        }
       }
     }
   }
@@ -129,11 +162,23 @@ function safeDomain(url: string): string | null {
   }
 }
 
+function extractBareDomain(input: string): string | null {
+  const clean = input.replace(/^www\./, "").toLowerCase().split("/")[0];
+  if (/^[a-z0-9][a-z0-9-]*\.[a-z]{2,}$/.test(clean)) return clean;
+  return null;
+}
+
+function domainToTitle(domain: string): string {
+  // "gqitalia.it" → "GQ Italia", "trustpilot.com" → "Trustpilot"
+  const name = domain.split(".")[0];
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 function classifyDomain(domain: string, brandDomain?: string): ExtractedSource["source_type"] {
   if (brandDomain && domain.includes(brandDomain.replace(/^www\./, "").toLowerCase())) return "brand_owned";
-  if (/amazon|ebay|zalando|shopify|etsy|shop\./.test(domain)) return "ecommerce";
+  if (/amazon|ebay|zalando|shopify|etsy|shop\.|aliexpress/.test(domain)) return "ecommerce";
   if (/wikipedia\.org/.test(domain)) return "wikipedia";
-  if (/instagram|facebook|twitter|tiktok|youtube|linkedin/.test(domain)) return "social";
-  if (/trustpilot|tripadvisor|yelp|recensioni/.test(domain)) return "review";
+  if (/instagram|facebook|twitter|x\.com|tiktok|youtube|linkedin|reddit|threads/.test(domain)) return "social";
+  if (/trustpilot|tripadvisor|yelp|recensioni|glassdoor|g2\.com/.test(domain)) return "review";
   return "media";
 }

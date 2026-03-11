@@ -31,10 +31,7 @@ function chunk<T>(arr: T[], size: number): T[][] {
 
 function buildPrompt(query: string, segmentContext: string, language: string): string {
   const lang = language === "it" ? "Rispondi in italiano." : "Answer in English.";
-  const sourceHint = language === "it"
-    ? "\n\nImportante: nella tua risposta cita esplicitamente i siti web, portali, blog o piattaforme rilevanti includendo il loro dominio (es: nike.com, amazon.it, trustpilot.com)."
-    : "\n\nImportant: in your response explicitly cite relevant websites, portals, blogs or platforms including their domain (e.g.: nike.com, amazon.com, trustpilot.com).";
-  return `${lang}\n\nContesto utente: ${segmentContext}\n\nDomanda: ${query}${sourceHint}`;
+  return `${lang}\n\nContesto utente: ${segmentContext}\n\nDomanda: ${query}`;
 }
 
 // Map short model IDs to actual API model identifiers

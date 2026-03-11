@@ -434,35 +434,34 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
         <div className="card p-5 space-y-3">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-primary" />
-            <h2 className="font-display font-semibold text-foreground">Fonti Estratte</h2>
+            <h2 className="font-display font-semibold text-foreground">Fonti consultate dall&apos;AI</h2>
             <span className="badge badge-muted text-[10px]">{filteredSources.length}</span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-xs text-muted-foreground">
-                  <th className="text-left py-2 pr-4 font-medium">URL / Dominio</th>
-                  <th className="text-left py-2 pr-4 font-medium">Label</th>
-                  <th className="text-left py-2 font-medium">Tipo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSources.map((s: any) => (
-                  <tr key={s.id} className="border-b border-border/50">
-                    <td className="py-2 pr-4 text-foreground">
-                      {s.url ? (
-                        <span className="flex items-center gap-1">
-                          <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0" />
-                          <span className="truncate max-w-[300px]">{s.url}</span>
-                        </span>
-                      ) : s.domain ?? "-"}
-                    </td>
-                    <td className="py-2 pr-4 text-muted-foreground">{s.label ?? "-"}</td>
-                    <td className="py-2"><span className="badge badge-muted text-[10px]">{s.source_type}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex flex-wrap gap-2">
+            {filteredSources.map((s: any) => {
+              const label = s.label || s.domain || "—";
+              const url = s.url || (s.domain ? `https://${s.domain}` : "#");
+              const typeColor = s.source_type === "brand_owned" ? "border-primary/30 bg-primary/5 text-primary"
+                : s.source_type === "review" ? "border-yellow-500/30 bg-yellow-500/5 text-yellow-400"
+                : s.source_type === "social" ? "border-blue-500/30 bg-blue-500/5 text-blue-400"
+                : s.source_type === "ecommerce" ? "border-orange-500/30 bg-orange-500/5 text-orange-400"
+                : s.source_type === "wikipedia" ? "border-muted-foreground/30 bg-muted-foreground/5 text-muted-foreground"
+                : "border-border bg-muted/30 text-foreground";
+              return (
+                <a
+                  key={s.id}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-[2px] border transition-colors hover:opacity-80 ${typeColor}`}
+                  title={s.url || s.domain}
+                >
+                  <ExternalLink className="w-3 h-3 shrink-0" />
+                  <span className="truncate max-w-[200px]">{label}</span>
+                  <span className="font-mono text-[0.5rem] opacity-60 uppercase">{s.source_type}</span>
+                </a>
+              );
+            })}
           </div>
         </div>
       )}

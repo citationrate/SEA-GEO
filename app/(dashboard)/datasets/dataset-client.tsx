@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { Database, ChevronDown, X, Loader2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Database, ChevronDown, X, Loader2, ExternalLink } from "lucide-react";
 
 interface Project {
   id: string;
@@ -34,6 +34,7 @@ interface PromptRow {
   brand_rank: number | null;
   sentiment_score: number | null;
   competitors_found: string[] | null;
+  sources: { url: string; domain: string; label?: string; source_type: string }[];
 }
 
 const MODEL_LABELS: Record<string, string> = {
@@ -430,6 +431,28 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
                   <span key={i} className="text-xs bg-muted border border-border rounded-[2px] px-2 py-0.5 text-foreground">
                     {c}
                   </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Sources */}
+          {row.sources && row.sources.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Fonti consultate dall&apos;AI</p>
+              <div className="flex flex-wrap gap-1.5">
+                {row.sources.map((s, i) => (
+                  <a
+                    key={i}
+                    href={s.url || `https://${s.domain}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs bg-muted border border-border rounded-[2px] px-2 py-1 text-foreground hover:border-primary/30 transition-colors"
+                  >
+                    <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0" />
+                    <span className="truncate max-w-[200px]">{s.label || s.domain}</span>
+                    <span className="font-mono text-[0.45rem] text-muted-foreground uppercase">{s.source_type}</span>
+                  </a>
                 ))}
               </div>
             </div>

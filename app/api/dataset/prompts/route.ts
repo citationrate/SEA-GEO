@@ -34,6 +34,17 @@ export async function GET(request: NextRequest) {
       : { data: [] };
     const analysisMap = new Map((analyses ?? []).map((a: any) => [a.prompt_executed_id, a]));
 
+    // Fetch sources for all prompt IDs
+    const { data: sources } = promptIds.length > 0
+      ? await supabase.from("sources").select("prompt_executed_id, url, domain, label, source_type").in("prompt_executed_id", promptIds)
+      : { data: [] };
+    const sourcesMap = new Map<string, any[]>();
+    for (const s of (sources ?? []) as any[]) {
+      const key = s.prompt_executed_id;
+      if (!sourcesMap.has(key)) sourcesMap.set(key, []);
+      sourcesMap.get(key)!.push(s);
+    }
+
     // Build response rows
     const rows = promptsList.map((p: any) => {
       const q = queryMap.get(p.query_id);
@@ -55,6 +66,12 @@ export async function GET(request: NextRequest) {
         brand_rank: a?.brand_rank ?? null,
         sentiment_score: a?.sentiment_score ?? null,
         competitors_found: a?.competitors_found ?? null,
+        sources: (sourcesMap.get(p.id) ?? []).map((s: any) => ({
+          url: s.url,
+          domain: s.domain,
+          label: s.label,
+          source_type: s.source_type,
+        })),
       };
     });
 
