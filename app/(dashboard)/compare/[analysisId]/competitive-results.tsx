@@ -54,25 +54,21 @@ function fmLabel(fm: string | null, brandA: string, brandB: string): string {
 export function CompetitiveResults({
   analysis,
   prompts,
-  projectId,
 }: {
   analysis: Analysis;
   prompts: Prompt[];
-  projectId: string;
 }) {
   const router = useRouter();
   const a = analysis;
   const isRunning = a.status === "running" || a.status === "pending";
   const label = compScoreLabel(a.comp_score_a);
 
-  // Auto-refresh while running
   useEffect(() => {
     if (!isRunning) return;
     const interval = setInterval(() => router.refresh(), 5000);
     return () => clearInterval(interval);
   }, [isRunning, router]);
 
-  // Aggregate key arguments
   const argCounts = new Map<string, number>();
   for (const p of prompts) {
     for (const arg of p.key_arguments ?? []) {
@@ -86,14 +82,13 @@ export function CompetitiveResults({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-      {/* Header */}
       <div>
         <a
-          href={`/projects/${projectId}/competitive`}
+          href="/compare"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Torna alle analisi
+          Torna al confronto
         </a>
         <div className="flex items-center gap-3">
           <Swords className="w-6 h-6 text-primary" />
@@ -108,7 +103,6 @@ export function CompetitiveResults({
         </div>
       </div>
 
-      {/* Running state */}
       {isRunning && (
         <div className="card p-8 text-center space-y-3">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
@@ -118,7 +112,6 @@ export function CompetitiveResults({
         </div>
       )}
 
-      {/* KPI Cards */}
       {a.status === "completed" && (
         <>
           <div className="grid grid-cols-3 gap-4">
@@ -193,7 +186,6 @@ export function CompetitiveResults({
             </div>
           </div>
 
-          {/* Key Arguments */}
           {topArgs.length > 0 && (
             <div className="card p-5 space-y-3">
               <div className="flex items-center gap-2">
@@ -209,14 +201,13 @@ export function CompetitiveResults({
                     className="px-3 py-1.5 rounded-[2px] text-sm bg-muted/50 border border-border text-foreground"
                   >
                     {arg}
-                    <span className="ml-1.5 text-xs text-muted-foreground">×{count}</span>
+                    <span className="ml-1.5 text-xs text-muted-foreground">&times;{count}</span>
                   </span>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Prompts Table */}
           <div className="card overflow-hidden">
             <div className="px-5 py-3 border-b border-border">
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
@@ -232,7 +223,7 @@ export function CompetitiveResults({
                     <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">Run</th>
                     <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">Anteprima</th>
                     <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">Preferenza</th>
-                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">1° Menzione</th>
+                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">1a Menzione</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -266,7 +257,6 @@ export function CompetitiveResults({
         </>
       )}
 
-      {/* Failed state */}
       {a.status === "failed" && (
         <div className="card p-8 text-center space-y-2">
           <p className="text-destructive font-medium">Analisi fallita</p>

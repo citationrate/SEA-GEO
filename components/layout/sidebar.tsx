@@ -42,12 +42,15 @@ const NAV = [
   },
 ];
 
+const PRO_ROUTES = new Set(["/compare"]);
+
 interface SidebarProps {
   profile: { full_name?: string | null; email?: string; plan?: string } | null;
 }
 
 export function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname();
+  const isPro = profile?.plan === "pro" || profile?.plan === "agency";
 
   function isActive(href: string) {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -74,29 +77,39 @@ export function Sidebar({ profile }: SidebarProps) {
               {group}
             </p>
             <ul className="space-y-0.5">
-              {items.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] text-sm font-sans transition-all duration-100",
-                      isActive(item.href)
-                        ? "text-primary font-medium"
-                        : "text-muted-foreground hover:text-foreground hover:bg-surface-2"
-                    )}
-                    style={isActive(item.href) ? { background: "rgba(126,184,154,0.06)" } : undefined}
-                  >
-                    <item.icon className={cn(
-                      "w-[15px] h-[15px] flex-shrink-0",
-                      isActive(item.href) ? "text-primary" : "text-muted-foreground"
-                    )} />
-                    <span className="flex-1">{item.label}</span>
-                    {isActive(item.href) && (
-                      <ChevronRight className="w-3 h-3 text-primary/50" />
-                    )}
-                  </Link>
-                </li>
-              ))}
+              {items.map((item) => {
+                const needsPro = PRO_ROUTES.has(item.href);
+                const locked = needsPro && !isPro;
+
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={locked ? "/compare?upgrade=1" : item.href}
+                      className={cn(
+                        "flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] text-sm font-sans transition-all duration-100",
+                        locked
+                          ? "text-muted-foreground/50 cursor-default"
+                          : isActive(item.href)
+                            ? "text-primary font-medium"
+                            : "text-muted-foreground hover:text-foreground hover:bg-surface-2"
+                      )}
+                      style={isActive(item.href) && !locked ? { background: "rgba(126,184,154,0.06)" } : undefined}
+                    >
+                      <item.icon className={cn(
+                        "w-[15px] h-[15px] flex-shrink-0",
+                        locked ? "text-muted-foreground/40" : isActive(item.href) ? "text-primary" : "text-muted-foreground"
+                      )} />
+                      <span className="flex-1">{item.label}</span>
+                      {locked && (
+                        <span className="font-mono text-[0.5rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">PRO</span>
+                      )}
+                      {isActive(item.href) && !locked && (
+                        <ChevronRight className="w-3 h-3 text-primary/50" />
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}

@@ -1,13 +1,15 @@
 import { createServerClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { CompetitiveResults } from "./competitive-results";
 
 export default async function CompetitiveResultsPage({
   params,
 }: {
-  params: { id: string; analysisId: string };
+  params: { analysisId: string };
 }) {
   const supabase = createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
   const { data: analysis } = await (supabase.from("competitive_analyses") as any)
     .select("*")
@@ -27,7 +29,6 @@ export default async function CompetitiveResultsPage({
     <CompetitiveResults
       analysis={analysis}
       prompts={(prompts ?? []) as any[]}
-      projectId={params.id}
     />
   );
 }
