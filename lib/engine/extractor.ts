@@ -34,6 +34,81 @@ function positionScore(rank: number | null, nCompetitors: number): number {
   return Math.max(0, 1 - ((rank - 1) / nCompetitors));
 }
 
+async function extractCompetitorsTopicsSources(
+  response: string,
+  targetBrand: string,
+  knownCompetitors: string[],
+): Promise<Pick<ExtractionResult, "topics" | "competitors_found" | "sources">> {
+  const prompt = `Sei un analista AI. Il brand "${targetBrand}" NON è presente in questa risposta.
+Competitor conosciuti: ${knownCompetitors.length > 0 ? knownCompetitors.join(", ") : "nessuno specificato"}
+
+Estrai comunque:
+- competitors_found: tutti i brand citati nella risposta con rank e sentiment (come li descrive l'AI)
+- topics: argomenti principali trattati (max 5)
+- sources: tutti i siti/domini citati
+
+Rispondi SOLO con JSON valido, senza markdown o testo aggiuntivo.
+
+Schema JSON richiesto:
+{
+  "topics": string[],
+  "competitors_found": [{ "name": string, "rank": number, "sentiment": number, "recommendation": number }],
+  "sources": [{ "url": string|null, "domain": string, "label": string|null, "source_type": string, "is_brand_owned": boolean, "context": string }]
+}
+
+REGOLE per competitors_found:
+Estrai tutti i brand, aziende, insegne o entità commerciali citate.
+INCLUDI: qualsiasi entità con un nome proprio specifico.
+ESCLUDI: il brand target "${targetBrand}", sub-brand del target, descrizioni generiche senza nome proprio.
+Restituisci SOLO il nome commerciale.
+
+FONTI: Estrai TUTTI i siti web, domini, URL, blog, riviste, piattaforme citati o menzionati nella risposta.
+Se la risposta cita una pagina specifica, estrai l'URL completo con path. Se hai solo il dominio usa domain, se hai il path completo usa url.
+source_type: media|review|ecommerce|social|brand_owned|competitor|wikipedia|other
+
+Analizza questa risposta:
+
+${response}`;
+
+  try {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const message = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 1000,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const raw = message.content[0]?.type === "text" ? message.content[0].text : "{}";
+    const cleaned = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+    const parsed = JSON.parse(cleaned);
+    console.log("[extractor] partial result (no brand):", JSON.stringify(parsed));
+
+    return {
+      topics: Array.isArray(parsed.topics) ? parsed.topics : [],
+      competitors_found: Array.isArray(parsed.competitors_found)
+        ? parsed.competitors_found.map((c: any) =>
+            typeof c === "string"
+              ? { name: c, rank: null, sentiment: null, recommendation: null }
+              : { name: c.name, rank: c.rank ?? null, sentiment: c.sentiment ?? null, recommendation: c.recommendation ?? null }
+          )
+        : [],
+      sources: Array.isArray(parsed.sources)
+        ? parsed.sources.map((s: any) => ({
+            url: s.url ?? null,
+            domain: s.domain ?? null,
+            label: s.label ?? null,
+            source_type: VALID_SOURCE_TYPES.includes(s.source_type) ? s.source_type : "other",
+            is_brand_owned: Boolean(s.is_brand_owned),
+            context: s.context ?? null,
+          }))
+        : [],
+    };
+  } catch (e) {
+    console.error("[extractor] partial extraction failed:", e);
+    return { topics: [], competitors_found: [], sources: [] };
+  }
+}
+
 export async function extractFromResponse(
   response: string,
   targetBrand: string,
@@ -46,23 +121,27 @@ export async function extractFromResponse(
 
   console.log("[extractor] brand literal check:", brandMentionedLiteral, "→", targetBrand);
 
+  console.log("[extractor] using Claude Haiku as extractor");
+
+  // If brand not present, use a lighter prompt for competitors/topics/sources only
   if (!brandMentionedLiteral) {
+    const partialResult = await extractCompetitorsTopicsSources(
+      response, targetBrand, knownCompetitors
+    );
     return {
       brand_mentioned: false,
       brand_rank: null,
       brand_occurrences: 0,
       sentiment_score: 0,
-      tone_score: 0,
-      position_score: 0,
-      recommendation_score: 0,
+      tone_score: null,
+      position_score: null,
+      recommendation_score: null,
       brand_adjectives: [],
-      topics: [],
-      competitors_found: [],
-      sources: [],
+      topics: partialResult.topics,
+      competitors_found: partialResult.competitors_found,
+      sources: partialResult.sources,
     };
   }
-
-  console.log("[extractor] using Claude Haiku as extractor");
 
   const systemPrompt = `Sei un analista AI. Analizza la risposta di un modello AI ed estrai dati strutturati.
 
