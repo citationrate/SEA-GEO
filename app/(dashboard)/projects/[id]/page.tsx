@@ -1,6 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Cpu, Settings } from "lucide-react";
+import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Cpu, Settings, Swords } from "lucide-react";
 import { AnalysisLauncher } from "./analysis-launcher";
 import { AnalysisProgress } from "./analysis-progress";
 import { ProjectAVITrend } from "./project-avi-trend";
@@ -402,6 +402,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           >
             <Users className="w-4 h-4" />
             Segmenti
+          </a>
+          <a
+            href={`/projects/${params.id}/competitive`}
+            className="flex items-center gap-2 bg-surface border border-border text-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:border-primary/30 transition-colors"
+          >
+            <Swords className="w-4 h-4" />
+            Competitive
           </a>
         </div>
         <DeleteProjectButton projectId={params.id} projectName={proj.name} />
