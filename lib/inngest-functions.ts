@@ -20,6 +20,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 interface AIModelResult {
   text: string;
   sources: ExtractedSource[];
+  error?: string;
 }
 
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -117,8 +118,9 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
           if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
         }
       }
-      console.error("[Gemini] failed after 2 attempts:", lastError?.message ?? lastError);
-      return empty;
+      const errMsg = lastError?.message ?? String(lastError ?? "Errore sconosciuto Gemini");
+      console.error("[Gemini] failed after 2 attempts:", errMsg);
+      return { ...empty, error: `[Gemini] ${errMsg}` };
     }
 
     if (provider === "xai") {
@@ -173,8 +175,9 @@ async function callAIModel(prompt: string, model: string, browsing = false, bran
     const text = completion.choices[0]?.message?.content ?? "";
     return { text, sources: extractFromText(text, brandDomain ?? undefined) };
   } catch (err) {
-    console.error(`[callAIModel] ${model} failed:`, err instanceof Error ? err.message : err);
-    return empty;
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[callAIModel] ${model} failed:`, errMsg);
+    return { ...empty, error: `[${model}] ${errMsg}` };
   }
 }
 
@@ -405,12 +408,13 @@ async function executePrompt(
   try {
     aiResult = await callAIModel(promptText, task.model, task.browsing, task.brandDomain);
   } catch (e: any) {
-    console.error("[executePrompt] callAIModel crashed:", e?.message);
-    aiResult = { text: "", sources: [] };
+    const crashMsg = e?.message ?? String(e);
+    console.error("[executePrompt] callAIModel crashed:", crashMsg);
+    aiResult = { text: "", sources: [], error: `[${task.model}] ${crashMsg}` };
   }
 
   const rawText = aiResult.text;
-  const promptError: string | null = rawText ? null : "Risposta vuota dal modello";
+  const promptError: string | null = rawText ? null : (aiResult.error ?? "Risposta vuota dal modello");
 
   // Update prompt with response
   await (supabase.from("prompts_executed") as any)

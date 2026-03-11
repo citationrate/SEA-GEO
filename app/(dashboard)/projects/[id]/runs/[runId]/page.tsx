@@ -88,6 +88,23 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
   const mentionsList = (competitorMentions ?? []) as any[];
   const analysesList = (analyses ?? []) as any[];
 
+  // Error stats for banner
+  const errorPrompts = (prompts ?? []).filter((p: any) => p.error);
+  const errorCount = errorPrompts.length;
+  const hasGeminiErrors = errorPrompts.some((p: any) =>
+    (p.model as string)?.toLowerCase().includes("gemini") ||
+    (p.error as string)?.toLowerCase().includes("gemini")
+  );
+  const hasGptErrors = errorPrompts.some((p: any) =>
+    (p.model as string)?.toLowerCase().includes("gpt") ||
+    (p.model as string)?.toLowerCase().startsWith("o1") ||
+    (p.model as string)?.toLowerCase().startsWith("o3")
+  );
+  const hasQuotaErrors = errorPrompts.some((p: any) => {
+    const err = (p.error as string)?.toLowerCase() ?? "";
+    return err.includes("429") || err.includes("quota") || err.includes("rate");
+  });
+
   // Unique models for filter pills
   const models = Array.from(new Set((prompts ?? []).map((p: any) => p.model as string)));
 
@@ -123,6 +140,20 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
   return (
     <div className="space-y-6 max-w-[1400px] animate-fade-in">
       <RunAutoRefresh status={r.status} />
+
+      {/* Error banner */}
+      {errorCount > 0 && (
+        <div className="card border-destructive/30 bg-destructive/5 p-3 flex items-center gap-2 text-sm">
+          <span className="text-destructive font-mono text-xs">&#9888;</span>
+          <span className="text-destructive">
+            {errorCount} prompt falliti
+            {hasGeminiErrors && hasQuotaErrors ? " — Gemini: quota esaurita (rate limit)" : hasGeminiErrors ? " — Gemini: errore API" : ""}
+            {hasGptErrors ? " — GPT: errore API" : ""}
+            {!hasGeminiErrors && !hasGptErrors ? " — Errore API" : ""}
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <a

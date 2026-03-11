@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Globe, Tag, Users, ExternalLink, Eye, Hash, TrendingUp, TrendingDown } from "lucide-react";
+import { Globe, Tag, Users, ExternalLink, Eye, Hash, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
 
 interface RunMetricsProps {
   prompts: any[];
@@ -22,6 +22,14 @@ function sentimentColor(v: number): string {
   if (v > 0.1) return "text-success";
   if (v < -0.1) return "text-destructive";
   return "text-muted-foreground";
+}
+
+function classifyError(error: string | null): string {
+  if (!error) return "";
+  const lower = error.toLowerCase();
+  if (lower.includes("429") || lower.includes("quota") || lower.includes("rate")) return "Quota esaurita";
+  if (lower.includes("timeout")) return "Timeout";
+  return "Errore API";
 }
 
 export function RunMetrics({ prompts, analyses, sources, models, competitorMentions, brandAviScore, targetBrand, perModelAvi }: RunMetricsProps) {
@@ -460,37 +468,51 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
               <tbody>
                 {filteredPrompts.map((p: any, i: number) => {
                   const analysis = analysisMap.get(p.id) as any;
+                  const isError = !!p.error;
+                  const errorLabel = classifyError(p.error);
                   return (
-                    <tr key={p.id} className="border-b border-border/50 hover:bg-muted/30">
-                      <td className="py-2 pr-3 text-muted-foreground">{i + 1}</td>
-                      <td className="py-2 pr-3"><span className="badge badge-muted text-[10px]">{p.model}</span></td>
-                      <td className="py-2 pr-3 text-muted-foreground">{p.run_number}</td>
-                      <td className="py-2 pr-3">
-                        {analysis ? (
-                          analysis.brand_mentioned
-                            ? <span className="text-success font-medium">Si</span>
-                            : <span className="text-muted-foreground">No</span>
-                        ) : <span className="text-muted-foreground">-</span>}
-                      </td>
-                      <td className="py-2 pr-3 text-foreground">{analysis?.brand_rank ?? "-"}</td>
-                      <td className="py-2 pr-3">
-                        {analysis?.sentiment_score != null ? (
-                          <span className={sentimentColor(analysis.sentiment_score)}>
-                            {sentimentSign(analysis.sentiment_score)}{analysis.sentiment_score.toFixed(2)}
-                          </span>
-                        ) : "-"}
-                      </td>
-                      <td className="py-2 pr-3 text-muted-foreground text-xs max-w-[200px] truncate">
-                        {analysis?.competitors_found?.length ? analysis.competitors_found.join(", ") : "-"}
-                      </td>
-                      <td className="py-2">
-                        {p.error
-                          ? <span className="badge badge-muted text-destructive text-[10px]">Errore</span>
-                          : p.raw_response
-                            ? <span className="badge badge-success text-[10px]">OK</span>
-                            : <span className="badge badge-muted text-[10px]">Pending</span>}
-                      </td>
-                    </tr>
+                    <>
+                      <tr key={p.id} className={`border-b border-border/50 ${isError ? "bg-destructive/5 border-l-2 border-l-destructive" : "hover:bg-muted/30"}`}>
+                        <td className="py-2 pr-3 text-muted-foreground">{i + 1}</td>
+                        <td className="py-2 pr-3"><span className="badge badge-muted text-[10px]">{p.model}</span></td>
+                        <td className="py-2 pr-3 text-muted-foreground">{p.run_number}</td>
+                        <td className="py-2 pr-3">
+                          {analysis ? (
+                            analysis.brand_mentioned
+                              ? <span className="text-success font-medium">Si</span>
+                              : <span className="text-muted-foreground">No</span>
+                          ) : <span className="text-muted-foreground">-</span>}
+                        </td>
+                        <td className="py-2 pr-3 text-foreground">{analysis?.brand_rank ?? "-"}</td>
+                        <td className="py-2 pr-3">
+                          {analysis?.sentiment_score != null ? (
+                            <span className={sentimentColor(analysis.sentiment_score)}>
+                              {sentimentSign(analysis.sentiment_score)}{analysis.sentiment_score.toFixed(2)}
+                            </span>
+                          ) : "-"}
+                        </td>
+                        <td className="py-2 pr-3 text-muted-foreground text-xs max-w-[200px] truncate">
+                          {analysis?.competitors_found?.length ? analysis.competitors_found.join(", ") : "-"}
+                        </td>
+                        <td className="py-2">
+                          {isError
+                            ? <span className="badge badge-muted text-destructive text-[10px] flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                {errorLabel || "Errore"}
+                              </span>
+                            : p.raw_response
+                              ? <span className="badge badge-success text-[10px]">OK</span>
+                              : <span className="badge badge-muted text-[10px]">Pending</span>}
+                        </td>
+                      </tr>
+                      {isError && (
+                        <tr key={`${p.id}-err`} className="bg-destructive/5">
+                          <td colSpan={8} className="py-1.5 px-3 text-xs text-destructive/80 font-mono truncate">
+                            {p.error}
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   );
                 })}
               </tbody>
