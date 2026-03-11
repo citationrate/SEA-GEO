@@ -62,7 +62,8 @@ export default async function SourcesPage({
     filteredRunIds = (allRuns ?? []).map((r: any) => r.id);
   }
 
-  // Get sources filtered by run_id
+  // Get sources filtered by active run IDs only
+  const activeRunIds = (allRuns ?? []).map((r: any) => r.id);
   let sourcesList: any[] = [];
   if (filteredRunIds.length > 0) {
     const { data: sources } = await supabase
@@ -71,12 +72,13 @@ export default async function SourcesPage({
       .in("project_id", targetIds)
       .in("run_id", filteredRunIds);
     sourcesList = (sources ?? []) as any[];
-  } else if (!selectedModel && targetIds.length > 0) {
-    // No model filter + no runs = show all sources for project
+  } else if (!selectedModel && activeRunIds.length > 0) {
+    // No model filter — show sources from active runs only
     const { data: sources } = await supabase
       .from("sources")
       .select("*")
-      .in("project_id", targetIds);
+      .in("project_id", targetIds)
+      .in("run_id", activeRunIds);
     sourcesList = (sources ?? []) as any[];
   }
 

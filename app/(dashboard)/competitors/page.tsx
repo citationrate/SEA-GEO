@@ -50,19 +50,22 @@ export default async function CompetitorsPage({
     filteredRunIds = (allRuns ?? []).map((r: any) => r.id);
   }
 
-  // Fetch competitors by project_id (mentions filtered via response_analysis below)
-  const { data: competitors } = targetIds.length > 0
+  // Active (non-archived) run IDs
+  const activeRunIds = (allRuns ?? []).map((r: any) => r.id);
+
+  // Fetch competitors discovered in active runs only
+  const { data: competitors } = activeRunIds.length > 0
     ? await supabase
         .from("competitors")
         .select("*")
         .in("project_id", targetIds)
+        .in("discovered_at_run_id", activeRunIds)
         .order("created_at", { ascending: true })
     : { data: [] };
 
   const compList = (competitors ?? []) as any[];
 
   // Fetch total historical mention counts from competitor_mentions (only active runs)
-  const activeRunIds = (allRuns ?? []).map((r: any) => r.id);
   const { data: allMentionRows } = activeRunIds.length > 0
     ? await (supabase.from("competitor_mentions") as any)
         .select("competitor_name")
