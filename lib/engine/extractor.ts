@@ -55,11 +55,11 @@ async function extractCompetitorsTopicsSources(
 Competitor conosciuti: ${knownCompetitors.length > 0 ? knownCompetitors.join(", ") : "nessuno specificato"}
 
 Estrai comunque:
-- competitors_found: tutti i brand citati nella risposta con rank e sentiment (come li descrive l'AI)
-- topics: argomenti principali trattati (max 5)
-- sources: tutti i siti/domini citati
+- competitors_found: max 3 brand più rilevanti citati nella risposta con rank e sentiment
+- topics: max 3 argomenti principali trattati
+- sources: max 3 siti/domini più rilevanti citati
 
-Rispondi SOLO con JSON valido, senza markdown o testo aggiuntivo.
+Rispondi SOLO con JSON valido. Max 3 competitor, max 3 topic, max 3 fonti. Nessun testo prima o dopo il JSON.
 
 Schema JSON richiesto:
 {
@@ -86,13 +86,32 @@ ${cleanResponse}`;
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 1000,
+      max_tokens: 2000,
       messages: [{ role: "user", content: prompt }],
     });
 
     const raw = message.content[0]?.type === "text" ? message.content[0].text : "{}";
-    const cleaned = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
-    const parsed = JSON.parse(cleaned);
+    const stripped = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+
+    let parsed;
+    try {
+      const jsonMatch = stripped.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(jsonMatch?.[0] ?? stripped);
+    } catch {
+      console.log("[extractor] JSON parse failed, attempting partial recovery");
+      try {
+        const competitorsMatch = stripped.match(/"competitors_found"\s*:\s*(\[[\s\S]*?\])/);
+        const topicsMatch = stripped.match(/"topics"\s*:\s*(\[[\s\S]*?\])/);
+        parsed = {
+          competitors_found: competitorsMatch ? JSON.parse(competitorsMatch[1]) : [],
+          topics: topicsMatch ? JSON.parse(topicsMatch[1]) : [],
+          sources: [],
+        };
+      } catch {
+        console.log("[extractor] full parse failure, returning empty");
+        parsed = { competitors_found: [], topics: [], sources: [] };
+      }
+    }
     console.log("[extractor] partial result (no brand):", JSON.stringify(parsed));
 
     return {

@@ -1,0 +1,2 @@
+ALTER TABLE competitor_avi
+ADD COLUMN IF NOT EXISTS consistency FLOAT DEFAULT 0;
