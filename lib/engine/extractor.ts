@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 
 export interface ExtractionResult {
   brand_mentioned: boolean;
@@ -39,6 +39,31 @@ export async function extractFromResponse(
   targetBrand: string,
   knownCompetitors: string[]
 ): Promise<ExtractionResult> {
+  // Literal brand check — skip Claude call entirely if brand not present
+  const brandMentionedLiteral = response
+    .toLowerCase()
+    .includes(targetBrand.toLowerCase());
+
+  console.log("[extractor] brand literal check:", brandMentionedLiteral, "→", targetBrand);
+
+  if (!brandMentionedLiteral) {
+    return {
+      brand_mentioned: false,
+      brand_rank: null,
+      brand_occurrences: 0,
+      sentiment_score: 0,
+      tone_score: 0,
+      position_score: 0,
+      recommendation_score: 0,
+      brand_adjectives: [],
+      topics: [],
+      competitors_found: [],
+      sources: [],
+    };
+  }
+
+  console.log("[extractor] using Claude Haiku as extractor");
+
   const systemPrompt = `Sei un analista AI. Analizza la risposta di un modello AI ed estrai dati strutturati.
 
 Il brand target è: "${targetBrand}"
@@ -132,24 +157,30 @@ FORMATO:
 - Se non sei sicuro del nome esatto, usa il nome più comunemente conosciuto
 - Array di oggetti: [{"name": "Esselunga", "rank": 1, "sentiment": 0.6, "recommendation": 0.5}]`;
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0,
-    response_format: { type: "json_object" },
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const message = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 1000,
     messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Analizza questa risposta:\n\n${response}` },
+      {
+        role: "user",
+        content: `${systemPrompt}\n\nAnalizza questa risposta:\n\n${response}`,
+      },
     ],
   });
 
-  const raw = completion.choices[0]?.message?.content ?? "{}";
+  const raw = message.content[0]?.type === "text"
+    ? message.content[0].text
+    : "{}";
 
   try {
-    const parsed = JSON.parse(raw);
+    // Strip markdown code fences if present
+    const cleaned = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+    const parsed = JSON.parse(cleaned);
     console.log("[extractor] result:", JSON.stringify(parsed));
 
-    const brandMentioned = Boolean(parsed.brand_mentioned);
+    // Always use literal check for brand_mentioned
+    const brandMentioned = brandMentionedLiteral;
 
     // Enforce brand_rank when brand is mentioned
     let brandRank: number | null = parsed.brand_rank != null ? Number(parsed.brand_rank) : null;
