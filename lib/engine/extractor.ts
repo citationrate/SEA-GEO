@@ -29,6 +29,120 @@ export interface ExtractionResult {
 
 const VALID_SOURCE_TYPES = ["brand_owned", "competitor", "media", "review", "social", "ecommerce", "wikipedia", "other"];
 
+/* ─── Brand mention detection ─── */
+
+/** Strip accents: "Caffè" → "Caffe", "Ménard" → "Menard" */
+function stripAccents(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Escape a string for use inside a RegExp */
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Build brand name variants for matching:
+ * - Full name as-is
+ * - Full name with accents stripped
+ * - First distinctive word (for multi-word brands like "Costa Crociere" → "Costa")
+ * - Common international swaps (Crociere↔Cruises, Gruppo↔Group, etc.)
+ */
+function buildBrandVariants(brand: string): string[] {
+  const variants = new Set<string>();
+
+  const clean = brand.trim();
+  if (!clean) return [];
+
+  // Full name
+  variants.add(clean.toLowerCase());
+  variants.add(stripAccents(clean).toLowerCase());
+
+  // International name swaps (Italian ↔ English)
+  const swaps: [RegExp, string][] = [
+    [/\bCrociere\b/i, "Cruises"],
+    [/\bCruises\b/i, "Crociere"],
+    [/\bGruppo\b/i, "Group"],
+    [/\bGroup\b/i, "Gruppo"],
+    [/\bAssicurazioni\b/i, "Insurance"],
+    [/\bInsurance\b/i, "Assicurazioni"],
+    [/\bEnergia\b/i, "Energy"],
+    [/\bEnergy\b/i, "Energia"],
+    [/\bAlimentari\b/i, "Foods"],
+    [/\bFoods\b/i, "Alimentari"],
+  ];
+  for (const [pattern, replacement] of swaps) {
+    if (pattern.test(clean)) {
+      variants.add(clean.replace(pattern, replacement).toLowerCase());
+    }
+  }
+
+  // First distinctive word for multi-word brands
+  // Skip generic prefixes that shouldn't match alone
+  const GENERIC_WORDS = new Set([
+    "il", "la", "le", "lo", "i", "gli", "un", "una", "the", "a", "an",
+    "di", "del", "della", "dei", "delle", "of", "de",
+    "san", "saint", "new", "old", "gran", "grande", "big",
+    "gruppo", "group", "società", "company", "brand",
+  ]);
+
+  const words = clean.split(/\s+/);
+  if (words.length >= 2) {
+    const firstWord = words[0];
+    // Only use first word if it's distinctive enough (>= 3 chars, not generic)
+    if (firstWord.length >= 3 && !GENERIC_WORDS.has(firstWord.toLowerCase())) {
+      variants.add(firstWord.toLowerCase());
+      variants.add(stripAccents(firstWord).toLowerCase());
+    }
+  }
+
+  // Handle "&" / "and" / "e" variations: "Dolce & Gabbana" ↔ "Dolce and Gabbana"
+  if (clean.includes("&")) {
+    variants.add(clean.replace(/\s*&\s*/g, " and ").toLowerCase());
+    variants.add(clean.replace(/\s*&\s*/g, " e ").toLowerCase());
+  }
+  if (/\band\b/i.test(clean)) {
+    variants.add(clean.replace(/\band\b/gi, "&").toLowerCase());
+  }
+
+  return Array.from(variants);
+}
+
+interface BrandDetection {
+  mentioned: boolean;
+  occurrences: number;
+  matchedVariant: string | null;
+}
+
+/**
+ * Detect brand mentions using multiple strategies:
+ * 1. Exact full-name match (case-insensitive, accent-insensitive)
+ * 2. International name variations
+ * 3. First-word partial match (for multi-word brands)
+ */
+function detectBrandMention(response: string, targetBrand: string): BrandDetection {
+  const responseLower = response.toLowerCase();
+  const responseNorm = stripAccents(responseLower);
+  const variants = buildBrandVariants(targetBrand);
+
+  // Try full-name variants first (higher confidence), then partial
+  // Sort: longer variants first (full name before first-word)
+  const sorted = variants.sort((a, b) => b.length - a.length);
+
+  for (const variant of sorted) {
+    const variantNorm = stripAccents(variant);
+    // Use word-boundary matching to avoid false positives
+    // e.g. "Costa" should match "Costa" but not "Costabile"
+    const pattern = new RegExp(`\\b${escapeRegex(variantNorm)}\\b`, "gi");
+    const matches = responseNorm.match(pattern);
+    if (matches && matches.length > 0) {
+      return { mentioned: true, occurrences: matches.length, matchedVariant: variant };
+    }
+  }
+
+  return { mentioned: false, occurrences: 0, matchedVariant: null };
+}
+
 function positionScore(rank: number | null, nCompetitors: number): number {
   if (!rank || rank === 0) return 0.5; // presente ma non classificabile
   if (nCompetitors === 0) return 0.7;  // unico citato, nessun confronto
@@ -158,18 +272,22 @@ export async function extractFromResponse(
   sector?: string,
   brandType?: string,
 ): Promise<ExtractionResult> {
-  // Literal brand check — skip Claude call entirely if brand not present
-  const brandMentionedLiteral = response
-    .toLowerCase()
-    .includes(targetBrand.toLowerCase());
+  // Robust brand detection with variants and partial matching
+  const detection = detectBrandMention(response, targetBrand);
 
-  console.log("[extractor] brand literal check:", brandMentionedLiteral, "→", targetBrand);
+  console.log("[extractor] brand detection:", {
+    brand: targetBrand,
+    mentioned: detection.mentioned,
+    occurrences: detection.occurrences,
+    matchedVariant: detection.matchedVariant,
+    responsePreview: response.substring(0, 200),
+  });
 
   console.log("[extractor] using Claude Haiku as extractor");
 
   // If brand not present, use a lighter prompt for competitors/topics/sources only
-  if (!brandMentionedLiteral) {
-    console.log("[extractor] brand not found, running partial extraction for:", response.substring(0, 100));
+  if (!detection.mentioned) {
+    console.log("[extractor] brand not found in response, running partial extraction. Variants tried:", buildBrandVariants(targetBrand));
     const partialResult = await extractCompetitorsTopicsSources(
       response, targetBrand, knownCompetitors, sector, brandType
     );
@@ -316,8 +434,8 @@ FORMATO: Restituisci SOLO il nome commerciale.`;
     const parsed = JSON.parse(cleaned);
     console.log("[extractor] result:", JSON.stringify(parsed));
 
-    // Always use literal check for brand_mentioned
-    const brandMentioned = brandMentionedLiteral;
+    // Use robust detection result for brand_mentioned
+    const brandMentioned = detection.mentioned;
 
     // Enforce brand_rank when brand is mentioned
     let brandRank: number | null = parsed.brand_rank != null ? Number(parsed.brand_rank) : null;
@@ -349,7 +467,7 @@ FORMATO: Restituisci SOLO il nome commerciale.`;
     return {
       brand_mentioned: brandMentioned,
       brand_rank: brandRank,
-      brand_occurrences: Number(parsed.brand_occurrences) || 0,
+      brand_occurrences: Number(parsed.brand_occurrences) || detection.occurrences,
       sentiment_score: sentimentFinal,
       tone_score: toneScore,
       position_score: posScore,
