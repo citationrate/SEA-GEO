@@ -68,15 +68,18 @@ export default async function CompetitorsPage({
   // Fetch total historical mention counts from competitor_mentions (only active runs)
   const { data: allMentionRows } = activeRunIds.length > 0
     ? await (supabase.from("competitor_mentions") as any)
-        .select("competitor_name")
+        .select("competitor_name, competitor_type")
         .in("project_id", targetIds)
         .in("run_id", activeRunIds)
     : { data: [] };
 
   const totalMentionMap = new Map<string, number>();
+  const compTypeMap = new Map<string, string>();
   for (const m of (allMentionRows ?? []) as any[]) {
     const key = (m.competitor_name as string).toLowerCase().trim();
     totalMentionMap.set(key, (totalMentionMap.get(key) ?? 0) + 1);
+    // Keep latest type (last row wins)
+    if (m.competitor_type) compTypeMap.set(key, m.competitor_type);
   }
 
   // Use filtered run IDs for stats
@@ -166,6 +169,7 @@ export default async function CompetitorsPage({
     firstSeen: string;
     lastSeen: string;
     themeAnalysis: ThemeAnalysis | null;
+    competitorType: string;
   }
 
   // Case-insensitive lookup: normalizedName -> original display name
@@ -203,6 +207,7 @@ export default async function CompetitorsPage({
         firstSeen: c.created_at,
         lastSeen: c.created_at,
         themeAnalysis: c.theme_analysis && Object.keys(c.theme_analysis).length > 0 ? c.theme_analysis : null,
+        competitorType: compTypeMap.get(key) ?? "direct",
       });
     }
   }
@@ -230,6 +235,7 @@ export default async function CompetitorsPage({
         firstSeen: "",
         lastSeen: "",
         themeAnalysis: null,
+        competitorType: compTypeMap.get(key) ?? "direct",
       });
     }
   }
@@ -295,6 +301,7 @@ export default async function CompetitorsPage({
         rows={rows.map((r) => ({
           ...r,
           aviScore: compAviMap.get(r.name.toLowerCase().trim()) ?? null,
+          competitorType: r.competitorType,
           projects: r.projects.map((p) => ({ id: p.id, name: p.name, brand: p.brand })),
         }))}
         topicGroups={topicGroups}

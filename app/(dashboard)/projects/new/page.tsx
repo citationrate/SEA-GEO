@@ -78,6 +78,8 @@ export default function NewProjectPage() {
 
   const [name, setName] = useState("");
   const [targetBrand, setTargetBrand] = useState("");
+  const [sector, setSector] = useState("");
+  const [brandType, setBrandType] = useState("manufacturer");
   const [competitors, setCompetitors] = useState<string[]>([]);
   const [competitorInput, setCompetitorInput] = useState("");
   const [marketContext, setMarketContext] = useState("");
@@ -146,6 +148,8 @@ export default function NewProjectPage() {
         body: JSON.stringify({
           name,
           target_brand: targetBrand,
+          sector: sector || null,
+          brand_type: brandType,
           website_url: websiteUrl || null,
           known_competitors: competitors,
           market_context: marketContext || null,
@@ -210,6 +214,38 @@ export default function NewProjectPage() {
             placeholder="Es. Acme Inc"
             className="input-base"
           />
+        </div>
+
+        {/* Settore e Tipo Brand */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Settore</label>
+            <input
+              type="text"
+              value={sector}
+              onChange={(e) => setSector(e.target.value)}
+              placeholder="es. Alimentare, Moda, Finanza, Automotive..."
+              className="input-base"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Tipo Brand</label>
+            <select
+              value={brandType}
+              onChange={(e) => setBrandType(e.target.value)}
+              className="input-base"
+            >
+              <option value="manufacturer">Produttore / Brand</option>
+              <option value="retailer">Retailer / GDO</option>
+              <option value="service">Servizio / Subscription</option>
+              <option value="financial">Finanziario / Assicurativo</option>
+              <option value="platform">Piattaforma / Marketplace</option>
+              <option value="local">Business Locale / Catena</option>
+              <option value="publisher">Media / Editore / Publisher</option>
+              <option value="pharma">Pharma / Healthcare</option>
+              <option value="utility">Utility / Energia / Telco</option>
+            </select>
+          </div>
         </div>
 
         {/* Sito web ufficiale */}

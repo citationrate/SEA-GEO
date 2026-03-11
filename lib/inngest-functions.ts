@@ -481,6 +481,8 @@ interface PromptTask {
   knownCompetitors: string[];
   language: string;
   browsing: boolean;
+  sector: string | null;
+  brandType: string | null;
 }
 
 async function executePrompt(
@@ -533,7 +535,7 @@ async function executePrompt(
 
   if (!rawText) return;
 
-  const extraction = await extractFromResponse(rawText, task.targetBrand, task.knownCompetitors);
+  const extraction = await extractFromResponse(rawText, task.targetBrand, task.knownCompetitors, task.sector ?? undefined, task.brandType ?? undefined);
 
   // Save response_analysis
   await (supabase.from("response_analysis") as any)
@@ -562,6 +564,7 @@ async function executePrompt(
       rank: c.rank ?? null,
       sentiment: c.sentiment ?? null,
       recommendation: c.recommendation ?? null,
+      competitor_type: c.type ?? "direct",
     }));
     const { error: mentionErr } = await (supabase.from("competitor_mentions") as any)
       .insert(mentions);
@@ -708,6 +711,8 @@ export const runAnalysis = inngest.createFunction(
     const brandDomain = project.website_url ?? null;
     const knownCompetitors = project.known_competitors ?? [];
     const language = project.language;
+    const sector = project.sector ?? null;
+    const brandTypeVal = project.brand_type ?? null;
 
     // Build all prompt tasks
     // If no segments configured, use a default generic audience fallback
@@ -735,6 +740,8 @@ export const runAnalysis = inngest.createFunction(
               knownCompetitors,
               language,
               browsing,
+              sector,
+              brandType: brandTypeVal,
             });
           }
         }

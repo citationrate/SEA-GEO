@@ -12,6 +12,7 @@ export interface ExtractionResult {
   topics: string[];
   competitors_found: {
     name: string;
+    type: "direct" | "indirect" | "channel" | "aggregator";
     rank: number | null;
     sentiment: number | null;
     recommendation: number | null;
@@ -38,6 +39,8 @@ async function extractCompetitorsTopicsSources(
   response: string,
   targetBrand: string,
   knownCompetitors: string[],
+  sector?: string,
+  brandType?: string,
 ): Promise<Pick<ExtractionResult, "topics" | "competitors_found" | "sources">> {
   console.log("[extractor] partial extraction called, response length:", response.length, "first 200 chars:", response.substring(0, 200));
 
@@ -52,10 +55,12 @@ async function extractCompetitorsTopicsSources(
   }
 
   const prompt = `Sei un analista AI. Il brand "${targetBrand}" NON è presente in questa risposta.
+Settore: ${sector ?? "generico"}
+Tipo brand: ${brandType ?? "manufacturer"}
 Competitor conosciuti: ${knownCompetitors.length > 0 ? knownCompetitors.join(", ") : "nessuno specificato"}
 
 Estrai comunque:
-- competitors_found: max 3 brand più rilevanti citati nella risposta con rank e sentiment
+- competitors_found: max 3 brand più rilevanti citati, con tipo competitivo
 - topics: max 3 argomenti principali trattati
 - sources: max 3 siti/domini più rilevanti citati
 
@@ -64,9 +69,15 @@ Rispondi SOLO con JSON valido. Max 3 competitor, max 3 topic, max 3 fonti. Nessu
 Schema JSON richiesto:
 {
   "topics": string[],
-  "competitors_found": [{ "name": string, "rank": number, "sentiment": number, "recommendation": number }],
+  "competitors_found": [{ "name": string, "type": "direct"|"indirect"|"channel"|"aggregator", "rank": number, "sentiment": number, "recommendation": number }],
   "sources": [{ "url": string|null, "domain": string, "label": string|null, "source_type": string, "is_brand_owned": boolean, "context": string }]
 }
+
+TIPI COMPETITOR:
+- direct: stesso prodotto/servizio, stesso mercato
+- indirect: prodotto diverso, soddisfa lo stesso bisogno
+- channel: canali che vendono/distribuiscono al posto del brand
+- aggregator: piattaforme che confrontano alternative
 
 REGOLE per competitors_found:
 Estrai tutti i brand, aziende, insegne o entità commerciali citate.
@@ -119,8 +130,8 @@ ${cleanResponse}`;
       competitors_found: Array.isArray(parsed.competitors_found)
         ? parsed.competitors_found.map((c: any) =>
             typeof c === "string"
-              ? { name: c, rank: null, sentiment: null, recommendation: null }
-              : { name: c.name, rank: c.rank ?? null, sentiment: c.sentiment ?? null, recommendation: c.recommendation ?? null }
+              ? { name: c, type: "direct" as const, rank: null, sentiment: null, recommendation: null }
+              : { name: c.name, type: c.type ?? "direct", rank: c.rank ?? null, sentiment: c.sentiment ?? null, recommendation: c.recommendation ?? null }
           )
         : [],
       sources: Array.isArray(parsed.sources)
@@ -143,7 +154,9 @@ ${cleanResponse}`;
 export async function extractFromResponse(
   response: string,
   targetBrand: string,
-  knownCompetitors: string[]
+  knownCompetitors: string[],
+  sector?: string,
+  brandType?: string,
 ): Promise<ExtractionResult> {
   // Literal brand check — skip Claude call entirely if brand not present
   const brandMentionedLiteral = response
@@ -158,7 +171,7 @@ export async function extractFromResponse(
   if (!brandMentionedLiteral) {
     console.log("[extractor] brand not found, running partial extraction for:", response.substring(0, 100));
     const partialResult = await extractCompetitorsTopicsSources(
-      response, targetBrand, knownCompetitors
+      response, targetBrand, knownCompetitors, sector, brandType
     );
     return {
       brand_mentioned: false,
@@ -175,9 +188,28 @@ export async function extractFromResponse(
     };
   }
 
+  const sectorContext = sector
+    ? `Settore: ${sector}`
+    : `Settore: non specificato — inferisci dal contesto della risposta`;
+
+  const brandTypeLabels: Record<string, string> = {
+    manufacturer: "Produttore/Brand di prodotto",
+    retailer: "Retailer o catena della grande distribuzione",
+    service: "Servizio in abbonamento o SaaS",
+    financial: "Istituto finanziario, banca o assicurazione",
+    platform: "Piattaforma digitale o marketplace",
+    local: "Business locale o catena territoriale",
+    publisher: "Media, editore o piattaforma di contenuti",
+    pharma: "Azienda farmaceutica o sanitaria",
+    utility: "Utility, energia, telecomunicazioni",
+  };
+  const brandTypeContext = brandTypeLabels[brandType ?? "manufacturer"] ?? "Brand generico";
+
   const systemPrompt = `Sei un analista AI. Analizza la risposta di un modello AI ed estrai dati strutturati.
 
-Il brand target è: "${targetBrand}"
+Brand da analizzare: "${targetBrand}"
+${sectorContext}
+Tipo brand: ${brandTypeContext}
 Competitor conosciuti: ${knownCompetitors.length > 0 ? knownCompetitors.join(", ") : "nessuno specificato"}
 
 Rispondi SOLO con JSON valido, senza markdown o testo aggiuntivo.
@@ -192,7 +224,7 @@ Schema JSON richiesto:
   "recommendation_score": number,
   "brand_adjectives": string[],
   "topics": string[],
-  "competitors_found": [{ "name": string, "rank": number, "sentiment": number, "recommendation": number }],
+  "competitors_found": [{ "name": string, "type": "direct"|"indirect"|"channel"|"aggregator", "rank": number, "sentiment": number, "recommendation": number }],
   "sources": [{ "url": string|null, "domain": string, "label": string|null, "source_type": string, "is_brand_owned": boolean, "context": string }]
 }
 
@@ -232,6 +264,7 @@ Regole:
 - topics: argomenti principali trattati nella risposta (max 5)
 - competitors_found: per ogni competitor trovato estrai:
   - name: nome del brand
+  - type: tipo di competitor ("direct"|"indirect"|"channel"|"aggregator")
   - rank: posizione in cui appare nella risposta (1=primo citato)
   - sentiment: tono con cui l'AI descrive il competitor (-1.0/+1.0)
   - recommendation: l'AI lo raccomanda? (+1=sì, 0=neutro, -1=sconsigliato)
@@ -239,34 +272,27 @@ Regole:
 
 REGOLA CRITICA: Se brand_mentioned è true, brand_rank, tone_score e recommendation_score sono OBBLIGATORI e non possono essere null.
 
+TIPI COMPETITOR (multi-dimensionale):
+1. DIRECT — stesso prodotto/servizio, stesso mercato target
+2. INDIRECT — soddisfa lo stesso bisogno con approccio diverso
+3. CHANNEL — canali distributivi che si interpongono tra brand e consumatore o vendono private label
+4. AGGREGATOR — piattaforme di confronto o discovery che intercettano l'intento
+
+Usa il settore e tipo brand per inferire il tipo corretto.
+NON escludere entità perché "non sono competitor diretti" — in AI visibility ogni entità citata al posto del brand ha rilevanza strategica.
+
 FONTI: Estrai TUTTI i siti web, domini, URL, blog, riviste, piattaforme citati o menzionati nella risposta, anche implicitamente.
 Esempi: se dice 'secondo Gambero Rosso' → estrai 'gamberorosso.it', se dice 'disponibile su Amazon' → estrai 'amazon.it', se dice 'recensioni su Trustpilot' → estrai 'trustpilot.com'.
-Se la risposta cita categorie di siti senza nominarli esplicitamente (es. 'siti di recensioni', 'e-commerce'), estrai i domini più probabili per quel contesto.
-Se la risposta cita una pagina specifica, estrai l'URL completo con path (es. 'gamberorosso.it/prodotti/biscotti' non solo 'gamberorosso.it'). Se hai solo il dominio usa domain, se hai il path completo usa url.
-Restituisci array di oggetti: [{url: 'dominio.com/path' o null, domain: 'dominio.com', label: null, source_type: 'media|review|ecommerce|social|brand_owned|competitor|wikipedia|other', is_brand_owned: boolean, context: 'breve spiegazione'}]
-Se non ci sono fonti restituisci [].
+Se la risposta cita una pagina specifica, estrai l'URL completo con path. Se hai solo il dominio usa domain, se hai il path completo usa url.
+source_type: media|review|ecommerce|social|brand_owned|competitor|wikipedia|other
 
 REGOLE per competitors_found:
-Estrai tutti i brand, aziende, insegne o entità commerciali che compaiono come alternative al brand principale.
-
-INCLUDI: qualsiasi entità con un nome proprio specifico — supermercati, distributori, e-commerce, produttori artigianali con nome proprio, catene, marketplace. Esempi: "Esselunga", "Coop", "Biscottificio Artigianale Rossi", "Penny Market", "NaturaSì".
-
+INCLUDI: qualsiasi entità con un nome proprio specifico.
 ESCLUDI ASSOLUTAMENTE:
-- Varianti, linee di prodotto o sub-brand del brand target.
-  Esempi: se target è 'Coca-Cola', escludi 'Coca-Cola Zero', 'Coca-Cola Light', 'Coca-Cola Cherry', 'Coca-Cola Vanilla'.
-  Se target è 'Pepsi', escludi 'Pepsi Max', 'Pepsi Light', 'Pepsi Zero'.
-- Prodotti dello stesso gruppo aziendale del brand target
+- Sub-brand o varianti del brand target (es. se target è 'Coca-Cola', escludi 'Coca-Cola Zero')
 - Il brand target "${targetBrand}" stesso in qualsiasi forma
-- Descrizioni generiche senza nome proprio ("biscottificio artigianale", "produttore locale", "negozio di quartiere", "brand sportivo", "competitor locale")
-- Entità che non hanno un nome che un utente potrebbe cercare su Google
-
-INCLUDI solo brand/aziende completamente distinte dal target.
-
-FORMATO:
-- Restituisci SOLO il nome commerciale (es. "Esselunga", non "Esselunga è un supermercato")
-- Se vedi "Brand + Prodotto" (es. "Nike Air Max 90"), estrai SOLO il brand ("Nike")
-- Se non sei sicuro del nome esatto, usa il nome più comunemente conosciuto
-- Array di oggetti: [{"name": "Esselunga", "rank": 1, "sentiment": 0.6, "recommendation": 0.5}]`;
+- Descrizioni generiche senza nome proprio
+FORMATO: Restituisci SOLO il nome commerciale.`;
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const message = await anthropic.messages.create({
@@ -334,8 +360,8 @@ FORMATO:
         const competitorsRaw = Array.isArray(parsed.competitors_found) ? parsed.competitors_found : [];
         return competitorsRaw.map((c: any) =>
           typeof c === 'string'
-            ? { name: c, rank: null, sentiment: null, recommendation: null }
-            : { name: c.name, rank: c.rank ?? null, sentiment: c.sentiment ?? null, recommendation: c.recommendation ?? null }
+            ? { name: c, type: "direct" as const, rank: null, sentiment: null, recommendation: null }
+            : { name: c.name, type: c.type ?? "direct", rank: c.rank ?? null, sentiment: c.sentiment ?? null, recommendation: c.recommendation ?? null }
         );
       })(),
       sources: Array.isArray(parsed.sources)

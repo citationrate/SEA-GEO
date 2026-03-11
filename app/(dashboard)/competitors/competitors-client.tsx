@@ -33,7 +33,15 @@ interface CompRow {
   lastSeen: string;
   themeAnalysis: ThemeAnalysis | null;
   aviScore: number | null;
+  competitorType: string;
 }
+
+const COMP_TYPE_CONFIG: Record<string, { label: string; border: string; text: string }> = {
+  direct:     { label: "Diretto",      border: "border-primary/30",     text: "text-primary" },
+  indirect:   { label: "Indiretto",    border: "border-[#c4a882]/30",   text: "text-[#c4a882]" },
+  channel:    { label: "Canale",       border: "border-[#7eb3d4]/30",   text: "text-[#7eb3d4]" },
+  aggregator: { label: "Aggregatore",  border: "border-[#e8956d]/30",   text: "text-[#e8956d]" },
+};
 
 interface TopicGroup {
   topic: string;
@@ -88,6 +96,9 @@ export function CompetitorsClient({
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState("");
   const [drawerTheme, setDrawerTheme] = useState<{ compName: string; theme: MacroTheme } | null>(null);
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+
+  const filteredRows = typeFilter ? rows.filter((r) => r.competitorType === typeFilter) : rows;
 
   async function analyzeContexts() {
     setAnalyzing(true);
@@ -202,9 +213,38 @@ export function CompetitorsClient({
         </div>
       )}
 
+      {/* Competitor type filter */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setTypeFilter(null)}
+          className="font-mono text-[0.6rem] tracking-wide uppercase px-3 py-1.5 rounded-full border transition-colors"
+          style={
+            !typeFilter
+              ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
+              : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
+          }
+        >
+          Tutti
+        </button>
+        {Object.entries(COMP_TYPE_CONFIG).map(([type, cfg]) => (
+          <button
+            key={type}
+            onClick={() => setTypeFilter(typeFilter === type ? null : type)}
+            className="font-mono text-[0.6rem] tracking-wide uppercase px-3 py-1.5 rounded-full border transition-colors"
+            style={
+              typeFilter === type
+                ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
+                : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
+            }
+          >
+            {cfg.label}
+          </button>
+        ))}
+      </div>
+
       {analyzeError && <p className="text-sm text-destructive">{analyzeError}</p>}
 
-      {rows.length === 0 ? (
+      {filteredRows.length === 0 ? (
         <div className="card p-12 text-center">
           <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground">Nessun competitor trovato. Lancia un&apos;analisi per scoprirli.</p>
@@ -212,8 +252,8 @@ export function CompetitorsClient({
       ) : view === "competitor" ? (
         <>
           {/* Benchmark vs Brand */}
-          {brandAviScore != null && rows.length > 0 && (() => {
-            const top5 = rows.slice(0, 5);
+          {brandAviScore != null && filteredRows.length > 0 && (() => {
+            const top5 = filteredRows.slice(0, 5);
             return (
               <div className="card p-5 space-y-4">
                 <h2 className="font-display font-semibold text-foreground text-sm">Benchmark</h2>
@@ -254,7 +294,7 @@ export function CompetitorsClient({
               </div>
             );
           })()}
-          <CompetitorView rows={rows} onThemeClick={(compName, theme) => setDrawerTheme({ compName, theme })} />
+          <CompetitorView rows={filteredRows} onThemeClick={(compName, theme) => setDrawerTheme({ compName, theme })} />
         </>
       ) : (
         <AmbitoView topicGroups={topicGroups} rows={rows} />
@@ -311,6 +351,14 @@ function CompetitorCard({
             {rank}
           </span>
           <h3 className="font-display font-bold text-lg text-foreground">{row.name}</h3>
+          {(() => {
+            const cfg = COMP_TYPE_CONFIG[row.competitorType];
+            return cfg ? (
+              <span className={`font-mono text-[0.55rem] tracking-wide uppercase px-1.5 py-0.5 rounded-[2px] border ${cfg.border} ${cfg.text}`}>
+                {cfg.label}
+              </span>
+            ) : null;
+          })()}
         </div>
         <div className="flex items-center gap-2">
           {row.aviScore != null && (
