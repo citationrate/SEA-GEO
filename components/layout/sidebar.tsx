@@ -42,7 +42,7 @@ const NAV = [
   },
 ];
 
-const PRO_ROUTES = new Set(["/compare"]);
+const PRO_ROUTES = new Set(["/compare", "/datasets"]);
 
 interface SidebarProps {
   profile: { full_name?: string | null; email?: string; plan?: string } | null;
@@ -84,7 +84,7 @@ export function Sidebar({ profile }: SidebarProps) {
                 return (
                   <li key={item.href}>
                     <Link
-                      href={locked ? "/compare?upgrade=1" : item.href}
+                      href={locked ? `${item.href}?upgrade=1` : item.href}
                       className={cn(
                         "flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] text-sm font-sans transition-all duration-100",
                         locked
