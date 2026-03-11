@@ -60,6 +60,19 @@ export default async function CompetitorsPage({
 
   const compList = (competitors ?? []) as any[];
 
+  // Fetch total historical mention counts from competitor_mentions (all runs)
+  const { data: allMentionRows } = targetIds.length > 0
+    ? await (supabase.from("competitor_mentions") as any)
+        .select("competitor_name")
+        .in("project_id", targetIds)
+    : { data: [] };
+
+  const totalMentionMap = new Map<string, number>();
+  for (const m of (allMentionRows ?? []) as any[]) {
+    const key = (m.competitor_name as string).toLowerCase().trim();
+    totalMentionMap.set(key, (totalMentionMap.get(key) ?? 0) + 1);
+  }
+
   // Use filtered run IDs for stats
   const runIds = filteredRunIds;
 
@@ -192,7 +205,8 @@ export default async function CompetitorsPage({
     const key = name.toLowerCase().trim();
     const row = grouped.get(key);
     if (row) {
-      row.mentions = stats.mentions;
+      // Use total historical mentions from competitor_mentions, fallback to response_analysis count
+      row.mentions = totalMentionMap.get(key) ?? stats.mentions;
       row.analysisCount = stats.runIds.size;
       row.avgSentiment = stats.sentimentCount > 0 ? stats.sentimentSum / stats.sentimentCount : null;
       Array.from(stats.topics).forEach((t) => { if (!row.topics.includes(t)) row.topics.push(t); });
@@ -201,7 +215,7 @@ export default async function CompetitorsPage({
       grouped.set(key, {
         name,
         projects: [],
-        mentions: stats.mentions,
+        mentions: totalMentionMap.get(key) ?? stats.mentions,
         analysisCount: stats.runIds.size,
         topics: Array.from(stats.topics),
         queryTypes: Array.from(stats.queryTypes),
@@ -210,6 +224,13 @@ export default async function CompetitorsPage({
         lastSeen: "",
         themeAnalysis: null,
       });
+    }
+  }
+
+  // Also apply total historical mentions to competitors that have mentions but weren't in compStats
+  for (const [key, row] of Array.from(grouped.entries())) {
+    if (row.mentions === 0 && totalMentionMap.has(key)) {
+      row.mentions = totalMentionMap.get(key)!;
     }
   }
 
