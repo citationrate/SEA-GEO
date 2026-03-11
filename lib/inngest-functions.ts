@@ -43,8 +43,8 @@ const API_MODEL_ID: Record<string, string> = {
   "claude-sonnet": "claude-sonnet-4-5",
   "claude-opus": "claude-opus-4-5",
   "gemini-2.5-pro": "gemini-2.5-pro-preview-03-25",
-  "perplexity-sonar": "llama-3.1-sonar-large-128k-online",
-  "perplexity-sonar-pro": "llama-3.1-sonar-huge-128k-online",
+  "perplexity-sonar": "sonar",
+  "perplexity-sonar-pro": "sonar-pro",
 };
 
 async function callAIModel(prompt: string, model: string, browsing = false, brandDomain?: string | null): Promise<AIModelResult> {
