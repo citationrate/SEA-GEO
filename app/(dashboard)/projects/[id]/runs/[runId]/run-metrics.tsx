@@ -382,7 +382,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
               : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
           }
         >
-          Brand Si
+          Brand Citato
         </button>
         <button
           onClick={() => setBrandCitedFilter(brandCitedFilter === false ? null : false)}
@@ -393,7 +393,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
               : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
           }
         >
-          Brand No
+          Brand Non Citato
         </button>
       </div>
 

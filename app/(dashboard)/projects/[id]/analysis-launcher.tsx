@@ -152,7 +152,7 @@ export function AnalysisLauncher({
             <div className="space-y-2">
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                 Numero di Run
-                <InfoTooltip text="Ogni run ripete le query per misurare la consistenza delle risposte AI. Più run = dati più affidabili." />
+                <InfoTooltip text="Ogni run esegue tutte le query una volta. Con 3 run ottieni il punteggio Consistency che misura quanto le risposte AI sono stabili nel tempo. 1 run = veloce | 2 run = bilanciato | 3 run = Preciso (con Consistency)" />
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {RUN_OPTIONS.map((opt) => (

@@ -133,7 +133,8 @@ export default function QueriesPage() {
             className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-primary/85 transition-colors"
           >
             <Sparkles className="w-4 h-4" />
-            Genera
+            Genera Prompt con AI
+            <span className="font-mono text-[0.55rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px] bg-[#c4a882]/10">PRO</span>
           </a>
         </div>
       </div>

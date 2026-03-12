@@ -139,7 +139,7 @@ export function Sidebar({ profile }: SidebarProps) {
               {profile?.full_name ?? profile?.email ?? "Utente"}
             </p>
             <p className="font-mono text-[0.6rem] text-muted-foreground uppercase tracking-wide">
-              Piano {profile?.plan ?? "free"}
+              Piano {profile?.plan === "free" || !profile?.plan ? "Base" : profile.plan === "pro" ? "Pro" : profile.plan === "agency" ? "Agency" : profile.plan}
             </p>
           </div>
         </Link>

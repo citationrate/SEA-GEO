@@ -1,6 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { AI_MODELS, PROVIDER_CONFIG } from "@/lib/engine/models";
-import { Settings, User, Cpu, CreditCard, Trash2, PlayCircle, Bell, AlertTriangle } from "lucide-react";
+import { Settings, Cpu, Trash2, PlayCircle } from "lucide-react";
 import { RestartTourButton } from "./restart-tour-button";
 import { SettingsClient } from "./settings-client";
 
@@ -8,11 +8,6 @@ export const metadata = { title: "Impostazioni" };
 
 // Deduplicate models by id (keep first occurrence)
 const UNIQUE_MODELS = AI_MODELS.filter((m, i, arr) => arr.findIndex((x) => x.id === m.id) === i);
-
-// Select models users can toggle as preferred
-const SELECTABLE_MODELS = UNIQUE_MODELS.filter((m) =>
-  ["gpt-4o-mini", "gemini-2.5-flash", "claude-haiku", "grok-3", "perplexity-sonar", "copilot-gpt4"].includes(m.id)
-);
 
 export default async function SettingsPage() {
   const supabase = createServerClient();
@@ -50,9 +45,6 @@ export default async function SettingsPage() {
         fullName={p.full_name ?? ""}
         plan={p.plan ?? "free"}
         notifyAnalysisComplete={p.notify_analysis_complete ?? true}
-        notifyCompetitorAlert={p.notify_competitor_alert ?? false}
-        preferredModels={p.preferred_models ?? ["gpt-4o-mini", "gemini-2.5-flash"]}
-        selectableModels={SELECTABLE_MODELS.map((m) => ({ id: m.id, label: m.label, desc: m.desc, provider: m.provider }))}
       />
 
       {/* Modelli AI disponibili (read-only reference) */}

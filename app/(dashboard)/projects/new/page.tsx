@@ -115,7 +115,7 @@ export default function NewProjectPage() {
   const [marketContext, setMarketContext] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [language, setLanguage] = useState<"it" | "en">("it");
-  const [country, setCountry] = useState("");
+  const [countries, setCountries] = useState<string[]>([]);
   const [countrySearch, setCountrySearch] = useState("");
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const [selectedQueries, setSelectedQueries] = useState<SuggestedQuery[]>([]);
@@ -232,7 +232,7 @@ export default function NewProjectPage() {
           known_competitors: competitors,
           market_context: marketContext || null,
           language,
-          country: country || null,
+          country: countries.length > 0 ? countries.join(", ") : null,
           models_config: getModelsConfig(),
         }),
       });
@@ -447,18 +447,30 @@ export default function NewProjectPage() {
               Paese
               <InfoTooltip text="Determina la lingua e il contesto geografico dell'analisi" />
             </label>
-            {/* Searchable country dropdown */}
+            {/* Searchable multi-select country dropdown */}
             <div ref={countryRef} className="relative">
               <button
                 type="button"
                 onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
                 className="input-base w-full flex items-center justify-between text-left"
               >
-                <span className={country ? "text-foreground" : "text-muted-foreground"}>
-                  {country || "Seleziona paese..."}
+                <span className={countries.length > 0 ? "text-foreground" : "text-muted-foreground"}>
+                  {countries.length > 0 ? `${countries.length} selezionat${countries.length === 1 ? "o" : "i"}` : "Seleziona paesi..."}
                 </span>
                 <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
+              {countries.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {countries.map((c) => (
+                    <span key={c} className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border border-primary/30 bg-primary/5 text-foreground">
+                      {c}
+                      <button type="button" onClick={() => setCountries(countries.filter((x) => x !== c))} className="hover:text-destructive transition-colors">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
               {countryDropdownOpen && (
                 <div className="absolute z-20 mt-1 w-full bg-[#111416] border border-border rounded-[2px] shadow-xl max-h-60 overflow-hidden">
                   <div className="p-2 border-b border-border">
@@ -478,24 +490,32 @@ export default function NewProjectPage() {
                     {filteredCountries.length === 0 ? (
                       <p className="text-xs text-muted-foreground text-center py-3">Nessun risultato</p>
                     ) : (
-                      filteredCountries.map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => {
-                            setCountry(c);
-                            setCountryDropdownOpen(false);
-                            setCountrySearch("");
-                          }}
-                          className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                            country === c
-                              ? "bg-primary/10 text-primary font-medium"
-                              : "text-foreground hover:bg-muted/30"
-                          }`}
-                        >
-                          {c}
-                        </button>
-                      ))
+                      filteredCountries.map((c) => {
+                        const isSelected = countries.includes(c);
+                        return (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => {
+                              setCountries(isSelected ? countries.filter((x) => x !== c) : [...countries, c]);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
+                              isSelected
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "text-foreground hover:bg-muted/30"
+                            }`}
+                          >
+                            <div className={`w-3.5 h-3.5 rounded-[2px] border flex items-center justify-center shrink-0 ${
+                              isSelected ? "border-primary bg-primary" : "border-muted-foreground"
+                            }`}>
+                              {isSelected && (
+                                <Check className="w-2.5 h-2.5 text-primary-foreground" />
+                              )}
+                            </div>
+                            {c}
+                          </button>
+                        );
+                      })
                     )}
                   </div>
                 </div>

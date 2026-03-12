@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { User, CreditCard, Cpu, Bell, AlertTriangle, Check, Loader2, LogOut } from "lucide-react";
+import { User, CreditCard, Bell, AlertTriangle, Check, Loader2, LogOut } from "lucide-react";
 
 interface SettingsClientProps {
   userId: string;
@@ -10,9 +10,6 @@ interface SettingsClientProps {
   fullName: string;
   plan: string;
   notifyAnalysisComplete: boolean;
-  notifyCompetitorAlert: boolean;
-  preferredModels: string[];
-  selectableModels: { id: string; label: string; desc: string; provider: string }[];
 }
 
 async function patchProfile(data: Record<string, unknown>) {
@@ -30,18 +27,12 @@ export function SettingsClient({
   fullName: initialName,
   plan,
   notifyAnalysisComplete: initialNotifyAnalysis,
-  notifyCompetitorAlert: initialNotifyCompetitor,
-  preferredModels: initialPreferred,
-  selectableModels,
 }: SettingsClientProps) {
   const [fullName, setFullName] = useState(initialName);
   const [savingName, setSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
 
   const [notifyAnalysis, setNotifyAnalysis] = useState(initialNotifyAnalysis);
-  const [notifyCompetitor, setNotifyCompetitor] = useState(initialNotifyCompetitor);
-
-  const [preferred, setPreferred] = useState<Set<string>>(new Set(initialPreferred));
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -62,20 +53,8 @@ export function SettingsClient({
 
   const toggleNotification = useCallback(async (field: string, value: boolean) => {
     if (field === "notify_analysis_complete") setNotifyAnalysis(value);
-    if (field === "notify_competitor_alert") setNotifyCompetitor(value);
     await patchProfile({ [field]: value });
   }, []);
-
-  const toggleModel = useCallback(async (modelId: string) => {
-    const next = new Set(preferred);
-    if (next.has(modelId)) {
-      next.delete(modelId);
-    } else {
-      next.add(modelId);
-    }
-    setPreferred(next);
-    await patchProfile({ preferred_models: Array.from(next) });
-  }, [preferred]);
 
   return (
     <>
@@ -143,7 +122,7 @@ export function SettingsClient({
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-[2px] bg-muted/30 border border-border text-foreground">
-              Piano Starter
+              Piano Base
             </span>
           )}
         </div>
@@ -179,41 +158,6 @@ export function SettingsClient({
         )}
       </div>
 
-      {/* Modelli AI Preferiti */}
-      <div className="card p-6 space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Cpu className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-semibold text-foreground">Modelli AI Preferiti</h2>
-        </div>
-        <p className="text-xs text-muted-foreground">Seleziona i modelli predefiniti per i nuovi progetti</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          {selectableModels.map((m) => {
-            const isSelected = preferred.has(m.id);
-            return (
-              <button
-                key={m.id}
-                onClick={() => toggleModel(m.id)}
-                className={`flex items-start gap-2.5 text-left rounded-[2px] px-3 py-2.5 border transition-colors ${
-                  isSelected
-                    ? "border-primary/30 bg-primary/5"
-                    : "border-border bg-muted/10 hover:bg-muted/20"
-                }`}
-              >
-                <div className={`w-4 h-4 mt-0.5 rounded-[2px] border flex items-center justify-center shrink-0 transition-colors ${
-                  isSelected ? "border-primary bg-primary" : "border-muted-foreground/30"
-                }`}>
-                  {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
-                </div>
-                <div>
-                  <span className={`text-sm ${isSelected ? "text-foreground font-medium" : "text-muted-foreground"}`}>{m.label}</span>
-                  <p className="text-xs text-muted-foreground">{m.desc}</p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Notifiche */}
       <div className="card p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
@@ -235,18 +179,6 @@ export function SettingsClient({
             </button>
           </div>
 
-          <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
-            <div>
-              <p className="text-sm text-foreground">Alert quando un competitor supera il mio AVI</p>
-              <p className="text-xs text-muted-foreground">Monitora i cambiamenti nella classifica competitiva</p>
-            </div>
-            <button
-              onClick={() => toggleNotification("notify_competitor_alert", !notifyCompetitor)}
-              className={`relative w-10 h-5 rounded-full transition-colors ${notifyCompetitor ? "bg-primary" : "bg-muted"}`}
-            >
-              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${notifyCompetitor ? "left-5" : "left-0.5"}`} />
-            </button>
-          </div>
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
-import { Plus, FolderOpen } from "lucide-react";
+import { Plus } from "lucide-react";
+import { ProjectsList } from "./projects-list";
 
 export const metadata = { title: "Progetti" };
 
@@ -10,6 +11,12 @@ export default async function ProjectsPage() {
     .select("id, name, target_brand, language, created_at")
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
+
+  const items = (projects ?? []).map((p: any) => ({
+    id: p.id,
+    name: p.name,
+    target_brand: p.target_brand,
+  }));
 
   return (
     <div className="space-y-6 max-w-[1400px]">
@@ -23,21 +30,7 @@ export default async function ProjectsPage() {
           Nuovo Progetto
         </a>
       </div>
-      {!projects?.length ? (
-        <div className="card flex flex-col items-center justify-center py-24 text-center">
-          <FolderOpen className="w-10 h-10 text-muted-foreground/40 mb-3" />
-          <p className="text-sm text-muted-foreground">Nessun progetto ancora.</p>
-        </div>
-      ) : (
-        <div data-tour="projects-list" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {projects.map((p: { id: string; name: string; target_brand: string; language: string; created_at: string }) => (
-            <a key={p.id} href={`/projects/${p.id}`} className="card p-5 block">
-              <h3 className="font-display font-semibold text-foreground">{p.name}</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">{p.target_brand}</p>
-            </a>
-          ))}
-        </div>
-      )}
+      <ProjectsList projects={items} />
     </div>
   );
 }

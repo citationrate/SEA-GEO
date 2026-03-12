@@ -725,7 +725,7 @@ export default function GenerateQueriesPage() {
                 Hai utilizzato <span className="text-foreground font-bold">{usedThisMonth}</span> / {monthlyLimit} query questo mese
               </span>
               <span className={`font-mono ${wouldExceed ? "text-destructive" : "text-muted-foreground"}`}>
-                {isPro ? "Piano Pro" : "Piano Starter"}
+                {isPro ? "Piano Pro" : "Piano Base"}
               </span>
             </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
