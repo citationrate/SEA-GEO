@@ -2,7 +2,8 @@ import { createServerClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
 import { resolveProjectId } from "@/lib/utils/resolve-project";
 import { AI_MODELS, PROVIDER_CONFIG } from "@/lib/engine/models";
-import { Settings, User, Globe, Cpu, CreditCard, Trash2 } from "lucide-react";
+import { Settings, User, Globe, Cpu, CreditCard, Trash2, PlayCircle } from "lucide-react";
+import { RestartTourButton } from "./restart-tour-button";
 
 export const metadata = { title: "Impostazioni" };
 
@@ -115,6 +116,18 @@ export default async function SettingsPage({
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Tour guidato */}
+      <div className="card p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <PlayCircle className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-semibold text-foreground">Tour guidato</h2>
+        </div>
+        <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
+          <p className="text-sm text-muted-foreground">Rivedi il tour introduttivo di SeaGeo</p>
+          <RestartTourButton />
         </div>
       </div>
 
