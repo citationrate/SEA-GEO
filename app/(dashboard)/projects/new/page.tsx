@@ -82,13 +82,54 @@ const AVAILABLE_PROVIDERS: ProviderOption[] = [
 
 const COUNTRIES = [
   "Globale / Worldwide",
-  "Italia", "Francia", "Germania", "Spagna", "Regno Unito",
-  "Stati Uniti", "Canada", "Australia", "Brasile", "Messico",
-  "Argentina", "Giappone", "Cina", "India", "Corea del Sud",
-  "Emirati Arabi", "Arabia Saudita", "Paesi Bassi", "Belgio",
-  "Svizzera", "Austria", "Portogallo", "Polonia", "Svezia",
-  "Norvegia", "Danimarca", "Finlandia", "Turchia", "Russia",
-  "Sud Africa", "Nigeria", "Egitto",
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola",
+  "Antigua e Barbuda", "Arabia Saudita", "Argentina", "Armenia", "Australia",
+  "Austria", "Azerbaigian",
+  "Bahamas", "Bahrein", "Bangladesh", "Barbados", "Belgio", "Belize",
+  "Benin", "Bhutan", "Bielorussia", "Bolivia", "Bosnia ed Erzegovina",
+  "Botswana", "Brasile", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
+  "Cambogia", "Camerun", "Canada", "Capo Verde", "Ciad", "Cile", "Cina",
+  "Cipro", "Colombia", "Comore", "Corea del Nord", "Corea del Sud",
+  "Costa d'Avorio", "Costa Rica", "Croazia", "Cuba",
+  "Danimarca", "Dominica",
+  "Ecuador", "Egitto", "El Salvador", "Emirati Arabi Uniti", "Eritrea",
+  "Estonia", "Eswatini", "Etiopia",
+  "Figi", "Filippine", "Finlandia", "Francia",
+  "Gabon", "Gambia", "Georgia", "Germania", "Ghana", "Giamaica",
+  "Giappone", "Gibuti", "Giordania", "Grecia", "Grenada", "Guatemala",
+  "Guinea", "Guinea Equatoriale", "Guinea-Bissau", "Guyana",
+  "Haiti", "Honduras",
+  "India", "Indonesia", "Iran", "Iraq", "Irlanda", "Islanda", "Israele",
+  "Italia",
+  "Kazakistan", "Kenya", "Kirghizistan", "Kiribati", "Kuwait",
+  "Laos", "Lesotho", "Lettonia", "Libano", "Liberia", "Libia",
+  "Liechtenstein", "Lituania", "Lussemburgo",
+  "Macedonia del Nord", "Madagascar", "Malawi", "Malaysia", "Maldive",
+  "Mali", "Malta", "Marocco", "Mauritania", "Mauritius", "Messico",
+  "Micronesia", "Moldavia", "Monaco", "Mongolia", "Montenegro",
+  "Mozambico", "Myanmar",
+  "Namibia", "Nauru", "Nepal", "Nicaragua", "Niger", "Nigeria", "Norvegia",
+  "Nuova Zelanda",
+  "Oman",
+  "Paesi Bassi", "Pakistan", "Palau", "Palestina", "Panama",
+  "Papua Nuova Guinea", "Paraguay", "Perù", "Polonia", "Portogallo",
+  "Qatar",
+  "Regno Unito", "Repubblica Ceca", "Repubblica Centrafricana",
+  "Repubblica del Congo", "Repubblica Democratica del Congo",
+  "Repubblica Dominicana", "Romania", "Ruanda", "Russia",
+  "Saint Kitts e Nevis", "Saint Lucia", "Saint Vincent e Grenadine",
+  "Samoa", "San Marino", "São Tomé e Príncipe", "Senegal", "Serbia",
+  "Seychelles", "Sierra Leone", "Singapore", "Siria", "Slovacchia",
+  "Slovenia", "Somalia", "Spagna", "Sri Lanka", "Stati Uniti",
+  "Sud Africa", "Sudan", "Sudan del Sud", "Suriname", "Svezia",
+  "Svizzera",
+  "Tagikistan", "Taiwan", "Tanzania", "Thailandia", "Timor Est", "Togo",
+  "Tonga", "Trinidad e Tobago", "Tunisia", "Turchia", "Turkmenistan",
+  "Tuvalu",
+  "Ucraina", "Uganda", "Ungheria", "Uruguay", "Uzbekistan",
+  "Vanuatu", "Vaticano", "Venezuela", "Vietnam",
+  "Yemen",
+  "Zambia", "Zimbabwe",
 ];
 
 const BASE_MODEL_LIMIT = 3;
@@ -117,7 +158,9 @@ export default function NewProjectPage() {
   const [name, setName] = useState("");
   const [targetBrand, setTargetBrand] = useState("");
   const [sector, setSector] = useState("");
+  const [customSector, setCustomSector] = useState("");
   const [brandType, setBrandType] = useState("manufacturer");
+  const [customBrandType, setCustomBrandType] = useState("");
   const [competitors, setCompetitors] = useState<string[]>([]);
   const [competitorInput, setCompetitorInput] = useState("");
   const [marketContext, setMarketContext] = useState("");
@@ -233,8 +276,8 @@ export default function NewProjectPage() {
         body: JSON.stringify({
           name,
           target_brand: targetBrand,
-          sector: sector || null,
-          brand_type: brandType,
+          sector: sector === "Altro" ? (customSector || "Altro") : (sector || null),
+          brand_type: brandType === "altro" ? (customBrandType || "altro") : brandType,
           website_url: websiteUrl || null,
           known_competitors: competitors,
           market_context: marketContext || null,
@@ -326,7 +369,7 @@ export default function NewProjectPage() {
             </label>
             <select
               value={sector}
-              onChange={(e) => setSector(e.target.value)}
+              onChange={(e) => { setSector(e.target.value); if (e.target.value !== "Altro") setCustomSector(""); }}
               className="input-base"
             >
               <option value="">Seleziona...</option>
@@ -334,6 +377,15 @@ export default function NewProjectPage() {
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
+            {sector === "Altro" && (
+              <input
+                type="text"
+                value={customSector}
+                onChange={(e) => setCustomSector(e.target.value)}
+                placeholder="Inserisci il settore..."
+                className="input-base mt-1.5"
+              />
+            )}
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
@@ -342,7 +394,7 @@ export default function NewProjectPage() {
             </label>
             <select
               value={brandType}
-              onChange={(e) => setBrandType(e.target.value)}
+              onChange={(e) => { setBrandType(e.target.value); if (e.target.value !== "altro") setCustomBrandType(""); }}
               className="input-base"
             >
               <option value="manufacturer">Produttore / Brand</option>
@@ -354,7 +406,17 @@ export default function NewProjectPage() {
               <option value="publisher">Media / Editore / Publisher</option>
               <option value="pharma">Pharma / Healthcare</option>
               <option value="utility">Utility / Energia / Telco</option>
+              <option value="altro">Altro</option>
             </select>
+            {brandType === "altro" && (
+              <input
+                type="text"
+                value={customBrandType}
+                onChange={(e) => setCustomBrandType(e.target.value)}
+                placeholder="Inserisci il tipo di brand..."
+                className="input-base mt-1.5"
+              />
+            )}
           </div>
         </div>
 
