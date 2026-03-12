@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { X } from "lucide-react";
+import { toast } from "sonner";
 
 interface OnboardingStep {
   title: string;
@@ -76,24 +77,14 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
       tooltipPosition: "right",
       pro: false,
     },
-    // 6 — Projects: list
+    // 6 — Projects
     {
       title: "Progetti",
       description:
-        "Ogni progetto corrisponde a un brand da analizzare. Puoi avere pi\u00f9 brand attivi contemporaneamente e monitorarli separatamente.",
+        "Ogni progetto corrisponde a un brand da analizzare. Puoi avere pi\u00f9 brand attivi contemporaneamente e monitorarli separatamente.\n\nClicca su un progetto per vedere query, analisi e risultati.",
       route: "/projects",
       selector: '[data-tour="new-project-btn"]',
       tooltipPosition: "bottom-right",
-      pro: false,
-    },
-    // 7 — Projects: project list grid
-    {
-      title: "I tuoi Progetti",
-      description:
-        "Qui trovi tutti i brand che stai monitorando. Clicca su un progetto per vedere query, analisi e risultati.",
-      route: "/projects",
-      selector: '[data-tour="projects-list"]',
-      tooltipPosition: "right",
       pro: false,
     },
     // 8 — Project detail: queries
@@ -346,7 +337,11 @@ export function OnboardingTour() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ onboarding_completed: true }),
     }).catch(() => {});
-  }, []);
+
+    // Redirect to new project creation
+    toast.success("Cominciamo! Crea il tuo primo progetto.");
+    router.push("/projects/new");
+  }, [router]);
 
   function handleNext() {
     let next = current + 1;
@@ -380,29 +375,6 @@ export function OnboardingTour() {
   const vh = typeof window !== "undefined" ? window.innerHeight : 1080;
 
   const tooltipW = 410;
-  const tooltipH = 220;
-  let tooltipX = 0;
-  let tooltipY = 0;
-
-  if (step.tooltipPosition === "center" || !rect) {
-    tooltipX = vw / 2 - tooltipW / 2;
-    tooltipY = vh / 2 - tooltipH / 2;
-  } else if (step.tooltipPosition === "right") {
-    tooltipX = rect.x + rect.width + 16;
-    tooltipY = rect.y + rect.height / 2 - tooltipH / 2;
-  } else if (step.tooltipPosition === "bottom-right") {
-    tooltipX = rect.x;
-    tooltipY = rect.y + rect.height + 12;
-  } else if (step.tooltipPosition === "bottom-left") {
-    tooltipX = rect.x + rect.width - tooltipW;
-    tooltipY = rect.y + rect.height + 12;
-  } else if (step.tooltipPosition === "top-right") {
-    tooltipX = rect.x + rect.width + 16;
-    tooltipY = rect.y;
-  }
-
-  tooltipX = Math.max(12, Math.min(vw - tooltipW - 12, tooltipX));
-  tooltipY = Math.max(12, Math.min(vh - tooltipH - 12, tooltipY));
 
   // Count visible (non-skipped) steps for progress dots
   const visibleSteps = steps.map((_, i) => !shouldSkipStep(i));
@@ -480,14 +452,14 @@ export function OnboardingTour() {
         }}
       />
 
-      {/* Tooltip */}
+      {/* Tooltip — fixed bottom-right, never moves */}
       {!navigating && (
         <div
           className="fixed animate-fade-in"
           style={{
             zIndex: 110,
-            left: tooltipX,
-            top: tooltipY,
+            bottom: 32,
+            right: 32,
             width: tooltipW,
             pointerEvents: "auto",
           }}

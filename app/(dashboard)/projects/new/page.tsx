@@ -1,11 +1,11 @@
-// v4
 "use client";
 
-import { useState, type KeyboardEvent } from "react";
+import { useState, useEffect, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, X, Loader2, Lock } from "lucide-react";
+import { ArrowLeft, X, Loader2, Lock, Check, ArrowRight, Crown } from "lucide-react";
 import { SuggestedQueriesNew, type SuggestedQuery } from "@/components/suggested-queries";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import confetti from "canvas-confetti";
 
 interface ModelOption {
   id: string;
@@ -76,6 +76,17 @@ export default function NewProjectPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPlanSelector, setShowPlanSelector] = useState(false);
+  const [newProjectId, setNewProjectId] = useState<string | null>(null);
+  const [existingProjectCount, setExistingProjectCount] = useState<number | null>(null);
+
+  // Check how many projects the user has (for first-project plan selector)
+  useEffect(() => {
+    fetch("/api/projects")
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setExistingProjectCount(Array.isArray(data) ? data.length : 0))
+      .catch(() => setExistingProjectCount(0));
+  }, []);
 
   const [name, setName] = useState("");
   const [targetBrand, setTargetBrand] = useState("");
@@ -178,7 +189,20 @@ export default function NewProjectPage() {
         );
       }
 
-      router.push("/projects");
+      // First project → show plan selector
+      if (existingProjectCount === 0) {
+        setNewProjectId(data.id);
+        setShowPlanSelector(true);
+        confetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ["#00d4ff", "#7eb3d4", "#e8956d", "#7eb89a", "#c4a882"],
+        });
+        return;
+      }
+
+      router.push(`/projects/${data.id}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore sconosciuto");
@@ -459,6 +483,99 @@ export default function NewProjectPage() {
           {loading ? "Salvataggio..." : "Crea Progetto"}
         </button>
       </form>
+
+      {/* Plan selector — shown after first project creation */}
+      {showPlanSelector && newProjectId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+          <div className="relative w-full max-w-2xl bg-[#111416] border border-[rgba(255,255,255,0.08)] rounded-lg shadow-2xl overflow-hidden animate-fade-in">
+            <div className="px-8 py-8 space-y-6">
+              <div className="text-center space-y-2">
+                <h2 className="font-display font-bold text-2xl text-foreground">
+                  Scegli il tuo piano
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Inizia gratis o sblocca tutte le funzionalit&agrave; con Pro
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Starter Plan */}
+                <div className="rounded-lg border border-border p-6 space-y-4">
+                  <div>
+                    <h3 className="font-display font-bold text-lg text-foreground">Starter</h3>
+                    <p className="text-2xl font-bold text-foreground mt-1">Gratis</p>
+                  </div>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0" />
+                      2 analisi / mese
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0" />
+                      GPT + Gemini
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0" />
+                      AVI base
+                    </li>
+                  </ul>
+                  <button
+                    onClick={() => {
+                      router.push(`/projects/${newProjectId}`);
+                      router.refresh();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-border text-foreground rounded-[2px] text-sm font-semibold hover:bg-surface-2 transition-colors"
+                  >
+                    Inizia gratis
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Pro Plan */}
+                <div className="rounded-lg border border-[#c4a882]/30 bg-[#c4a882]/5 p-6 space-y-4 relative">
+                  <div className="absolute top-3 right-3">
+                    <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">
+                      <Crown className="w-3 h-3" /> PRO
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-lg text-foreground">Pro</h3>
+                    <p className="text-2xl font-bold text-foreground mt-1">
+                      &euro;29<span className="text-sm font-normal text-muted-foreground">/mese</span>
+                    </p>
+                  </div>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
+                      10 analisi / mese
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
+                      Tutti i modelli AI
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
+                      Confronto + Dataset + Genera Query
+                    </li>
+                  </ul>
+                  <button
+                    onClick={() => {
+                      router.push("/settings#piano");
+                      router.refresh();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#c4a882] text-black rounded-[2px] text-sm font-semibold hover:bg-[#c4a882]/80 transition-colors"
+                  >
+                    <Crown className="w-4 h-4" />
+                    Passa a Pro
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
