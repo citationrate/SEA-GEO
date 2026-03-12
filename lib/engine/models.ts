@@ -9,6 +9,7 @@ export const AI_MODELS: AIModel[] = [
   // OpenAI
   { id: "gpt-4o-mini",  label: "GPT-4o Mini",       desc: "Veloce, risposte concise",                    provider: "openai" },
   { id: "gpt-4o",       label: "GPT-4o",             desc: "Preciso, risposte elaborate",                 provider: "openai" },
+  { id: "gpt-5.4",      label: "GPT-5.4",            desc: "Nuova generazione, massima qualità",          provider: "openai" },
   { id: "o1-mini",      label: "o1 Mini",            desc: "Ragionamento approfondito",                   provider: "openai" },
   { id: "o3-mini",      label: "o3 Mini",            desc: "Ragionamento avanzato, risposte dettagliate", provider: "openai" },
   { id: "o3",           label: "o3",                 desc: "Massima capacita di ragionamento",             provider: "openai" },
@@ -31,7 +32,7 @@ export const AI_MODELS: AIModel[] = [
   { id: "perplexity-sonar",      label: "Sonar",      desc: "Web search in tempo reale",                  provider: "perplexity" },
   { id: "perplexity-sonar-pro",  label: "Sonar Pro",  desc: "Web search avanzato, fonti più ricche",      provider: "perplexity" },
   // Azure (Microsoft Copilot)
-  { id: "copilot-gpt4",  label: "Copilot GPT-4",  desc: "Via Azure OpenAI",                               provider: "azure" },
+  { id: "copilot-gpt4",  label: "Copilot (GPT-4o)",  desc: "Via Azure OpenAI",                             provider: "azure" },
 ];
 
 export const MODEL_MAP = new Map(AI_MODELS.map((m) => [m.id, m]));
