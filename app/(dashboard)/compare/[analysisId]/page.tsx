@@ -25,10 +25,21 @@ export default async function CompetitiveResultsPage({
     .order("model", { ascending: true })
     .order("run_number", { ascending: true });
 
+  // Fetch historical analyses for the same brand pair + driver (for trend chart)
+  const { data: historicalAnalyses } = await (supabase.from("competitive_analyses") as any)
+    .select("id, brand_a, brand_b, driver, win_rate_a, win_rate_b, fmr_a, fmr_b, comp_score_a, status, created_at, mode")
+    .eq("brand_a", analysis.brand_a)
+    .eq("brand_b", analysis.brand_b)
+    .eq("driver", analysis.driver)
+    .eq("status", "completed")
+    .order("created_at", { ascending: true });
+
   return (
     <CompetitiveResults
       analysis={analysis}
       prompts={(prompts ?? []) as any[]}
+      historicalAnalyses={(historicalAnalyses ?? []) as any[]}
+      currentAnalysisId={params.analysisId}
     />
   );
 }

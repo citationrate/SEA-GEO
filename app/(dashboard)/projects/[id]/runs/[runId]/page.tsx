@@ -8,6 +8,7 @@ import { RunMetrics } from "./run-metrics";
 import { DeleteRunButton, RestoreRunButton } from "./run-actions";
 import { ShareButton } from "./share-button";
 import { StabilitySection } from "./stability-section";
+import { SegmentSection } from "./segment-section";
 
 const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = {
   pending:   { label: "In attesa",   class: "badge-muted",    icon: Clock },
@@ -108,6 +109,12 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
   const queryIds = Array.from(new Set((prompts ?? []).map((p: any) => p.query_id).filter(Boolean)));
   const { data: queries } = queryIds.length > 0
     ? await supabase.from("queries").select("id, text, funnel_stage, family").in("id", queryIds)
+    : { data: [] };
+
+  // Fetch audience segments for this project
+  const segmentIds = Array.from(new Set((prompts ?? []).map((p: any) => p.segment_id).filter(Boolean)));
+  const { data: segments } = segmentIds.length > 0
+    ? await (supabase.from("audience_segments") as any).select("id, label, name, prompt_context").in("id", segmentIds)
     : { data: [] };
 
   const mentionsList = (competitorMentions ?? []) as any[];
@@ -319,6 +326,16 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         perModelAvi={perModelAvi}
         queries={queries ?? []}
       />
+
+      {/* Segment/Persona analysis (only if segments are present) */}
+      {(segments ?? []).length > 0 && (
+        <SegmentSection
+          prompts={prompts ?? []}
+          analyses={analyses ?? []}
+          segments={segments ?? []}
+          queries={queries ?? []}
+        />
+      )}
 
       {/* Stability section (only if 3+ runs per prompt) */}
       {runCount >= 3 && (

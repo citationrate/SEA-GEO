@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Trophy, Users, LayoutList, LayoutGrid, Sparkles,
+  Trophy, Users, Sparkles,
   Loader2, X, Tag, BarChart3, MessageSquareQuote,
 } from "lucide-react";
 
@@ -44,11 +44,6 @@ const COMP_TYPE_CONFIG: Record<string, { label: string; border: string; text: st
   aggregator: { label: "Aggregatore",  border: "border-[#e8956d]/30",   text: "text-[#e8956d]" },
 };
 
-interface TopicGroup {
-  topic: string;
-  competitors: string[];
-}
-
 /* ─── Helpers ─── */
 function sentimentLabel(s: number | null): { text: string; cls: string } {
   if (s == null) return { text: "N/D", cls: "text-muted-foreground" };
@@ -79,21 +74,18 @@ const FREQ_COLORS = [
 /* ─── Main Client ─── */
 export function CompetitorsClient({
   rows,
-  topicGroups,
   projectIds,
   brandAviScore,
   availableModels,
   selectedModel,
 }: {
   rows: CompRow[];
-  topicGroups: TopicGroup[];
   projectIds: string[];
   brandAviScore?: number | null;
   availableModels?: string[];
   selectedModel?: string | null;
 }) {
   const router = useRouter();
-  const [view, setView] = useState<"competitor" | "ambito">("competitor");
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState("");
   const [drawerTheme, setDrawerTheme] = useState<{ compName: string; theme: MacroTheme } | null>(null);
@@ -154,25 +146,6 @@ export function CompetitorsClient({
             </button>
           )}
 
-          {/* View toggle */}
-          <div className="flex items-center gap-1 bg-muted rounded-[2px] p-0.5">
-            <button
-              onClick={() => setView("competitor")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] text-xs font-medium transition-colors ${
-                view === "competitor" ? "bg-surface text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <LayoutList className="w-3.5 h-3.5" /> Per Competitor
-            </button>
-            <button
-              onClick={() => setView("ambito")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] text-xs font-medium transition-colors ${
-                view === "ambito" ? "bg-surface text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" /> Per Ambito
-            </button>
-          </div>
         </div>
       </div>
 
@@ -251,7 +224,7 @@ export function CompetitorsClient({
           <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground">Nessun competitor trovato. Lancia un&apos;analisi per scoprirli.</p>
         </div>
-      ) : view === "competitor" ? (
+      ) : (
         <>
           {/* Benchmark vs Brand */}
           {brandAviScore != null && filteredRows.length > 0 && (() => {
@@ -299,8 +272,6 @@ export function CompetitorsClient({
           })()}
           <CompetitorView rows={filteredRows} onThemeClick={(compName, theme) => setDrawerTheme({ compName, theme })} />
         </>
-      ) : (
-        <AmbitoView topicGroups={topicGroups} rows={rows} />
       )}
 
       {/* Theme Drawer */}
@@ -460,49 +431,6 @@ function CompetitorCard({
           </span>
         )}
       </div>
-    </div>
-  );
-}
-
-/* ─── Per Ambito View ─── */
-function AmbitoView({ topicGroups, rows }: { topicGroups: TopicGroup[]; rows: CompRow[] }) {
-  const rowMap = new Map(rows.map((r) => [r.name, r]));
-
-  return (
-    <div className="space-y-4">
-      {topicGroups.map((group) => (
-        <div key={group.topic} className="card p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-primary shrink-0" />
-              {group.topic}
-            </h3>
-            <span className="text-xs text-muted-foreground">
-              {group.competitors.length} competitor
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {group.competitors.map((name) => {
-              const comp = rowMap.get(name);
-              return (
-                <div key={name}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-[2px] bg-muted/50 border border-border hover:border-primary/30 transition-colors">
-                  <span className="text-sm font-medium text-foreground">{name}</span>
-                  <span className="text-[10px] text-muted-foreground font-medium">
-                    {comp?.mentions ?? 0}x
-                  </span>
-                  <span className={`w-1.5 h-1.5 rounded-full ${sentimentDot(comp?.avgSentiment ?? null)}`} />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-      {topicGroups.length === 0 && (
-        <div className="card p-8 text-center">
-          <p className="text-sm text-muted-foreground">Nessun topic associato ai competitor.</p>
-        </div>
-      )}
     </div>
   );
 }

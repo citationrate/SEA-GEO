@@ -2,6 +2,8 @@ import { createServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { GitCompare, Plus, Clock, CheckCircle, XCircle, Loader2, Swords, Lock } from "lucide-react";
 import { isProUser } from "@/lib/utils/is-pro";
+import { ProjectSelector } from "@/components/project-selector";
+import { resolveProjectId } from "@/lib/utils/resolve-project";
 
 export const metadata = { title: "Confronto Competitivo" };
 
@@ -15,7 +17,7 @@ function scoreLabel(score: number | null): { text: string; cls: string } {
 export default async function ComparePage({
   searchParams,
 }: {
-  searchParams: { upgrade?: string };
+  searchParams: { upgrade?: string; projectId?: string };
 }) {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -71,14 +73,17 @@ export default async function ComparePage({
     .eq("user_id", user.id)
     .is("deleted_at", null);
 
-  const projectMap = new Map((projects ?? []).map((p: any) => [p.id, p.name]));
-  const projectIds = (projects ?? []).map((p: any) => p.id);
+  const projectsList = (projects ?? []) as any[];
+  const projectMap = new Map(projectsList.map((p: any) => [p.id, p.name]));
+  const projectIds = projectsList.map((p: any) => p.id);
+  const selectedId = resolveProjectId(searchParams, projectIds);
 
-  // Fetch all competitive analyses
-  const { data: analyses } = projectIds.length > 0
+  // Fetch competitive analyses (filtered by project if selected)
+  const targetIds = selectedId ? [selectedId] : projectIds;
+  const { data: analyses } = targetIds.length > 0
     ? await (supabase.from("competitive_analyses") as any)
         .select("*")
-        .in("project_id", projectIds)
+        .in("project_id", targetIds)
         .order("created_at", { ascending: false })
     : { data: [] };
 
@@ -96,14 +101,17 @@ export default async function ComparePage({
             </p>
           </div>
         </div>
-        <a
-          href="/compare/new"
-          data-tour="new-comparison-btn"
-          className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-primary/85 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Nuova Analisi
-        </a>
+        <div className="flex items-center gap-3">
+          <ProjectSelector projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))} />
+          <a
+            href="/compare/new"
+            data-tour="new-comparison-btn"
+            className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-primary/85 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Nuova Analisi
+          </a>
+        </div>
       </div>
 
       {list.length === 0 ? (

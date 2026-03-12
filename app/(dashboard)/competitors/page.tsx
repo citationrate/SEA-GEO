@@ -275,18 +275,6 @@ export default async function CompetitorsPage({
     return aviB - aviA || b.mentions - a.mentions;
   });
 
-  // Build all-topics list for "Per Ambito" view
-  const allTopics = new Map<string, CompRow[]>();
-  for (const row of rows) {
-    for (const t of row.topics) {
-      if (!allTopics.has(t)) allTopics.set(t, []);
-      allTopics.get(t)!.push(row);
-    }
-  }
-  const topicGroups = Array.from(allTopics.entries())
-    .sort((a, b) => b[1].length - a[1].length)
-    .map(([topic, comps]) => ({ topic, competitors: comps.map((c) => c.name) }));
-
   // Extract all available models from runs
   const availableModels = Array.from(new Set((allRuns ?? []).flatMap((r: any) => r.models_used ?? []))) as string[];
 
@@ -303,7 +291,6 @@ export default async function CompetitorsPage({
           competitorType: r.competitorType,
           projects: r.projects.map((p) => ({ id: p.id, name: p.name, brand: p.brand })),
         }))}
-        topicGroups={topicGroups}
         projectIds={targetIds}
         brandAviScore={brandAviScore}
         availableModels={availableModels}
