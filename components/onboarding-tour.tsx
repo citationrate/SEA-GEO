@@ -281,7 +281,7 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
       });
   }, []);
 
-  // Activate tour only for genuinely new accounts (DB says not completed)
+  // DB is the single source of truth for tour activation
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (onboardingCompleted) {
@@ -289,9 +289,9 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
       localStorage.setItem(LS_KEY, "true");
       return;
     }
-    if (localStorage.getItem(LS_KEY) !== "true") {
-      setActive(true);
-    }
+    // DB says not completed — always activate (clear stale localStorage)
+    localStorage.removeItem(LS_KEY);
+    setActive(true);
   }, [onboardingCompleted]);
 
   // Listen for manual restart
