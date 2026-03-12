@@ -49,8 +49,12 @@ const PROVIDER_ENV_REQUIREMENTS: Record<string, string[]> = {
   azure:      ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_KEY"],
 };
 
+/** Models explicitly on hold (not yet ready for production). */
+const MODELS_ON_HOLD = new Set(["copilot-gpt4"]);
+
 /** Check if a model's required env vars are configured (server-side only). */
 export function isModelAvailable(modelId: string): boolean {
+  if (MODELS_ON_HOLD.has(modelId)) return false;
   const model = MODEL_MAP.get(modelId);
   if (!model) return false;
   const required = PROVIDER_ENV_REQUIREMENTS[model.provider];

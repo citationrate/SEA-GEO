@@ -60,14 +60,18 @@ export default async function SettingsPage() {
               <div key={provider}>
                 <p className={`text-sm font-semibold mb-2 ${config?.color ?? "text-foreground"}`}>{config?.label ?? provider}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {models.map((m) => (
-                    <div key={m.id} className="flex items-start gap-2 bg-muted/20 rounded-[2px] px-3 py-2">
-                      <div>
-                        <span className="text-sm text-foreground">{m.label}</span>
-                        <p className="text-xs text-muted-foreground">{m.desc}</p>
+                  {models.map((m) => {
+                    const isSoon = m.id === "copilot-gpt4";
+                    return (
+                      <div key={m.id} className={`flex items-start gap-2 bg-muted/20 rounded-[2px] px-3 py-2 ${isSoon ? "opacity-50" : ""}`}>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm text-foreground">{m.label}</span>
+                          {isSoon && <span className="font-mono text-[0.5rem] tracking-wide text-amber-500 border border-amber-500/30 bg-amber-500/10 px-1 py-0.5 rounded-[2px] ml-1.5">SOON</span>}
+                          <p className="text-xs text-muted-foreground">{m.desc}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );

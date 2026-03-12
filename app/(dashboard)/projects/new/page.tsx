@@ -17,6 +17,7 @@ interface ProviderOption {
   id: string;
   label: string;
   models: ModelOption[];
+  comingSoon?: boolean;
 }
 
 const AVAILABLE_PROVIDERS: ProviderOption[] = [
@@ -63,14 +64,14 @@ const AVAILABLE_PROVIDERS: ProviderOption[] = [
       { id: "grok-3-mini", label: "Grok 3 Mini", description: "Veloce e diretto" },
     ],
   },
-  // TODO: re-enable when Azure credentials confirmed
-  // {
-  //   id: "microsoft",
-  //   label: "Microsoft",
-  //   models: [
-  //     { id: "copilot-gpt4", label: "Copilot GPT-4o", description: "Richiede credenziali Azure • GPT-4o su infrastruttura Microsoft" },
-  //   ],
-  // },
+  {
+    id: "microsoft",
+    label: "Microsoft",
+    comingSoon: true,
+    models: [
+      { id: "copilot-gpt4", label: "Copilot GPT-4o", description: "GPT-4o su infrastruttura Microsoft Azure" },
+    ],
+  },
 ];
 
 const COUNTRIES = [
@@ -534,19 +535,22 @@ export default function NewProjectPage() {
           </p>
           <div className="space-y-2">
             {AVAILABLE_PROVIDERS.map((provider) => {
-              const isActive = activeProviders.has(provider.id);
+              const isSoon = !!provider.comingSoon;
+              const isActive = !isSoon && activeProviders.has(provider.id);
               const currentModel = selectedModelPerProvider[provider.id] ?? provider.models[0].id;
-              const isDisabled = !isActive && atLimit;
+              const isDisabled = isSoon || (!isActive && atLimit);
 
               return (
                 <div
                   key={provider.id}
                   className={`rounded-sm border transition-all ${
-                    isActive
-                      ? "border-primary/50 bg-primary/5"
-                      : isDisabled
-                        ? "border-border opacity-40"
-                        : "border-border"
+                    isSoon
+                      ? "border-border opacity-50"
+                      : isActive
+                        ? "border-primary/50 bg-primary/5"
+                        : isDisabled
+                          ? "border-border opacity-40"
+                          : "border-border"
                   }`}
                 >
                   {/* Provider header */}
@@ -567,8 +571,11 @@ export default function NewProjectPage() {
                         </svg>
                       )}
                     </div>
-                    <span className="text-sm font-semibold text-foreground">{provider.label}</span>
+                    <span className={`text-sm font-semibold ${isSoon ? "text-muted-foreground" : "text-foreground"}`}>{provider.label}</span>
                     <span className="font-mono text-[0.55rem] tracking-wide text-muted-foreground">{provider.id.toUpperCase()}</span>
+                    {isSoon && (
+                      <span className="font-mono text-[0.55rem] tracking-wide text-amber-500 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded-[2px] ml-auto">SOON</span>
+                    )}
                   </button>
 
                   {/* Model radio buttons */}

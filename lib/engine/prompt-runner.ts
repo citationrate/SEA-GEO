@@ -38,6 +38,12 @@ export async function callAIModel(
   brandDomain?: string | null,
 ): Promise<AIModelResult> {
   const empty: AIModelResult = { text: "", sources: [] };
+
+  // Skip models on hold
+  if (model === "copilot-gpt4") {
+    return { text: "", sources: [], error: `[${model}] SKIPPED: Copilot non ancora disponibile` };
+  }
+
   const apiModel = API_MODEL_ID[model] ?? model;
   try {
     const modelDef = MODEL_MAP.get(model);
