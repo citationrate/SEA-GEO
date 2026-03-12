@@ -12,47 +12,34 @@ export async function POST(request: Request) {
     const supabase = createServiceClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      console.error("[competitors/analyze] No authenticated user");
       return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
     }
 
     const body = await request.json();
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) {
-      console.error("[competitors/analyze] Invalid body:", parsed.error.flatten());
       return NextResponse.json({ error: "Dati non validi", details: parsed.error.flatten() }, { status: 400 });
     }
 
     const { project_id } = parsed.data;
-    console.log("[competitors/analyze] called for project:", project_id, "by user:", user.id);
 
     // Verify project ownership
-    const { data: project, error: projectError } = await supabase
+    const { data: project } = await supabase
       .from("projects")
       .select("id")
       .eq("id", project_id)
       .eq("user_id", user.id)
       .is("deleted_at", null)
       .single();
-    if (projectError) {
-      console.error("[competitors/analyze] project query error:", projectError.message);
-    }
     if (!project) {
-      console.error("[competitors/analyze] Project not found or not owned:", project_id);
       return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
     }
 
     // Get all competitors for this project
-    console.log("[competitors/analyze] projectId received:", project_id);
-    const { data: competitors, error: compError } = await supabase
+    const { data: competitors } = await supabase
       .from("competitors")
       .select("*")
       .eq("project_id", project_id);
-
-    if (compError) {
-      console.error("[competitors/analyze] competitors query error:", compError.message, compError);
-    }
-    console.log("[competitors/analyze] competitors query result:", competitors?.length, competitors?.map((c: any) => c.name));
 
     if (!competitors?.length) {
       return NextResponse.json({ error: "Nessun competitor trovato" }, { status: 400 });
@@ -65,7 +52,6 @@ export async function POST(request: Request) {
       .eq("project_id", project_id)
       .is("deleted_at", null);
     const runIds = (runs ?? []).map((r: any) => r.id);
-    console.log("[competitors/analyze] runs found:", runIds.length);
 
     if (!runIds.length) {
       return NextResponse.json({ error: "Nessuna analisi eseguita" }, { status: 400 });
@@ -80,7 +66,6 @@ export async function POST(request: Request) {
 
     const promptIds = (prompts ?? []).map((p: any) => p.id);
     const promptResponseMap = new Map((prompts ?? []).map((p: any) => [p.id, p.raw_response as string]));
-    console.log("[competitors/analyze] prompts with responses:", promptIds.length);
 
     if (!promptIds.length) {
       return NextResponse.json({ error: "Nessuna risposta disponibile" }, { status: 400 });
@@ -91,8 +76,6 @@ export async function POST(request: Request) {
       .from("response_analysis")
       .select("prompt_executed_id, competitors_found")
       .in("prompt_executed_id", promptIds);
-
-    console.log("[competitors/analyze] analyses found:", (analyses ?? []).length);
 
     // Build map: competitor name -> list of raw_response texts (case-insensitive)
     const compTexts = new Map<string, string[]>();
@@ -106,11 +89,8 @@ export async function POST(request: Request) {
       });
     });
 
-    console.log("[competitors/analyze] compTexts keys:", Array.from(compTexts.keys()).slice(0, 5));
-
     // Check OpenAI API key
     if (!process.env.OPENAI_API_KEY) {
-      console.error("[competitors/analyze] OPENAI_API_KEY is not set!");
       return NextResponse.json({ error: "API key OpenAI non configurata" }, { status: 500 });
     }
 
@@ -121,8 +101,6 @@ export async function POST(request: Request) {
     for (const comp of competitors as any[]) {
       const key = comp.name.toLowerCase().trim();
       const texts = compTexts.get(key);
-      console.log(`[competitors/analyze] competitor "${comp.name}" (key="${key}"): ${texts?.length ?? 0} texts`);
-
       if (!texts?.length) {
         results.push({ id: comp.id, name: comp.name, analysis: { macro_themes: [], positioning_summary: "Nessun contesto disponibile per l'analisi." } });
         continue;
@@ -154,7 +132,6 @@ Testi:
 ${truncated}`;
 
       try {
-        console.log(`[competitors/analyze] calling OpenAI for competitor: "${comp.name}"`);
         const completion = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           temperature: 0.3,
@@ -200,7 +177,6 @@ ${truncated}`;
           }
         }
 
-        console.log(`[competitors/analyze] success for "${comp.name}": ${analysis.macro_themes?.length ?? 0} themes`);
         results.push({ id: comp.id, name: comp.name, analysis });
       } catch (err) {
         console.error(`[competitors/analyze] OpenAI error for "${comp.name}":`, err instanceof Error ? err.message : err);
@@ -224,7 +200,6 @@ ${truncated}`;
       }
     }
 
-    console.log(`[competitors/analyze] done: ${results.length} analyzed, ${saveErrors} save errors`);
     return NextResponse.json({ success: true, analyzed: results.length, saveErrors });
   } catch (err) {
     console.error("[competitors/analyze] unexpected error:", err instanceof Error ? err.stack : err);

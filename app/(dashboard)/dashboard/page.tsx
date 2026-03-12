@@ -72,7 +72,6 @@ export default async function DashboardPage({
         .order("computed_at", { ascending: true })
     : { data: [] };
 
-  console.log("[AVI chart] raw data:", JSON.stringify(aviHistory, null, 2));
   const aviList = (aviHistory ?? []) as any[];
   const lastAvi = aviList.length > 0 ? aviList[aviList.length - 1] : null;
   const prevAvi = aviList.length > 1 ? aviList[aviList.length - 2] : null;
@@ -189,8 +188,6 @@ export default async function DashboardPage({
     }
     return point;
   });
-  console.log("[dashboard] trendData:", JSON.stringify(trendData));
-
   // Build recent runs
   const aviMap = new Map(aviList.map((a: any) => [a.run_id, a.avi_score]));
   const recentRuns = runs.slice(0, 5).map((r: any) => ({

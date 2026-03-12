@@ -156,15 +156,12 @@ async function extractCompetitorsTopicsSources(
   sector?: string,
   brandType?: string,
 ): Promise<Pick<ExtractionResult, "topics" | "competitors_found" | "sources">> {
-  console.log("[extractor] partial extraction called, response length:", response.length, "first 200 chars:", response.substring(0, 200));
-
   // Clean control characters that may break Claude parsing
   const cleanResponse = response
     .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
     .trim();
 
   if (!cleanResponse || cleanResponse.length < 50) {
-    console.log("[extractor] response too short or empty, skip extraction");
     return { topics: [], competitors_found: [], sources: [] };
   }
 
@@ -223,7 +220,6 @@ ${cleanResponse}`;
       const jsonMatch = stripped.match(/\{[\s\S]*\}/);
       parsed = JSON.parse(jsonMatch?.[0] ?? stripped);
     } catch {
-      console.log("[extractor] JSON parse failed, attempting partial recovery");
       try {
         const competitorsMatch = stripped.match(/"competitors_found"\s*:\s*(\[[\s\S]*?\])/);
         const topicsMatch = stripped.match(/"topics"\s*:\s*(\[[\s\S]*?\])/);
@@ -233,12 +229,9 @@ ${cleanResponse}`;
           sources: [],
         };
       } catch {
-        console.log("[extractor] full parse failure, returning empty");
         parsed = { competitors_found: [], topics: [], sources: [] };
       }
     }
-    console.log("[extractor] partial result (no brand):", JSON.stringify(parsed));
-
     return {
       topics: Array.isArray(parsed.topics) ? parsed.topics : [],
       competitors_found: Array.isArray(parsed.competitors_found)
@@ -275,19 +268,8 @@ export async function extractFromResponse(
   // Robust brand detection with variants and partial matching
   const detection = detectBrandMention(response, targetBrand);
 
-  console.log("[extractor] brand detection:", {
-    brand: targetBrand,
-    mentioned: detection.mentioned,
-    occurrences: detection.occurrences,
-    matchedVariant: detection.matchedVariant,
-    responsePreview: response.substring(0, 200),
-  });
-
-  console.log("[extractor] using Claude Haiku as extractor");
-
   // If brand not present, use a lighter prompt for competitors/topics/sources only
   if (!detection.mentioned) {
-    console.log("[extractor] brand not found in response, running partial extraction. Variants tried:", buildBrandVariants(targetBrand));
     const partialResult = await extractCompetitorsTopicsSources(
       response, targetBrand, knownCompetitors, sector, brandType
     );
@@ -432,7 +414,6 @@ FORMATO: Restituisci SOLO il nome commerciale.`;
     // Strip markdown code fences if present
     const cleaned = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
     const parsed = JSON.parse(cleaned);
-    console.log("[extractor] result:", JSON.stringify(parsed));
 
     // Use robust detection result for brand_mentioned
     const brandMentioned = detection.mentioned;
@@ -440,11 +421,8 @@ FORMATO: Restituisci SOLO il nome commerciale.`;
     // Enforce brand_rank when brand is mentioned
     let brandRank: number | null = parsed.brand_rank != null ? Number(parsed.brand_rank) : null;
 
-    if (brandMentioned) {
-      if (brandRank == null) {
-        console.log("[extractor] WARN: brand_mentioned=true but brand_rank is null, defaulting to 1");
-        brandRank = 1;
-      }
+    if (brandMentioned && brandRank == null) {
+      brandRank = 1;
     }
 
     // Multidimensional sentiment
@@ -455,14 +433,6 @@ FORMATO: Restituisci SOLO il nome commerciale.`;
     // Formula pesata con recommendation come componente additiva
     const base = (toneScore * 0.3) + (posScore * 0.5) + (recScore * 0.2);
     const sentimentFinal = Math.max(-1, Math.min(1, base)); // clamp -1/+1
-
-    console.log("[extractor] sentiment breakdown:", {
-      tone: toneScore,
-      position: posScore,
-      recommendation: recScore,
-      final: sentimentFinal,
-      adjectives: Array.isArray(parsed.brand_adjectives) ? parsed.brand_adjectives : [],
-    });
 
     return {
       brand_mentioned: brandMentioned,

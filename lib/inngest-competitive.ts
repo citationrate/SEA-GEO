@@ -1,15 +1,9 @@
 import { inngest } from "./inngest";
 import { createServiceClient } from "./supabase/service";
-import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { callAIModel } from "./engine/prompt-runner";
 
 /* ─── Helpers ─── */
-
-const API_MODEL_ID: Record<string, string> = {
-  "gpt-4o-mini": "gpt-4o-mini",
-  "gemini-2.5-flash": "gemini-2.5-flash",
-};
 
 const MODELS = ["gpt-4o-mini", "gemini-2.5-flash"];
 const RUNS_PER_QUERY = 3;
@@ -20,33 +14,6 @@ function generateQueries(brandA: string, brandB: string, driver: string): { patt
     { pattern: "B", text: `È meglio scegliere ${brandA} o ${brandB} se mi interessa soprattutto ${driver}?` },
     { pattern: "C", text: `${brandA} o ${brandB}: quale consigli considerando ${driver}?` },
   ];
-}
-
-async function callModel(prompt: string, model: string): Promise<string> {
-  const apiModel = API_MODEL_ID[model] ?? model;
-
-  if (model.startsWith("gemini")) {
-    const genai = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY ?? "");
-    const gemini = genai.getGenerativeModel({ model: apiModel });
-    const result = await gemini.generateContent(prompt);
-    const resp = result.response;
-    try {
-      return resp.text() || "";
-    } catch {
-      const parts = resp.candidates?.[0]?.content?.parts;
-      return parts?.map((p: any) => p.text ?? "").join("") || "";
-    }
-  }
-
-  // OpenAI (default for gpt-4o-mini)
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const completion = await openai.chat.completions.create({
-    model: apiModel,
-    temperature: 0.7,
-    max_tokens: 1500,
-    messages: [{ role: "user", content: prompt }],
-  });
-  return completion.choices[0]?.message?.content ?? "";
 }
 
 async function evaluateResponse(
@@ -174,7 +141,8 @@ export const runCompetitiveAnalysis = inngest.createFunction(
           if (!prompt) continue;
 
           try {
-            const responseText = await callModel(prompt.query_text, prompt.model);
+            const result = await callAIModel(prompt.query_text, prompt.model);
+            const responseText = result.text;
 
             await (supabase.from("competitive_prompts") as any)
               .update({

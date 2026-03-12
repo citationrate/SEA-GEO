@@ -34,7 +34,6 @@ export default async function CompetitorsPage({
     ? await supabase.from("analysis_runs").select("id, models_used").in("project_id", targetIds).is("deleted_at", null)
     : { data: [] };
 
-
   const selectedModel = searchParams.model || null;
 
   let filteredRunIds: string[];
@@ -250,11 +249,6 @@ export default async function CompetitorsPage({
       row.mentions = totalMentionMap.get(key)!;
     }
   }
-
-  console.log("[competitors] competitors from DB:", compList.length);
-  console.log("[competitors] compStats keys:", Array.from(compStats.keys()).slice(0, 5));
-  console.log("[competitors] grouped keys:", Array.from(grouped.keys()).slice(0, 5));
-  console.log("[competitors] matched stats:", Array.from(compStats.keys()).filter(n => grouped.has(n.toLowerCase().trim())).length, "/", compStats.size);
 
   // Fetch competitor AVI scores per project (case-insensitive keys)
   const compAviMap = new Map<string, number>();
