@@ -67,7 +67,7 @@ const AVAILABLE_PROVIDERS: ProviderOption[] = [
     id: "microsoft",
     label: "Microsoft",
     models: [
-      { id: "copilot-gpt4", label: "Copilot GPT-4o", description: "GPT-4o su infrastruttura Microsoft Azure" },
+      { id: "copilot-gpt4", label: "Copilot GPT-4o", description: "Richiede credenziali Azure \u2022 GPT-4o su infrastruttura Microsoft" },
     ],
   },
 ];

@@ -121,8 +121,10 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
   const analysesList = (analyses ?? []) as any[];
 
   // Error stats for banner
-  const errorPrompts = (prompts ?? []).filter((p: any) => p.error);
+  const skippedPrompts = (prompts ?? []).filter((p: any) => p.error?.includes("SKIPPED"));
+  const errorPrompts = (prompts ?? []).filter((p: any) => p.error && !p.error.includes("SKIPPED"));
   const errorCount = errorPrompts.length;
+  const skippedCount = skippedPrompts.length;
   const hasGeminiErrors = errorPrompts.some((p: any) =>
     (p.model as string)?.toLowerCase().includes("gemini") ||
     (p.error as string)?.toLowerCase().includes("gemini")
@@ -189,6 +191,16 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         </div>
       )}
 
+      {/* Skipped banner */}
+      {skippedCount > 0 && (
+        <div className="card border-amber-500/30 bg-amber-500/5 p-3 flex items-center gap-2 text-sm">
+          <span className="text-amber-600 font-mono text-xs">&#9888;</span>
+          <span className="text-amber-600">
+            {skippedCount} prompt saltati &mdash; credenziali mancanti (es. Azure)
+          </span>
+        </div>
+      )}
+
       {/* Error banner */}
       {errorCount > 0 && (
         <div className="card border-destructive/30 bg-destructive/5 p-3 flex items-center gap-2 text-sm">
@@ -214,7 +226,9 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         <div className="flex items-start justify-between">
           <div>
             <h1 className="font-display font-bold text-2xl text-foreground">Analisi v{r.version}</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{proj?.name} &middot; {proj?.target_brand}</p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {proj?.name === proj?.target_brand ? proj?.name : `${proj?.name} \u00B7 ${proj?.target_brand}`}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             {r.status === "completed" && <ExportButtons runId={params.runId} />}
@@ -233,8 +247,8 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
       </div>
 
       {/* Run metadata */}
-      <div className="card p-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-        <div><span className="text-muted-foreground">Modelli:</span>{" "}<span className="text-foreground font-medium">{r.models_used?.join(", ")}</span></div>
+      <div className="card p-4 flex flex-wrap gap-x-6 gap-y-2 text-sm break-words">
+        <div className="flex flex-wrap items-center gap-1"><span className="text-muted-foreground">Modelli:</span>{" "}<span className="text-foreground font-medium break-words">{r.models_used?.join(", ")}</span></div>
         <div><span className="text-muted-foreground">Prompt:</span>{" "}<span className="text-foreground font-medium">{r.completed_prompts}/{r.total_prompts}</span></div>
         <div><span className="text-muted-foreground">Run per prompt:</span>{" "}<span className="text-foreground font-medium">{r.run_count}</span></div>
         {r.started_at && <div><span className="text-muted-foreground">Inizio:</span>{" "}<span className="text-foreground">{new Date(r.started_at).toLocaleString("it-IT")}</span></div>}
@@ -258,7 +272,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
       {/* AVI Score: Ring + Component Breakdown */}
       {aviData && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-6">
             <div className="space-y-3">
               <RunAVIRing
                 score={aviData.avi_score}
@@ -273,22 +287,22 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
             </div>
 
             {/* AVI Component Cards */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               {AVI_COMPONENTS.map((c) => {
                 const value = aviData[c.key] != null ? Math.round(aviData[c.key]) : null;
                 return (
-                  <div key={c.key} className="card p-4 space-y-2">
-                    <div className="flex items-center justify-between">
+                  <div key={c.key} className="card p-4 flex items-center gap-4">
+                    <div className="shrink-0 w-28">
                       <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{c.label}</span>
-                      <span className="font-display font-bold text-xl text-foreground">{value ?? "--"}</span>
+                      <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">{c.desc}</p>
                     </div>
-                    <p className="text-[10px] text-muted-foreground">{c.desc}</p>
-                    <div className="h-2 rounded-[2px] bg-muted overflow-hidden">
+                    <div className="flex-1 h-2 rounded-[2px] bg-muted overflow-hidden">
                       <div
                         className="h-full rounded-[2px] transition-all duration-700"
                         style={{ width: `${Math.min(100, value ?? 0)}%`, backgroundColor: c.color }}
                       />
                     </div>
+                    <span className="font-display font-bold text-xl text-foreground shrink-0 w-10 text-right">{value ?? "--"}</span>
                   </div>
                 );
               })}

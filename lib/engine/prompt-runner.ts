@@ -139,15 +139,19 @@ export async function callAIModel(
     }
 
     if (provider === "azure") {
+      const endpoint = process.env.AZURE_OPENAI_ENDPOINT ?? "";
+      const azureKey = process.env.AZURE_OPENAI_KEY ?? "";
+      if (!endpoint || !azureKey) {
+        return { text: "", sources: [], error: `[${model}] SKIPPED: credenziali Azure non configurate` };
+      }
       return await retryCall(2, async () => {
-        const endpoint = process.env.AZURE_OPENAI_ENDPOINT ?? "";
         const deployment = apiModel;
         const res = await fetch(
           `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=2024-02-01`,
           {
             method: "POST",
             headers: {
-              "api-key": process.env.AZURE_OPENAI_KEY ?? "",
+              "api-key": azureKey,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
@@ -220,10 +224,12 @@ export async function callAIModel(
     });
     const text = completion.choices[0]?.message?.content ?? "";
     return { text, sources: extractFromText(text, brandDomain ?? undefined) };
-  } catch (err) {
+  } catch (err: any) {
+    const statusCode = err?.status ?? err?.statusCode ?? err?.response?.status ?? "";
     const errMsg = err instanceof Error ? err.message : String(err);
-    console.error(`[callAIModel] ${model} failed:`, errMsg);
-    return { ...empty, error: `[${model}] ${errMsg}` };
+    const detail = statusCode ? `[${model}] HTTP ${statusCode}: ${errMsg}` : `[${model}] ${errMsg}`;
+    console.error(`[callAIModel] ${model} failed:`, detail);
+    return { ...empty, error: detail };
   }
 }
 

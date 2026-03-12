@@ -254,6 +254,7 @@ async function executePrompt(
   }
 
   const rawText = aiResult.text;
+  const isSkipped = aiResult.error?.includes("SKIPPED");
   const promptError: string | null = rawText ? null : (aiResult.error ?? "Risposta vuota dal modello");
 
   // Update prompt with response

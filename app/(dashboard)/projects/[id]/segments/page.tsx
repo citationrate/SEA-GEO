@@ -18,9 +18,6 @@ interface PersonaAttributes {
   interessi?: string[];
   valori?: string[];
   stile_vita?: string[];
-  fase_acquisto?: string;
-  expertise?: string;
-  frequenza_acquisto?: string;
 }
 
 interface Segment {
@@ -44,51 +41,47 @@ const REDDITO_OPTIONS = ["< 1.500\u20AC", "1.500-3.000\u20AC", "3.000-5.000\u20A
 const INTERESSI_OPTIONS = ["Sport", "Tecnologia", "Finanza", "Salute", "Viaggi", "Moda", "Casa", "Famiglia", "Automotive", "Gaming", "Arte", "Alimentazione"];
 const VALORI_OPTIONS = ["Risparmio", "Qualit\u00E0", "Sostenibilit\u00E0", "Innovazione", "Tradizione", "Comodit\u00E0", "Status"];
 const STILE_OPTIONS = ["Molto attivo", "Attivo", "Sedentario", "Digitale", "Ibrido"];
-const FASE_OPTIONS = ["Sta esplorando", "Sta comparando", "Pronto ad acquistare"];
-const EXPERTISE_OPTIONS = ["Novizio", "Base", "Intermedio", "Avanzato", "Esperto"];
-const FREQUENZA_OPTIONS = ["Prima volta", "Occasionale", "Abituale", "Brand loyal"];
-
 /* ─── Template Personas ─── */
 const TEMPLATES: { emoji: string; label: string; description: string; attrs: PersonaAttributes }[] = [
   {
     emoji: "\uD83E\uDDD1\u200D\uD83D\uDCBC", label: "Professionista Urbano",
     description: "30-44 anni, dipendente/manager, reddito medio-alto, Nord Italia, tech e finanza",
-    attrs: { sesso: "Maschile", eta: ["30-44"], zona: ["Nord Italia"], occupazione: ["Dipendente", "Manager"], reddito: "3.000-5.000\u20AC", interessi: ["Tecnologia", "Finanza"], valori: ["Qualit\u00E0", "Innovazione"], fase_acquisto: "Sta comparando" },
+    attrs: { sesso: "Maschile", eta: ["30-44"], zona: ["Nord Italia"], occupazione: ["Dipendente", "Manager"], reddito: "3.000-5.000\u20AC", interessi: ["Tecnologia", "Finanza"], valori: ["Qualit\u00E0", "Innovazione"] },
   },
   {
     emoji: "\uD83D\uDC74", label: "Pensionato Attivo",
     description: "55-65+ anni, pensionato, reddito basso, Centro/Sud, salute e famiglia",
-    attrs: { sesso: "Maschile", eta: ["55-64", "65+"], zona: ["Centro Italia", "Sud Italia"], occupazione: ["Pensionato"], reddito: "< 1.500\u20AC", interessi: ["Salute", "Famiglia"], valori: ["Tradizione", "Risparmio"], fase_acquisto: "Sta esplorando" },
+    attrs: { sesso: "Maschile", eta: ["55-64", "65+"], zona: ["Centro Italia", "Sud Italia"], occupazione: ["Pensionato"], reddito: "< 1.500\u20AC", interessi: ["Salute", "Famiglia"], valori: ["Tradizione", "Risparmio"] },
   },
   {
     emoji: "\uD83C\uDF93", label: "Giovane Professionista",
     description: "Donna 25-34, libera professionista, viaggi e moda, sostenibilit\u00E0",
-    attrs: { sesso: "Femminile", eta: ["25-34"], zona: ["Italia intera"], occupazione: ["Libero Professionista"], titolo_studio: "Laurea", reddito: "1.500-3.000\u20AC", interessi: ["Viaggi", "Moda"], valori: ["Sostenibilit\u00E0"], frequenza_acquisto: "Prima volta" },
+    attrs: { sesso: "Femminile", eta: ["25-34"], zona: ["Italia intera"], occupazione: ["Libero Professionista"], titolo_studio: "Laurea", reddito: "1.500-3.000\u20AC", interessi: ["Viaggi", "Moda"], valori: ["Sostenibilit\u00E0"] },
   },
   {
     emoji: "\uD83D\uDC69\u200D\uD83D\uDC67", label: "Genitore Pratico",
     description: "Donna 35-44, dipendente, Sud Italia, casa e famiglia, risparmio",
-    attrs: { sesso: "Femminile", eta: ["35-44"], zona: ["Sud Italia"], occupazione: ["Dipendente"], reddito: "1.500-3.000\u20AC", interessi: ["Casa", "Famiglia"], valori: ["Risparmio", "Comodit\u00E0"], fase_acquisto: "Pronto ad acquistare" },
+    attrs: { sesso: "Femminile", eta: ["35-44"], zona: ["Sud Italia"], occupazione: ["Dipendente"], reddito: "1.500-3.000\u20AC", interessi: ["Casa", "Famiglia"], valori: ["Risparmio", "Comodit\u00E0"] },
   },
   {
     emoji: "\uD83D\uDE80", label: "Imprenditore Digitale",
     description: "Uomo 30-44, imprenditore, reddito alto, tech e automotive, innovazione",
-    attrs: { sesso: "Maschile", eta: ["30-44"], zona: ["Nord Italia"], occupazione: ["Imprenditore"], reddito: "> 5.000\u20AC", interessi: ["Tecnologia", "Automotive"], valori: ["Innovazione", "Status"], expertise: "Esperto" },
+    attrs: { sesso: "Maschile", eta: ["30-44"], zona: ["Nord Italia"], occupazione: ["Imprenditore"], reddito: "> 5.000\u20AC", interessi: ["Tecnologia", "Automotive"], valori: ["Innovazione", "Status"] },
   },
   {
     emoji: "\uD83C\uDFAE", label: "Giovane Studente",
     description: "18-24, studente, gaming e tech, risparmio, occasionale",
-    attrs: { eta: ["18-24"], occupazione: ["Studente"], reddito: "< 1.500\u20AC", zona: ["Italia intera"], interessi: ["Gaming", "Tecnologia"], valori: ["Risparmio"], frequenza_acquisto: "Occasionale" },
+    attrs: { eta: ["18-24"], occupazione: ["Studente"], reddito: "< 1.500\u20AC", zona: ["Italia intera"], interessi: ["Gaming", "Tecnologia"], valori: ["Risparmio"] },
   },
   {
     emoji: "\uD83C\uDFE5", label: "Professionista Sanitario",
     description: "Donna 35-54, dipendente, laurea, salute e formazione, qualit\u00E0",
-    attrs: { sesso: "Femminile", eta: ["35-44", "45-54"], zona: ["Italia intera"], occupazione: ["Dipendente"], titolo_studio: "Laurea", reddito: "3.000-5.000\u20AC", interessi: ["Salute"], valori: ["Qualit\u00E0"], expertise: "Intermedio" },
+    attrs: { sesso: "Femminile", eta: ["35-44", "45-54"], zona: ["Italia intera"], occupazione: ["Dipendente"], titolo_studio: "Laurea", reddito: "3.000-5.000\u20AC", interessi: ["Salute"], valori: ["Qualit\u00E0"] },
   },
   {
     emoji: "\uD83C\uDFE1", label: "Artigiano Tradizionale",
     description: "Uomo 45-54, libero professionista, diploma, Centro Italia, tradizione",
-    attrs: { sesso: "Maschile", eta: ["45-54"], zona: ["Centro Italia"], occupazione: ["Libero Professionista"], titolo_studio: "Diploma", reddito: "1.500-3.000\u20AC", interessi: ["Casa", "Alimentazione"], valori: ["Tradizione", "Qualit\u00E0"], frequenza_acquisto: "Abituale" },
+    attrs: { sesso: "Maschile", eta: ["45-54"], zona: ["Centro Italia"], occupazione: ["Libero Professionista"], titolo_studio: "Diploma", reddito: "1.500-3.000\u20AC", interessi: ["Casa", "Alimentazione"], valori: ["Tradizione", "Qualit\u00E0"] },
   },
 ];
 
@@ -110,9 +103,6 @@ function generatePrompt(name: string, a: PersonaAttributes): string {
   if (a.interessi?.length) parts.push(`Mi interessano ${a.interessi.join(", ").toLowerCase()}`);
   if (a.valori?.length) parts.push(`do valore a ${a.valori.join(", ").toLowerCase()}`);
   if (a.stile_vita?.length) parts.push(`il mio stile di vita \u00E8 ${a.stile_vita.join(", ").toLowerCase()}`);
-  if (a.fase_acquisto) parts.push(`${a.fase_acquisto === "Pronto ad acquistare" ? "Sono pronto ad acquistare" : a.fase_acquisto === "Sta comparando" ? "Sto comparando diverse opzioni" : "Sto esplorando le possibilit\u00E0"}`);
-  if (a.expertise) parts.push(`il mio livello di expertise nel settore \u00E8 ${a.expertise.toLowerCase()}`);
-  if (a.frequenza_acquisto) parts.push(`la mia frequenza di acquisto \u00E8: ${a.frequenza_acquisto.toLowerCase()}`);
 
   if (parts.length === 0) return "";
   return parts.join(". ").replace(/\.\./g, ".") + ".";
@@ -575,42 +565,6 @@ function PersonaDrawer({
             ))}
           </div>
           <CustomChipInput placeholder="Stile custom..." onAdd={(v) => addCustomMulti("stile_vita", v)} />
-
-          {/* COMPORTAMENTALI */}
-          <SectionLabel>Comportamentali</SectionLabel>
-
-          <FieldLabel>Fase acquisto</FieldLabel>
-          <div className="flex flex-wrap gap-2">
-            {FASE_OPTIONS.map((o) => (
-              <Chip key={o} label={o} active={attrs.fase_acquisto === o} onClick={() => setSingle("fase_acquisto", o)} />
-            ))}
-            {(customSingles.fase_acquisto ?? []).filter((c) => !FASE_OPTIONS.includes(c)).map((c) => (
-              <Chip key={c} label={c} active={attrs.fase_acquisto === c} custom onClick={() => setSingle("fase_acquisto", c)} />
-            ))}
-          </div>
-          <CustomChipInput placeholder="Fase custom..." onAdd={(v) => addCustomSingle("fase_acquisto", v)} />
-
-          <FieldLabel>Expertise settore</FieldLabel>
-          <div className="flex flex-wrap gap-2">
-            {EXPERTISE_OPTIONS.map((o) => (
-              <Chip key={o} label={o} active={attrs.expertise === o} onClick={() => setSingle("expertise", o)} />
-            ))}
-            {(customSingles.expertise ?? []).filter((c) => !EXPERTISE_OPTIONS.includes(c)).map((c) => (
-              <Chip key={c} label={c} active={attrs.expertise === c} custom onClick={() => setSingle("expertise", c)} />
-            ))}
-          </div>
-          <CustomChipInput placeholder="Expertise custom..." onAdd={(v) => addCustomSingle("expertise", v)} />
-
-          <FieldLabel>Frequenza acquisto</FieldLabel>
-          <div className="flex flex-wrap gap-2">
-            {FREQUENZA_OPTIONS.map((o) => (
-              <Chip key={o} label={o} active={attrs.frequenza_acquisto === o} onClick={() => setSingle("frequenza_acquisto", o)} />
-            ))}
-            {(customSingles.frequenza_acquisto ?? []).filter((c) => !FREQUENZA_OPTIONS.includes(c)).map((c) => (
-              <Chip key={c} label={c} active={attrs.frequenza_acquisto === c} custom onClick={() => setSingle("frequenza_acquisto", c)} />
-            ))}
-          </div>
-          <CustomChipInput placeholder="Frequenza custom..." onAdd={(v) => addCustomSingle("frequenza_acquisto", v)} />
 
           {/* ANTEPRIMA PROMPT */}
           <SectionLabel>Anteprima Prompt</SectionLabel>
