@@ -5,7 +5,7 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from "recharts";
 import { TrendingUp, TrendingDown, Minus, Clock, CheckCircle2, AlertCircle } from "lucide-react";
-import { InfoTooltip } from "@/components/ui/info-tooltip";
+
 
 /* ─── AVI Ring ─── */
 interface AVIRingProps {
@@ -77,18 +77,20 @@ export function AVIRing({ score, trend, components }: AVIRingProps) {
       </div>
 
       {score != null && (
-        <div className="w-full space-y-2 pt-2 border-t border-border">
+        <div className="w-full space-y-2.5 pt-2 border-t border-border">
           {comps.map(c => (
-            <div key={c.label} className="flex items-center gap-2">
-              <span className="font-mono text-[10px] text-cream-dim w-16 shrink-0 flex items-center gap-1">
-                {c.label}
-                {COMP_TOOLTIPS[c.label] && <InfoTooltip text={COMP_TOOLTIPS[c.label]} />}
-              </span>
-              <div className="flex-1 h-1 bg-ink-3 rounded-sm overflow-hidden">
+            <div key={c.label}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-mono text-[10px] text-cream-dim flex items-center gap-1" title={COMP_TOOLTIPS[c.label]}>
+                  {c.label}
+                  <svg className="w-2.5 h-2.5 text-cream-dim/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                </span>
+                <span className="font-mono text-[10px] text-cream-dim">{c.v != null ? Math.round(c.v) : "--"}</span>
+              </div>
+              <div className="w-full h-1 bg-ink-3 rounded-sm overflow-hidden">
                 <div className="h-full rounded-sm transition-all duration-700"
                   style={{ width: c.v != null ? `${c.v}%` : "0%", backgroundColor: COMP_COLORS[c.label] ?? "var(--sage)" }} />
               </div>
-              <span className="font-mono text-[10px] text-cream-dim w-5 text-right">{c.v != null ? Math.round(c.v) : "--"}</span>
             </div>
           ))}
         </div>
