@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, Loader2, MessageSquare, Sparkles } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, MessageSquare, Sparkles, AlertTriangle } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 interface Query {
   id: string;
@@ -40,6 +41,7 @@ export default function QueriesPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [targetBrand, setTargetBrand] = useState("");
 
   const [tofuText, setTofuText] = useState("");
   const [mofuText, setMofuText] = useState("");
@@ -58,7 +60,23 @@ export default function QueriesPage() {
     setLoading(false);
   }
 
-  useEffect(() => { fetchQueries(); }, []);
+  useEffect(() => {
+    fetchQueries();
+    createClient()
+      .from("projects")
+      .select("target_brand")
+      .eq("id", projectId)
+      .single()
+      .then(({ data }) => { if (data?.target_brand) setTargetBrand(data.target_brand); });
+  }, []);
+
+  const containsBrand = useCallback(
+    (text: string) => {
+      if (!targetBrand) return false;
+      return text.toLowerCase().includes(targetBrand.toLowerCase());
+    },
+    [targetBrand],
+  );
 
   async function addQuery(text: string, stage: "tofu" | "mofu") {
     if (!text.trim()) return;
@@ -224,6 +242,7 @@ export default function QueriesPage() {
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             </button>
           </div>
+          {containsBrand(tofuText) && <BrandWarning brand={targetBrand} />}
           {loading ? (
             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
           ) : tofuQueries.length === 0 ? (
@@ -262,6 +281,7 @@ export default function QueriesPage() {
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             </button>
           </div>
+          {containsBrand(mofuText) && <BrandWarning brand={targetBrand} />}
           {loading ? (
             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
           ) : mofuQueries.length === 0 ? (
@@ -275,6 +295,17 @@ export default function QueriesPage() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function BrandWarning({ brand }: { brand: string }) {
+  return (
+    <div className="flex items-start gap-2 px-3 py-2 rounded-[2px] border border-[#c4a882]/30 bg-[#c4a882]/5 animate-fade-in">
+      <AlertTriangle className="w-4 h-4 text-[#c4a882] shrink-0 mt-0.5" />
+      <p className="text-[13px] text-[#c4a882] leading-snug">
+        La query contiene <span className="font-semibold">&ldquo;{brand}&rdquo;</span>. Inserire il nome del brand nelle query potrebbe creare bias nei risultati dell&apos;analisi.
+      </p>
     </div>
   );
 }

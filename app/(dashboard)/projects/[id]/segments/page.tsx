@@ -580,12 +580,12 @@ function PersonaDrawer({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-border shrink-0 space-y-2" style={{ background: "var(--ink-2)" }}>
+        <div className="px-5 py-4 pb-6 border-t border-border shrink-0 space-y-2" style={{ background: "var(--ink-2)" }}>
           {error && <p className="text-xs text-destructive">{error}</p>}
           <button
             onClick={handleSave}
             disabled={saving || !name.trim()}
-            className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-3 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Salva Persona
