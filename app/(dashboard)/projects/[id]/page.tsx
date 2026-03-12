@@ -7,6 +7,7 @@ import { ProjectAVITrend } from "./project-avi-trend";
 import { DeleteProjectButton } from "./delete-project-button";
 import { OpenAnalysisButton } from "./open-analysis-button";
 import { ArchivedRunsSection } from "./archived-runs-section";
+import { AutoLaunch } from "./auto-launch";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const supabase = createServerClient();
@@ -138,6 +139,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
   return (
     <div className="space-y-6 max-w-[1400px] animate-fade-in">
+      <AutoLaunch />
       <div>
         <a
           href="/projects"
