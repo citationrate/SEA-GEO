@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { User, CreditCard, Cpu, Bell, AlertTriangle, Check, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { User, CreditCard, Cpu, Bell, AlertTriangle, Check, Loader2, LogOut } from "lucide-react";
 
 interface SettingsClientProps {
   userId: string;
@@ -43,6 +44,8 @@ export function SettingsClient({
   const [preferred, setPreferred] = useState<Set<string>>(new Set(initialPreferred));
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const router = useRouter();
 
   const isPro = plan === "pro" || plan === "agency";
 
@@ -239,6 +242,32 @@ export function SettingsClient({
               <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${notifyCompetitor ? "left-5" : "left-0.5"}`} />
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Logout */}
+      <div className="card p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <LogOut className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-semibold text-foreground">Sessione</h2>
+        </div>
+        <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
+          <div>
+            <p className="text-sm text-foreground">Esci dall&apos;account</p>
+            <p className="text-xs text-muted-foreground">Verrai reindirizzato alla pagina di login</p>
+          </div>
+          <button
+            onClick={async () => {
+              setLoggingOut(true);
+              await fetch("/api/auth/logout", { method: "POST" });
+              router.push("/login");
+            }}
+            disabled={loggingOut}
+            className="px-4 py-2 border border-border text-foreground rounded-[2px] text-sm font-medium hover:bg-muted/30 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+          >
+            {loggingOut ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogOut className="w-3.5 h-3.5" />}
+            {loggingOut ? "Uscita..." : "Logout"}
+          </button>
         </div>
       </div>
 
