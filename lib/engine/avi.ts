@@ -35,28 +35,7 @@ export function calculateAVI(analyses: AnalysisRow[]): AVIResult {
     };
   }
 
-  // --- Presence (35%): % prompt con brand menzionato ---
-  const mentionedCount = analyses.filter((a) => a.brand_mentioned).length;
-  const presence_score = (mentionedCount / analyses.length) * 100;
-
-  // --- Rank (25%): media di 1/brand_rank per i menzionati, 0 per non menzionati ---
-  const rankValues = analyses.map((a) => {
-    if (!a.brand_mentioned || a.brand_rank === null || a.brand_rank <= 0) return 0;
-    return 1 / a.brand_rank;
-  });
-  const avgRankInverse = rankValues.reduce((s, v) => s + v, 0) / rankValues.length;
-  const rank_score = avgRankInverse * 100; // 1/1=1→100, 1/2=0.5→50, etc.
-
-  // --- Sentiment (20%): media dei sentiment_score non null, default 0.5 ---
-  const withSentiment = analyses.filter((a) => a.sentiment_score !== null);
-  let sentimentAvg = 0.5;
-  if (withSentiment.length > 0) {
-    sentimentAvg = withSentiment.reduce((sum, a) => sum + a.sentiment_score!, 0) / withSentiment.length;
-  }
-  // Normalizza da -1..1 a 0..100
-  const sentiment_score = ((sentimentAvg + 1) / 2) * 100;
-
-  // --- Stability (20%): per ogni coppia query+segment, calcola concordanza tra run ---
+  // --- Stability (always calculated): per ogni coppia query+segment, concordanza tra run ---
   const pairGroups = new Map<string, boolean[]>();
   for (const a of analyses) {
     const key = `${a.query_id}__${a.segment_id}`;
@@ -73,13 +52,46 @@ export function calculateAVI(analyses: AnalysisRow[]): AVIResult {
         pairScores.push(100);
         continue;
       }
-      // Conta quante concordano col risultato di maggioranza
       const trueCount = runs.filter(Boolean).length;
       const majority = Math.max(trueCount, runs.length - trueCount);
       pairScores.push((majority / runs.length) * 100);
     }
     stability_score = pairScores.reduce((s, v) => s + v, 0) / pairScores.length;
   }
+
+  // --- Check: if brand not mentioned in ANY prompt, AVI = 0 ---
+  const mentionedCount = analyses.filter((a) => a.brand_mentioned).length;
+  if (mentionedCount === 0) {
+    return {
+      avi_score: 0,
+      components: {
+        presence_score: 0,
+        rank_score: 0,
+        sentiment_score: 0,
+        stability_score: Math.round(stability_score * 100) / 100,
+      },
+    };
+  }
+
+  // --- Presence (35%): % prompt con brand menzionato ---
+  const presence_score = (mentionedCount / analyses.length) * 100;
+
+  // --- Rank (25%): media di 1/brand_rank solo per i prompt con brand menzionato ---
+  const mentionedAnalyses = analyses.filter((a) => a.brand_mentioned);
+  const rankValues = mentionedAnalyses.map((a) => {
+    if (a.brand_rank === null || a.brand_rank <= 0) return 0;
+    return 1 / a.brand_rank;
+  });
+  const avgRankInverse = rankValues.reduce((s, v) => s + v, 0) / rankValues.length;
+  const rank_score = avgRankInverse * 100;
+
+  // --- Sentiment (20%): media dei sentiment_score solo per prompt con brand menzionato ---
+  const withSentiment = mentionedAnalyses.filter((a) => a.sentiment_score !== null);
+  let sentimentAvg = 0.5;
+  if (withSentiment.length > 0) {
+    sentimentAvg = withSentiment.reduce((sum, a) => sum + a.sentiment_score!, 0) / withSentiment.length;
+  }
+  const sentiment_score = ((sentimentAvg + 1) / 2) * 100;
 
   // --- AVI composito ---
   const avi_score = Math.round(

@@ -278,6 +278,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
               <RunAVIRing
                 score={aviData.avi_score}
                 trend={trend}
+                noBrandMentions={aviData.avi_score === 0 && aviData.presence_score === 0}
                 components={[
                   { label: "Prominence", v: aviData.presence_score != null ? Math.round(aviData.presence_score) : null },
                   { label: "Rank",       v: aviData.rank_score != null ? Math.round(aviData.rank_score) : null },

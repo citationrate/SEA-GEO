@@ -78,6 +78,7 @@ export default async function DashboardPage({
 
   const aviScore = lastAvi?.avi_score ?? null;
   const aviTrend = lastAvi && prevAvi ? lastAvi.avi_score - prevAvi.avi_score : null;
+  const noBrandMentions = lastAvi != null && lastAvi.avi_score === 0 && lastAvi.presence_score === 0;
 
   // Get total prompts executed
   const { count: totalPrompts } = runIds.length > 0
@@ -235,6 +236,7 @@ export default async function DashboardPage({
       aviScore={aviScore}
       aviTrend={aviTrend}
       aviComponents={aviComponents}
+      noBrandMentions={noBrandMentions}
       stats={stats}
       trendData={trendData}
       recentRuns={recentRuns}

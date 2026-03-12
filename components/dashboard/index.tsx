@@ -12,11 +12,12 @@ interface AVIRingProps {
   score: number | null;
   trend: number | null;
   components?: { label: string; v: number | null }[];
+  noBrandMentions?: boolean;
 }
 
-export function AVIRing({ score, trend, components }: AVIRingProps) {
+export function AVIRing({ score, trend, components, noBrandMentions }: AVIRingProps) {
   const R = 52, C = 2 * Math.PI * R;
-  const dash = score != null ? (score / 100) * C : 0;
+  const dash = score != null && !noBrandMentions ? (score / 100) * C : 0;
 
   const Icon = trend == null ? Minus : trend > 0 ? TrendingUp : TrendingDown;
   const trendColor = trend == null ? "text-cream-dim"
@@ -53,28 +54,34 @@ export function AVIRing({ score, trend, components }: AVIRingProps) {
         <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
           <circle cx="60" cy="60" r={R} fill="none" stroke="var(--line)" strokeWidth="7"/>
           <circle cx="60" cy="60" r={R} fill="none"
-            stroke="var(--sage)" strokeWidth="7"
+            stroke={noBrandMentions ? "var(--line)" : "var(--sage)"} strokeWidth="7"
             strokeLinecap="round"
             strokeDasharray={C}
-            strokeDashoffset={score != null ? C - dash : C}
+            strokeDashoffset={C - dash}
             style={{ transition: "stroke-dashoffset 1.2s ease-out",
-                     filter: "drop-shadow(0 0 6px var(--sage-glow))" }}
+                     filter: noBrandMentions ? "none" : "drop-shadow(0 0 6px var(--sage-glow))" }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-display text-[32px] text-foreground leading-none" style={{ fontWeight: 300 }}>
+          <span className={`font-display text-[32px] leading-none ${noBrandMentions ? "text-muted-foreground" : "text-foreground"}`} style={{ fontWeight: 300 }}>
             {score != null ? Math.round(score) : "--"}
           </span>
           {score != null && <span className="font-mono text-[12px] text-cream-dim">/100</span>}
         </div>
       </div>
 
-      <div className={`flex items-center gap-1.5 text-xs font-sans ${trendColor}`}>
-        <Icon className="w-3 h-3" />
-        {trend != null
-          ? <span>{trend > 0 ? "+" : ""}{trend.toFixed(1)} vs ultima run</span>
-          : <span className="text-cream-dim">Nessun dato precedente</span>}
-      </div>
+      {noBrandMentions ? (
+        <p className="text-xs text-muted-foreground text-center leading-snug px-2">
+          Il brand non è stato rilevato in nessuna risposta — AVI non calcolabile
+        </p>
+      ) : (
+        <div className={`flex items-center gap-1.5 text-xs font-sans ${trendColor}`}>
+          <Icon className="w-3 h-3" />
+          {trend != null
+            ? <span>{trend > 0 ? "+" : ""}{trend.toFixed(1)} vs ultima run</span>
+            : <span className="text-cream-dim">Nessun dato precedente</span>}
+        </div>
+      )}
 
       {score != null && (
         <div className="w-full space-y-2.5 pt-2 border-t border-border">

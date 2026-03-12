@@ -6,6 +6,7 @@ interface DashboardClientProps {
   aviScore: number | null;
   aviTrend: number | null;
   aviComponents?: { label: string; v: number | null }[];
+  noBrandMentions?: boolean;
   stats: { label: string; value: string; sub: string }[];
   trendData: { run: string; avi: number | null; prominence: number | null; sentiment: number | null; [key: string]: any }[];
   recentRuns: { id: string; project_id: string; project_name: string; version: number; status: string; avi_score: number | null; date: string }[];
@@ -18,6 +19,7 @@ export function DashboardClient({
   aviScore,
   aviTrend,
   aviComponents,
+  noBrandMentions,
   stats,
   trendData,
   recentRuns,
@@ -39,7 +41,7 @@ export function DashboardClient({
 
       {/* Top row: AVI Ring + Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
-        <AVIRing score={aviScore} trend={aviTrend} components={aviComponents} />
+        <AVIRing score={aviScore} trend={aviTrend} components={aviComponents} noBrandMentions={noBrandMentions} />
         <StatsRow stats={stats} />
       </div>
 
