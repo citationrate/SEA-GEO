@@ -7,24 +7,37 @@
 export interface GenerationInputs {
   categoria: string;
   mercato?: string;
-  use_cases: string[];
-  criteri: string[];
-  must_have: string[];
+  luogo?: string;
+  punti_di_forza: string[];
+  competitor: string[];
+  obiezioni: string[];
+  ai_answers?: string[];
+  personas_enabled: boolean;
+  personas: Persona[];
+  // Legacy fields (kept for backward compat with existing DB records)
+  use_cases?: string[];
+  criteri?: string[];
+  must_have?: string[];
   vincoli?: string;
-  obiezioni?: string;
   linguaggio_mercato?: string;
   ruolo?: string;
   dimensione_azienda?: string;
-  personas_enabled: boolean;
-  personas: Persona[];
 }
 
 export interface Persona {
   id: string;
+  nome?: string;
   mode: "demographic" | "decision_drivers";
+  // B2C
   zona?: string;
   contesto_uso?: string;
+  eta?: string;
+  sesso?: string;
+  situazione?: string;
+  // B2B
   ruolo?: string;
+  settore?: string;
+  problema?: string;
   priorita?: string;
   must_have?: string;
   no_go?: string;
@@ -46,11 +59,13 @@ function slot(val: string | undefined, fallback: string): string {
 export function generateQueries(inputs: GenerationInputs): GeneratedQuery[] {
   const queries: GeneratedQuery[] = [];
   const cat = inputs.categoria;
-  const criterio1 = inputs.criteri[0] || "qualità e affidabilità";
-  const criterio2 = inputs.criteri[1] || "rapporto qualità prezzo";
-  const mustHave = inputs.must_have[0] || "";
-  const vincolo = inputs.vincoli || "";
-  const obiezione = inputs.obiezioni || "";
+  const forza1 = inputs.punti_di_forza[0] || "qualità e affidabilità";
+  const forza2 = inputs.punti_di_forza[1] || "rapporto qualità prezzo";
+  const comp1 = inputs.competitor[0] || "";
+  const comp2 = inputs.competitor[1] || "";
+  const obiezione1 = inputs.obiezioni[0] || "";
+  const luogo = inputs.luogo || "";
+  const mercato = inputs.mercato || "";
 
   // --- Family 1: GENERALI (Benchmark) ---
   queries.push({
@@ -58,7 +73,7 @@ export function generateQueries(inputs: GenerationInputs): GeneratedQuery[] {
     set_type: "generale", layer: "A", funnel: "TOFU",
   });
   queries.push({
-    text: `Se cerco ${cat} con ${criterio1}, quali realtà dovrei valutare?`,
+    text: `Se cerco ${cat} con ${forza1}, quali realtà dovrei valutare?`,
     set_type: "generale", layer: "B", funnel: "TOFU",
   });
   queries.push({
@@ -66,46 +81,69 @@ export function generateQueries(inputs: GenerationInputs): GeneratedQuery[] {
     set_type: "generale", layer: "A", funnel: "MOFU",
   });
   queries.push({
-    text: `Per scegliere tra le opzioni di ${cat}, cosa conta di più su ${criterio1} e ${criterio2}?`,
+    text: `Per scegliere tra le opzioni di ${cat}, cosa conta di più su ${forza1} e ${forza2}?`,
     set_type: "generale", layer: "B", funnel: "MOFU",
   });
 
-  // --- Family 2: VERTICALI (Use case + criteri) ---
-  const useCases = inputs.use_cases.length > 0 ? inputs.use_cases : [cat];
-
-  for (const uc of useCases) {
+  // --- Family 2: VERTICALI ---
+  // Geo-localized queries
+  if (luogo) {
     queries.push({
-      text: `Chi mi consiglieresti per ${uc} in ${cat}?`,
+      text: `Chi mi consiglieresti per ${cat} a ${luogo}?`,
       set_type: "verticale", layer: "A", funnel: "TOFU",
     });
     queries.push({
-      text: mustHave
-        ? `Per ${uc}, quali aziende sono forti su ${mustHave}?`
-        : `Per ${uc}, quali aziende sono forti su ${criterio1}?`,
+      text: `Quali sono i migliori servizi di ${cat} disponibili a ${luogo}?`,
       set_type: "verticale", layer: "B", funnel: "TOFU",
     });
-    if (vincolo) {
+  }
+
+  // Strength-based queries
+  if (inputs.punti_di_forza.length > 0) {
+    queries.push({
+      text: `Chi eccelle in ${cat} per ${forza1}?`,
+      set_type: "verticale", layer: "A", funnel: "TOFU",
+    });
+    if (inputs.punti_di_forza.length > 1) {
       queries.push({
-        text: `Sto cercando ${cat} per ${uc}: quali opzioni sono più adatte se ${vincolo}?`,
-        set_type: "verticale", layer: "C", funnel: "TOFU",
+        text: `Quale azienda di ${cat} combina meglio ${forza1} e ${forza2}?`,
+        set_type: "verticale", layer: "B", funnel: "MOFU",
       });
     }
+  }
+
+  // Competitor comparison queries
+  if (comp1) {
     queries.push({
-      text: `Come scelgo tra le opzioni di ${cat} per ${uc}?`,
+      text: `Come si posiziona ${comp1} rispetto alle alternative in ${cat}?`,
       set_type: "verticale", layer: "A", funnel: "MOFU",
     });
-    queries.push({
-      text: obiezione
-        ? `Per ${uc}, quali realtà eccellono su ${criterio1} senza ${obiezione}?`
-        : `Per ${uc}, quali realtà eccellono su ${criterio1}?`,
-      set_type: "verticale", layer: "B", funnel: "MOFU",
-    });
-    if (mustHave && vincolo) {
+    if (comp2) {
       queries.push({
-        text: `Ho bisogno di ${cat} per ${uc}: quali aziende soddisfano ${mustHave} anche con ${vincolo}?`,
-        set_type: "verticale", layer: "C", funnel: "MOFU",
+        text: `Sto valutando ${comp1} e ${comp2} per ${cat}: quale scegliere?`,
+        set_type: "verticale", layer: "B", funnel: "MOFU",
       });
     }
+  }
+
+  // Objection-based queries
+  if (obiezione1) {
+    queries.push({
+      text: `${cat}: è vero che ${obiezione1}? Quali alternative risolvono questo problema?`,
+      set_type: "verticale", layer: "B", funnel: "TOFU",
+    });
+    queries.push({
+      text: `Cerco ${cat} ma mi preoccupa ${obiezione1}: chi affronta meglio questo aspetto?`,
+      set_type: "verticale", layer: "C", funnel: "MOFU",
+    });
+  }
+
+  // Market-specific
+  if (mercato) {
+    queries.push({
+      text: `Qual è il panorama di ${cat} nel mercato ${mercato}?`,
+      set_type: "verticale", layer: "A", funnel: "TOFU",
+    });
   }
 
   // --- Family 3: PERSONAS (opt-in only) ---
@@ -114,41 +152,43 @@ export function generateQueries(inputs: GenerationInputs): GeneratedQuery[] {
 
     for (const p of activePersonas) {
       if (p.mode === "demographic") {
-        const zona = slot(p.zona, "nella mia zona");
-        const contesto = slot(p.contesto_uso, cat);
+        const situazione = slot(p.situazione, "");
+        const eta = slot(p.eta, "");
+        const contesto = situazione || (eta ? `${eta} anni` : cat);
 
         queries.push({
-          text: `Sono ${zona}, cerco ${cat} per ${contesto}: chi mi consiglieresti?`,
+          text: situazione
+            ? `Sono una persona che ${situazione}: quale ${cat} mi consigli?`
+            : `Cerco ${cat} per ${contesto}: chi mi consiglieresti?`,
           set_type: "persona", layer: "B", funnel: "TOFU",
           persona_mode: "demographic", persona_id: p.id,
         });
         queries.push({
-          text: `Per ${contesto} in ${zona}, quali aziende di ${cat} sono migliori su ${criterio1}?`,
+          text: `Per qualcuno che ${contesto}, quali aziende di ${cat} sono migliori su ${forza1}?`,
           set_type: "persona", layer: "B", funnel: "MOFU",
           persona_mode: "demographic", persona_id: p.id,
         });
       } else {
-        // decision_drivers
+        // decision_drivers (B2B)
         const ruolo = slot(p.ruolo, "decisore");
-        const priorita = slot(p.priorita, criterio1);
-        const pMustHave = slot(p.must_have, mustHave || criterio1);
-        const noGo = slot(p.no_go, "");
+        const problema = slot(p.problema, "");
+        const settore = slot(p.settore, "");
 
         queries.push({
-          text: `Come ${ruolo}, cerco ${cat} con priorità su ${priorita}: quali aziende valutare?`,
+          text: problema
+            ? `Come ${ruolo}${settore ? ` nel settore ${settore}` : ""}, cerco ${cat} per risolvere ${problema}: quali aziende valutare?`
+            : `Come ${ruolo}${settore ? ` nel settore ${settore}` : ""}, cerco ${cat}: quali aziende valutare?`,
           set_type: "persona", layer: "B", funnel: "TOFU",
           persona_mode: "decision_drivers", persona_id: p.id,
         });
         queries.push({
-          text: vincolo
-            ? `Come ${ruolo} con budget ${vincolo} e must-have ${pMustHave}, quale ${cat} scelgo?`
-            : `Come ${ruolo} con must-have ${pMustHave}, quale ${cat} scelgo?`,
+          text: `Come ${ruolo}, devo scegliere ${cat}: chi eccelle su ${forza1}?`,
           set_type: "persona", layer: "B", funnel: "MOFU",
           persona_mode: "decision_drivers", persona_id: p.id,
         });
-        if (noGo) {
+        if (p.no_go) {
           queries.push({
-            text: `Come ${ruolo}, devo scegliere ${cat}: chi esclude ${noGo} e garantisce ${pMustHave}?`,
+            text: `Come ${ruolo}, devo scegliere ${cat}: chi evita ${p.no_go} e garantisce ${slot(p.must_have, forza1)}?`,
             set_type: "persona", layer: "C", funnel: "MOFU",
             persona_mode: "decision_drivers", persona_id: p.id,
           });
