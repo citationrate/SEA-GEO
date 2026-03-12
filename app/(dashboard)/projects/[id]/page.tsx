@@ -248,7 +248,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               <h2 className="font-display font-semibold text-foreground">Query TOFU</h2>
               <span className="badge badge-muted text-[10px]">{tofuQueries.length}</span>
             </div>
-            <a href={`/projects/${params.id}/queries`} className="text-xs text-primary hover:text-primary/70 transition-colors">
+            <a href={`/projects/${params.id}/queries`} data-tour="add-query-btn" className="text-xs text-primary hover:text-primary/70 transition-colors">
               <Plus className="w-4 h-4" />
             </a>
           </div>

@@ -44,7 +44,7 @@ export function AVIRing({ score, trend, components }: AVIRingProps) {
   ];
 
   return (
-    <div className="card p-5 h-full flex flex-col items-center gap-3">
+    <div data-tour="avi-ring" className="card p-5 h-full flex flex-col items-center gap-3">
       <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cream-dim">
         AI Visibility Index
       </p>

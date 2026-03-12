@@ -3,7 +3,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
 import { isProUser } from "@/lib/utils/is-pro";
-import { OnboardingModal } from "@/components/onboarding/onboarding-modal";
+import { OnboardingTour } from "@/components/onboarding-tour";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = createServerClient();
@@ -21,18 +21,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
       : ((profile as any)?.plan ?? "free"),
   };
 
-  // Check if onboarding should show (first-time user, no projects)
-  const onboardingCompleted = (profile as any)?.onboarding_completed === true;
-  let showOnboarding = false;
-  if (!onboardingCompleted) {
-    const { count } = await supabase
-      .from("projects")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .is("deleted_at", null);
-    showOnboarding = (count ?? 0) === 0;
-  }
-
   return (
     <div className="flex h-screen bg-ink overflow-hidden">
       <Sidebar profile={enrichedProfile} />
@@ -42,7 +30,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {children}
         </main>
       </div>
-      {showOnboarding && <OnboardingModal />}
+      <OnboardingTour />
     </div>
   );
 }

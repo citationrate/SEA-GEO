@@ -2,6 +2,22 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+export async function GET() {
+  const supabase = createServiceClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json([], { status: 200 });
+
+  const { data } = await supabase
+    .from("projects")
+    .select("id, name")
+    .eq("user_id", user.id)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  return NextResponse.json(data ?? []);
+}
+
 const projectSchema = z.object({
   name: z.string().min(1),
   target_brand: z.string().min(1),

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils/cn";
 import {
   LayoutDashboard, FolderOpen, Play, BarChart3,
   Users, Link2, Tag, GitCompare, Settings,
-  Database, ChevronRight, Layers,
+  Database, ChevronRight, Layers, RotateCcw,
 } from "lucide-react";
 
 const NAV = [
@@ -115,8 +115,18 @@ export function Sidebar({ profile }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Profile */}
-      <div className="border-t border-border p-3 flex-shrink-0">
+      {/* Tour restart + Profile */}
+      <div className="border-t border-border p-3 flex-shrink-0 space-y-1">
+        <button
+          onClick={() => {
+            localStorage.removeItem("seageo_onboarding_done");
+            window.dispatchEvent(new CustomEvent("restart-onboarding-tour"));
+          }}
+          className="flex items-center gap-2 w-full px-2 py-1.5 rounded-[2px] text-xs text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors"
+        >
+          <RotateCcw className="w-3 h-3" />
+          Rivedi tour
+        </button>
         <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] hover:bg-surface-2 transition-colors cursor-pointer">
           <div className="w-6 h-6 rounded-[2px] flex items-center justify-center flex-shrink-0 text-primary font-mono text-xs" style={{ background: "var(--primary-glow)" }}>
             {(profile?.full_name?.[0] ?? profile?.email?.[0] ?? "U").toUpperCase()}
