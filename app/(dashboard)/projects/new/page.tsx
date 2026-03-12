@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, X, Loader2, Lock, Check, ArrowRight, Crown, Search, ChevronDown } from "lucide-react";
-import { SuggestedQueriesNew, type SuggestedQuery } from "@/components/suggested-queries";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import confetti from "canvas-confetti";
 
@@ -120,7 +119,6 @@ export default function NewProjectPage() {
   const [countries, setCountries] = useState<string[]>([]);
   const [countrySearch, setCountrySearch] = useState("");
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
-  const [selectedQueries, setSelectedQueries] = useState<SuggestedQuery[]>([]);
   const countryRef = useRef<HTMLDivElement>(null);
 
   // Close country dropdown on outside click
@@ -244,19 +242,6 @@ export default function NewProjectPage() {
         throw new Error(data.error || "Errore durante il salvataggio");
       }
 
-      // Save selected suggested queries
-      if (selectedQueries.length > 0 && data.id) {
-        await Promise.all(
-          selectedQueries.map((q) =>
-            fetch("/api/queries", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ project_id: data.id, text: q.text, funnel_stage: q.stage }),
-            })
-          )
-        );
-      }
-
       // First project → show plan selector
       if (existingProjectCount === 0) {
         setNewProjectId(data.id);
@@ -334,7 +319,7 @@ export default function NewProjectPage() {
             </label>
             <select
               value={sector}
-              onChange={(e) => { setSector(e.target.value); setSelectedQueries([]); }}
+              onChange={(e) => setSector(e.target.value)}
               className="input-base"
             >
               <option value="">Seleziona...</option>
@@ -365,15 +350,6 @@ export default function NewProjectPage() {
             </select>
           </div>
         </div>
-
-        {/* Query suggerite per settore */}
-        {sector && (
-          <SuggestedQueriesNew
-            sector={sector}
-            selectedQueries={selectedQueries}
-            onSelectionChange={setSelectedQueries}
-          />
-        )}
 
         {/* Sito web ufficiale */}
         <div className="space-y-1.5">
