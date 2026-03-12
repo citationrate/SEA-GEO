@@ -291,10 +291,12 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
               {AVI_COMPONENTS.map((c) => {
                 const value = aviData[c.key] != null ? Math.round(aviData[c.key]) : null;
                 return (
-                  <div key={c.key} className="card p-4 flex items-center gap-4">
-                    <div className="shrink-0 w-28">
+                  <div key={c.key} className="card p-4 flex items-center gap-3">
+                    <div className="flex items-center gap-1 shrink-0" style={{ minWidth: 120 }}>
                       <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{c.label}</span>
-                      <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">{c.desc}</p>
+                      <span title={c.desc} className="text-muted-foreground cursor-help">
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                      </span>
                     </div>
                     <div className="flex-1 h-2 rounded-[2px] bg-muted overflow-hidden">
                       <div
