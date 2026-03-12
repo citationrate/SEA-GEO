@@ -2,9 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Loader2, Globe, Tag, Building2, MessageSquare } from "lucide-react";
+import { ArrowRight, Loader2, Globe, Tag, Building2, MessageSquare } from "lucide-react";
 import confetti from "canvas-confetti";
-import { SUGGESTED_QUERIES, type SuggestedQuery } from "@/components/suggested-queries";
 
 const SECTORS = ["Turismo", "Alimentare", "Bevande", "Tech", "Moda", "Finance", "Automotive", "Pharma", "Energia", "Altro"];
 
@@ -22,7 +21,6 @@ export function OnboardingModal() {
 
   // Step 3 state
   const [projectId, setProjectId] = useState<string | null>(null);
-  const [selectedQueries, setSelectedQueries] = useState<SuggestedQuery[]>([]);
 
   const markComplete = useCallback(async () => {
     await fetch("/api/onboarding/complete", { method: "POST" }).catch(() => {});
@@ -59,44 +57,23 @@ export function OnboardingModal() {
     }
   }
 
-  async function handleLaunchAnalysis() {
-    if (!projectId || selectedQueries.length === 0) return;
-    setLoading(true);
-    try {
-      // Save selected queries
-      for (const q of selectedQueries) {
-        await fetch("/api/queries", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            project_id: projectId,
-            text: q.text,
-            funnel_stage: q.stage,
-          }),
-        });
-      }
+  async function handleGoToProject() {
+    if (!projectId) return;
+    await markComplete();
 
-      await markComplete();
+    // Fire confetti
+    confetti({
+      particleCount: 150,
+      spread: 80,
+      origin: { y: 0.6 },
+      colors: ["#00d4ff", "#7eb3d4", "#e8956d", "#7eb89a", "#c4a882"],
+    });
 
-      // Fire confetti
-      confetti({
-        particleCount: 150,
-        spread: 80,
-        origin: { y: 0.6 },
-        colors: ["#00d4ff", "#7eb3d4", "#e8956d", "#7eb89a", "#c4a882"],
-      });
-
-      // Redirect to project page — launcher will be opened via URL param
-      setTimeout(() => {
-        router.push(`/projects/${projectId}?launch=true`);
-        router.refresh();
-      }, 800);
-    } finally {
-      setLoading(false);
-    }
+    setTimeout(() => {
+      router.push(`/projects/${projectId}`);
+      router.refresh();
+    }, 800);
   }
-
-  const suggestions = SUGGESTED_QUERIES[sector] ?? [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -162,7 +139,7 @@ export function OnboardingModal() {
               <div className="space-y-3">
                 <div>
                   <label className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-1">
-                    <Tag className="w-3 h-3" /> Brand target
+                    <Tag className="w-3 h-3" /> Brand rilevato
                   </label>
                   <input
                     type="text"
@@ -192,10 +169,7 @@ export function OnboardingModal() {
                   </label>
                   <select
                     value={sector}
-                    onChange={(e) => {
-                      setSector(e.target.value);
-                      setSelectedQueries([]);
-                    }}
+                    onChange={(e) => setSector(e.target.value)}
                     className="w-full px-3 py-2 bg-muted/30 border border-border rounded-[2px] text-sm text-foreground focus:outline-none focus:border-primary/50"
                   >
                     <option value="">Seleziona settore</option>
@@ -230,91 +204,32 @@ export function OnboardingModal() {
             </div>
           )}
 
-          {/* ─── STEP 3: Add Queries ─── */}
+          {/* ─── STEP 3: Go to project ─── */}
           {step === 3 && (
             <div className="space-y-4 animate-fade-in">
               <div className="space-y-1">
                 <h2 className="font-display font-bold text-xl text-foreground">
-                  Aggiungi le prime query
+                  Progetto creato! 🎉
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Seleziona le domande che le AI ricevono nel tuo settore
+                  Ora aggiungi le query personalizzate o usa il generatore AI nella pagina del progetto
                 </p>
               </div>
 
-              {suggestions.length > 0 ? (
-                <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
-                  {suggestions.map((q) => {
-                    const isSelected = selectedQueries.some((s) => s.text === q.text);
-                    return (
-                      <button
-                        key={q.text}
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedQueries(selectedQueries.filter((s) => s.text !== q.text));
-                          } else {
-                            setSelectedQueries([...selectedQueries, q]);
-                          }
-                        }}
-                        className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-[2px] border text-left transition-all ${
-                          isSelected
-                            ? "border-primary/40 bg-primary/5"
-                            : "border-border hover:border-primary/20 bg-muted/30"
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded-[2px] border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                          isSelected ? "border-primary bg-primary" : "border-muted-foreground"
-                        }`}>
-                          {isSelected && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
-                        </div>
-                        <p className="text-sm text-foreground flex-1">{q.text}</p>
-                        <span className={`font-mono text-[0.55rem] tracking-wide uppercase px-1.5 py-0.5 rounded-[2px] border shrink-0 mt-0.5 ${
-                          q.stage === "tofu"
-                            ? "border-primary/30 text-primary"
-                            : "border-[#7eb89a]/30 text-[#7eb89a]"
-                        }`}>
-                          {q.stage}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-6">
-                  <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Nessuna query suggerita per questo settore.
-                    <br />Potrai aggiungerle manualmente nella pagina progetto.
-                  </p>
-                </div>
-              )}
+              <div className="border border-dashed border-border rounded-[2px] px-4 py-6 text-center space-y-2">
+                <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto" />
+                <p className="text-sm text-muted-foreground">
+                  Aggiungi le tue query personalizzate o usa il generatore AI
+                </p>
+              </div>
 
               <button
-                onClick={handleLaunchAnalysis}
-                disabled={selectedQueries.length === 0 || loading}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold hover:bg-primary/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={handleGoToProject}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold hover:bg-primary/80 transition-colors"
               >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <ArrowRight className="w-4 h-4" />
-                )}
-                Lancia la tua prima analisi
+                <ArrowRight className="w-4 h-4" />
+                Vai al progetto
               </button>
-
-              {suggestions.length === 0 && (
-                <button
-                  onClick={async () => {
-                    await markComplete();
-                    router.push(`/projects/${projectId}`);
-                    router.refresh();
-                  }}
-                  className="w-full text-center text-sm text-primary hover:text-primary/80 transition-colors"
-                >
-                  Vai al progetto senza query
-                </button>
-              )}
             </div>
           )}
 

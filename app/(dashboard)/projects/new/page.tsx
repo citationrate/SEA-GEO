@@ -3,7 +3,7 @@
 
 import { useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, X, Loader2 } from "lucide-react";
+import { ArrowLeft, X, Loader2, Lock } from "lucide-react";
 import { SuggestedQueriesNew, type SuggestedQuery } from "@/components/suggested-queries";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 
@@ -16,7 +16,6 @@ interface ModelOption {
 interface ProviderOption {
   id: string;
   label: string;
-  comingSoon?: boolean;
   models: ModelOption[];
 }
 
@@ -27,6 +26,7 @@ const AVAILABLE_PROVIDERS: ProviderOption[] = [
     models: [
       { id: "gpt-4o-mini", label: "GPT-4o Mini", description: "Veloce, risposte concise" },
       { id: "gpt-4o", label: "GPT-4o", description: "Preciso, risposte elaborate" },
+      { id: "gpt-5.4", label: "GPT-5.4", description: "Ultimo modello OpenAI, massima qualità" },
       { id: "o1-mini", label: "o1 Mini", description: "Ragionamento approfondito" },
     ],
   },
@@ -66,9 +66,8 @@ const AVAILABLE_PROVIDERS: ProviderOption[] = [
   {
     id: "microsoft",
     label: "Microsoft",
-    comingSoon: true,
     models: [
-      { id: "copilot-gpt4", label: "Copilot GPT-4", description: "Prossimamente disponibile" },
+      { id: "copilot-gpt4", label: "Copilot GPT-4o", description: "GPT-4o su infrastruttura Microsoft Azure" },
     ],
   },
 ];
@@ -97,7 +96,6 @@ export default function NewProjectPage() {
   });
 
   function toggleProvider(provider: ProviderOption) {
-    if (provider.comingSoon) return;
     setActiveProviders((prev) => {
       const next = new Set(prev);
       if (next.has(provider.id)) {
@@ -121,7 +119,7 @@ export default function NewProjectPage() {
   // Build models_config array from active providers
   function getModelsConfig(): string[] {
     return AVAILABLE_PROVIDERS
-      .filter((p) => activeProviders.has(p.id) && !p.comingSoon)
+      .filter((p) => activeProviders.has(p.id))
       .map((p) => selectedModelPerProvider[p.id] ?? p.models[0].id);
   }
 
@@ -219,10 +217,10 @@ export default function NewProjectPage() {
           />
         </div>
 
-        {/* Brand target */}
+        {/* Brand rilevato */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-            Brand target
+            Brand rilevato
             <InfoTooltip text="Il brand che verrà cercato nelle risposte AI" />
           </label>
           <input
@@ -376,32 +374,27 @@ export default function NewProjectPage() {
           <div className="space-y-2">
             {AVAILABLE_PROVIDERS.map((provider) => {
               const isActive = activeProviders.has(provider.id);
-              const isDisabled = !!provider.comingSoon;
               const currentModel = selectedModelPerProvider[provider.id] ?? provider.models[0].id;
 
               return (
                 <div
                   key={provider.id}
                   className={`rounded-sm border transition-all ${
-                    isDisabled
-                      ? "opacity-50 cursor-not-allowed border-border"
-                      : isActive
-                        ? "border-primary/50 bg-primary/5"
-                        : "border-border"
+                    isActive
+                      ? "border-primary/50 bg-primary/5"
+                      : "border-border"
                   }`}
                 >
                   {/* Provider header */}
                   <button
                     type="button"
                     onClick={() => toggleProvider(provider)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${
-                      isDisabled ? "cursor-not-allowed" : "cursor-pointer"
-                    }`}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left cursor-pointer"
                   >
                     <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${
-                      isActive && !isDisabled ? "border-primary bg-primary" : "border-muted-foreground"
+                      isActive ? "border-primary bg-primary" : "border-muted-foreground"
                     }`}>
-                      {isActive && !isDisabled && (
+                      {isActive && (
                         <svg className="w-2.5 h-2.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
@@ -409,13 +402,10 @@ export default function NewProjectPage() {
                     </div>
                     <span className="text-sm font-semibold text-foreground">{provider.label}</span>
                     <span className="font-mono text-[0.55rem] tracking-wide text-muted-foreground">{provider.id.toUpperCase()}</span>
-                    {provider.comingSoon && (
-                      <span className="font-mono text-[0.55rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">SOON</span>
-                    )}
                   </button>
 
                   {/* Model radio buttons */}
-                  {isActive && !isDisabled && (
+                  {isActive && (
                     <div className="px-4 pb-3 pt-0 space-y-0.5">
                       {provider.models.map((model) => (
                         <label
@@ -447,6 +437,12 @@ export default function NewProjectPage() {
                 </div>
               );
             })}
+          </div>
+          <div className="flex items-start gap-2 mt-2">
+            <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground">
+              I modelli selezionati saranno fissi per tutta la durata del progetto per garantire dati comparabili nel tempo. Per usare modelli diversi, crea un nuovo progetto.
+            </p>
           </div>
         </div>
 

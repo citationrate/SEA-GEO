@@ -161,10 +161,10 @@ export default function EditProjectPage() {
           />
         </div>
 
-        {/* Brand target */}
+        {/* Brand rilevato */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-            Brand target *
+            Brand rilevato *
             <InfoTooltip text="Il brand che verrà cercato nelle risposte AI" />
           </label>
           <input
