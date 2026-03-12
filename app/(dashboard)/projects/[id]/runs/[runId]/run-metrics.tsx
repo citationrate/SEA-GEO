@@ -79,7 +79,7 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
 export function RunMetrics({ prompts, analyses, sources, models, competitorMentions, brandAviScore, targetBrand, perModelAvi, queries }: RunMetricsProps) {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [funnelFilter, setFunnelFilter] = useState<string | null>(null);
-  const [brandCitedFilter, setBrandCitedFilter] = useState<boolean | null>(null);
+
   const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null);
   const [modalPrompt, setModalPrompt] = useState<any | null>(null);
 
@@ -109,15 +109,6 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
     const filteredSources = sources.filter((s) => filteredPromptIds.has(s.prompt_executed_id));
 
     const analysisMap = new Map(filteredAnalyses.map((a) => [a.prompt_executed_id, a]));
-
-    // Apply brand cited filter after we have analysisMap
-    if (brandCitedFilter !== null) {
-      filteredPrompts = filteredPrompts.filter((p) => {
-        const a = analysisMap.get(p.id);
-        if (!a) return !brandCitedFilter;
-        return brandCitedFilter ? a.brand_mentioned : !a.brand_mentioned;
-      });
-    }
 
     const totalAnalysed = filteredAnalyses.length;
     const mentionCount = filteredAnalyses.filter((a) => a.brand_mentioned).length;
@@ -254,7 +245,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       topicList,
       sourcesByType,
     };
-  }, [selectedModel, funnelFilter, brandCitedFilter, prompts, analyses, sources, competitorMentions, queryMap]);
+  }, [selectedModel, funnelFilter, prompts, analyses, sources, competitorMentions, queryMap]);
 
   const {
     filteredPrompts,
@@ -367,34 +358,6 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           </>
         )}
 
-        {/* Separator */}
-        {(models.length > 1 || funnelStages.length > 0) && (
-          <div className="w-px h-5 bg-border mx-1" />
-        )}
-
-        {/* Brand cited toggle */}
-        <button
-          onClick={() => setBrandCitedFilter(brandCitedFilter === true ? null : true)}
-          className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
-          style={
-            brandCitedFilter === true
-              ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
-              : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
-          }
-        >
-          Brand Citato
-        </button>
-        <button
-          onClick={() => setBrandCitedFilter(brandCitedFilter === false ? null : false)}
-          className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
-          style={
-            brandCitedFilter === false
-              ? { borderColor: "#c0614a", backgroundColor: "rgba(192,97,74,0.1)", color: "#c0614a" }
-              : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
-          }
-        >
-          Brand Non Citato
-        </button>
       </div>
 
       {/* Brand Mention Stats */}
