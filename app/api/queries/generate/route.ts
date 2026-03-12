@@ -80,8 +80,8 @@ export async function POST(request: Request) {
       ...inputs,
     });
 
-    // Insert queries
-    const rows = queries.map((q) => ({
+    // Insert queries — try with funnel column, fallback without it
+    const rowsWithFunnel = queries.map((q) => ({
       project_id,
       text: q.text,
       funnel_stage: q.funnel.toLowerCase() as "tofu" | "mofu",
@@ -92,10 +92,26 @@ export async function POST(request: Request) {
       persona_id: q.persona_id || null,
     }));
 
-    const { error } = await supabase.from("queries").insert(rows as any);
+    let { error } = await supabase.from("queries").insert(rowsWithFunnel as any);
+
+    // If funnel column doesn't exist yet, retry without it
+    if (error?.code === "42703") {
+      const rowsWithoutFunnel = queries.map((q) => ({
+        project_id,
+        text: q.text,
+        funnel_stage: q.funnel.toLowerCase() as "tofu" | "mofu",
+        set_type: q.set_type,
+        layer: q.layer,
+        persona_mode: q.persona_mode || null,
+        persona_id: q.persona_id || null,
+      }));
+      const result = await supabase.from("queries").insert(rowsWithoutFunnel as any);
+      error = result.error;
+    }
+
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    return NextResponse.json({ ok: true, count: rows.length }, { status: 201 });
+    return NextResponse.json({ ok: true, count: queries.length }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Errore interno" }, { status: 500 });
   }

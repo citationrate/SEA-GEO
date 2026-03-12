@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, ArrowRight, Sparkles, Loader2, Plus, X, Users,
-  ChevronLeft, Lock, MessageCircleQuestion, Check,
+  ChevronLeft, MessageCircleQuestion, Check, Crown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { generateQueries, type GenerationInputs, type GeneratedQuery, type Persona } from "@/lib/query-generator";
@@ -24,10 +24,10 @@ const FUNNEL_COLORS: Record<string, string> = {
 };
 
 const QUERY_COUNT_OPTIONS = [
-  { value: 5, label: "5 query", desc: "rapido", pro: false },
-  { value: 10, label: "10 query", desc: "consigliato", pro: false },
-  { value: 20, label: "20 query", desc: "approfondito", pro: false },
-  { value: 50, label: "50 query", desc: "completo", pro: true },
+  { value: 5, label: "5 query", desc: "rapido" },
+  { value: 10, label: "10 query", desc: "consigliato" },
+  { value: 20, label: "20 query", desc: "approfondito" },
+  { value: 50, label: "50 query", desc: "completo" },
 ];
 
 export default function GenerateQueriesPage() {
@@ -38,6 +38,7 @@ export default function GenerateQueriesPage() {
   const [step, setStep] = useState<Step>(1);
   const [saving, setSaving] = useState(false);
   const [isPro, setIsPro] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [existingQueryCount, setExistingQueryCount] = useState(0);
 
   // Step 1: Inputs
@@ -61,9 +62,10 @@ export default function GenerateQueriesPage() {
   const [personasEnabled, setPersonasEnabled] = useState(false);
   const [personas, setPersonas] = useState<Persona[]>([]);
 
-  // Step 3: Query count
+  // Step 3: Query count & TOFU/MOFU split
   const [queryCount, setQueryCount] = useState(10);
   const [customCount, setCustomCount] = useState(30);
+  const [tofuPercent, setTofuPercent] = useState(60);
 
   // Step 4: Preview
   const [generatedQueries, setGeneratedQueries] = useState<GeneratedQuery[]>([]);
@@ -73,7 +75,7 @@ export default function GenerateQueriesPage() {
   useEffect(() => {
     fetch("/api/profile").then((r) => r.json()).then((p) => {
       setIsPro(p?.plan === "pro" || p?.plan === "agency");
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setProfileLoaded(true));
 
     fetch(`/api/queries?project_id=${projectId}`).then((r) => r.json()).then((qs) => {
       if (Array.isArray(qs)) setExistingQueryCount(qs.length);
@@ -87,7 +89,7 @@ export default function GenerateQueriesPage() {
     return {
       categoria,
       mercato: mercato || undefined,
-      luogo: (isPro && luogo) ? luogo : undefined,
+      luogo: luogo || undefined,
       punti_di_forza: puntiDiForza,
       competitor,
       obiezioni,
@@ -129,19 +131,34 @@ export default function GenerateQueriesPage() {
 
   function goToStep4() {
     const inputs = buildInputs();
-    let allQueries = generateQueries(inputs);
+    const allQueries = generateQueries(inputs);
+    const targetCount = queryCount === -1 ? customCount : queryCount;
 
-    // Limit to selected queryCount
-    const targetCount = queryCount === -1 ? (isPro ? customCount : 30) : queryCount;
-    if (allQueries.length > targetCount) {
-      allQueries = allQueries.slice(0, targetCount);
+    // Split into TOFU/MOFU pools
+    const tofuPool = allQueries.filter((q) => q.funnel === "TOFU");
+    const mofuPool = allQueries.filter((q) => q.funnel === "MOFU");
+
+    const targetTofu = Math.round(targetCount * (tofuPercent / 100));
+    const targetMofu = targetCount - targetTofu;
+
+    // Pick from each pool, then fill remaining from the other
+    let finalTofu = tofuPool.slice(0, targetTofu);
+    let finalMofu = mofuPool.slice(0, targetMofu);
+
+    // If one pool is short, fill from the other
+    const tofuShort = targetTofu - finalTofu.length;
+    const mofuShort = targetMofu - finalMofu.length;
+    if (tofuShort > 0) {
+      finalMofu = mofuPool.slice(0, targetMofu + tofuShort);
+    }
+    if (mofuShort > 0) {
+      finalTofu = tofuPool.slice(0, targetTofu + mofuShort);
     }
 
-    // If we need more queries, duplicate with variations
-    // (In practice the template engine handles this based on inputs)
+    const result = [...finalTofu, ...finalMofu];
 
-    setGeneratedQueries(allQueries);
-    setSelectedIndexes(new Set(allQueries.map((_, i) => i)));
+    setGeneratedQueries(result);
+    setSelectedIndexes(new Set(result.map((_, i) => i)));
     setStep(4);
   }
 
@@ -215,7 +232,8 @@ export default function GenerateQueriesPage() {
   }
 
   // Remaining quota check
-  const wouldExceed = usedThisMonth + queryCount > monthlyLimit;
+  const effectiveCount = queryCount === -1 ? customCount : queryCount;
+  const wouldExceed = usedThisMonth + effectiveCount > monthlyLimit;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
@@ -231,13 +249,44 @@ export default function GenerateQueriesPage() {
         <div className="flex items-center gap-3">
           <Sparkles className="w-6 h-6 text-primary" />
           <div>
-            <h1 className="font-display font-bold text-2xl text-foreground">Genera Query</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="font-display font-bold text-2xl text-foreground">Genera Query</h1>
+              {isPro && (
+                <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">
+                  <Crown className="w-3 h-3" /> PRO
+                </span>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground mt-0.5">
               Generazione strutturata con famiglie, layer e personas
             </p>
           </div>
         </div>
       </div>
+
+      {/* Pro gate for non-Pro users */}
+      {profileLoaded && !isPro && (
+        <div className="card border-[#c4a882]/20 bg-[#c4a882]/5 p-6 space-y-3">
+          <div className="flex items-center gap-2">
+            <Crown className="w-5 h-5 text-[#c4a882]" />
+            <h2 className="font-display font-semibold text-foreground">Funzionalità Pro</h2>
+          </div>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Il generatore di query AI è disponibile con il piano Pro. Passa a Pro per generare query strutturate
+            con famiglie, layer, personas e distribuzione TOFU/MOFU personalizzata.
+          </p>
+          <a
+            href="/settings"
+            className="inline-flex items-center gap-2 bg-[#c4a882] text-black text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-[#c4a882]/80 transition-colors"
+          >
+            <Crown className="w-4 h-4" />
+            Passa a Pro
+          </a>
+        </div>
+      )}
+
+      {/* Wizard content — disabled for non-Pro */}
+      <div className={profileLoaded && !isPro ? "opacity-40 pointer-events-none select-none space-y-6" : "space-y-6"}>
 
       {/* Step indicator */}
       <div className="flex items-center gap-2">
@@ -298,25 +347,18 @@ export default function GenerateQueriesPage() {
             />
           </div>
 
-          {/* Luogo — Pro only */}
+          {/* Luogo */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
               Luogo
-              {!isPro ? (
-                <span className="inline-flex items-center gap-1 font-mono text-[0.55rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">
-                  <Lock className="w-2.5 h-2.5" /> PRO
-                </span>
-              ) : (
-                <InfoTooltip text="Specifica una città, regione o paese per generare query geolocalizzate. Aumenta la rilevanza per brand con presenza locale." />
-              )}
+              <InfoTooltip text="Specifica una città, regione o paese per generare query geolocalizzate. Aumenta la rilevanza per brand con presenza locale." />
             </label>
             <input
               type="text"
               value={luogo}
               onChange={(e) => setLuogo(e.target.value)}
               placeholder="es. Milano, Nord Italia, Europa"
-              disabled={!isPro}
-              className={`input-base w-full ${!isPro ? "opacity-50 cursor-not-allowed" : ""}`}
+              className="input-base w-full"
             />
           </div>
 
@@ -581,58 +623,41 @@ export default function GenerateQueriesPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {QUERY_COUNT_OPTIONS.map((opt) => {
-              const locked = opt.pro && !isPro;
               const isSelected = queryCount === opt.value;
               return (
                 <button
                   key={opt.value}
                   type="button"
-                  onClick={() => !locked && setQueryCount(opt.value)}
-                  disabled={locked}
+                  onClick={() => setQueryCount(opt.value)}
                   className={`relative p-3 rounded-[2px] border text-center transition-all ${
-                    locked
-                      ? "opacity-50 cursor-not-allowed border-border"
-                      : isSelected
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:border-primary/30"
+                    isSelected
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-primary/30"
                   }`}
                 >
                   <p className={`text-lg font-display font-bold ${isSelected ? "text-primary" : "text-foreground"}`}>
                     {opt.label}
                   </p>
                   <p className="text-xs text-muted-foreground">{opt.desc}</p>
-                  {locked && (
-                    <span className="absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 font-mono text-[0.5rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">
-                      <Lock className="w-2 h-2" /> PRO
-                    </span>
-                  )}
                 </button>
               );
             })}
           </div>
 
-          {/* Custom count — Pro only */}
+          {/* Custom count */}
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => isPro && setQueryCount(-1)}
-              disabled={!isPro}
+              onClick={() => setQueryCount(-1)}
               className={`flex items-center gap-2 text-sm px-3 py-2 rounded-[2px] border transition-all ${
-                !isPro
-                  ? "opacity-50 cursor-not-allowed border-border"
-                  : queryCount === -1
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:border-primary/30"
+                queryCount === -1
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:border-primary/30"
               }`}
             >
               Personalizzato
-              {!isPro && (
-                <span className="inline-flex items-center gap-0.5 font-mono text-[0.5rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">
-                  <Lock className="w-2 h-2" /> PRO
-                </span>
-              )}
             </button>
-            {queryCount === -1 && isPro && (
+            {queryCount === -1 && (
               <input
                 type="number"
                 min={1}
@@ -642,6 +667,55 @@ export default function GenerateQueriesPage() {
                 className="input-base w-24"
               />
             )}
+          </div>
+
+          {/* TOFU / MOFU split selector */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+              Distribuzione TOFU / MOFU
+              <InfoTooltip text="TOFU (Top of Funnel): query informative e generiche. MOFU (Middle of Funnel): query comparative e valutative. Bilancia la copertura del funnel." />
+            </label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-primary">TOFU</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={tofuPercent}
+                  onChange={(e) => setTofuPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+                  className="input-base w-16 text-center"
+                />
+                <span className="text-xs text-muted-foreground">%</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-[#7eb89a]">MOFU</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={100 - tofuPercent}
+                  onChange={(e) => setTofuPercent(100 - Math.min(100, Math.max(0, Number(e.target.value))))}
+                  className="input-base w-16 text-center"
+                />
+                <span className="text-xs text-muted-foreground">%</span>
+              </div>
+            </div>
+            {/* Visual bar */}
+            <div className="h-2.5 rounded-full overflow-hidden flex bg-muted">
+              <div
+                className="h-full bg-primary transition-all duration-300"
+                style={{ width: `${tofuPercent}%` }}
+              />
+              <div
+                className="h-full bg-[#7eb89a] transition-all duration-300"
+                style={{ width: `${100 - tofuPercent}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span>{Math.round((queryCount === -1 ? customCount : queryCount) * tofuPercent / 100)} query TOFU</span>
+              <span>{(queryCount === -1 ? customCount : queryCount) - Math.round((queryCount === -1 ? customCount : queryCount) * tofuPercent / 100)} query MOFU</span>
+            </div>
           </div>
 
           {/* Usage bar */}
@@ -786,6 +860,8 @@ export default function GenerateQueriesPage() {
           </div>
         </div>
       )}
+
+      </div>{/* end wizard content wrapper */}
     </div>
   );
 }
