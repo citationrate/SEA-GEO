@@ -67,7 +67,7 @@ export default function QueriesPage() {
       .select("target_brand")
       .eq("id", projectId)
       .single()
-      .then(({ data }) => { if (data?.target_brand) setTargetBrand(data.target_brand); });
+      .then(({ data }: { data: any }) => { if (data?.target_brand) setTargetBrand(data.target_brand); });
   }, []);
 
   const containsBrand = useCallback(
