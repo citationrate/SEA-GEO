@@ -30,7 +30,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {children}
         </main>
       </div>
-      <OnboardingTour />
+      <OnboardingTour onboardingCompleted={!!(enrichedProfile as any)?.onboarding_completed} />
     </div>
   );
 }

@@ -255,7 +255,7 @@ interface Rect {
   height: number;
 }
 
-export function OnboardingTour() {
+export function OnboardingTour({ onboardingCompleted = false }: { onboardingCompleted?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -281,13 +281,18 @@ export function OnboardingTour() {
       });
   }, []);
 
-  // Check localStorage on mount
+  // Activate tour only for genuinely new accounts (DB says not completed)
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (onboardingCompleted) {
+      // DB says done — sync localStorage and skip
+      localStorage.setItem(LS_KEY, "true");
+      return;
+    }
     if (localStorage.getItem(LS_KEY) !== "true") {
       setActive(true);
     }
-  }, []);
+  }, [onboardingCompleted]);
 
   // Listen for manual restart
   useEffect(() => {
@@ -368,10 +373,15 @@ export function OnboardingTour() {
       body: JSON.stringify({ onboarding_completed: true }),
     }).catch(() => {});
 
-    // Redirect to new project creation
-    toast.success("Cominciamo! Crea il tuo primo progetto.");
-    router.push("/projects/new");
-  }, [router]);
+    // First-time user (no projects) → redirect to new project creation
+    // Returning user (restarted tour) → stay on dashboard
+    if (!firstProjectId) {
+      toast.success("Cominciamo! Crea il tuo primo progetto.");
+      router.push("/projects/new");
+    } else {
+      router.push("/dashboard");
+    }
+  }, [router, firstProjectId]);
 
   function handleNext() {
     let next = current + 1;
