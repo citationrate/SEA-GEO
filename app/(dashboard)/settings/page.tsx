@@ -2,7 +2,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
 import { resolveProjectId } from "@/lib/utils/resolve-project";
 import { AI_MODELS, PROVIDER_CONFIG } from "@/lib/engine/models";
-import { Settings, User, Globe, Cpu, CreditCard } from "lucide-react";
+import { Settings, User, Globe, Cpu, CreditCard, Trash2 } from "lucide-react";
 
 export const metadata = { title: "Impostazioni" };
 
@@ -115,6 +115,23 @@ export default async function SettingsPage({
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Progetti eliminati */}
+      <div className="card p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Trash2 className="w-5 h-5 text-destructive" />
+          <h2 className="font-display font-semibold text-foreground">Progetti eliminati</h2>
+        </div>
+        <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
+          <p className="text-sm text-muted-foreground">Ripristina progetti che sono stati eliminati</p>
+          <a
+            href="/settings/deleted-projects"
+            className="px-4 py-2 bg-muted/30 border border-[rgba(255,255,255,0.1)] text-foreground rounded-[2px] text-sm font-medium hover:bg-muted/50 transition-colors"
+          >
+            Gestisci
+          </a>
         </div>
       </div>
 

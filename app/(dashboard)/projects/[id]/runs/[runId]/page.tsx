@@ -6,6 +6,7 @@ import { ExportButtons } from "./export-buttons";
 import { RunAutoRefresh } from "./run-auto-refresh";
 import { RunMetrics } from "./run-metrics";
 import { DeleteRunButton, RestoreRunButton } from "./run-actions";
+import { ShareButton } from "./share-button";
 
 const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = {
   pending:   { label: "In attesa",   class: "badge-muted",    icon: Clock },
@@ -195,6 +196,9 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
           </div>
           <div className="flex items-center gap-2">
             {r.status === "completed" && <ExportButtons runId={params.runId} />}
+            {r.status === "completed" && (
+              <ShareButton runId={params.runId} initialToken={(r as any).share_token} />
+            )}
             {(r.status === "completed" || r.status === "failed" || r.status === "cancelled") && !r.deleted_at && (
               <DeleteRunButton runId={params.runId} projectId={params.id} />
             )}

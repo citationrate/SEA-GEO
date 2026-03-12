@@ -59,6 +59,7 @@ export async function POST(request: Request) {
       .select("id")
       .eq("id", project_id)
       .eq("user_id", user.id)
+      .is("deleted_at", null)
       .single();
     if (!project) return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
 

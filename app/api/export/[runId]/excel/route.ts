@@ -66,6 +66,20 @@ export async function GET(
         .in("prompt_executed_id", promptIds)
     : { data: [] };
 
+  // Fetch queries for human-readable text
+  const queryIds = Array.from(new Set((prompts ?? []).map((p: any) => p.query_id).filter(Boolean)));
+  const { data: queries } = queryIds.length > 0
+    ? await supabase.from("queries").select("id, text").in("id", queryIds)
+    : { data: [] };
+  const queryTextMap = new Map((queries ?? []).map((q: any) => [q.id, q.text]));
+
+  // Fetch segments for human-readable context
+  const segmentIds = Array.from(new Set((prompts ?? []).map((p: any) => p.segment_id).filter(Boolean)));
+  const { data: segments } = segmentIds.length > 0
+    ? await supabase.from("segments").select("id, label").in("id", segmentIds)
+    : { data: [] };
+  const segmentLabelMap = new Map((segments ?? []).map((s: any) => [s.id, s.label]));
+
   // Build workbook
   const wb = XLSX.utils.book_new();
 
@@ -101,8 +115,8 @@ export async function GET(
   const promptRows = (prompts ?? []).map((p: any) => {
     const a = analysisMap.get(p.id);
     return [
-      p.query_id,
-      p.segment_id,
+      queryTextMap.get(p.query_id) ?? p.query_id ?? "—",
+      segmentLabelMap.get(p.segment_id) ?? p.segment_id ?? "—",
       p.model,
       p.run_number,
       a?.brand_mentioned ? "Sì" : "No",

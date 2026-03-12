@@ -53,6 +53,16 @@ export async function PATCH(
   if ((project as any).user_id !== user.id) return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
 
   const body = await request.json();
+
+  // Handle restore action
+  if (body.restore === true) {
+    const { error } = await (supabase.from("projects") as any)
+      .update({ deleted_at: null })
+      .eq("id", params.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
     const msg = parsed.error.errors.map((e) => e.message).join(", ");
@@ -77,11 +87,12 @@ export async function DELETE(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
 
-  // Verify project belongs to user
+  // Verify project belongs to user and is not already deleted
   const { data: project } = await supabase
     .from("projects")
     .select("id, user_id")
     .eq("id", params.id)
+    .is("deleted_at", null)
     .single();
 
   if (!project) return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });

@@ -24,6 +24,7 @@ export const API_MODEL_ID: Record<string, string> = {
   "gemini-2.5-pro": "gemini-2.5-pro-preview-03-25",
   "perplexity-sonar": "sonar",
   "perplexity-sonar-pro": "sonar-pro",
+  "copilot-gpt4": "gpt-4o",
 };
 
 /**
@@ -140,8 +141,9 @@ export async function callAIModel(
     if (provider === "azure") {
       return await retryCall(2, async () => {
         const endpoint = process.env.AZURE_OPENAI_ENDPOINT ?? "";
+        const deployment = apiModel;
         const res = await fetch(
-          `${endpoint}/openai/deployments/gpt-4o/chat/completions?api-version=2024-02-01`,
+          `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=2024-02-01`,
           {
             method: "POST",
             headers: {
