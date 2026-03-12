@@ -287,24 +287,24 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
             </div>
 
             {/* AVI Component Cards */}
-            <div className="grid grid-cols-1 gap-3">
+            <div className="card p-5 space-y-0">
               {AVI_COMPONENTS.map((c) => {
                 const value = aviData[c.key] != null ? Math.round(aviData[c.key]) : null;
                 return (
-                  <div key={c.key} className="card p-4 flex items-center gap-3">
-                    <div className="flex items-center gap-1 shrink-0" style={{ minWidth: 120 }}>
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{c.label}</span>
-                      <span title={c.desc} className="text-muted-foreground cursor-help">
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                  <div key={c.key} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                    <div style={{ width: 110, flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ fontSize: 13 }} className="text-muted-foreground">{c.label}</span>
+                      <span title={c.desc} className="text-muted-foreground/50 cursor-help" style={{ flexShrink: 0 }}>
+                        <svg style={{ width: 14, height: 14 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                       </span>
                     </div>
-                    <div className="flex-1 h-2 rounded-[2px] bg-muted overflow-hidden">
+                    <div style={{ flex: 1, height: 6, background: "#333", borderRadius: 3 }}>
                       <div
-                        className="h-full rounded-[2px] transition-all duration-700"
-                        style={{ width: `${Math.min(100, value ?? 0)}%`, backgroundColor: c.color }}
+                        className="transition-all duration-700"
+                        style={{ width: `${Math.min(100, value ?? 0)}%`, height: "100%", backgroundColor: c.color, borderRadius: 3 }}
                       />
                     </div>
-                    <span className="font-display font-bold text-xl text-foreground shrink-0 w-10 text-right">{value ?? "--"}</span>
+                    <span style={{ width: 32, textAlign: "right", fontSize: 13, flexShrink: 0 }} className="font-display font-bold text-foreground">{value ?? "--"}</span>
                   </div>
                 );
               })}
