@@ -250,7 +250,7 @@ export default function GenerateQueriesPage() {
           <Sparkles className="w-6 h-6 text-primary" />
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-display font-bold text-2xl text-foreground">Genera Query</h1>
+              <h1 className="font-display font-bold text-2xl text-foreground">Genera Prompt con AI</h1>
               {isPro && (
                 <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">
                   <Crown className="w-3 h-3" /> PRO
@@ -272,7 +272,7 @@ export default function GenerateQueriesPage() {
             <h2 className="font-display font-semibold text-foreground">Funzionalità Pro</h2>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Il generatore di query AI è disponibile con il piano Pro. Passa a Pro per generare query strutturate
+            Genera Prompt con AI è disponibile con il piano Pro. Passa a Pro per generare query strutturate
             con famiglie, layer, personas e distribuzione TOFU/MOFU personalizzata.
           </p>
           <a

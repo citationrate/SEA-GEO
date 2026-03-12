@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Play, X, Loader2, Cpu, Globe } from "lucide-react";
+import { Play, X, Loader2, Cpu, Globe, AlertTriangle } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 const RUN_OPTIONS = [
@@ -38,9 +38,35 @@ export function AnalysisLauncher({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Profile data for quota check
+  const [isPro, setIsPro] = useState(false);
+  const [queriesUsed, setQueriesUsed] = useState(0);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((r) => r.json())
+      .then((p) => {
+        setIsPro(p?.plan === "pro" || p?.plan === "agency");
+        setQueriesUsed(p?.queries_used_this_month ?? 0);
+      })
+      .catch(() => {})
+      .finally(() => setProfileLoaded(true));
+  }, []);
+
+  const monthlyLimit = isPro ? 500 : 100;
+
   const totalPrompts = useMemo(() => {
     return modelsConfig.length * queryCount * Math.max(segmentCount, 1) * runCount;
   }, [modelsConfig.length, queryCount, segmentCount, runCount]);
+
+  // Query cost = queries × models × runs
+  const queryCost = useMemo(() => {
+    return queryCount * modelsConfig.length * runCount;
+  }, [queryCount, modelsConfig.length, runCount]);
+
+  const remaining = monthlyLimit - queriesUsed;
+  const wouldExceed = queryCost > remaining;
 
   async function startAnalysis() {
     setLoading(true);
@@ -181,6 +207,31 @@ export function AnalysisLauncher({
               </button>
             </div>
 
+            {/* Query cost breakdown */}
+            <div className="space-y-2 rounded-[2px] border border-border bg-muted/20 px-4 py-3">
+              <p className="text-sm text-muted-foreground">
+                Questa analisi utilizzer&agrave; <span className="text-foreground font-bold">{queryCost}</span> query sul tuo piano
+              </p>
+              <p className="text-xs text-muted-foreground">
+                ({queryCount} query &times; {modelsConfig.length} modell{modelsConfig.length === 1 ? "o" : "i"} &times; {runCount} run)
+              </p>
+              {profileLoaded && (
+                <p className="text-xs text-muted-foreground">
+                  Hai <span className="text-foreground font-medium">{remaining}</span> query rimanenti questo mese ({queriesUsed}/{monthlyLimit} utilizzate)
+                </p>
+              )}
+            </div>
+
+            {/* Exceed warning */}
+            {profileLoaded && wouldExceed && (
+              <div className="flex items-start gap-2.5 rounded-[2px] border border-destructive/30 bg-destructive/10 px-4 py-3">
+                <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                <p className="text-xs text-destructive">
+                  Non hai abbastanza query disponibili questo mese. Hai {remaining} query rimanenti, questa analisi ne richiede {queryCost}.
+                </p>
+              </div>
+            )}
+
             {/* Footer info */}
             <p className="text-sm text-muted-foreground text-center">
               <span className="text-foreground font-medium">{modelsConfig.length}</span> modell{modelsConfig.length === 1 ? "o" : "i"} &middot;{" "}
@@ -200,7 +251,7 @@ export function AnalysisLauncher({
               </button>
               <button
                 onClick={startAnalysis}
-                disabled={loading}
+                disabled={loading || (profileLoaded && wouldExceed)}
                 className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-sm hover:bg-primary/85 transition-colors disabled:opacity-50"
               >
                 {loading ? (

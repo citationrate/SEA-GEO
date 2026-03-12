@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, type KeyboardEvent } from "react";
+import { useState, useEffect, useRef, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, X, Loader2, Lock, Check, ArrowRight, Crown } from "lucide-react";
+import { ArrowLeft, X, Loader2, Lock, Check, ArrowRight, Crown, Search, ChevronDown } from "lucide-react";
 import { SuggestedQueriesNew, type SuggestedQuery } from "@/components/suggested-queries";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import confetti from "canvas-confetti";
@@ -72,6 +72,19 @@ const AVAILABLE_PROVIDERS: ProviderOption[] = [
   },
 ];
 
+const COUNTRIES = [
+  "Globale / Worldwide",
+  "Italia", "Francia", "Germania", "Spagna", "Regno Unito",
+  "Stati Uniti", "Canada", "Australia", "Brasile", "Messico",
+  "Argentina", "Giappone", "Cina", "India", "Corea del Sud",
+  "Emirati Arabi", "Arabia Saudita", "Paesi Bassi", "Belgio",
+  "Svizzera", "Austria", "Portogallo", "Polonia", "Svezia",
+  "Norvegia", "Danimarca", "Finlandia", "Turchia", "Russia",
+  "Sud Africa", "Nigeria", "Egitto",
+];
+
+const BASE_MODEL_LIMIT = 3;
+
 export default function NewProjectPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -79,13 +92,18 @@ export default function NewProjectPage() {
   const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [newProjectId, setNewProjectId] = useState<string | null>(null);
   const [existingProjectCount, setExistingProjectCount] = useState<number | null>(null);
+  const [isPro, setIsPro] = useState(false);
 
-  // Check how many projects the user has (for first-project plan selector)
+  // Check how many projects the user has & pro status
   useEffect(() => {
     fetch("/api/projects")
       .then((r) => r.ok ? r.json() : [])
       .then((data) => setExistingProjectCount(Array.isArray(data) ? data.length : 0))
       .catch(() => setExistingProjectCount(0));
+    fetch("/api/profile")
+      .then((r) => r.json())
+      .then((p) => setIsPro(p?.plan === "pro" || p?.plan === "agency"))
+      .catch(() => {});
   }, []);
 
   const [name, setName] = useState("");
@@ -98,7 +116,25 @@ export default function NewProjectPage() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [language, setLanguage] = useState<"it" | "en">("it");
   const [country, setCountry] = useState("");
+  const [countrySearch, setCountrySearch] = useState("");
+  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const [selectedQueries, setSelectedQueries] = useState<SuggestedQuery[]>([]);
+  const countryRef = useRef<HTMLDivElement>(null);
+
+  // Close country dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (countryRef.current && !countryRef.current.contains(e.target as Node)) {
+        setCountryDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const filteredCountries = COUNTRIES.filter((c) =>
+    c.toLowerCase().includes(countrySearch.toLowerCase())
+  );
 
   // Track which providers are active and which model is selected per provider
   const [activeProviders, setActiveProviders] = useState<Set<string>>(new Set(["openai"]));
@@ -106,13 +142,24 @@ export default function NewProjectPage() {
     openai: "gpt-4o-mini",
   });
 
+  const modelLimit = isPro ? Infinity : BASE_MODEL_LIMIT;
+  const atLimit = !isPro && activeProviders.size >= modelLimit;
+
   function toggleProvider(provider: ProviderOption) {
     setActiveProviders((prev) => {
       const next = new Set(prev);
       if (next.has(provider.id)) {
-        if (next.size === 1) return prev; // minimo 1 provider
+        // Always allow deselection (no minimum)
         next.delete(provider.id);
+        // Also clear the selected model for this provider
+        setSelectedModelPerProvider((m) => {
+          const copy = { ...m };
+          delete copy[provider.id];
+          return copy;
+        });
       } else {
+        // Check limit for non-Pro users
+        if (!isPro && next.size >= BASE_MODEL_LIMIT) return prev;
         next.add(provider.id);
         // Set default model if none selected
         if (!selectedModelPerProvider[provider.id]) {
@@ -124,7 +171,22 @@ export default function NewProjectPage() {
   }
 
   function selectModel(providerId: string, modelId: string) {
-    setSelectedModelPerProvider((prev) => ({ ...prev, [providerId]: modelId }));
+    const currentModel = selectedModelPerProvider[providerId];
+    if (currentModel === modelId) {
+      // Clicking selected model deselects the entire provider
+      setActiveProviders((prev) => {
+        const next = new Set(prev);
+        next.delete(providerId);
+        return next;
+      });
+      setSelectedModelPerProvider((prev) => {
+        const copy = { ...prev };
+        delete copy[providerId];
+        return copy;
+      });
+    } else {
+      setSelectedModelPerProvider((prev) => ({ ...prev, [providerId]: modelId }));
+    }
   }
 
   // Build models_config array from active providers
@@ -150,6 +212,10 @@ export default function NewProjectPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (activeProviders.size === 0) {
+      setError("Seleziona almeno un modello AI");
+      return;
+    }
     setError("");
     setLoading(true);
 
@@ -381,24 +447,75 @@ export default function NewProjectPage() {
               Paese
               <InfoTooltip text="Determina la lingua e il contesto geografico dell'analisi" />
             </label>
-            <input
-              type="text"
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              placeholder="Es. Italia"
-              className="input-base"
-            />
+            {/* Searchable country dropdown */}
+            <div ref={countryRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
+                className="input-base w-full flex items-center justify-between text-left"
+              >
+                <span className={country ? "text-foreground" : "text-muted-foreground"}>
+                  {country || "Seleziona paese..."}
+                </span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+              </button>
+              {countryDropdownOpen && (
+                <div className="absolute z-20 mt-1 w-full bg-[#111416] border border-border rounded-[2px] shadow-xl max-h-60 overflow-hidden">
+                  <div className="p-2 border-b border-border">
+                    <div className="flex items-center gap-2 input-base">
+                      <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <input
+                        type="text"
+                        value={countrySearch}
+                        onChange={(e) => setCountrySearch(e.target.value)}
+                        placeholder="Cerca paese..."
+                        className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground flex-1"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                  <div className="overflow-y-auto max-h-44">
+                    {filteredCountries.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-3">Nessun risultato</p>
+                    ) : (
+                      filteredCountries.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => {
+                            setCountry(c);
+                            setCountryDropdownOpen(false);
+                            setCountrySearch("");
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                            country === c
+                              ? "bg-primary/10 text-primary font-medium"
+                              : "text-foreground hover:bg-muted/30"
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Modelli AI - Two-level provider → model */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Modelli AI</label>
-          <p className="text-xs text-muted-foreground">Seleziona i provider e il modello specifico per ogni analisi (minimo 1)</p>
+          <p className="text-xs text-muted-foreground">
+            Seleziona i provider e il modello specifico per ogni analisi
+            {!isPro && ` (max ${BASE_MODEL_LIMIT})`}
+          </p>
           <div className="space-y-2">
             {AVAILABLE_PROVIDERS.map((provider) => {
               const isActive = activeProviders.has(provider.id);
               const currentModel = selectedModelPerProvider[provider.id] ?? provider.models[0].id;
+              const isDisabled = !isActive && atLimit;
 
               return (
                 <div
@@ -406,14 +523,19 @@ export default function NewProjectPage() {
                   className={`rounded-sm border transition-all ${
                     isActive
                       ? "border-primary/50 bg-primary/5"
-                      : "border-border"
+                      : isDisabled
+                        ? "border-border opacity-40"
+                        : "border-border"
                   }`}
                 >
                   {/* Provider header */}
                   <button
                     type="button"
-                    onClick={() => toggleProvider(provider)}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left cursor-pointer"
+                    onClick={() => !isDisabled && toggleProvider(provider)}
+                    disabled={isDisabled}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${
+                      isDisabled ? "cursor-not-allowed" : "cursor-pointer"
+                    }`}
                   >
                     <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${
                       isActive ? "border-primary bg-primary" : "border-muted-foreground"
@@ -431,43 +553,61 @@ export default function NewProjectPage() {
                   {/* Model radio buttons */}
                   {isActive && (
                     <div className="px-4 pb-3 pt-0 space-y-0.5">
-                      {provider.models.map((model) => (
-                        <label
-                          key={model.id}
-                          onClick={() => selectModel(provider.id, model.id)}
-                          className={`flex items-center gap-2 p-2 rounded-[2px] cursor-pointer transition-colors ${
-                            currentModel === model.id
-                              ? "bg-primary/10"
-                              : "hover:bg-muted/30"
-                          }`}
-                        >
-                          <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                            currentModel === model.id ? "border-primary" : "border-muted-foreground"
-                          }`}>
-                            {currentModel === model.id && (
-                              <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <span className={`text-sm font-medium ${
-                              currentModel === model.id ? "text-primary" : "text-foreground"
-                            }`}>{model.label}</span>
-                            <p className="text-xs text-muted-foreground">{model.description}</p>
-                          </div>
-                        </label>
-                      ))}
+                      {provider.models.map((model) => {
+                        const isSelected = currentModel === model.id;
+                        return (
+                          <label
+                            key={model.id}
+                            onClick={() => selectModel(provider.id, model.id)}
+                            className={`flex items-center gap-2 p-2 rounded-[2px] cursor-pointer transition-colors ${
+                              isSelected
+                                ? "bg-primary/10"
+                                : "hover:bg-muted/30"
+                            }`}
+                          >
+                            <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                              isSelected ? "border-primary" : "border-muted-foreground"
+                            }`}>
+                              {isSelected && (
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className={`text-sm font-medium ${
+                                isSelected ? "text-primary" : "text-foreground"
+                              }`}>{model.label}</span>
+                              <p className="text-xs text-muted-foreground">{model.description}</p>
+                            </div>
+                          </label>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
-          <div className="flex items-start gap-2 mt-2">
-            <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
-            <p className="text-xs text-muted-foreground">
-              I modelli selezionati saranno fissi per tutta la durata del progetto per garantire dati comparabili nel tempo. Per usare modelli diversi, crea un nuovo progetto.
+
+          {/* Model counter */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-start gap-2">
+              <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground">
+                I modelli selezionati saranno fissi per tutta la durata del progetto per garantire dati comparabili nel tempo.
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground shrink-0 ml-4">
+              <span className="text-foreground font-bold">{activeProviders.size}</span>
+              {isPro ? " modelli selezionati" : ` / ${BASE_MODEL_LIMIT} modelli`}
             </p>
           </div>
+
+          {/* Limit warning for Base plan */}
+          {atLimit && (
+            <p className="text-xs text-[#c4a882]">
+              Hai raggiunto il limite di {BASE_MODEL_LIMIT} modelli AI per il piano Base. Passa a Pro per selezionare tutti i modelli.
+            </p>
+          )}
         </div>
 
         {error && (
@@ -476,7 +616,7 @@ export default function NewProjectPage() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || activeProviders.size === 0}
           className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
         >
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -503,17 +643,21 @@ export default function NewProjectPage() {
                 {/* Starter Plan */}
                 <div className="rounded-lg border border-border p-6 space-y-4">
                   <div>
-                    <h3 className="font-display font-bold text-lg text-foreground">Starter</h3>
+                    <h3 className="font-display font-bold text-lg text-foreground">Base (Starter)</h3>
                     <p className="text-2xl font-bold text-foreground mt-1">Gratis</p>
                   </div>
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-primary shrink-0" />
-                      2 analisi / mese
+                      100 query / mese
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-primary shrink-0" />
-                      GPT + Gemini
+                      Max 3 progetti
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0" />
+                      Max 3 modelli AI
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-primary shrink-0" />
@@ -548,15 +692,27 @@ export default function NewProjectPage() {
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
-                      10 analisi / mese
+                      500 query / mese
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
-                      Tutti i modelli AI
+                      Max 10 progetti
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
-                      Confronto + Dataset + Genera Query
+                      Tutti i modelli AI sbloccati
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
+                      10 rilevazioni Confronto / mese
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
+                      Genera Prompt con AI
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
+                      Dataset + AVI completo
                     </li>
                   </ul>
                   <button

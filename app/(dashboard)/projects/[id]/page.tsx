@@ -404,7 +404,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-primary/85 transition-colors"
           >
             <Sparkles className="w-4 h-4" />
-            Genera con AI
+            Genera Prompt con AI
+            <span className="inline-flex items-center gap-0.5 font-mono text-[0.5rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">&#10022; Pro</span>
           </a>
           <a
             href={`/projects/${params.id}/segments`}

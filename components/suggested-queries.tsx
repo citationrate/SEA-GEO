@@ -70,7 +70,9 @@ export function SuggestedQueriesEdit({
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
         >
           <Sparkles className="w-3.5 h-3.5" />
-          Genera con AI &rarr;
+          Genera Prompt con AI
+          <span className="inline-flex items-center gap-0.5 font-mono text-[0.5rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">&#10022; Pro</span>
+          &rarr;
         </a>
       </div>
     </div>

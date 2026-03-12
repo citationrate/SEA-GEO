@@ -531,6 +531,29 @@ export const runAnalysis = inngest.createFunction(
           completed_at: new Date().toISOString(),
         })
         .eq("id", runId);
+
+      // Increment monthly query usage for the project owner
+      // Query cost = num_queries × num_models × num_runs
+      const queryCost = (queries?.length ?? 0) * modelsUsed.length * runCount;
+      if (queryCost > 0 && project.user_id) {
+        const { data: profile } = await (supabase.from("profiles") as any)
+          .select("queries_used_this_month, queries_reset_at")
+          .eq("id", project.user_id)
+          .single();
+
+        // Reset counter if it's a new month
+        const resetAt = profile?.queries_reset_at ? new Date(profile.queries_reset_at) : new Date(0);
+        const now = new Date();
+        const isNewMonth = now.getMonth() !== resetAt.getMonth() || now.getFullYear() !== resetAt.getFullYear();
+
+        const currentUsage = isNewMonth ? 0 : (profile?.queries_used_this_month ?? 0);
+        await (supabase.from("profiles") as any)
+          .update({
+            queries_used_this_month: currentUsage + queryCost,
+            queries_reset_at: isNewMonth ? now.toISOString() : undefined,
+          })
+          .eq("id", project.user_id);
+      }
     });
 
     return { runId, totalPrompts: allTasks.length, status: "completed" };

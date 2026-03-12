@@ -150,19 +150,24 @@ export function SettingsClient({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-muted/20 rounded-[2px] p-4 space-y-2 border border-border">
-            <p className="font-semibold text-foreground text-sm">Starter</p>
+            <p className="font-semibold text-foreground text-sm">Base (Starter)</p>
             <ul className="space-y-1 text-xs text-muted-foreground">
-              <li>2 analisi / mese</li>
-              <li>GPT + Gemini</li>
+              <li>100 query / mese</li>
+              <li>Max 3 progetti</li>
+              <li>Max 3 modelli AI</li>
               <li>AVI base</li>
             </ul>
           </div>
           <div className="bg-primary/5 rounded-[2px] p-4 space-y-2 border border-primary/20">
             <p className="font-semibold text-primary text-sm">Pro</p>
             <ul className="space-y-1 text-xs text-muted-foreground">
-              <li>10 analisi / mese</li>
-              <li>Tutti i modelli AI</li>
-              <li>Confronto, Dataset, Genera Query</li>
+              <li>500 query / mese</li>
+              <li>Max 10 progetti</li>
+              <li>Tutti i modelli AI sbloccati</li>
+              <li>10 rilevazioni Confronto / mese</li>
+              <li>Genera Prompt con AI</li>
+              <li>Dataset sbloccato</li>
+              <li>AVI completo</li>
             </ul>
           </div>
         </div>

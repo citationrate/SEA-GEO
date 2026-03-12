@@ -109,7 +109,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     },
     // 10 — Project detail: generate queries
     {
-      title: "Genera Query con AI \u2728",
+      title: "Genera Prompt con AI \u2728",
       description:
         "Genera automaticamente query strutturate in famiglie Generali, Verticali e Personas.\n\nIl sistema usa template deterministici per garantire coerenza e comparabilit\u00e0.",
       route: `/projects/${pid}`,
