@@ -725,12 +725,11 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
               )}
             </div>
 
-            {/* Full response */}
-            <div className="space-y-1">
-              <p className="font-mono text-[0.75rem] uppercase tracking-wide text-muted-foreground">Risposta AI</p>
-              <div className="text-sm text-foreground/90 bg-muted/10 rounded-[2px] px-4 py-3 max-h-[300px] overflow-y-auto whitespace-pre-wrap leading-relaxed border border-border/50">
-                {modalPrompt.prompt.raw_response}
-              </div>
+            {/* Response note */}
+            <div className="flex items-center gap-2 px-3 py-2 rounded-[2px] border border-border bg-muted/10">
+              <p className="text-xs text-muted-foreground">
+                La risposta completa è consultabile nella sezione <a href="/datasets" className="text-primary hover:text-primary/70 transition-colors font-medium">Dataset</a>.
+              </p>
             </div>
 
             {/* Sources found */}
