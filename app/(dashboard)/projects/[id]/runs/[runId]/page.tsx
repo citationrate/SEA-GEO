@@ -287,24 +287,28 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
             </div>
 
             {/* AVI Component Cards */}
-            <div className="card p-5 space-y-0">
+            <div className="card p-5 space-y-3">
               {AVI_COMPONENTS.map((c) => {
                 const value = aviData[c.key] != null ? Math.round(aviData[c.key]) : null;
                 return (
-                  <div key={c.key} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                    <div style={{ width: 110, flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
-                      <span style={{ fontSize: 13 }} className="text-muted-foreground">{c.label}</span>
-                      <span title={c.desc} className="text-muted-foreground/50 cursor-help" style={{ flexShrink: 0 }}>
-                        <svg style={{ width: 14, height: 14 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                      </span>
+                  <div key={c.key}>
+                    {/* Top line: label with icon on left, value on right */}
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{c.label}</span>
+                        <span title={c.desc} className="text-muted-foreground/40 cursor-help">
+                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                        </span>
+                      </div>
+                      <span className="font-display font-bold text-sm text-foreground tabular-nums">{value ?? "--"}</span>
                     </div>
-                    <div style={{ flex: 1, height: 6, background: "#333", borderRadius: 3 }}>
+                    {/* Bar below — full width, standalone row */}
+                    <div className="w-full h-1.5 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>
                       <div
-                        className="transition-all duration-700"
-                        style={{ width: `${Math.min(100, value ?? 0)}%`, height: "100%", backgroundColor: c.color, borderRadius: 3 }}
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${Math.min(100, value ?? 0)}%`, backgroundColor: c.color }}
                       />
                     </div>
-                    <span style={{ width: 32, textAlign: "right", fontSize: 13, flexShrink: 0 }} className="font-display font-bold text-foreground">{value ?? "--"}</span>
                   </div>
                 );
               })}
