@@ -7,6 +7,7 @@ import { RunAutoRefresh } from "./run-auto-refresh";
 import { RunMetrics } from "./run-metrics";
 import { DeleteRunButton, RestoreRunButton } from "./run-actions";
 import { ShareButton } from "./share-button";
+import { StabilitySection } from "./stability-section";
 
 const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = {
   pending:   { label: "In attesa",   class: "badge-muted",    icon: Clock },
@@ -15,6 +16,13 @@ const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = 
   failed:    { label: "Fallita",     class: "badge badge-muted text-destructive border-destructive/20 bg-destructive/10", icon: XCircle },
   cancelled: { label: "Annullata",   class: "badge-muted",    icon: XCircle },
 };
+
+const AVI_COMPONENTS = [
+  { key: "presence_score",   label: "Prominence",  color: "#e8956d", desc: "Quanto spesso il brand appare nelle risposte AI" },
+  { key: "rank_score",       label: "Rank",        color: "#7eb3d4", desc: "Posizione media del brand quando viene citato" },
+  { key: "sentiment_score",  label: "Sentiment",   color: "#7eb89a", desc: "Tono con cui l'AI descrive il brand" },
+  { key: "stability_score",  label: "Consistency", color: "#c4a882", desc: "Coerenza delle risposte tra modelli e run" },
+];
 
 export default async function RunDetailPage({ params }: { params: { id: string; runId: string } }) {
   const supabase = createServerClient();
@@ -43,7 +51,6 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
   // Trend vs previous run (exclude archived runs)
   let trend: number | null = null;
   if (avi) {
-    // Get run IDs of non-deleted runs
     const { data: activeRuns } = await supabase
       .from("analysis_runs")
       .select("id")
@@ -87,7 +94,6 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     .eq("project_id", params.id)
     .eq("discovered_at_run_id", params.runId);
 
-  // Fetch competitor mentions for this run
   const { data: competitorMentions } = await (supabase.from("competitor_mentions") as any)
     .select("*")
     .eq("run_id", params.runId);
@@ -97,6 +103,12 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     .select("*")
     .eq("project_id", params.id)
     .eq("first_seen_run_id", params.runId);
+
+  // Fetch queries for funnel stage info
+  const queryIds = Array.from(new Set((prompts ?? []).map((p: any) => p.query_id).filter(Boolean)));
+  const { data: queries } = queryIds.length > 0
+    ? await supabase.from("queries").select("id, text, funnel_stage, family").in("id", queryIds)
+    : { data: [] };
 
   const mentionsList = (competitorMentions ?? []) as any[];
   const analysesList = (analyses ?? []) as any[];
@@ -145,6 +157,9 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     }
   }
 
+  // Stability data: check if run_count >= 3
+  const runCount = r.run_count ?? 1;
+
   const statusInfo = STATUS_MAP[r.status] ?? STATUS_MAP.pending;
   const StatusIcon = statusInfo.icon;
   const proj = project as any;
@@ -173,9 +188,9 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
           <span className="text-destructive font-mono text-xs">&#9888;</span>
           <span className="text-destructive">
             {errorCount} prompt falliti
-            {hasGeminiErrors && hasQuotaErrors ? " — Gemini: quota esaurita (rate limit)" : hasGeminiErrors ? " — Gemini: errore API" : ""}
-            {hasGptErrors ? " — GPT: errore API" : ""}
-            {!hasGeminiErrors && !hasGptErrors ? " — Errore API" : ""}
+            {hasGeminiErrors && hasQuotaErrors ? " \u2014 Gemini: quota esaurita (rate limit)" : hasGeminiErrors ? " \u2014 Gemini: errore API" : ""}
+            {hasGptErrors ? " \u2014 GPT: errore API" : ""}
+            {!hasGeminiErrors && !hasGptErrors ? " \u2014 Errore API" : ""}
           </span>
         </div>
       )}
@@ -233,43 +248,63 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         </div>
       )}
 
-      {/* AVI Score: Ring + Component Bars */}
+      {/* AVI Score: Ring + Component Breakdown */}
       {aviData && (
-        <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6">
-          <div className="space-y-3">
-            <RunAVIRing
-              score={aviData.avi_score}
-              trend={trend}
-              components={[
-                { label: "Prominence", v: aviData.presence_score != null ? Math.round(aviData.presence_score) : null },
-                { label: "Rank",       v: aviData.rank_score != null ? Math.round(aviData.rank_score) : null },
-                { label: "Sentiment",  v: aviData.sentiment_score != null ? Math.round(aviData.sentiment_score) : null },
-                { label: "Consistency", v: aviData.stability_score != null ? Math.round(aviData.stability_score) : null },
-              ]}
-            />
-          </div>
-          <div className="card p-5 space-y-4">
-            <h2 className="font-display font-semibold text-foreground">Componenti AVI</h2>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6">
             <div className="space-y-3">
-              {[
-                { label: "Prominence", value: Math.round(aviData.presence_score ?? 0), color: "#e8956d" },
-                { label: "Rank", value: Math.round(aviData.rank_score ?? 0), color: "#7eb3d4" },
-                { label: "Sentiment", value: Math.round(aviData.sentiment_score ?? 0), color: "#7eb89a" },
-                { label: "Consistency", value: Math.round(aviData.stability_score ?? 0), color: "#c4a882" },
-              ].map((c) => (
-                <div key={c.label} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">{c.label}</span>
-                    <span className="font-medium text-foreground">{Math.round(c.value)}</span>
+              <RunAVIRing
+                score={aviData.avi_score}
+                trend={trend}
+                components={[
+                  { label: "Prominence", v: aviData.presence_score != null ? Math.round(aviData.presence_score) : null },
+                  { label: "Rank",       v: aviData.rank_score != null ? Math.round(aviData.rank_score) : null },
+                  { label: "Sentiment",  v: aviData.sentiment_score != null ? Math.round(aviData.sentiment_score) : null },
+                  { label: "Consistency", v: aviData.stability_score != null ? Math.round(aviData.stability_score) : null },
+                ]}
+              />
+            </div>
+
+            {/* AVI Component Cards */}
+            <div className="grid grid-cols-2 gap-3">
+              {AVI_COMPONENTS.map((c) => {
+                const value = aviData[c.key] != null ? Math.round(aviData[c.key]) : null;
+                return (
+                  <div key={c.key} className="card p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{c.label}</span>
+                      <span className="font-display font-bold text-xl text-foreground">{value ?? "--"}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">{c.desc}</p>
+                    <div className="h-2 rounded-[2px] bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-[2px] transition-all duration-700"
+                        style={{ width: `${Math.min(100, value ?? 0)}%`, backgroundColor: c.color }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 rounded-[2px] bg-muted overflow-hidden">
-                    <div className="h-full rounded-[2px] transition-all duration-700" style={{ width: `${Math.min(100, c.value)}%`, backgroundColor: c.color }} />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
-        </div>
+
+          {/* AVI Component Comparison Bar */}
+          <div className="card p-5 space-y-3">
+            <h2 className="font-display font-semibold text-foreground text-sm">Confronto Componenti AVI</h2>
+            <div className="flex items-end gap-4 h-32">
+              {AVI_COMPONENTS.map((c) => {
+                const value = aviData[c.key] != null ? Math.round(aviData[c.key]) : 0;
+                return (
+                  <div key={c.key} className="flex-1 flex flex-col items-center gap-1">
+                    <span className="font-mono text-[10px] font-bold text-foreground">{value}</span>
+                    <div className="w-full rounded-t-[2px] transition-all duration-700" style={{ height: `${value}%`, backgroundColor: c.color }} />
+                    <span className="font-mono text-[9px] text-muted-foreground text-center">{c.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
       )}
 
       {/* Filterable metrics, competitors, topics, sources, prompts */}
@@ -282,7 +317,18 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         brandAviScore={aviData?.avi_score ?? 0}
         targetBrand={proj?.target_brand ?? ""}
         perModelAvi={perModelAvi}
+        queries={queries ?? []}
       />
+
+      {/* Stability section (only if 3+ runs per prompt) */}
+      {runCount >= 3 && (
+        <StabilitySection
+          prompts={prompts ?? []}
+          analyses={analyses ?? []}
+          queries={queries ?? []}
+          runCount={runCount}
+        />
+      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils/cn";
 import {
   LayoutDashboard, FolderOpen, Play, BarChart3,
   Users, Link2, Tag, GitCompare, Settings,
-  Database, ChevronRight, Layers, RotateCcw,
+  Database, ChevronRight, Layers, RotateCcw, Plus,
 } from "lucide-react";
 
 const NAV = [
@@ -100,10 +100,20 @@ export function Sidebar({ profile }: SidebarProps) {
                         locked ? "text-muted-foreground/40" : isActive(item.href) ? "text-primary" : "text-muted-foreground"
                       )} />
                       <span className="flex-1">{item.label}</span>
+                      {item.href === "/projects" && !locked && (
+                        <Link
+                          href="/projects/new"
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-5 h-5 flex items-center justify-center rounded-[2px] text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                          title="Nuovo Progetto"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </Link>
+                      )}
                       {locked && (
                         <span className="font-mono text-[0.5rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">PRO</span>
                       )}
-                      {isActive(item.href) && !locked && (
+                      {isActive(item.href) && !locked && item.href !== "/projects" && (
                         <ChevronRight className="w-3 h-3 text-primary/50" />
                       )}
                     </Link>

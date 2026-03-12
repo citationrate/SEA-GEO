@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Globe, Tag, Users, ExternalLink, Eye, Hash, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
+import { useState, useMemo, Fragment } from "react";
+import { Globe, Tag, Users, ExternalLink, Eye, Hash, TrendingUp, TrendingDown, AlertTriangle, X, ChevronDown, ChevronRight } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 interface RunMetricsProps {
@@ -13,6 +13,7 @@ interface RunMetricsProps {
   brandAviScore: number;
   targetBrand: string;
   perModelAvi?: { model: string; avi: number }[];
+  queries?: any[];
 }
 
 function sentimentSign(v: number): string {
@@ -28,6 +29,7 @@ function sentimentColor(v: number): string {
 const MODEL_LABELS: Record<string, string> = {
   "gpt-4o-mini": "GPT-4o Mini",
   "gpt-4o": "GPT-4o",
+  "gpt-5.4": "GPT-5.4",
   "o1-mini": "o1 Mini",
   "o3-mini": "o3 Mini",
   "o3": "o3",
@@ -55,13 +57,51 @@ function classifyError(error: string | null): string {
   return "Errore API";
 }
 
-export function RunMetrics({ prompts, analyses, sources, models, competitorMentions, brandAviScore, targetBrand, perModelAvi }: RunMetricsProps) {
+const SOURCE_TYPE_COLORS: Record<string, string> = {
+  brand_owned: "border-primary/30 bg-primary/5 text-primary",
+  review: "border-yellow-500/30 bg-yellow-500/5 text-yellow-400",
+  social: "border-blue-500/30 bg-blue-500/5 text-blue-400",
+  news: "border-gray-400/30 bg-gray-400/5 text-gray-400",
+  ecommerce: "border-orange-500/30 bg-orange-500/5 text-orange-400",
+  wikipedia: "border-muted-foreground/30 bg-muted-foreground/5 text-muted-foreground",
+};
+
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  brand_owned: "Brand",
+  review: "Review",
+  social: "Social",
+  news: "News",
+  ecommerce: "E-commerce",
+  wikipedia: "Wikipedia",
+  other: "Altro",
+};
+
+export function RunMetrics({ prompts, analyses, sources, models, competitorMentions, brandAviScore, targetBrand, perModelAvi, queries }: RunMetricsProps) {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [funnelFilter, setFunnelFilter] = useState<string | null>(null);
+  const [brandCitedFilter, setBrandCitedFilter] = useState<boolean | null>(null);
+  const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null);
+  const [modalPrompt, setModalPrompt] = useState<any | null>(null);
+
+  // Build query map for funnel stage lookup
+  const queryMap = useMemo(() => {
+    const map = new Map<string, any>();
+    (queries ?? []).forEach((q: any) => map.set(q.id, q));
+    return map;
+  }, [queries]);
 
   const filtered = useMemo(() => {
-    const filteredPrompts = selectedModel
+    let filteredPrompts = selectedModel
       ? prompts.filter((p) => p.model === selectedModel)
-      : prompts;
+      : [...prompts];
+
+    // Apply funnel stage filter
+    if (funnelFilter && queryMap.size > 0) {
+      filteredPrompts = filteredPrompts.filter((p) => {
+        const q = queryMap.get(p.query_id);
+        return q?.funnel_stage?.toLowerCase() === funnelFilter.toLowerCase();
+      });
+    }
 
     const filteredPromptIds = new Set(filteredPrompts.map((p) => p.id));
 
@@ -70,6 +110,15 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
 
     const analysisMap = new Map(filteredAnalyses.map((a) => [a.prompt_executed_id, a]));
 
+    // Apply brand cited filter after we have analysisMap
+    if (brandCitedFilter !== null) {
+      filteredPrompts = filteredPrompts.filter((p) => {
+        const a = analysisMap.get(p.id);
+        if (!a) return !brandCitedFilter;
+        return brandCitedFilter ? a.brand_mentioned : !a.brand_mentioned;
+      });
+    }
+
     const totalAnalysed = filteredAnalyses.length;
     const mentionCount = filteredAnalyses.filter((a) => a.brand_mentioned).length;
     const mentionRate = totalAnalysed > 0 ? Math.round((mentionCount / totalAnalysed) * 100) : 0;
@@ -77,7 +126,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
     const ranked = filteredAnalyses.filter((a) => a.brand_rank !== null && a.brand_rank > 0);
     const avgRank = ranked.length > 0
       ? (ranked.reduce((s: number, a: any) => s + a.brand_rank, 0) / ranked.length).toFixed(1)
-      : "—";
+      : "\u2014";
 
     const withSentiment = filteredAnalyses.filter((a) => a.sentiment_score !== null);
     const avgSentimentNum = withSentiment.length > 0
@@ -85,7 +134,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       : null;
     const avgSentiment = avgSentimentNum != null
       ? `${sentimentSign(avgSentimentNum)}${avgSentimentNum.toFixed(2)}`
-      : "—";
+      : "\u2014";
     const avgSentimentColor = avgSentimentNum != null ? sentimentColor(avgSentimentNum) : "text-foreground";
 
     const withTone = filteredAnalyses.filter((a) => a.tone_score != null);
@@ -176,6 +225,14 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
     });
     const topicList = Array.from(topicsMap.entries()).sort((a, b) => b[1] - a[1]);
 
+    // Group sources by type with counts
+    const sourcesByType = new Map<string, any[]>();
+    filteredSources.forEach((s: any) => {
+      const type = s.source_type || "other";
+      if (!sourcesByType.has(type)) sourcesByType.set(type, []);
+      sourcesByType.get(type)!.push(s);
+    });
+
     return {
       filteredPrompts,
       filteredSources,
@@ -195,8 +252,9 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       brandModelScore,
       competitorList,
       topicList,
+      sourcesByType,
     };
-  }, [selectedModel, prompts, analyses, sources, competitorMentions]);
+  }, [selectedModel, funnelFilter, brandCitedFilter, prompts, analyses, sources, competitorMentions, queryMap]);
 
   const {
     filteredPrompts,
@@ -217,46 +275,127 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
     brandModelScore,
     competitorList,
     topicList,
+    sourcesByType,
   } = filtered;
+
+  // Check if we have funnel stages available
+  const hasFunnelData = queryMap.size > 0;
+  const funnelStages = useMemo(() => {
+    if (!hasFunnelData) return [];
+    const stages = new Set<string>();
+    prompts.forEach((p) => {
+      const q = queryMap.get(p.query_id);
+      if (q?.funnel_stage) stages.add(q.funnel_stage.toUpperCase());
+    });
+    return Array.from(stages).sort();
+  }, [hasFunnelData, prompts, queryMap]);
 
   return (
     <>
-      {/* Model filter pills */}
-      {models.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedModel(null)}
-            className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
-            style={
-              selectedModel === null
-                ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
-                : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
-            }
-          >
-            Tutti
-          </button>
-          {models.map((model) => {
-            const modelAvi = perModelAvi?.find((m) => m.model === model);
-            return (
+      {/* Filter pills row */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {/* Model filter */}
+        {models.length > 1 && (
+          <>
+            <button
+              onClick={() => setSelectedModel(null)}
+              className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
+              style={
+                selectedModel === null
+                  ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
+                  : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
+              }
+            >
+              Tutti
+            </button>
+            {models.map((model) => {
+              const modelAvi = perModelAvi?.find((m) => m.model === model);
+              return (
+                <button
+                  key={model}
+                  onClick={() => setSelectedModel(model)}
+                  className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
+                  style={
+                    selectedModel === model
+                      ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
+                      : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
+                  }
+                >
+                  {MODEL_LABELS[model] ?? model}
+                  {modelAvi != null && (
+                    <span className="ml-1.5 opacity-70">{Math.round(modelAvi.avi)}</span>
+                  )}
+                </button>
+              );
+            })}
+          </>
+        )}
+
+        {/* Separator */}
+        {models.length > 1 && funnelStages.length > 0 && (
+          <div className="w-px h-5 bg-border mx-1" />
+        )}
+
+        {/* Funnel stage filter */}
+        {funnelStages.length > 0 && (
+          <>
+            <button
+              onClick={() => setFunnelFilter(null)}
+              className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
+              style={
+                funnelFilter === null
+                  ? { borderColor: "#e8956d", backgroundColor: "rgba(232,149,109,0.1)", color: "#e8956d" }
+                  : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
+              }
+            >
+              Tutti
+            </button>
+            {funnelStages.map((stage) => (
               <button
-                key={model}
-                onClick={() => setSelectedModel(model)}
+                key={stage}
+                onClick={() => setFunnelFilter(stage)}
                 className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
                 style={
-                  selectedModel === model
-                    ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
+                  funnelFilter === stage
+                    ? { borderColor: "#e8956d", backgroundColor: "rgba(232,149,109,0.1)", color: "#e8956d" }
                     : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
                 }
               >
-                {MODEL_LABELS[model] ?? model}
-                {modelAvi != null && (
-                  <span className="ml-1.5 opacity-70">{Math.round(modelAvi.avi)}</span>
-                )}
+                {stage}
               </button>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </>
+        )}
+
+        {/* Separator */}
+        {(models.length > 1 || funnelStages.length > 0) && (
+          <div className="w-px h-5 bg-border mx-1" />
+        )}
+
+        {/* Brand cited toggle */}
+        <button
+          onClick={() => setBrandCitedFilter(brandCitedFilter === true ? null : true)}
+          className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
+          style={
+            brandCitedFilter === true
+              ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
+              : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
+          }
+        >
+          Brand Si
+        </button>
+        <button
+          onClick={() => setBrandCitedFilter(brandCitedFilter === false ? null : false)}
+          className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
+          style={
+            brandCitedFilter === false
+              ? { borderColor: "#c0614a", backgroundColor: "rgba(192,97,74,0.1)", color: "#c0614a" }
+              : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
+          }
+        >
+          Brand No
+        </button>
+      </div>
 
       {/* Brand Mention Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -284,7 +423,6 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           <p className="text-[10px] text-muted-foreground">scala -1 / +1</p>
           {avgTone !== null && avgPosition !== null && avgRec !== null && (
             <div className="space-y-1 mt-2">
-              {/* Tone */}
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[0.5rem] text-muted-foreground w-16">TONE</span>
                 <div className="flex-1 h-1 bg-muted rounded-[2px] overflow-hidden">
@@ -300,7 +438,6 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                   {sentimentSign(avgTone)}{avgTone.toFixed(2)}
                 </span>
               </div>
-              {/* Position */}
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[0.5rem] text-muted-foreground w-16">POSITION</span>
                 <div className="flex-1 h-1 bg-muted rounded-[2px] overflow-hidden">
@@ -311,7 +448,6 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                   {avgPosition.toFixed(2)}
                 </span>
               </div>
-              {/* Recommendation */}
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[0.5rem] text-muted-foreground w-16">REC</span>
                 <div className="flex-1 h-1 bg-muted rounded-[2px] overflow-hidden">
@@ -430,40 +566,53 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
         </div>
       </div>
 
-      {/* Sources */}
+      {/* Sources grouped by type */}
       {filteredSources.length > 0 && (
-        <div className="card p-5 space-y-3">
+        <div className="card p-5 space-y-4">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-primary" />
             <h2 className="font-display font-semibold text-foreground">Fonti consultate dall&apos;AI</h2>
             <span className="badge badge-muted text-[10px]">{filteredSources.length}</span>
           </div>
+
+          {/* Source type counts */}
           <div className="flex flex-wrap gap-2">
-            {filteredSources.map((s: any) => {
-              const label = s.label || s.domain || "—";
-              const url = s.url || (s.domain ? `https://${s.domain}` : "#");
-              const typeColor = s.source_type === "brand_owned" ? "border-primary/30 bg-primary/5 text-primary"
-                : s.source_type === "review" ? "border-yellow-500/30 bg-yellow-500/5 text-yellow-400"
-                : s.source_type === "social" ? "border-blue-500/30 bg-blue-500/5 text-blue-400"
-                : s.source_type === "ecommerce" ? "border-orange-500/30 bg-orange-500/5 text-orange-400"
-                : s.source_type === "wikipedia" ? "border-muted-foreground/30 bg-muted-foreground/5 text-muted-foreground"
-                : "border-border bg-muted/30 text-foreground";
-              return (
-                <a
-                  key={s.id}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-[2px] border transition-colors hover:opacity-80 ${typeColor}`}
-                  title={s.url || s.domain}
-                >
-                  <ExternalLink className="w-3 h-3 shrink-0" />
-                  <span className="truncate max-w-[200px]">{label}</span>
-                  <span className="font-mono text-[0.5rem] opacity-60 uppercase">{s.source_type}</span>
-                </a>
-              );
-            })}
+            {Array.from(sourcesByType.entries()).map(([type, items]) => (
+              <span
+                key={type}
+                className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-1 rounded-[2px] border ${SOURCE_TYPE_COLORS[type] ?? "border-border bg-muted/30 text-foreground"}`}
+              >
+                {SOURCE_TYPE_LABELS[type] ?? type}
+                <span className="opacity-70">{items.length}</span>
+              </span>
+            ))}
           </div>
+
+          {/* Source chips grouped */}
+          {Array.from(sourcesByType.entries()).map(([type, items]) => (
+            <div key={type} className="space-y-1.5">
+              <p className="font-mono text-[0.6rem] uppercase tracking-wide text-muted-foreground">{SOURCE_TYPE_LABELS[type] ?? type}</p>
+              <div className="flex flex-wrap gap-2">
+                {items.map((s: any) => {
+                  const label = s.label || s.domain || "\u2014";
+                  const url = s.url || (s.domain ? `https://${s.domain}` : "#");
+                  return (
+                    <a
+                      key={s.id}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-[2px] border transition-colors hover:opacity-80 ${SOURCE_TYPE_COLORS[type] ?? "border-border bg-muted/30 text-foreground"}`}
+                      title={s.url || s.domain}
+                    >
+                      <ExternalLink className="w-3 h-3 shrink-0" />
+                      <span className="truncate max-w-[200px]">{label}</span>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -476,13 +625,16 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
               <thead>
                 <tr className="border-b border-border text-xs text-muted-foreground">
                   <th className="text-left py-2 pr-3 font-medium">#</th>
+                  <th className="text-left py-2 pr-3 font-medium">Query</th>
+                  {hasFunnelData && <th className="text-left py-2 pr-3 font-medium">Tipo</th>}
                   <th className="text-left py-2 pr-3 font-medium">Modello</th>
                   <th className="text-left py-2 pr-3 font-medium">Run</th>
                   <th className="text-left py-2 pr-3 font-medium">Brand</th>
                   <th className="text-left py-2 pr-3 font-medium">Rank</th>
                   <th className="text-left py-2 pr-3 font-medium">Sentiment</th>
                   <th className="text-left py-2 pr-3 font-medium">Competitors</th>
-                  <th className="text-left py-2 font-medium">Stato</th>
+                  <th className="text-left py-2 pr-3 font-medium">Stato</th>
+                  <th className="text-left py-2 font-medium">Azioni</th>
                 </tr>
               </thead>
               <tbody>
@@ -490,10 +642,23 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                   const analysis = analysisMap.get(p.id) as any;
                   const isError = !!p.error;
                   const errorLabel = classifyError(p.error);
+                  const query = queryMap.get(p.query_id);
+                  const queryText = query?.text || p.prompt_text || "";
+                  const funnelStage = query?.funnel_stage?.toUpperCase() || "";
                   return (
-                    <>
-                      <tr key={p.id} className={`border-b border-border/50 ${isError ? "bg-destructive/5 border-l-2 border-l-destructive" : "hover:bg-muted/30"}`}>
+                    <Fragment key={p.id}>
+                      <tr className={`border-b border-border/50 ${isError ? "bg-destructive/5 border-l-2 border-l-destructive" : "hover:bg-muted/30"}`}>
                         <td className="py-2 pr-3 text-muted-foreground">{i + 1}</td>
+                        <td className="py-2 pr-3 text-foreground text-xs max-w-[200px] truncate" title={queryText}>
+                          {queryText.slice(0, 60)}{queryText.length > 60 ? "..." : ""}
+                        </td>
+                        {hasFunnelData && (
+                          <td className="py-2 pr-3">
+                            {funnelStage && (
+                              <span className="badge badge-muted text-[10px]">{funnelStage}</span>
+                            )}
+                          </td>
+                        )}
                         <td className="py-2 pr-3"><span className="badge badge-muted text-[10px]">{p.model}</span></td>
                         <td className="py-2 pr-3 text-muted-foreground">{p.run_number}</td>
                         <td className="py-2 pr-3">
@@ -514,7 +679,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                         <td className="py-2 pr-3 text-muted-foreground text-xs max-w-[200px] truncate">
                           {analysis?.competitors_found?.length ? analysis.competitors_found.join(", ") : "-"}
                         </td>
-                        <td className="py-2">
+                        <td className="py-2 pr-3">
                           {isError
                             ? <span className="badge badge-muted text-destructive text-[10px] flex items-center gap-1">
                                 <AlertTriangle className="w-3 h-3" />
@@ -524,19 +689,123 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                               ? <span className="badge badge-success text-[10px]">OK</span>
                               : <span className="badge badge-muted text-[10px]">Pending</span>}
                         </td>
+                        <td className="py-2">
+                          {p.raw_response && (
+                            <button
+                              onClick={() => setModalPrompt({ prompt: p, analysis, query })}
+                              className="text-muted-foreground hover:text-primary transition-colors"
+                              title="Espandi risposta"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          )}
+                        </td>
                       </tr>
                       {isError && (
-                        <tr key={`${p.id}-err`} className="bg-destructive/5">
-                          <td colSpan={8} className="py-1.5 px-3 text-xs text-destructive/80 font-mono truncate">
+                        <tr className="bg-destructive/5">
+                          <td colSpan={hasFunnelData ? 11 : 10} className="py-1.5 px-3 text-xs text-destructive/80 font-mono truncate">
                             {p.error}
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Response detail modal */}
+      {modalPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setModalPrompt(null)}>
+          <div className="absolute inset-0 bg-black/60" />
+          <div
+            className="relative w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-lg shadow-2xl p-6 space-y-4"
+            style={{ background: "#111416", border: "1px solid rgba(126,184,154,0.2)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <h3 className="font-display font-bold text-lg text-foreground">Dettaglio Risposta</h3>
+              <button onClick={() => setModalPrompt(null)} className="text-muted-foreground hover:text-foreground transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Query */}
+            <div className="space-y-1">
+              <p className="font-mono text-[0.6rem] uppercase tracking-wide text-muted-foreground">Query</p>
+              <p className="text-sm text-foreground bg-muted/20 rounded-[2px] px-3 py-2">
+                {modalPrompt.query?.text || modalPrompt.prompt.prompt_text || "N/A"}
+              </p>
+            </div>
+
+            {/* Metadata */}
+            <div className="flex flex-wrap gap-3 text-xs">
+              <span className="badge badge-muted">{modalPrompt.prompt.model}</span>
+              {modalPrompt.query?.funnel_stage && (
+                <span className="badge badge-primary">{modalPrompt.query.funnel_stage.toUpperCase()}</span>
+              )}
+              {modalPrompt.analysis?.brand_mentioned != null && (
+                <span className={`badge ${modalPrompt.analysis.brand_mentioned ? "badge-success" : "badge-muted"}`}>
+                  Brand: {modalPrompt.analysis.brand_mentioned ? "Si" : "No"}
+                </span>
+              )}
+              {modalPrompt.analysis?.brand_rank != null && (
+                <span className="badge badge-muted">Rank: {modalPrompt.analysis.brand_rank}</span>
+              )}
+              {modalPrompt.analysis?.sentiment_score != null && (
+                <span className={`badge badge-muted ${sentimentColor(modalPrompt.analysis.sentiment_score)}`}>
+                  Sentiment: {sentimentSign(modalPrompt.analysis.sentiment_score)}{modalPrompt.analysis.sentiment_score.toFixed(2)}
+                </span>
+              )}
+            </div>
+
+            {/* Full response */}
+            <div className="space-y-1">
+              <p className="font-mono text-[0.6rem] uppercase tracking-wide text-muted-foreground">Risposta AI</p>
+              <div className="text-sm text-foreground/90 bg-muted/10 rounded-[2px] px-4 py-3 max-h-[300px] overflow-y-auto whitespace-pre-wrap leading-relaxed border border-border/50">
+                {modalPrompt.prompt.raw_response}
+              </div>
+            </div>
+
+            {/* Sources found */}
+            {(() => {
+              const promptSources = sources.filter((s: any) => s.prompt_executed_id === modalPrompt.prompt.id);
+              if (promptSources.length === 0) return null;
+              return (
+                <div className="space-y-1">
+                  <p className="font-mono text-[0.6rem] uppercase tracking-wide text-muted-foreground">Fonti ({promptSources.length})</p>
+                  <div className="flex flex-wrap gap-2">
+                    {promptSources.map((s: any) => (
+                      <a
+                        key={s.id}
+                        href={s.url || (s.domain ? `https://${s.domain}` : "#")}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/70 transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        {s.label || s.domain || s.url}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Competitors found */}
+            {modalPrompt.analysis?.competitors_found?.length > 0 && (
+              <div className="space-y-1">
+                <p className="font-mono text-[0.6rem] uppercase tracking-wide text-muted-foreground">Competitor trovati</p>
+                <div className="flex flex-wrap gap-2">
+                  {modalPrompt.analysis.competitors_found.map((c: string) => (
+                    <span key={c} className="badge badge-primary text-xs">{c}</span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
