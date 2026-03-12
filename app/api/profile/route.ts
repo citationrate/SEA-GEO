@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { isProUser } from "@/lib/utils/is-pro";
 
 export async function GET() {
   const supabase = createServiceClient();
@@ -12,7 +13,14 @@ export async function GET() {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+
+  // Enrich plan from user_metadata.is_pro (same logic as dashboard layout)
+  const profile = data as any;
+  if (isProUser(profile, user.user_metadata)) {
+    profile.plan = profile.plan === "agency" ? "agency" : "pro";
+  }
+
+  return NextResponse.json(profile);
 }
 
 export async function PATCH(request: Request) {
