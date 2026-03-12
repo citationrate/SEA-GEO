@@ -5,7 +5,7 @@ import { callAIModel } from "./engine/prompt-runner";
 
 /* ─── Helpers ─── */
 
-const MODELS = ["gpt-4o-mini", "gemini-2.5-flash"];
+const DEFAULT_MODELS = ["gpt-4o-mini", "gemini-2.5-flash"];
 const RUNS_PER_QUERY = 3;
 
 function generateQueries(brandA: string, brandB: string, driver: string): { pattern: string; text: string }[] {
@@ -80,12 +80,15 @@ export const runCompetitiveAnalysis = inngest.createFunction(
   },
   { event: "competitive/start" },
   async ({ event, step }) => {
-    const { analysisId, brandA, brandB, driver } = event.data as {
+    const { analysisId, brandA, brandB, driver, models: eventModels } = event.data as {
       analysisId: string;
       brandA: string;
       brandB: string;
       driver: string;
+      models?: string[];
     };
+
+    const models = eventModels && eventModels.length > 0 ? eventModels : DEFAULT_MODELS;
 
     // Step 1: Generate queries and create prompt rows
     const queries = generateQueries(brandA, brandB, driver);
@@ -99,7 +102,7 @@ export const runCompetitiveAnalysis = inngest.createFunction(
 
       const rows: any[] = [];
       for (const q of queries) {
-        for (const model of MODELS) {
+        for (const model of models) {
           for (let run = 1; run <= RUNS_PER_QUERY; run++) {
             rows.push({
               analysis_id: analysisId,

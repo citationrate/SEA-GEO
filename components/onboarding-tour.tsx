@@ -157,7 +157,17 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
       tooltipPosition: "bottom-left",
       pro: false,
     },
-    // 15 — Compare page
+    // 15 — Results page
+    {
+      title: "Risultati",
+      description:
+        "Panoramica di tutte le analisi eseguite. Vedi stato, progetto, modelli utilizzati e punteggio AVI di ogni run.\n\nClicca su una run per il dettaglio completo.",
+      route: "/results",
+      selector: '[data-tour="results-page"]',
+      tooltipPosition: "right",
+      pro: false,
+    },
+    // 16 — Compare page
     {
       title: "Confronto Competitivo \u2694\uFE0F",
       description:
@@ -187,7 +197,27 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
       tooltipPosition: "bottom-right",
       pro: true,
     },
-    // 18 — Query wizard
+    // — Sources page
+    {
+      title: "Fonti",
+      description:
+        "Scopri quali fonti web vengono citate dalle AI quando parlano del tuo settore.\n\nVedi domini, citazioni, tipo di fonte e se sono di proprietà del tuo brand.",
+      route: "/sources",
+      selector: '[data-tour="sources-page"]',
+      tooltipPosition: "right",
+      pro: false,
+    },
+    // — Topics page
+    {
+      title: "Topic",
+      description:
+        "I temi e gli argomenti estratti automaticamente dalle risposte AI.\n\nOgni topic ha un punteggio di rilevanza e la distribuzione per funnel (TOFU/MOFU).",
+      route: "/topics",
+      selector: '[data-tour="topics-page"]',
+      tooltipPosition: "right",
+      pro: false,
+    },
+    // — Query wizard
     {
       title: "Generatore Query Avanzato",
       description:

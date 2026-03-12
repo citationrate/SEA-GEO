@@ -135,7 +135,7 @@ export default async function SourcesPage({
     : 0;
 
   return (
-    <div className="space-y-6 max-w-[1200px] animate-fade-in">
+    <div data-tour="sources-page" className="space-y-6 max-w-[1200px] animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div />
         <div className="flex items-center gap-3">

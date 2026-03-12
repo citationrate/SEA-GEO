@@ -48,7 +48,7 @@ export default async function ResultsPage() {
   });
 
   return (
-    <div className="space-y-6 max-w-[1400px] animate-fade-in">
+    <div data-tour="results-page" className="space-y-6 max-w-[1400px] animate-fade-in">
       <div>
         <h1 className="font-display font-bold text-2xl text-foreground">Risultati</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Tutte le analisi eseguite</p>

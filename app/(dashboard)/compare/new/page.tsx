@@ -2,6 +2,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ArrowLeft, GitCompare } from "lucide-react";
 import { isProUser } from "@/lib/utils/is-pro";
+import { AI_MODELS, filterAvailableModels } from "@/lib/engine/models";
 import { NewCompetitiveForm } from "./new-competitive-form";
 
 export const metadata = { title: "Nuova Analisi Competitiva" };
@@ -70,6 +71,13 @@ export default async function NewCompetitivePage() {
           brand: p.target_brand,
         }))}
         topCompetitors={topCompetitors}
+        availableModels={(() => {
+          const uniqueModels = AI_MODELS.filter((m, i, arr) => arr.findIndex((x) => x.id === m.id) === i);
+          const availableIds = filterAvailableModels(uniqueModels.map((m) => m.id));
+          return uniqueModels
+            .filter((m) => availableIds.includes(m.id))
+            .map((m) => ({ id: m.id, label: m.label, provider: m.provider }));
+        })()}
       />
     </div>
   );

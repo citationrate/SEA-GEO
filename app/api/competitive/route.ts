@@ -7,6 +7,7 @@ const startSchema = z.object({
   project_id: z.string().uuid(),
   brand_b: z.string().min(1),
   driver: z.string().min(1),
+  models: z.array(z.string().min(1)).min(1),
 });
 
 export async function POST(request: Request) {
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     const parsed = startSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { project_id, brand_b, driver } = parsed.data;
+    const { project_id, brand_b, driver, models } = parsed.data;
 
     // Get project brand
     const { data: project } = await supabase
@@ -58,6 +59,7 @@ export async function POST(request: Request) {
         brandA,
         brandB: brand_b,
         driver,
+        models,
       },
     });
 
