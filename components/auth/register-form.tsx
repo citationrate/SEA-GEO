@@ -53,7 +53,7 @@ export function RegisterForm() {
       toast.success("Account creato! Effettua il login.");
       router.push("/login");
     } else {
-      router.push("/dashboard");
+      router.push("/dashboard?welcome=1");
       router.refresh();
     }
   }

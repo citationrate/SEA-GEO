@@ -258,6 +258,7 @@ interface Rect {
 export function OnboardingTour({ onboardingCompleted = false }: { onboardingCompleted?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParamsRef = useRef(typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null);
 
   const [active, setActive] = useState(false);
   const [current, setCurrent] = useState(0);
@@ -281,18 +282,16 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
       });
   }, []);
 
-  // DB is the single source of truth for tour activation
+  // Tour activates ONLY on signup (when ?welcome=1 is in URL)
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (onboardingCompleted) {
-      // DB says done — sync localStorage and skip
-      localStorage.setItem(LS_KEY, "true");
-      return;
+    const isWelcome = searchParamsRef.current?.get("welcome") === "1";
+    if (isWelcome && !onboardingCompleted) {
+      setActive(true);
+      // Clean the URL without reload
+      window.history.replaceState({}, "", pathname);
     }
-    // DB says not completed — always activate (clear stale localStorage)
-    localStorage.removeItem(LS_KEY);
-    setActive(true);
-  }, [onboardingCompleted]);
+  }, [onboardingCompleted, pathname]);
 
   // Listen for manual restart
   useEffect(() => {
