@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Trophy, Users, Sparkles,
   Loader2, X, Tag, BarChart3, MessageSquareQuote,
+  Check, Info,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -35,6 +36,7 @@ interface CompRow {
   aviScore: number | null;
   mentionScore: number | null;
   competitorType: string;
+  modelMentions: Record<string, boolean>;
 }
 
 const COMP_TYPE_CONFIG: Record<string, { label: string; border: string; text: string }> = {
@@ -88,6 +90,7 @@ export function CompetitorsClient({
   const router = useRouter();
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState("");
+  const [analyzeModel, setAnalyzeModel] = useState<string | null>(null);
   const [drawerTheme, setDrawerTheme] = useState<{ compName: string; theme: MacroTheme } | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
@@ -101,7 +104,7 @@ export function CompetitorsClient({
         const res = await fetch("/api/competitors/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ project_id: pid }),
+          body: JSON.stringify({ project_id: pid, ...(analyzeModel ? { model: analyzeModel } : {}) }),
         });
         if (!res.ok) {
           const data = await res.json();
@@ -133,6 +136,19 @@ export function CompetitorsClient({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Model selector for analysis */}
+          {rows.length > 0 && (availableModels ?? []).length > 1 && (
+            <select
+              value={analyzeModel ?? ""}
+              onChange={(e) => setAnalyzeModel(e.target.value || null)}
+              className="h-9 px-2 rounded-[2px] border border-border bg-[hsl(var(--surface))] text-xs text-foreground font-mono"
+            >
+              <option value="">Tutti i modelli</option>
+              {(availableModels ?? []).map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          )}
           {/* Analyze button */}
           {rows.length > 0 && (
             <button
@@ -216,6 +232,14 @@ export function CompetitorsClient({
           </button>
         ))}
       </div>
+
+      {/* Model variation note */}
+      {(availableModels ?? []).length > 1 && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Info className="w-3.5 h-3.5 shrink-0" />
+          <span>I competitor scoperti variano per modello AI. Usa i filtri sopra per confrontare i risultati.</span>
+        </div>
+      )}
 
       {analyzeError && <p className="text-sm text-destructive">{analyzeError}</p>}
 
@@ -347,6 +371,25 @@ function CompetitorCard({
           </span>
         </div>
       </div>
+
+      {/* Per-model discovery badges */}
+      {row.modelMentions && Object.keys(row.modelMentions).length > 1 && (
+        <div className="flex flex-wrap gap-1">
+          {Object.entries(row.modelMentions).map(([model, found]) => (
+            <span
+              key={model}
+              className={`inline-flex items-center gap-1 font-mono text-[0.55rem] tracking-wide px-1.5 py-0.5 rounded-[2px] border ${
+                found
+                  ? "border-primary/30 text-primary bg-primary/5"
+                  : "border-border text-muted-foreground/50 bg-muted/30"
+              }`}
+            >
+              {found ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
+              {model.replace(/^(gpt-|claude-|gemini-|grok-)/, (m) => m).split("-").slice(0, 2).join("-")}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Positioning summary */}
       {summary && (

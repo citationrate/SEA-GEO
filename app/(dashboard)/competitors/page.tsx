@@ -82,6 +82,35 @@ export default async function CompetitorsPage({
     if (m.competitor_type) compTypeMap.set(key, m.competitor_type);
   }
 
+  // Build per-model mention map for each competitor
+  // Fetch mentions with model info (from the run's models_used)
+  const perModelMentionMap = new Map<string, Set<string>>();
+  if (activeRunIds.length > 0) {
+    const runModelMap = new Map<string, string[]>();
+    for (const r of (allRuns ?? []) as any[]) {
+      runModelMap.set(r.id, r.models_used ?? []);
+    }
+
+    const { data: mentionRowsWithRun } = await (supabase.from("competitor_mentions") as any)
+      .select("competitor_name, run_id, model")
+      .in("project_id", targetIds)
+      .in("run_id", activeRunIds);
+
+    for (const m of (mentionRowsWithRun ?? []) as any[]) {
+      const key = (m.competitor_name as string).toLowerCase().trim();
+      if (!perModelMentionMap.has(key)) perModelMentionMap.set(key, new Set());
+      // Use model field if available, otherwise infer from run's models_used
+      if (m.model) {
+        perModelMentionMap.get(key)!.add(m.model);
+      } else {
+        const runModels = runModelMap.get(m.run_id) ?? [];
+        for (const model of runModels) {
+          perModelMentionMap.get(key)!.add(model);
+        }
+      }
+    }
+  }
+
   // Use filtered run IDs for stats
   const runIds = filteredRunIds;
 
@@ -284,13 +313,22 @@ export default async function CompetitorsPage({
         <ProjectSelector projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))} />
       </div>
       <CompetitorsClient
-        rows={rows.map((r) => ({
-          ...r,
-          aviScore: compAviMap.get(r.name.toLowerCase().trim()) ?? null,
-          mentionScore: totalPrompts > 0 ? Math.round((r.mentions / totalPrompts) * 1000) / 10 : null,
-          competitorType: r.competitorType,
-          projects: r.projects.map((p) => ({ id: p.id, name: p.name, brand: p.brand })),
-        }))}
+        rows={rows.map((r) => {
+          const key = r.name.toLowerCase().trim();
+          const modelSet = perModelMentionMap.get(key);
+          const modelMentions: Record<string, boolean> = {};
+          for (const m of availableModels) {
+            modelMentions[m] = modelSet?.has(m) ?? false;
+          }
+          return {
+            ...r,
+            aviScore: compAviMap.get(key) ?? null,
+            mentionScore: totalPrompts > 0 ? Math.round((r.mentions / totalPrompts) * 1000) / 10 : null,
+            competitorType: r.competitorType,
+            projects: r.projects.map((p) => ({ id: p.id, name: p.name, brand: p.brand })),
+            modelMentions,
+          };
+        })}
         projectIds={targetIds}
         brandAviScore={brandAviScore}
         availableModels={availableModels}
