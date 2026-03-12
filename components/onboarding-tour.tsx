@@ -22,7 +22,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Benvenuto in SeaGeo \u{1F44B}",
       description:
-        "SeaGeo misura quanto il tuo brand \u00e8 visibile\nnelle risposte dei principali motori AI.\n\nIn pochi minuti scoprirai dove appari, con che sentiment\ne chi sono i tuoi competitor secondo l\u2019AI.",
+        "SeaGeo misura quanto il tuo brand \u00e8 visibile nelle risposte dei principali motori AI.\n\nIn pochi minuti scoprirai dove appari, con che sentiment e chi sono i tuoi competitor secondo l\u2019AI.",
       tooltipPosition: "center",
       pro: false,
     },
@@ -30,7 +30,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Navigazione",
       description:
-        "Dalla sidebar accedi a tutte le sezioni di SeaGeo:\nDashboard, Progetti, Analisi, Intelligence e Impostazioni.\n\nOgni voce corrisponde a un\u2019area funzionale della piattaforma.",
+        "Dalla sidebar accedi a tutte le sezioni di SeaGeo: Dashboard, Progetti, Analisi, Intelligence e Impostazioni.\n\nOgni voce corrisponde a un\u2019area funzionale della piattaforma.",
       route: "/dashboard",
       selector: '[data-tour="sidebar-nav"]',
       tooltipPosition: "right",
@@ -40,7 +40,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Dashboard \u2014 Il tuo AVI",
       description:
-        "L\u2019AI Visibility Index \u00e8 il tuo punteggio da 0 a 100.\nMisura presenza, rilevanza e sentiment del tuo brand\nnelle risposte AI.\n\nMonitoralo nel tempo per vedere i progressi.",
+        "L\u2019AI Visibility Index \u00e8 il tuo punteggio da 0 a 100. Misura presenza, rilevanza e sentiment del tuo brand nelle risposte AI.\n\nMonitoralo nel tempo per vedere i progressi.",
       route: "/dashboard",
       selector: '[data-tour="avi-ring"]',
       tooltipPosition: "right",
@@ -50,7 +50,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "AVI nel Tempo",
       description:
-        "Questo grafico mostra l\u2019evoluzione del tuo AVI\ntra le diverse analisi.\n\nConfrontalo con Prominence e Sentiment\nper capire cosa sta guidando il cambiamento.",
+        "Questo grafico mostra l\u2019evoluzione del tuo AVI tra le diverse analisi.\n\nConfrontalo con Prominence e Sentiment per capire cosa sta guidando il cambiamento.",
       route: "/dashboard",
       selector: '[data-tour="avi-trend"]',
       tooltipPosition: "top-right",
@@ -60,7 +60,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Top Competitor",
       description:
-        "I brand che le AI citano pi\u00f9 spesso\ncome alternativa al tuo.\n\nSono scoperti automaticamente durante l\u2019analisi.",
+        "I brand che le AI citano pi\u00f9 spesso come alternativa al tuo.\n\nSono scoperti automaticamente durante l\u2019analisi.",
       route: "/dashboard",
       selector: '[data-tour="top-competitors"]',
       tooltipPosition: "right",
@@ -70,7 +70,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Ultime Analisi",
       description:
-        "Accesso rapido alle analisi pi\u00f9 recenti.\nVedi stato, progetto, versione e punteggio AVI\ndi ogni run a colpo d\u2019occhio.",
+        "Accesso rapido alle analisi pi\u00f9 recenti. Vedi stato, progetto, versione e punteggio AVI di ogni run a colpo d\u2019occhio.",
       route: "/dashboard",
       selector: '[data-tour="recent-runs"]',
       tooltipPosition: "right",
@@ -80,7 +80,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Progetti",
       description:
-        "Ogni progetto corrisponde a un brand da analizzare.\nPuoi avere pi\u00f9 brand attivi contemporaneamente\ne monitorarli separatamente.",
+        "Ogni progetto corrisponde a un brand da analizzare. Puoi avere pi\u00f9 brand attivi contemporaneamente e monitorarli separatamente.",
       route: "/projects",
       selector: '[data-tour="new-project-btn"]',
       tooltipPosition: "bottom-right",
@@ -90,7 +90,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "I tuoi Progetti",
       description:
-        "Qui trovi tutti i brand che stai monitorando.\nClicca su un progetto per vedere query, analisi e risultati.",
+        "Qui trovi tutti i brand che stai monitorando. Clicca su un progetto per vedere query, analisi e risultati.",
       route: "/projects",
       selector: '[data-tour="projects-list"]',
       tooltipPosition: "right",
@@ -100,7 +100,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Query del Progetto",
       description:
-        "Le query sono le domande che SeaGeo pone ai motori AI.\nSono divise in TOFU (awareness) e MOFU (consideration).\n\nAggiungi domande che un utente reale potrebbe fare\nriguardo al tuo settore.",
+        "Le query sono le domande che SeaGeo pone ai motori AI. Sono divise in TOFU (awareness) e MOFU (consideration).\n\nAggiungi domande che un utente reale potrebbe fare riguardo al tuo settore.",
       route: `/projects/${pid}`,
       selector: '[data-tour="project-queries"]',
       tooltipPosition: "right",
@@ -110,7 +110,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Aggiungi Query",
       description:
-        "Clicca qui per aggiungere manualmente una nuova query\nal tuo progetto.",
+        "Clicca qui per aggiungere manualmente una nuova query al tuo progetto.",
       route: `/projects/${pid}`,
       selector: '[data-tour="add-query-btn"]',
       tooltipPosition: "right",
@@ -120,7 +120,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Genera Query con AI \u2728",
       description:
-        "Genera automaticamente query strutturate\nin famiglie Generali, Verticali e Personas.\n\nIl sistema usa template deterministici\nper garantire coerenza e comparabilit\u00e0.",
+        "Genera automaticamente query strutturate in famiglie Generali, Verticali e Personas.\n\nIl sistema usa template deterministici per garantire coerenza e comparabilit\u00e0.",
       route: `/projects/${pid}`,
       selector: '[data-tour="generate-queries-btn"]',
       tooltipPosition: "bottom-right",
@@ -130,7 +130,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Lancia Analisi",
       description:
-        "Avvia l\u2019analisi: SeaGeo interroga i modelli AI\ne calcola il tuo AVI in pochi minuti.\n\nScegli il numero di run:\n1 = veloce | 2 = bilanciato | 3 = preciso",
+        "Avvia l\u2019analisi: SeaGeo interroga i modelli AI e calcola il tuo AVI in pochi minuti.\n\nScegli il numero di run:\n1 = veloce | 2 = bilanciato | 3 = preciso",
       route: `/projects/${pid}`,
       selector: '[data-tour="launch-analysis-btn"]',
       tooltipPosition: "bottom-left",
@@ -140,7 +140,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Risultati Analisi",
       description:
-        "Dopo ogni analisi trovi qui i risultati.\nClicca su una run per vedere il dettaglio completo:\nAVI, competitor, fonti, topic e risposte.",
+        "Dopo ogni analisi trovi qui i risultati. Clicca su una run per vedere il dettaglio completo: AVI, competitor, fonti, topic e risposte.",
       route: `/projects/${pid}`,
       selector: '[data-tour="run-results"]',
       tooltipPosition: "right",
@@ -150,7 +150,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Competitor",
       description:
-        "Tutti i brand scoperti dalle AI come alternative al tuo.\nClassificati per tipo: Diretto, Indiretto, Canale, Aggregatore.\n\nVisualizza menzioni, AVI e sentiment di ciascuno.",
+        "Tutti i brand scoperti dalle AI come alternative al tuo. Classificati per tipo: Diretto, Indiretto, Canale, Aggregatore.\n\nVisualizza menzioni, AVI e sentiment di ciascuno.",
       route: "/competitors",
       selector: '[data-tour="competitors-tab"]',
       tooltipPosition: "right",
@@ -160,7 +160,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Analizza Contesti con AI",
       description:
-        "Usa l\u2019AI per analizzare i contesti in cui\ni competitor vengono citati insieme al tuo brand.\n\nScopri temi ricorrenti e posizionamento relativo.",
+        "Usa l\u2019AI per analizzare i contesti in cui i competitor vengono citati insieme al tuo brand.\n\nScopri temi ricorrenti e posizionamento relativo.",
       route: "/competitors",
       selector: '[data-tour="analyze-contexts-btn"]',
       tooltipPosition: "bottom-left",
@@ -180,7 +180,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Dataset",
       description:
-        "Accedi alle risposte raw di ogni singolo prompt.\nEspandi ogni riga per leggere la risposta completa\ne le fonti consultate dall\u2019AI.",
+        "Accedi alle risposte raw di ogni singolo prompt. Espandi ogni riga per leggere la risposta completa e le fonti consultate dall\u2019AI.",
       route: "/datasets",
       selector: '[data-tour="dataset-table"]',
       tooltipPosition: "right",
@@ -190,7 +190,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Filtri Dataset",
       description:
-        "Filtra per progetto, modello, run, query e famiglia.\nCombina i filtri per analisi mirate\nsu specifici segmenti di risposte.",
+        "Filtra per progetto, modello, run, query e famiglia. Combina i filtri per analisi mirate su specifici segmenti di risposte.",
       route: "/datasets",
       selector: '[data-tour="dataset-filters"]',
       tooltipPosition: "bottom-right",
@@ -200,7 +200,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Generatore Query Avanzato",
       description:
-        "Descrivi il tuo brand con use case, criteri e must-have.\nIl sistema genera automaticamente query strutturate\ncon Layer A/B/C e famiglie TOFU/MOFU.\n\nPreview del costo prima di salvare.",
+        "Descrivi il tuo brand con use case, criteri e must-have. Il sistema genera automaticamente query strutturate con Layer A/B/C e famiglie TOFU/MOFU.\n\nPreview del costo prima di salvare.",
       route: `/projects/${pid}/queries/generate`,
       selector: '[data-tour="query-wizard-step1"]',
       tooltipPosition: "center",
@@ -210,7 +210,7 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
     {
       title: "Impostazioni \u2014 Profilo",
       description:
-        "Gestisci il tuo profilo, visualizza l\u2019email\ne l\u2019ID utente associato al tuo account.",
+        "Gestisci il tuo profilo, visualizza l\u2019email e l\u2019ID utente associato al tuo account.",
       route: "/settings",
       selector: '[data-tour="settings-account"]',
       tooltipPosition: "right",
@@ -379,7 +379,7 @@ export function OnboardingTour() {
   const vw = typeof window !== "undefined" ? window.innerWidth : 1920;
   const vh = typeof window !== "undefined" ? window.innerHeight : 1080;
 
-  const tooltipW = 360;
+  const tooltipW = 410;
   const tooltipH = 220;
   let tooltipX = 0;
   let tooltipY = 0;
@@ -493,7 +493,7 @@ export function OnboardingTour() {
           }}
         >
           <div
-            className="rounded-lg p-5 space-y-3 shadow-2xl"
+            className="rounded-lg p-5 space-y-3 shadow-2xl min-w-[380px] max-w-[440px]"
             style={{
               background: "#111416",
               border: "1px solid rgba(126,184,154,0.2)",
@@ -530,7 +530,7 @@ export function OnboardingTour() {
             {/* Body */}
             <p
               className="text-sm text-muted-foreground leading-relaxed"
-              style={{ whiteSpace: "pre-line" }}
+              style={{ whiteSpace: "pre-line", overflowWrap: "break-word" }}
             >
               {step.description}
             </p>
