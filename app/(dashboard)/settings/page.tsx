@@ -49,7 +49,7 @@ export default async function SettingsPage({
       </div>
 
       {/* Profilo */}
-      <div className="card p-6 space-y-4">
+      <div data-tour="settings-account" className="card p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <User className="w-5 h-5 text-primary" />
           <h2 className="font-display font-semibold text-foreground">Profilo</h2>
@@ -120,7 +120,7 @@ export default async function SettingsPage({
       </div>
 
       {/* Tour guidato */}
-      <div className="card p-6 space-y-4">
+      <div data-tour="settings-tour" className="card p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <PlayCircle className="w-5 h-5 text-primary" />
           <h2 className="font-display font-semibold text-foreground">Tour guidato</h2>

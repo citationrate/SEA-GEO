@@ -29,7 +29,7 @@ export default async function ProjectsPage() {
           <p className="text-sm text-muted-foreground">Nessun progetto ancora.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div data-tour="projects-list" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {projects.map((p: { id: string; name: string; target_brand: string; language: string; created_at: string }) => (
             <a key={p.id} href={`/projects/${p.id}`} className="card p-5 block">
               <h3 className="font-display font-semibold text-foreground">{p.name}</h3>

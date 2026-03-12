@@ -144,6 +144,7 @@ export function CompetitorsClient({
           {/* Analyze button */}
           {rows.length > 0 && (
             <button
+              data-tour="analyze-contexts-btn"
               onClick={analyzeContexts}
               disabled={analyzing}
               className="flex items-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-3.5 py-2 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"

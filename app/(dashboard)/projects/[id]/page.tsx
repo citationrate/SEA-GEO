@@ -239,7 +239,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div data-tour="project-queries" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Query TOFU */}
         <div className="card p-5 space-y-4">
           <div className="flex items-center justify-between">
@@ -313,7 +313,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
       {/* Analisi eseguite */}
       {allRuns.length > 0 && (
-        <div className="card p-5 space-y-4">
+        <div data-tour="run-results" className="card p-5 space-y-4">
           <div className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-primary" />
             <h2 className="font-display font-semibold text-foreground">Analisi Eseguite</h2>

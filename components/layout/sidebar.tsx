@@ -70,7 +70,7 @@ export function Sidebar({ profile }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2.5 space-y-4">
+      <nav data-tour="sidebar-nav" className="flex-1 overflow-y-auto py-4 px-2.5 space-y-4">
         {NAV.map(({ group, items }) => (
           <div key={group}>
             <p className="font-mono text-[0.62rem] uppercase tracking-wider text-muted-foreground px-2 mb-1.5">

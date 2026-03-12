@@ -85,7 +85,7 @@ export default async function ComparePage({
   const list = (analyses ?? []) as any[];
 
   return (
-    <div className="space-y-6 max-w-[1200px] animate-fade-in">
+    <div data-tour="confronto-page" className="space-y-6 max-w-[1200px] animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <GitCompare className="w-6 h-6 text-primary" />

@@ -44,12 +44,16 @@ export function DashboardClient({
       </div>
 
       {/* Trend chart */}
-      <AVITrend data={trendData} models={models} />
+      <div data-tour="avi-trend">
+        <AVITrend data={trendData} models={models} />
+      </div>
 
       {/* Bottom row: Competitors + Recent Runs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <CompetitorBar data={competitorBarData} />
-        <RecentRuns runs={recentRuns} />
+        <div data-tour="recent-runs">
+          <RecentRuns runs={recentRuns} />
+        </div>
       </div>
     </div>
   );

@@ -125,7 +125,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
       </div>
 
       {/* Filters */}
-      <div className="card p-4 flex flex-wrap gap-4 items-end">
+      <div data-tour="dataset-filters" className="card p-4 flex flex-wrap gap-4 items-end">
         {/* Project */}
         <div className="space-y-1 min-w-[200px]">
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Progetto</label>
