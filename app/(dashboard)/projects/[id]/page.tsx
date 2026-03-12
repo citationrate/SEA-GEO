@@ -180,9 +180,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       {/* Modelli AI configurati */}
       <div className="flex items-center gap-2 flex-wrap">
         <Cpu className="w-3.5 h-3.5 text-cream-dim" />
-        <span className="font-mono text-[11px] text-cream-dim">Modelli AI:</span>
+        <span className="font-mono text-[13px] text-cream-dim">Modelli AI:</span>
         {((proj.models_config as string[]) ?? ["gpt-4o-mini"]).map((m: string) => (
-          <span key={m} className="badge badge-primary text-[10px]">{m}</span>
+          <span key={m} className="badge badge-primary text-[12px]">{m}</span>
         ))}
       </div>
 
@@ -213,7 +213,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
               Ultima analisi: {new Date((lastRun as any).completed_at ?? (lastRun as any).created_at).toLocaleString("it-IT")}
               {" "}&middot; v{(lastRun as any).version}
-              {" "}&middot; <span className="badge badge-success text-[10px]">{(lastRun as any).status}</span>
+              {" "}&middot; <span className="badge badge-success text-[12px]">{(lastRun as any).status}</span>
             </p>
           )}
         </div>
@@ -246,7 +246,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             <div className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-primary" />
               <h2 className="font-display font-semibold text-foreground">Query TOFU</h2>
-              <span className="badge badge-muted text-[10px]">{tofuQueries.length}</span>
+              <span className="badge badge-muted text-[12px]">{tofuQueries.length}</span>
             </div>
             <a href={`/projects/${params.id}/queries`} data-tour="add-query-btn" className="text-xs text-primary hover:text-primary/70 transition-colors">
               <Plus className="w-4 h-4" />
@@ -269,7 +269,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             <div className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-accent" />
               <h2 className="font-display font-semibold text-foreground">Query MOFU</h2>
-              <span className="badge badge-muted text-[10px]">{mofuQueries.length}</span>
+              <span className="badge badge-muted text-[12px]">{mofuQueries.length}</span>
             </div>
             <a href={`/projects/${params.id}/queries`} className="text-xs text-primary hover:text-primary/70 transition-colors">
               <Plus className="w-4 h-4" />
@@ -293,7 +293,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-primary" />
             <h2 className="font-display font-semibold text-foreground">Segmenti Audience Attivi</h2>
-            <span className="badge badge-muted text-[10px]">{(segments ?? []).length}</span>
+            <span className="badge badge-muted text-[12px]">{(segments ?? []).length}</span>
           </div>
           <a href={`/projects/${params.id}/segments`} className="text-xs text-primary hover:text-primary/70 transition-colors">Gestisci</a>
         </div>
@@ -317,7 +317,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           <div className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-primary" />
             <h2 className="font-display font-semibold text-foreground">Analisi Eseguite</h2>
-            <span className="badge badge-muted text-[10px]">{allRuns.length}</span>
+            <span className="badge badge-muted text-[12px]">{allRuns.length}</span>
           </div>
           <div className="space-y-2">
             {allRuns.map((run: any) => {
@@ -347,7 +347,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-muted-foreground">{new Date(run.completed_at ?? run.created_at).toLocaleDateString("it-IT")}</span>
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-[2px] border ${badgeClass}`}>
+                      <span className={`inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-0.5 rounded-[2px] border ${badgeClass}`}>
                         <Icon className={`w-3 h-3 ${run.status === "running" ? "animate-spin" : ""}`} />
                         {statusLabel}
                       </span>
@@ -405,7 +405,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           >
             <Sparkles className="w-4 h-4" />
             Genera Prompt con AI
-            <span className="inline-flex items-center gap-0.5 font-mono text-[0.5rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">&#10022; Pro</span>
+            <span className="inline-flex items-center gap-0.5 font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">&#10022; Pro</span>
           </a>
           <a
             href={`/projects/${params.id}/segments`}
@@ -443,7 +443,7 @@ function QueryBadgeItem({ query }: { query: any }) {
     <li className="flex items-start justify-between gap-2 text-sm text-foreground bg-muted rounded-[2px] px-3 py-2 border border-border">
       <span className="flex-1 min-w-0">{query.text}</span>
       {badge && (
-        <span className={`font-mono text-[0.5rem] tracking-wide uppercase px-1 py-0.5 rounded-[2px] border shrink-0 mt-0.5 ${badge.cls}`}>
+        <span className={`font-mono text-[0.625rem] tracking-wide uppercase px-1 py-0.5 rounded-[2px] border shrink-0 mt-0.5 ${badge.cls}`}>
           {badge.label}
         </span>
       )}

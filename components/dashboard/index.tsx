@@ -5,7 +5,7 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from "recharts";
 import { TrendingUp, TrendingDown, Minus, Clock, CheckCircle2, AlertCircle } from "lucide-react";
-
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 /* ─── AVI Ring ─── */
 interface AVIRingProps {
@@ -45,7 +45,7 @@ export function AVIRing({ score, trend, components }: AVIRingProps) {
 
   return (
     <div data-tour="avi-ring" className="card p-5 h-full flex flex-col items-center gap-3">
-      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-cream-dim">
+      <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-cream-dim">
         AI Visibility Index
       </p>
 
@@ -65,7 +65,7 @@ export function AVIRing({ score, trend, components }: AVIRingProps) {
           <span className="font-display text-[32px] text-foreground leading-none" style={{ fontWeight: 300 }}>
             {score != null ? Math.round(score) : "--"}
           </span>
-          {score != null && <span className="font-mono text-[10px] text-cream-dim">/100</span>}
+          {score != null && <span className="font-mono text-[12px] text-cream-dim">/100</span>}
         </div>
       </div>
 
@@ -81,11 +81,11 @@ export function AVIRing({ score, trend, components }: AVIRingProps) {
           {comps.map(c => (
             <div key={c.label}>
               <div className="flex items-center justify-between mb-1">
-                <span className="font-mono text-[10px] text-cream-dim flex items-center gap-1" title={COMP_TOOLTIPS[c.label]}>
+                <span className="font-mono text-[12px] text-cream-dim flex items-center gap-1">
                   {c.label}
-                  <svg className="w-2.5 h-2.5 text-cream-dim/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                  {COMP_TOOLTIPS[c.label] && <InfoTooltip text={COMP_TOOLTIPS[c.label]} />}
                 </span>
-                <span className="font-mono text-[10px] text-cream-dim">{c.v != null ? Math.round(c.v) : "--"}</span>
+                <span className="font-mono text-[12px] text-cream-dim">{c.v != null ? Math.round(c.v) : "--"}</span>
               </div>
               <div className="w-full h-1 bg-ink-3 rounded-sm overflow-hidden">
                 <div className="h-full rounded-sm transition-all duration-700"
@@ -120,10 +120,10 @@ export function StatsRow({ stats }: { stats?: StatItem[] }) {
     <div className="grid grid-cols-3 gap-3 h-full">
       {items.map(s => (
         <div key={s.label} className="card p-4 flex flex-col justify-between">
-          <p className="font-mono text-[10px] uppercase tracking-[0.04em] text-cream-dim">{s.label}</p>
+          <p className="font-mono text-[12px] uppercase tracking-[0.04em] text-cream-dim">{s.label}</p>
           <div className="mt-2">
             <p className="font-display text-2xl text-foreground" style={{ fontWeight: 300 }}>{s.value}</p>
-            <p className="font-mono text-[10px] text-cream-dim mt-0.5">{s.sub}</p>
+            <p className="font-mono text-[12px] text-cream-dim mt-0.5">{s.sub}</p>
           </div>
         </div>
       ))}
@@ -178,7 +178,7 @@ export function AVITrend({ data, models }: { data?: TrendDataPoint[]; models?: s
       <div className="card p-5">
         <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>AVI nel Tempo</h3>
         <div className="flex items-center justify-center py-8">
-          <p className="font-mono text-[11px] text-cream-dim">Esegui almeno un&apos;analisi per vedere il trend</p>
+          <p className="font-mono text-[13px] text-cream-dim">Esegui almeno un&apos;analisi per vedere il trend</p>
         </div>
       </div>
     );
@@ -196,9 +196,9 @@ export function AVITrend({ data, models }: { data?: TrendDataPoint[]; models?: s
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="font-display text-sm text-foreground" style={{ fontWeight: 300 }}>AVI nel Tempo</h3>
-          <p className="font-mono text-[10px] text-cream-dim mt-0.5">Punteggio di visibilita tra le analisi</p>
+          <p className="font-mono text-[12px] text-cream-dim mt-0.5">Punteggio di visibilita tra le analisi</p>
         </div>
-        <div className="flex items-center gap-4 font-mono text-[10px] text-cream-dim flex-wrap">
+        <div className="flex items-center gap-4 font-mono text-[12px] text-cream-dim flex-wrap">
           {legendItems.map(l => (
             <span key={l.label} className="flex items-center gap-1.5">
               <span className="w-4 h-0.5 rounded-sm inline-block" style={{ background: l.color }} />
@@ -250,7 +250,7 @@ export function CompetitorBar({ data }: { data?: CompetitorData[] }) {
       <div data-tour="top-competitors" className="card p-5">
         <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>Top Competitor</h3>
         <div className="flex items-center justify-center py-8">
-          <p className="font-mono text-[11px] text-cream-dim">Nessun competitor trovato</p>
+          <p className="font-mono text-[13px] text-cream-dim">Nessun competitor trovato</p>
         </div>
       </div>
     );
@@ -301,8 +301,8 @@ export function RecentRuns({ runs }: { runs?: RunItem[] }) {
       <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>Ultime Analisi</h3>
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <p className="font-mono text-[11px] text-cream-dim">Nessuna analisi ancora.</p>
-          <a href="/projects" className="font-mono text-[11px] text-sage hover:text-sage/70 transition-colors mt-2">
+          <p className="font-mono text-[13px] text-cream-dim">Nessuna analisi ancora.</p>
+          <a href="/projects" className="font-mono text-[13px] text-sage hover:text-sage/70 transition-colors mt-2">
             Vai ai progetti →
           </a>
         </div>
@@ -317,13 +317,13 @@ export function RecentRuns({ runs }: { runs?: RunItem[] }) {
               <div className="flex items-center gap-2">
                 {RUN_ICONS[r.status] ?? RUN_ICONS.failed}
                 <span className="text-sm font-sans text-foreground group-hover:text-sage transition-colors">{r.project_name}</span>
-                <span className="font-mono text-[10px] text-cream-dim">v{r.version}</span>
+                <span className="font-mono text-[12px] text-cream-dim">v{r.version}</span>
               </div>
               <div className="flex items-center gap-3">
                 {r.avi_score != null && (
                   <span className="font-display text-sm text-sage" style={{ fontWeight: 300 }}>{r.avi_score}</span>
                 )}
-                <span className="font-mono text-[10px] text-cream-dim">{r.date}</span>
+                <span className="font-mono text-[12px] text-cream-dim">{r.date}</span>
               </div>
             </a>
           ))}

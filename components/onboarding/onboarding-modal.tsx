@@ -92,7 +92,7 @@ export function OnboardingModal() {
               />
             </div>
           ))}
-          <span className="text-[0.65rem] text-muted-foreground ml-2 shrink-0">
+          <span className="text-[0.8rem] text-muted-foreground ml-2 shrink-0">
             {step}/3
           </span>
         </div>

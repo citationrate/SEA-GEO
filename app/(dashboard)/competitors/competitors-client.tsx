@@ -174,7 +174,7 @@ export function CompetitorsClient({
               params.delete("model");
               router.push(`?${params.toString()}`);
             }}
-            className="font-mono text-[0.6rem] tracking-wide uppercase px-3 py-1.5 rounded-full border transition-colors"
+            className="font-mono text-[0.75rem] tracking-wide uppercase px-3 py-1.5 rounded-full border transition-colors"
             style={
               !selectedModel
                 ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
@@ -191,7 +191,7 @@ export function CompetitorsClient({
                 params.set("model", model);
                 router.push(`?${params.toString()}`);
               }}
-              className="font-mono text-[0.6rem] tracking-wide uppercase px-3 py-1.5 rounded-full border transition-colors"
+              className="font-mono text-[0.75rem] tracking-wide uppercase px-3 py-1.5 rounded-full border transition-colors"
               style={
                 selectedModel === model
                   ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
@@ -208,7 +208,7 @@ export function CompetitorsClient({
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setTypeFilter(null)}
-          className="font-mono text-[0.6rem] tracking-wide uppercase px-3 py-1.5 rounded-full border transition-colors"
+          className="font-mono text-[0.75rem] tracking-wide uppercase px-3 py-1.5 rounded-full border transition-colors"
           style={
             !typeFilter
               ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
@@ -221,7 +221,7 @@ export function CompetitorsClient({
           <button
             key={type}
             onClick={() => setTypeFilter(typeFilter === type ? null : type)}
-            className="font-mono text-[0.6rem] tracking-wide uppercase px-3 py-1.5 rounded-full border transition-colors"
+            className="font-mono text-[0.75rem] tracking-wide uppercase px-3 py-1.5 rounded-full border transition-colors"
             style={
               typeFilter === type
                 ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
@@ -352,7 +352,7 @@ function CompetitorCard({
           {(() => {
             const cfg = COMP_TYPE_CONFIG[row.competitorType];
             return cfg ? (
-              <span className={`font-mono text-[0.55rem] tracking-wide uppercase px-1.5 py-0.5 rounded-[2px] border ${cfg.border} ${cfg.text}`}>
+              <span className={`font-mono text-[0.69rem] tracking-wide uppercase px-1.5 py-0.5 rounded-[2px] border ${cfg.border} ${cfg.text}`}>
                 {cfg.label}
               </span>
             ) : null;
@@ -378,7 +378,7 @@ function CompetitorCard({
           {Object.entries(row.modelMentions).map(([model, found]) => (
             <span
               key={model}
-              className={`inline-flex items-center gap-1 font-mono text-[0.55rem] tracking-wide px-1.5 py-0.5 rounded-[2px] border ${
+              className={`inline-flex items-center gap-1 font-mono text-[0.69rem] tracking-wide px-1.5 py-0.5 rounded-[2px] border ${
                 found
                   ? "border-primary/30 text-primary bg-primary/5"
                   : "border-border text-muted-foreground/50 bg-muted/30"
@@ -399,7 +399,7 @@ function CompetitorCard({
       {/* Macro themes */}
       {themes.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <p className="text-[12px] font-semibold uppercase tracking-widest text-muted-foreground">
             Citato in contesti di:
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -434,7 +434,7 @@ function CompetitorCard({
       {row.topics.length > 0 && themes.length === 0 && (
         <div className="flex flex-wrap gap-1.5">
           {row.topics.map((t) => (
-            <span key={t} className="px-2 py-0.5 rounded-[2px] text-[11px] font-medium bg-primary/10 text-primary border border-primary/20">
+            <span key={t} className="px-2 py-0.5 rounded-[2px] text-[13px] font-medium bg-primary/10 text-primary border border-primary/20">
               {t}
             </span>
           ))}
@@ -463,7 +463,7 @@ function CompetitorCard({
       </div>
 
       {/* Dates + project */}
-      <div className="flex items-center justify-between pt-2 border-t border-border text-[11px] text-muted-foreground">
+      <div className="flex items-center justify-between pt-2 border-t border-border text-[13px] text-muted-foreground">
         <div className="flex gap-4">
           <span>Prima: {row.firstSeen ? new Date(row.firstSeen).toLocaleDateString("it-IT") : "\u2014"}</span>
           <span>Ultima: {row.lastSeen ? new Date(row.lastSeen).toLocaleDateString("it-IT") : "\u2014"}</span>

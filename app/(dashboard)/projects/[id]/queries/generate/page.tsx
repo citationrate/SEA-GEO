@@ -252,7 +252,7 @@ export default function GenerateQueriesPage() {
             <div className="flex items-center gap-2">
               <h1 className="font-display font-bold text-2xl text-foreground">Genera Prompt con AI</h1>
               {isPro && (
-                <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">
+                <span className="inline-flex items-center gap-1 font-mono text-[0.75rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">
                   <Crown className="w-3 h-3" /> PRO
                 </span>
               )}
@@ -712,7 +712,7 @@ export default function GenerateQueriesPage() {
                 style={{ width: `${100 - tofuPercent}%` }}
               />
             </div>
-            <div className="flex justify-between text-[10px] text-muted-foreground">
+            <div className="flex justify-between text-[12px] text-muted-foreground">
               <span>{Math.round((queryCount === -1 ? customCount : queryCount) * tofuPercent / 100)} query TOFU</span>
               <span>{(queryCount === -1 ? customCount : queryCount) - Math.round((queryCount === -1 ? customCount : queryCount) * tofuPercent / 100)} query MOFU</span>
             </div>
@@ -825,10 +825,10 @@ export default function GenerateQueriesPage() {
                           {q.text}
                         </p>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <span className={`font-mono text-[0.55rem] tracking-wide uppercase px-1.5 py-0.5 rounded-[2px] border ${FUNNEL_COLORS[q.funnel]}`}>
+                          <span className={`font-mono text-[0.69rem] tracking-wide uppercase px-1.5 py-0.5 rounded-[2px] border ${FUNNEL_COLORS[q.funnel]}`}>
                             {q.funnel}
                           </span>
-                          <span className="font-mono text-[0.55rem] tracking-wide text-muted-foreground border border-border px-1.5 py-0.5 rounded-[2px]">
+                          <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground border border-border px-1.5 py-0.5 rounded-[2px]">
                             {q.layer}
                           </span>
                         </div>

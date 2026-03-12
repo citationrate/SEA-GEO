@@ -555,9 +555,9 @@ export default function NewProjectPage() {
                       )}
                     </div>
                     <span className={`text-sm font-semibold ${isSoon ? "text-muted-foreground" : "text-foreground"}`}>{provider.label}</span>
-                    <span className="font-mono text-[0.55rem] tracking-wide text-muted-foreground">{provider.badge}</span>
+                    <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{provider.badge}</span>
                     {isSoon && (
-                      <span className="font-mono text-[0.55rem] tracking-wide text-amber-500 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded-[2px] ml-auto">SOON</span>
+                      <span className="font-mono text-[0.69rem] tracking-wide text-amber-500 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded-[2px] ml-auto">SOON</span>
                     )}
                   </button>
 
@@ -690,7 +690,7 @@ export default function NewProjectPage() {
                 {/* Pro Plan */}
                 <div className="rounded-lg border border-[#c4a882]/30 bg-[#c4a882]/5 p-6 space-y-4 relative">
                   <div className="absolute top-3 right-3">
-                    <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">
+                    <span className="inline-flex items-center gap-1 font-mono text-[0.75rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">
                       <Crown className="w-3 h-3" /> PRO
                     </span>
                   </div>

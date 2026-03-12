@@ -135,7 +135,7 @@ function TopicCard({ topic, maxCount, maxRelevance }: { topic: TopicItem; maxCou
     <div className="p-3 rounded-[2px] border border-border bg-surface hover:border-primary/30 transition-colors space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-foreground truncate">{topic.name}</span>
-        <span className="badge badge-muted text-[10px] shrink-0 ml-2">{topic.count}x</span>
+        <span className="badge badge-muted text-[12px] shrink-0 ml-2">{topic.count}x</span>
       </div>
 
       {/* Count bar */}
@@ -148,7 +148,7 @@ function TopicCard({ topic, maxCount, maxRelevance }: { topic: TopicItem; maxCou
 
       {/* Funnel breakdown */}
       {total > 0 && (
-        <div className="flex items-center gap-2 text-[10px]">
+        <div className="flex items-center gap-2 text-[12px]">
           {mofu > 0 && (
             <span className="flex items-center gap-0.5">
               <TrendingUp className="w-2.5 h-2.5 text-success" />
@@ -166,7 +166,7 @@ function TopicCard({ topic, maxCount, maxRelevance }: { topic: TopicItem; maxCou
 
       {/* Relevance indicator */}
       <div className="flex items-center gap-1">
-        <span className="text-[10px] text-muted-foreground">Rilevanza</span>
+        <span className="text-[12px] text-muted-foreground">Rilevanza</span>
         <div className="flex gap-px">
           {Array.from({ length: 5 }).map((_, i) => {
             const filled = Math.ceil((topic.relevanceScore / Math.max(maxRelevance, 1)) * 5);

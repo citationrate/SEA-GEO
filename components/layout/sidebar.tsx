@@ -73,7 +73,7 @@ export function Sidebar({ profile }: SidebarProps) {
       <nav data-tour="sidebar-nav" className="flex-1 overflow-y-auto py-4 px-2.5 space-y-4">
         {NAV.map(({ group, items }) => (
           <div key={group}>
-            <p className="font-mono text-[0.6rem] font-semibold uppercase tracking-widest text-muted-foreground px-2 mb-1.5 select-none">
+            <p className="font-mono text-[0.75rem] font-semibold uppercase tracking-widest text-muted-foreground px-2 mb-1.5 select-none">
               {group}
             </p>
             <ul className="space-y-0.5">
@@ -111,7 +111,7 @@ export function Sidebar({ profile }: SidebarProps) {
                         </Link>
                       )}
                       {locked && (
-                        <span className="font-mono text-[0.5rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">PRO</span>
+                        <span className="font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">PRO</span>
                       )}
                       {isActive(item.href) && !locked && item.href !== "/projects" && (
                         <ChevronRight className="w-3 h-3 text-primary/50" />
@@ -138,7 +138,7 @@ export function Sidebar({ profile }: SidebarProps) {
             <p className="text-xs font-medium text-foreground truncate leading-tight font-sans">
               {profile?.full_name ?? profile?.email ?? "Utente"}
             </p>
-            <p className="font-mono text-[0.6rem] text-muted-foreground uppercase tracking-wide">
+            <p className="font-mono text-[0.75rem] text-muted-foreground uppercase tracking-wide">
               Piano {profile?.plan === "free" || !profile?.plan ? "Base" : profile.plan === "pro" ? "Pro" : profile.plan === "agency" ? "Agency" : profile.plan}
             </p>
           </div>

@@ -128,7 +128,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
       <div data-tour="dataset-filters" className="card p-4 flex flex-wrap gap-4 items-end">
         {/* Project */}
         <div className="space-y-1 min-w-[200px]">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Progetto</label>
+          <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Progetto</label>
           <div className="relative">
             <select
               value={selectedProject}
@@ -146,7 +146,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
 
         {/* Run */}
         <div className="space-y-1 min-w-[220px]">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Analisi</label>
+          <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Analisi</label>
           <div className="relative">
             <select
               value={selectedRun}
@@ -170,11 +170,11 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
         {/* Model pills */}
         {models.length > 0 && (
           <div className="space-y-1">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Modello AI</label>
+            <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Modello AI</label>
             <div className="flex flex-wrap gap-1.5">
               <button
                 onClick={() => setSelectedModel(null)}
-                className={`text-[11px] px-2.5 py-1 rounded-[2px] border transition-colors ${
+                className={`text-[13px] px-2.5 py-1 rounded-[2px] border transition-colors ${
                   selectedModel === null
                     ? "border-primary/40 bg-primary/10 text-primary"
                     : "border-border text-muted-foreground hover:text-foreground"
@@ -186,7 +186,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
                 <button
                   key={m}
                   onClick={() => setSelectedModel(m)}
-                  className={`text-[11px] px-2.5 py-1 rounded-[2px] border transition-colors ${
+                  className={`text-[13px] px-2.5 py-1 rounded-[2px] border transition-colors ${
                     selectedModel === m
                       ? "border-primary/40 bg-primary/10 text-primary"
                       : "border-border text-muted-foreground hover:text-foreground"
@@ -231,16 +231,16 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left">
-                  <th className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground min-w-[200px]">Query</th>
-                  <th className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tipo</th>
-                  <th className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Layer</th>
-                  <th className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Famiglia</th>
-                  <th className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Modello</th>
-                  <th className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Run</th>
-                  <th className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Brand</th>
-                  <th className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Rank</th>
-                  <th className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Sent.</th>
-                  <th className="px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground min-w-[160px]">Risposta AI</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground min-w-[200px]">Query</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Tipo</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Layer</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Famiglia</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Modello</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Run</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Brand</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Rank</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Sent.</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground min-w-[160px]">Risposta AI</th>
                 </tr>
               </thead>
               <tbody>
@@ -260,7 +260,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
                         <span className="text-foreground line-clamp-2 text-xs">{row.query_text}</span>
                       </td>
                       <td className="px-3 py-2">
-                        <span className={`font-mono text-[0.5rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${funnelCls}`}>
+                        <span className={`font-mono text-[0.625rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${funnelCls}`}>
                           {row.funnel_stage}
                         </span>
                       </td>
@@ -268,12 +268,12 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
                         {row.layer || "—"}
                       </td>
                       <td className="px-3 py-2">
-                        <span className={`font-mono text-[0.5rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${stBadge.cls}`}>
+                        <span className={`font-mono text-[0.625rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${stBadge.cls}`}>
                           {stBadge.label}
                         </span>
                       </td>
                       <td className="px-3 py-2">
-                        <span className="font-mono text-[10px] text-muted-foreground">{MODEL_LABELS[row.model] ?? row.model}</span>
+                        <span className="font-mono text-[12px] text-muted-foreground">{MODEL_LABELS[row.model] ?? row.model}</span>
                       </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground text-center">
                         #{row.run_number}
@@ -309,11 +309,11 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
                       </td>
                       <td className="px-3 py-2">
                         {row.error ? (
-                          <span className="text-destructive text-[11px]">Errore</span>
+                          <span className="text-destructive text-[13px]">Errore</span>
                         ) : response ? (
-                          <span className="text-muted-foreground text-[11px] line-clamp-2">{truncated}</span>
+                          <span className="text-muted-foreground text-[13px] line-clamp-2">{truncated}</span>
                         ) : (
-                          <span className="text-muted-foreground text-[11px]">—</span>
+                          <span className="text-muted-foreground text-[13px]">—</span>
                         )}
                       </td>
                     </tr>
@@ -365,19 +365,19 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground">{row.query_text}</p>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              <span className={`font-mono text-[0.5rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${funnelCls}`}>
+              <span className={`font-mono text-[0.625rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${funnelCls}`}>
                 {row.funnel_stage}
               </span>
-              <span className={`font-mono text-[0.5rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${stBadge.cls}`}>
+              <span className={`font-mono text-[0.625rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${stBadge.cls}`}>
                 {stBadge.label}
               </span>
               {row.layer && (
-                <span className="font-mono text-[0.5rem] text-muted-foreground border border-border px-1.5 py-0.5 rounded-[2px]">
+                <span className="font-mono text-[0.625rem] text-muted-foreground border border-border px-1.5 py-0.5 rounded-[2px]">
                   Layer {row.layer}
                 </span>
               )}
               {row.persona_mode && (
-                <span className="font-mono text-[0.5rem] text-purple-400 border border-purple-500/30 px-1.5 py-0.5 rounded-[2px]">
+                <span className="font-mono text-[0.625rem] text-purple-400 border border-purple-500/30 px-1.5 py-0.5 rounded-[2px]">
                   {row.persona_mode === "demographic" ? "Demografica" : "Decision Drivers"}
                 </span>
               )}
@@ -425,7 +425,7 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
           {/* Competitors */}
           {row.competitors_found && row.competitors_found.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Competitor trovati</p>
+              <p className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Competitor trovati</p>
               <div className="flex flex-wrap gap-1.5">
                 {row.competitors_found.map((c, i) => (
                   <span key={i} className="text-xs bg-muted border border-border rounded-[2px] px-2 py-0.5 text-foreground">
@@ -439,7 +439,7 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
           {/* Sources */}
           {row.sources && row.sources.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Fonti consultate dall&apos;AI</p>
+              <p className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Fonti consultate dall&apos;AI</p>
               <div className="flex flex-wrap gap-1.5">
                 {row.sources.map((s, i) => (
                   <a
@@ -460,7 +460,7 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
 
           {/* Full response */}
           <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Risposta AI</p>
+            <p className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Risposta AI</p>
             {row.error ? (
               <div className="bg-destructive/10 border border-destructive/30 rounded-[2px] px-4 py-3">
                 <p className="text-sm text-destructive">{row.error}</p>

@@ -277,7 +277,7 @@ export function CompetitiveResults({
                     return (
                       <tr key={p.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                         <td className="px-4 py-2.5">
-                          <span className="badge badge-primary text-[10px]">{p.pattern_type}</span>
+                          <span className="badge badge-primary text-[12px]">{p.pattern_type}</span>
                         </td>
                         <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{p.model}</td>
                         <td className="px-4 py-2.5 text-muted-foreground">#{p.run_number}</td>
@@ -307,10 +307,10 @@ export function CompetitiveResults({
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-primary" />
                   <h3 className="font-display font-semibold text-foreground">Trend nel Tempo</h3>
-                  <span className="badge badge-muted text-[10px]">{history.length} analisi</span>
+                  <span className="badge badge-muted text-[12px]">{history.length} analisi</span>
                 </div>
 
-                <div className="flex items-center gap-4 font-mono text-[10px] text-cream-dim">
+                <div className="flex items-center gap-4 font-mono text-[12px] text-cream-dim">
                   <span className="flex items-center gap-1.5">
                     <span className="w-4 h-0.5 rounded-sm inline-block" style={{ background: "#7eb89a" }} />
                     Win Rate {a.brand_a}
@@ -371,7 +371,7 @@ export function CompetitiveResults({
                                 className={`hover:text-primary transition-colors ${isCurrent ? "text-primary font-medium" : "text-foreground"}`}
                               >
                                 {new Date(h.created_at).toLocaleDateString("it-IT")}
-                                {isCurrent && <span className="ml-2 text-[10px] text-primary opacity-70">corrente</span>}
+                                {isCurrent && <span className="ml-2 text-[12px] text-primary opacity-70">corrente</span>}
                               </a>
                             </td>
                             <td className="px-4 py-2.5 font-bold text-primary">{h.win_rate_a ?? 0}%</td>

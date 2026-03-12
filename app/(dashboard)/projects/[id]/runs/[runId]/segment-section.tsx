@@ -127,7 +127,7 @@ export function SegmentSection({ prompts, analyses, segments, queries }: Segment
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-[#c4a882]" />
           <h2 className="font-display font-semibold text-foreground">Per Segmento</h2>
-          <span className="badge badge-muted text-[10px]">{data.length} segmenti</span>
+          <span className="badge badge-muted text-[12px]">{data.length} segmenti</span>
         </div>
 
         {/* TOFU/MOFU toggle */}
@@ -135,7 +135,7 @@ export function SegmentSection({ prompts, analyses, segments, queries }: Segment
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setFunnelFilter(null)}
-              className="font-mono text-[0.6rem] tracking-wide px-2.5 py-1 rounded-full border transition-colors"
+              className="font-mono text-[0.75rem] tracking-wide px-2.5 py-1 rounded-full border transition-colors"
               style={
                 funnelFilter === null
                   ? { borderColor: "#e8956d", backgroundColor: "rgba(232,149,109,0.1)", color: "#e8956d" }
@@ -148,7 +148,7 @@ export function SegmentSection({ prompts, analyses, segments, queries }: Segment
               <button
                 key={stage}
                 onClick={() => setFunnelFilter(stage)}
-                className="font-mono text-[0.6rem] tracking-wide px-2.5 py-1 rounded-full border transition-colors"
+                className="font-mono text-[0.75rem] tracking-wide px-2.5 py-1 rounded-full border transition-colors"
                 style={
                   funnelFilter === stage
                     ? { borderColor: "#e8956d", backgroundColor: "rgba(232,149,109,0.1)", color: "#e8956d" }
@@ -188,7 +188,7 @@ export function SegmentSection({ prompts, analyses, segments, queries }: Segment
                   <td className="py-2.5 pr-3">
                     <span className={`text-foreground ${isBaseline ? "font-medium" : ""}`}>{row.label}</span>
                     {isBaseline && (
-                      <span className="ml-2 font-mono text-[0.5rem] tracking-wide text-muted-foreground uppercase">baseline</span>
+                      <span className="ml-2 font-mono text-[0.625rem] tracking-wide text-muted-foreground uppercase">baseline</span>
                     )}
                   </td>
                   <td className="py-2.5 px-3 text-center text-muted-foreground">{row.totalPrompts}</td>

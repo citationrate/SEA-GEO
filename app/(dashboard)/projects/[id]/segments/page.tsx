@@ -283,7 +283,7 @@ export default function SegmentsPage() {
                     </button>
                   </div>
                 </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                <p className="text-[13px] text-muted-foreground leading-relaxed">
                   {summarizeAttrs(seg.persona_attributes)}
                 </p>
               </div>
@@ -571,7 +571,7 @@ function PersonaDrawer({
           <div className="card p-4 border-primary/20">
             <div className="flex items-center gap-1.5 mb-2">
               <Eye className="w-3.5 h-3.5 text-primary" />
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-primary">Preview</span>
+              <span className="text-[12px] font-semibold uppercase tracking-widest text-primary">Preview</span>
             </div>
             <p className="text-sm text-foreground/80 italic leading-relaxed">
               {prompt || "Seleziona gli attributi per generare l'anteprima del prompt"}

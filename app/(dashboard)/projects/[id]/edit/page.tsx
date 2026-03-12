@@ -282,7 +282,7 @@ export default function EditProjectPage() {
             <Cpu className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
             {modelsConfig.length > 0 ? (
               modelsConfig.map((m) => (
-                <span key={m} className="badge badge-primary text-[10px]">{m}</span>
+                <span key={m} className="badge badge-primary text-[12px]">{m}</span>
               ))
             ) : (
               <span className="text-xs text-muted-foreground">Nessun modello configurato</span>

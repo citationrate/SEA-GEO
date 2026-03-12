@@ -83,10 +83,10 @@ export function StabilitySection({ prompts, analyses, queries, runCount }: Stabi
         <div className="flex items-center gap-2">
           <Shield className="w-4 h-4 text-[#c4a882]" />
           <h2 className="font-display font-semibold text-foreground">Stabilita Risposte</h2>
-          <span className="badge badge-muted text-[10px]">{stabilityData.length} query</span>
+          <span className="badge badge-muted text-[12px]">{stabilityData.length} query</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[10px] text-muted-foreground">Consistenza media:</span>
+          <span className="font-mono text-[12px] text-muted-foreground">Consistenza media:</span>
           <span className={`font-display font-bold text-sm ${avgConsistency >= 80 ? "text-success" : avgConsistency >= 50 ? "text-yellow-500" : "text-destructive"}`}>
             {avgConsistency}%
           </span>
@@ -112,7 +112,7 @@ export function StabilitySection({ prompts, analyses, queries, runCount }: Stabi
                   {row.queryText.slice(0, 50)}{row.queryText.length > 50 ? "..." : ""}
                 </td>
                 <td className="py-2 pr-3">
-                  <span className="badge badge-muted text-[10px]">{row.model}</span>
+                  <span className="badge badge-muted text-[12px]">{row.model}</span>
                 </td>
                 {Array.from({ length: runCount }, (_, ri) => {
                   const run = row.runs.find((r) => r.runNumber === ri + 1);

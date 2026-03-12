@@ -518,7 +518,7 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
                 </h3>
                 {step.pro && (
                   <span
-                    className="shrink-0 text-[11px] font-semibold px-1.5 py-0.5"
+                    className="shrink-0 text-[13px] font-semibold px-1.5 py-0.5"
                     style={{
                       background: "rgba(126,184,154,0.15)",
                       border: "1px solid rgba(126,184,154,0.4)",

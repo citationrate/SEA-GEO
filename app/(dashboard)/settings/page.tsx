@@ -66,7 +66,7 @@ export default async function SettingsPage() {
                       <div key={m.id} className={`flex items-start gap-2 bg-muted/20 rounded-[2px] px-3 py-2 ${isSoon ? "opacity-50" : ""}`}>
                         <div className="flex-1 min-w-0">
                           <span className="text-sm text-foreground">{m.label}</span>
-                          {isSoon && <span className="font-mono text-[0.5rem] tracking-wide text-amber-500 border border-amber-500/30 bg-amber-500/10 px-1 py-0.5 rounded-[2px] ml-1.5">SOON</span>}
+                          {isSoon && <span className="font-mono text-[0.625rem] tracking-wide text-amber-500 border border-amber-500/30 bg-amber-500/10 px-1 py-0.5 rounded-[2px] ml-1.5">SOON</span>}
                           <p className="text-xs text-muted-foreground">{m.desc}</p>
                         </div>
                       </div>

@@ -31,7 +31,7 @@ export function ArchivedRunsSection({
         <div className="flex items-center gap-2">
           <Archive className="w-4 h-4 text-muted-foreground" />
           <h2 className="font-display font-semibold text-foreground text-sm">Archivio Run</h2>
-          <span className="badge badge-muted text-[10px]">{runs.length}</span>
+          <span className="badge badge-muted text-[12px]">{runs.length}</span>
         </div>
         {collapsed ? (
           <ChevronRight className="w-4 h-4 text-muted-foreground" />
@@ -50,7 +50,7 @@ export function ArchivedRunsSection({
             >
               <div className="flex items-center gap-3">
                 <span className="font-display font-semibold text-foreground text-sm">v{run.version}</span>
-                <span className="badge badge-muted text-[10px]">ARCHIVIATA</span>
+                <span className="badge badge-muted text-[12px]">ARCHIVIATA</span>
                 <span className="text-xs text-muted-foreground">{run.models_used?.join(", ")}</span>
                 <span className="text-xs text-muted-foreground">
                   {run.completed_prompts}/{run.total_prompts} prompt

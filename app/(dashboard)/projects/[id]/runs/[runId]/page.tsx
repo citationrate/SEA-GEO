@@ -9,6 +9,7 @@ import { DeleteRunButton, RestoreRunButton } from "./run-actions";
 import { ShareButton } from "./share-button";
 import { StabilitySection } from "./stability-section";
 import { SegmentSection } from "./segment-section";
+import { AVIBars } from "./avi-bars";
 
 const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = {
   pending:   { label: "In attesa",   class: "badge-muted",    icon: Clock },
@@ -287,32 +288,12 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
             </div>
 
             {/* AVI Component Cards */}
-            <div className="card p-5 space-y-3">
-              {AVI_COMPONENTS.map((c) => {
-                const value = aviData[c.key] != null ? Math.round(aviData[c.key]) : null;
-                return (
-                  <div key={c.key}>
-                    {/* Top line: label with icon on left, value on right */}
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{c.label}</span>
-                        <span title={c.desc} className="text-muted-foreground/40 cursor-help">
-                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                        </span>
-                      </div>
-                      <span className="font-display font-bold text-sm text-foreground tabular-nums">{value ?? "--"}</span>
-                    </div>
-                    {/* Bar below — full width, standalone row */}
-                    <div className="w-full h-1.5 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{ width: `${Math.min(100, value ?? 0)}%`, backgroundColor: c.color }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <AVIBars items={AVI_COMPONENTS.map((c) => ({
+              label: c.label,
+              color: c.color,
+              desc: c.desc,
+              value: aviData[c.key] != null ? Math.round(aviData[c.key]) : null,
+            }))} />
           </div>
 
           {/* AVI Component Comparison Bar */}
@@ -323,9 +304,9 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
                 const value = aviData[c.key] != null ? Math.round(aviData[c.key]) : 0;
                 return (
                   <div key={c.key} className="flex-1 flex flex-col items-center gap-1">
-                    <span className="font-mono text-[10px] font-bold text-foreground">{value}</span>
+                    <span className="font-mono text-[12px] font-bold text-foreground">{value}</span>
                     <div className="w-full rounded-t-[2px] transition-all duration-700" style={{ height: `${value}%`, backgroundColor: c.color }} />
-                    <span className="font-mono text-[9px] text-muted-foreground text-center">{c.label}</span>
+                    <span className="font-mono text-[11px] text-muted-foreground text-center">{c.label}</span>
                   </div>
                 );
               })}

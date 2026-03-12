@@ -51,7 +51,7 @@ export function ProjectAVITrend({ data, models }: { data: TrendPoint[]; models?:
     <div className="card p-5 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="font-display font-semibold text-foreground">AVI nel Tempo</h2>
-        <div className="flex items-center gap-4 font-mono text-[10px] text-muted-foreground">
+        <div className="flex items-center gap-4 font-mono text-[12px] text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <span className="w-4 h-0.5 rounded-sm inline-block" style={{ background: "#7eb89a" }} />
             AVI

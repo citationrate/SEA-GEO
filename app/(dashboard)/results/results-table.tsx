@@ -95,7 +95,7 @@ export function ResultsTable({ rows }: { rows: RunRow[] }) {
                   <td className="py-3 px-4">
                     <div className="flex flex-wrap gap-1">
                       {r.models_used?.map((m: string) => (
-                        <span key={m} className="badge badge-muted text-[10px]">{m}</span>
+                        <span key={m} className="badge badge-muted text-[12px]">{m}</span>
                       ))}
                     </div>
                   </td>

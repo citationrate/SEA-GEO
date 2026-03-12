@@ -290,7 +290,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           <>
             <button
               onClick={() => setSelectedModel(null)}
-              className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
+              className="font-mono text-[0.75rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
               style={
                 selectedModel === null
                   ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
@@ -305,7 +305,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                 <button
                   key={model}
                   onClick={() => setSelectedModel(model)}
-                  className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
+                  className="font-mono text-[0.75rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
                   style={
                     selectedModel === model
                       ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
@@ -332,7 +332,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           <>
             <button
               onClick={() => setFunnelFilter(null)}
-              className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
+              className="font-mono text-[0.75rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
               style={
                 funnelFilter === null
                   ? { borderColor: "#e8956d", backgroundColor: "rgba(232,149,109,0.1)", color: "#e8956d" }
@@ -345,7 +345,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
               <button
                 key={stage}
                 onClick={() => setFunnelFilter(stage)}
-                className="font-mono text-[0.6rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
+                className="font-mono text-[0.75rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
                 style={
                   funnelFilter === stage
                     ? { borderColor: "#e8956d", backgroundColor: "rgba(232,149,109,0.1)", color: "#e8956d" }
@@ -366,7 +366,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           <Eye className="w-5 h-5 text-primary mx-auto mb-2" />
           <p className="font-display font-bold text-2xl text-foreground">{mentionRate}%</p>
           <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">Menzioni Brand <InfoTooltip text="Percentuale di risposte AI in cui il brand viene citato" /></p>
-          <p className="text-[10px] text-muted-foreground">{mentionCount}/{totalAnalysed} prompt</p>
+          <p className="text-[12px] text-muted-foreground">{mentionCount}/{totalAnalysed} prompt</p>
         </div>
         <div className="card p-4 text-center">
           <Hash className="w-5 h-5 text-accent mx-auto mb-2" />
@@ -377,17 +377,17 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           <TrendingUp className="w-5 h-5 text-success mx-auto mb-2" />
           <p className="font-display font-bold text-2xl text-foreground">{avgRank}</p>
           <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">Rank Medio <InfoTooltip text="Posizione media del brand nelle liste AI (1 = primo citato)" /></p>
-          <p className="text-[10px] text-muted-foreground">{ranked.length} risposte con rank</p>
+          <p className="text-[12px] text-muted-foreground">{ranked.length} risposte con rank</p>
         </div>
         <div className="card p-4 text-center">
           <TrendingDown className="w-5 h-5 text-primary mx-auto mb-2" />
           <p className={`font-display font-bold text-2xl ${avgSentimentColor}`}>{avgSentiment}</p>
           <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">Sentiment Medio <InfoTooltip text="Tono con cui l'AI descrive il brand, da -1 (negativo) a +1 (positivo)" /></p>
-          <p className="text-[10px] text-muted-foreground">scala -1 / +1</p>
+          <p className="text-[12px] text-muted-foreground">scala -1 / +1</p>
           {avgTone !== null && avgPosition !== null && avgRec !== null && (
             <div className="space-y-1 mt-2">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[0.5rem] text-muted-foreground w-16">TONE</span>
+                <span className="font-mono text-[0.625rem] text-muted-foreground w-16">TONE</span>
                 <div className="flex-1 h-1 bg-muted rounded-[2px] overflow-hidden">
                   <div className="h-full rounded-[2px]"
                        style={{
@@ -397,22 +397,22 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                        }}
                   />
                 </div>
-                <span className={`font-mono text-[0.5rem] w-8 text-right ${sentimentColor(avgTone)}`}>
+                <span className={`font-mono text-[0.625rem] w-8 text-right ${sentimentColor(avgTone)}`}>
                   {sentimentSign(avgTone)}{avgTone.toFixed(2)}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[0.5rem] text-muted-foreground w-16">POSITION</span>
+                <span className="font-mono text-[0.625rem] text-muted-foreground w-16">POSITION</span>
                 <div className="flex-1 h-1 bg-muted rounded-[2px] overflow-hidden">
                   <div className="h-full rounded-[2px] bg-[#7eb3d4]"
                        style={{ width: `${avgPosition * 100}%` }} />
                 </div>
-                <span className="font-mono text-[0.5rem] text-muted-foreground w-8 text-right">
+                <span className="font-mono text-[0.625rem] text-muted-foreground w-8 text-right">
                   {avgPosition.toFixed(2)}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[0.5rem] text-muted-foreground w-16">REC</span>
+                <span className="font-mono text-[0.625rem] text-muted-foreground w-16">REC</span>
                 <div className="flex-1 h-1 bg-muted rounded-[2px] overflow-hidden">
                   <div className="h-full rounded-[2px]"
                        style={{
@@ -420,7 +420,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                          backgroundColor: avgRec >= 0 ? '#c4a882' : '#c0614a'
                        }} />
                 </div>
-                <span className={`font-mono text-[0.5rem] w-8 text-right ${sentimentColor(avgRec)}`}>
+                <span className={`font-mono text-[0.625rem] w-8 text-right ${sentimentColor(avgRec)}`}>
                   {sentimentSign(avgRec)}{avgRec.toFixed(2)}
                 </span>
               </div>
@@ -480,7 +480,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-primary" />
             <h2 className="font-display font-semibold text-foreground">Competitor Trovati</h2>
-            <span className="badge badge-muted text-[10px]">{competitorList.length}</span>
+            <span className="badge badge-muted text-[12px]">{competitorList.length}</span>
           </div>
           {competitorList.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Nessun competitor individuato</p>
@@ -494,9 +494,9 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                 return (
                   <span key={name} className="badge badge-primary flex items-center gap-1.5">
                     {name}
-                    <span className="text-[9px] opacity-70">({count})</span>
+                    <span className="text-[11px] opacity-70">({count})</span>
                     {cAvi != null && (
-                      <span className={`text-[10px] font-bold ${aviColor}`}>AVI {cAvi}</span>
+                      <span className={`text-[12px] font-bold ${aviColor}`}>AVI {cAvi}</span>
                     )}
                   </span>
                 );
@@ -509,14 +509,14 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           <div className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-accent" />
             <h2 className="font-display font-semibold text-foreground">Topic Emersi</h2>
-            <span className="badge badge-muted text-[10px]">{topicList.length}</span>
+            <span className="badge badge-muted text-[12px]">{topicList.length}</span>
           </div>
           {topicList.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Nessun topic individuato</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {topicList.map(([name, count]) => {
-                const size = count >= 5 ? "text-sm" : count >= 3 ? "text-xs" : "text-[10px]";
+                const size = count >= 5 ? "text-sm" : count >= 3 ? "text-xs" : "text-[12px]";
                 const opacity = count >= 5 ? "opacity-100" : count >= 3 ? "opacity-80" : "opacity-60";
                 return (
                   <span key={name} className={`badge badge-muted ${size} ${opacity}`}>
@@ -535,7 +535,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-primary" />
             <h2 className="font-display font-semibold text-foreground">Fonti consultate dall&apos;AI</h2>
-            <span className="badge badge-muted text-[10px]">{filteredSources.length}</span>
+            <span className="badge badge-muted text-[12px]">{filteredSources.length}</span>
           </div>
 
           {/* Source type counts */}
@@ -543,7 +543,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
             {Array.from(sourcesByType.entries()).map(([type, items]) => (
               <span
                 key={type}
-                className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-1 rounded-[2px] border ${SOURCE_TYPE_COLORS[type] ?? "border-border bg-muted/30 text-foreground"}`}
+                className={`inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-1 rounded-[2px] border ${SOURCE_TYPE_COLORS[type] ?? "border-border bg-muted/30 text-foreground"}`}
               >
                 {SOURCE_TYPE_LABELS[type] ?? type}
                 <span className="opacity-70">{items.length}</span>
@@ -554,7 +554,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           {/* Source chips grouped */}
           {Array.from(sourcesByType.entries()).map(([type, items]) => (
             <div key={type} className="space-y-1.5">
-              <p className="font-mono text-[0.6rem] uppercase tracking-wide text-muted-foreground">{SOURCE_TYPE_LABELS[type] ?? type}</p>
+              <p className="font-mono text-[0.75rem] uppercase tracking-wide text-muted-foreground">{SOURCE_TYPE_LABELS[type] ?? type}</p>
               <div className="flex flex-wrap gap-2">
                 {items.map((s: any) => {
                   const label = s.label || s.domain || "\u2014";
@@ -618,11 +618,11 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                         {hasFunnelData && (
                           <td className="py-2 pr-3">
                             {funnelStage && (
-                              <span className="badge badge-muted text-[10px]">{funnelStage}</span>
+                              <span className="badge badge-muted text-[12px]">{funnelStage}</span>
                             )}
                           </td>
                         )}
-                        <td className="py-2 pr-3"><span className="badge badge-muted text-[10px]">{p.model}</span></td>
+                        <td className="py-2 pr-3"><span className="badge badge-muted text-[12px]">{p.model}</span></td>
                         <td className="py-2 pr-3 text-muted-foreground">{p.run_number}</td>
                         <td className="py-2 pr-3">
                           {analysis ? (
@@ -644,13 +644,13 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                         </td>
                         <td className="py-2 pr-3">
                           {isError
-                            ? <span className="badge badge-muted text-destructive text-[10px] flex items-center gap-1">
+                            ? <span className="badge badge-muted text-destructive text-[12px] flex items-center gap-1">
                                 <AlertTriangle className="w-3 h-3" />
                                 {errorLabel || "Errore"}
                               </span>
                             : p.raw_response
-                              ? <span className="badge badge-success text-[10px]">OK</span>
-                              : <span className="badge badge-muted text-[10px]">Pending</span>}
+                              ? <span className="badge badge-success text-[12px]">OK</span>
+                              : <span className="badge badge-muted text-[12px]">Pending</span>}
                         </td>
                         <td className="py-2">
                           {p.raw_response && (
@@ -698,7 +698,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
 
             {/* Query */}
             <div className="space-y-1">
-              <p className="font-mono text-[0.6rem] uppercase tracking-wide text-muted-foreground">Query</p>
+              <p className="font-mono text-[0.75rem] uppercase tracking-wide text-muted-foreground">Query</p>
               <p className="text-sm text-foreground bg-muted/20 rounded-[2px] px-3 py-2">
                 {modalPrompt.query?.text || modalPrompt.prompt.prompt_text || "N/A"}
               </p>
@@ -727,7 +727,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
 
             {/* Full response */}
             <div className="space-y-1">
-              <p className="font-mono text-[0.6rem] uppercase tracking-wide text-muted-foreground">Risposta AI</p>
+              <p className="font-mono text-[0.75rem] uppercase tracking-wide text-muted-foreground">Risposta AI</p>
               <div className="text-sm text-foreground/90 bg-muted/10 rounded-[2px] px-4 py-3 max-h-[300px] overflow-y-auto whitespace-pre-wrap leading-relaxed border border-border/50">
                 {modalPrompt.prompt.raw_response}
               </div>
@@ -739,7 +739,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
               if (promptSources.length === 0) return null;
               return (
                 <div className="space-y-1">
-                  <p className="font-mono text-[0.6rem] uppercase tracking-wide text-muted-foreground">Fonti ({promptSources.length})</p>
+                  <p className="font-mono text-[0.75rem] uppercase tracking-wide text-muted-foreground">Fonti ({promptSources.length})</p>
                   <div className="flex flex-wrap gap-2">
                     {promptSources.map((s: any) => (
                       <a
@@ -761,7 +761,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
             {/* Competitors found */}
             {modalPrompt.analysis?.competitors_found?.length > 0 && (
               <div className="space-y-1">
-                <p className="font-mono text-[0.6rem] uppercase tracking-wide text-muted-foreground">Competitor trovati</p>
+                <p className="font-mono text-[0.75rem] uppercase tracking-wide text-muted-foreground">Competitor trovati</p>
                 <div className="flex flex-wrap gap-2">
                   {modalPrompt.analysis.competitors_found.map((c: string) => (
                     <span key={c} className="badge badge-primary text-xs">{c}</span>

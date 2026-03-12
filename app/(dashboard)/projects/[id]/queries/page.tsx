@@ -134,7 +134,7 @@ export default function QueriesPage() {
           >
             <Sparkles className="w-4 h-4" />
             Genera Prompt con AI
-            <span className="font-mono text-[0.55rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px] bg-[#c4a882]/10">PRO</span>
+            <span className="font-mono text-[0.69rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px] bg-[#c4a882]/10">PRO</span>
           </a>
         </div>
       </div>
@@ -146,12 +146,12 @@ export default function QueriesPage() {
         <div className="flex flex-wrap gap-4">
           {/* Set type filter */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mr-1">Tipo</span>
+            <span className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground mr-1">Tipo</span>
             {(["all", "generale", "verticale", "persona", "manual"] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setFilterSetType(v)}
-                className={`text-[11px] px-2 py-1 rounded-[2px] border transition-colors ${
+                className={`text-[13px] px-2 py-1 rounded-[2px] border transition-colors ${
                   filterSetType === v
                     ? "border-primary/40 bg-primary/10 text-primary"
                     : "border-border text-muted-foreground hover:text-foreground"
@@ -163,12 +163,12 @@ export default function QueriesPage() {
           </div>
           {/* Funnel filter */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mr-1">Funnel</span>
+            <span className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground mr-1">Funnel</span>
             {(["all", "tofu", "mofu"] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setFilterFunnel(v)}
-                className={`text-[11px] px-2 py-1 rounded-[2px] border transition-colors ${
+                className={`text-[13px] px-2 py-1 rounded-[2px] border transition-colors ${
                   filterFunnel === v
                     ? "border-primary/40 bg-primary/10 text-primary"
                     : "border-border text-muted-foreground hover:text-foreground"
@@ -180,12 +180,12 @@ export default function QueriesPage() {
           </div>
           {/* Layer filter */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mr-1">Layer</span>
+            <span className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground mr-1">Layer</span>
             {(["all", "A", "B", "C"] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setFilterLayer(v)}
-                className={`text-[11px] px-2 py-1 rounded-[2px] border transition-colors ${
+                className={`text-[13px] px-2 py-1 rounded-[2px] border transition-colors ${
                   filterLayer === v
                     ? "border-primary/40 bg-primary/10 text-primary"
                     : "border-border text-muted-foreground hover:text-foreground"
@@ -204,7 +204,7 @@ export default function QueriesPage() {
           <div className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-primary" />
             <h2 className="font-display font-semibold text-foreground">TOFU</h2>
-            <span className="badge badge-muted text-[10px]">{tofuQueries.length}</span>
+            <span className="badge badge-muted text-[12px]">{tofuQueries.length}</span>
           </div>
           <p className="text-xs text-muted-foreground">Domande top-of-funnel, generiche e informative</p>
           <div className="flex gap-2">
@@ -242,7 +242,7 @@ export default function QueriesPage() {
           <div className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-accent" />
             <h2 className="font-display font-semibold text-foreground">MOFU</h2>
-            <span className="badge badge-muted text-[10px]">{mofuQueries.length}</span>
+            <span className="badge badge-muted text-[12px]">{mofuQueries.length}</span>
           </div>
           <p className="text-xs text-muted-foreground">Domande middle-of-funnel, comparative e valutative</p>
           <div className="flex gap-2">
@@ -292,11 +292,11 @@ function QueryItem({ query, onDelete }: { query: Query; onDelete: (id: string) =
       <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
         {setType !== "manual" && (
           <>
-            <span className={`font-mono text-[0.5rem] tracking-wide uppercase px-1 py-0.5 rounded-[2px] border ${colorCls}`}>
+            <span className={`font-mono text-[0.625rem] tracking-wide uppercase px-1 py-0.5 rounded-[2px] border ${colorCls}`}>
               {label}
             </span>
             {query.layer && (
-              <span className="font-mono text-[0.5rem] tracking-wide text-muted-foreground border border-border px-1 py-0.5 rounded-[2px]">
+              <span className="font-mono text-[0.625rem] tracking-wide text-muted-foreground border border-border px-1 py-0.5 rounded-[2px]">
                 {query.layer}
               </span>
             )}

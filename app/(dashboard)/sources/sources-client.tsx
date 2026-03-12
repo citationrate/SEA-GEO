@@ -226,7 +226,7 @@ function DomainCard({ domain: d, onAnalyze }: { domain: SourceDomain; onAnalyze:
           />
           <h3 className="font-display font-bold text-foreground truncate">{d.domain}</h3>
         </div>
-        <span className={`badge border text-[10px] shrink-0 ${cfg.cls}`}>
+        <span className={`badge border text-[12px] shrink-0 ${cfg.cls}`}>
           <Icon className="w-3 h-3" />
           {cfg.label}
         </span>
@@ -244,7 +244,7 @@ function DomainCard({ domain: d, onAnalyze }: { domain: SourceDomain; onAnalyze:
 
       {/* Context preview */}
       {d.contexts.length > 0 && (
-        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 font-mono text-[0.6rem] tracking-wide">
+        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 font-mono text-[0.75rem] tracking-wide">
           {d.contexts[0]}
         </p>
       )}
@@ -312,7 +312,7 @@ function AnalyzeDrawer({
             />
             <div className="min-w-0">
               <h2 className="font-display font-bold text-lg text-foreground truncate">{d.domain}</h2>
-              <span className={`badge border text-[10px] ${cfg.cls}`}>
+              <span className={`badge border text-[12px] ${cfg.cls}`}>
                 <Icon className="w-3 h-3" /> {cfg.label}
               </span>
             </div>
@@ -328,18 +328,18 @@ function AnalyzeDrawer({
           <div className="flex gap-4">
             <div className="card p-3 flex-1 text-center">
               <p className="font-display font-bold text-lg text-foreground">{d.citations}</p>
-              <p className="text-[10px] text-muted-foreground">Citazioni</p>
+              <p className="text-[12px] text-muted-foreground">Citazioni</p>
             </div>
             <div className="card p-3 flex-1 text-center">
               <p className="font-display font-bold text-lg text-foreground">{d.analysisCount}</p>
-              <p className="text-[10px] text-muted-foreground">Analisi</p>
+              <p className="text-[12px] text-muted-foreground">Analisi</p>
             </div>
           </div>
 
           {/* URLs */}
           {d.urls.length > 0 && (
             <div>
-              <h4 className="font-mono text-[0.55rem] font-semibold uppercase tracking-widest text-muted-foreground mb-2">URL TROVATI</h4>
+              <h4 className="font-mono text-[0.69rem] font-semibold uppercase tracking-widest text-muted-foreground mb-2">URL TROVATI</h4>
               <div className="space-y-1">
                 {d.urls.slice(0, 5).map((url) => (
                   <a key={url} href={url} target="_blank" rel="noopener noreferrer"
@@ -355,13 +355,13 @@ function AnalyzeDrawer({
           {/* Contexts */}
           {d.contexts.length > 0 && (
             <div>
-              <h4 className="font-mono text-[0.55rem] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+              <h4 className="font-mono text-[0.69rem] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
                 CONTESTI DI CITAZIONE ({d.contexts.length})
               </h4>
               <div className="space-y-2">
                 {d.contexts.map((ctx, i) => (
                   <div key={i} className="pl-3 border-l-2 border-primary/30">
-                    <p className="font-mono text-[0.6rem] tracking-wide text-muted-foreground leading-relaxed">{ctx}</p>
+                    <p className="font-mono text-[0.75rem] tracking-wide text-muted-foreground leading-relaxed">{ctx}</p>
                   </div>
                 ))}
               </div>

@@ -145,7 +145,7 @@ export function AnalysisLauncher({
                   </span>
                 ))}
               </div>
-              <p className="text-[11px] text-cream-dim">I modelli sono fissati alla creazione del progetto</p>
+              <p className="text-[13px] text-cream-dim">I modelli sono fissati alla creazione del progetto</p>
             </div>
 
             {/* Run count selector */}
@@ -167,7 +167,7 @@ export function AnalysisLauncher({
                     }`}
                   >
                     <p className="text-sm font-medium text-foreground">{opt.label}</p>
-                    <p className="text-[11px] text-muted-foreground">{opt.desc}</p>
+                    <p className="text-[13px] text-muted-foreground">{opt.desc}</p>
                   </button>
                 ))}
               </div>
@@ -196,7 +196,7 @@ export function AnalysisLauncher({
                     <Globe className="w-3.5 h-3.5 text-primary" />
                     <p className="text-sm font-medium text-foreground">Browsing attivo</p>
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                  <p className="text-[13px] text-muted-foreground mt-0.5">
                     I modelli cercano informazioni aggiornate sul web (piu lento, piu fonti)
                   </p>
                 </div>
