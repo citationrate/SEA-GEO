@@ -10,6 +10,7 @@ interface OnboardingStep {
   route?: string;
   selector?: string;
   tooltipPosition: "center" | "right" | "bottom-right" | "bottom-left" | "top-right";
+  pro: boolean;
 }
 
 const LS_KEY = "seageo_onboarding_done";
@@ -22,46 +23,104 @@ function getSteps(firstProjectId: string | null): OnboardingStep[] {
       description:
         "SeaGeo misura quanto il tuo brand è visibile\nnelle risposte dei principali motori AI.\n\nIn pochi minuti scoprirai dove appari, con che sentiment\ne chi sono i tuoi competitor secondo l'AI.",
       tooltipPosition: "center",
+      pro: false,
     },
     {
-      title: "Crea il tuo primo progetto",
+      title: "Dashboard — Il tuo AVI",
       description:
-        "Ogni progetto corrisponde a un brand da analizzare.\nInserisci il brand, il sito web e il settore\nper iniziare a misurare la tua AI visibility.",
-      route: "/projects",
-      selector: '[data-tour="new-project-btn"]',
-      tooltipPosition: "bottom-right",
-    },
-    {
-      title: "Aggiungi le query",
-      description:
-        "Le query sono le domande che SeaGeo pone ai motori AI.\nAggiungi domande che un utente reale potrebbe fare\nriguardo al tuo settore.\n\nUsa il generatore AI per partire velocemente.",
-      route: `/projects/${pid}`,
-      selector: '[data-tour="add-query-btn"]',
-      tooltipPosition: "right",
-    },
-    {
-      title: "Lancia la tua prima analisi",
-      description:
-        "Clicca qui per avviare l'analisi.\nSeaGeo interrogherà i modelli AI selezionati\ne calcolerà il tuo AVI in pochi minuti.",
-      route: `/projects/${pid}`,
-      selector: '[data-tour="launch-analysis-btn"]',
-      tooltipPosition: "bottom-left",
-    },
-    {
-      title: "Il tuo AI Visibility Index",
-      description:
-        "L'AVI è il tuo punteggio da 0 a 100.\nMisura quanto sei presente, rilevante\ne ben percepito nelle risposte AI.\n\nMonitoralo nel tempo per vedere i progressi.",
+        "L'AI Visibility Index è il tuo punteggio da 0 a 100.\nMisura presenza, rilevanza e sentiment del tuo brand\nnelle risposte AI.\n\nMonitoralo nel tempo per vedere i progressi.",
       route: "/dashboard",
       selector: '[data-tour="avi-ring"]',
       tooltipPosition: "right",
+      pro: false,
     },
     {
-      title: "Confronto Competitivo",
+      title: "Top Competitor",
       description:
-        "Scopri come te la cavi negli scontri diretti\ncontro i tuoi competitor.\n\nWin Rate, First Mention Rate e CompScore\nti dicono chi preferiscono le AI.",
+        "I brand che le AI citano più spesso\ncome alternativa al tuo.\n\nSono scoperti automaticamente durante l'analisi.",
+      route: "/dashboard",
+      selector: '[data-tour="top-competitors"]',
+      tooltipPosition: "right",
+      pro: false,
+    },
+    {
+      title: "Progetti",
+      description:
+        "Ogni progetto corrisponde a un brand da analizzare.\nPuoi avere più brand attivi contemporaneamente\ne monitorarli separatamente.",
+      route: "/projects",
+      selector: '[data-tour="new-project-btn"]',
+      tooltipPosition: "bottom-right",
+      pro: false,
+    },
+    {
+      title: "Query",
+      description:
+        "Le query sono le domande che SeaGeo pone ai motori AI.\nAggiungi domande che un utente reale potrebbe fare\nriguardo al tuo settore.",
+      route: `/projects/${pid}`,
+      selector: '[data-tour="add-query-btn"]',
+      tooltipPosition: "right",
+      pro: false,
+    },
+    {
+      title: "Genera Query con AI ✨",
+      description:
+        "Genera automaticamente query strutturate\nin famiglie Generali, Verticali e Personas.\n\nIl sistema usa template deterministici\nper garantire coerenza e comparabilità.",
+      route: `/projects/${pid}`,
+      selector: '[data-tour="generate-queries-btn"]',
+      tooltipPosition: "bottom-right",
+      pro: true,
+    },
+    {
+      title: "Lancia Analisi",
+      description:
+        "Avvia l'analisi: SeaGeo interroga i modelli AI\ne calcola il tuo AVI in pochi minuti.\n\nScegli il numero di run:\n1 = veloce | 2 = bilanciato | 3 = preciso",
+      route: `/projects/${pid}`,
+      selector: '[data-tour="launch-analysis-btn"]',
+      tooltipPosition: "bottom-left",
+      pro: false,
+    },
+    {
+      title: "Competitor",
+      description:
+        "Tutti i brand scoperti dalle AI come alternative al tuo.\nClassificati per tipo: Diretto, Indiretto, Canale, Aggregatore.\n\nPuoi analizzare i contesti con AI\nper capire perché vengono citati insieme.",
+      route: "/competitors",
+      selector: '[data-tour="competitors-tab"]',
+      tooltipPosition: "right",
+      pro: false,
+    },
+    {
+      title: "Confronto Competitivo ⚔️",
+      description:
+        "Scontri diretti Brand A vs Brand B su driver specifici.\n\nWin Rate: chi viene raccomandato più spesso\nFirst Mention Rate: chi viene citato per primo\nCompScore: KPI sintetico 0-100",
       route: "/compare",
       selector: '[data-tour="new-comparison-btn"]',
       tooltipPosition: "bottom-right",
+      pro: true,
+    },
+    {
+      title: "Dataset",
+      description:
+        "Accedi alle risposte raw di ogni singolo prompt.\nFiltra per modello, run, query, famiglia e persona.\n\nEspandi ogni riga per leggere la risposta completa\ne le fonti consultate dall'AI.",
+      route: "/datasets",
+      selector: '[data-tour="dataset-table"]',
+      tooltipPosition: "right",
+      pro: true,
+    },
+    {
+      title: "Generatore Query Avanzato",
+      description:
+        "Descrivi il tuo brand con use case, criteri e must-have.\nIl sistema genera automaticamente query strutturate\ncon Layer A/B/C e famiglie TOFU/MOFU.\n\nPreview del costo prima di salvare.",
+      route: `/projects/${pid}/queries/generate`,
+      selector: '[data-tour="query-wizard-step1"]',
+      tooltipPosition: "center",
+      pro: true,
+    },
+    {
+      title: "Sei pronto! 🚀",
+      description:
+        "Hai visto tutte le sezioni di SeaGeo.\n\nInizia creando il tuo primo progetto\ne lancia la tua prima analisi.\n\nI risultati arrivano in pochi minuti.",
+      tooltipPosition: "center",
+      pro: false,
     },
   ];
 }
@@ -93,7 +152,6 @@ export function OnboardingTour() {
       .then((r) => r.ok ? r.json() : null)
       .catch(() => null)
       .then((data) => {
-        // The projects route returns array or single object
         if (Array.isArray(data) && data.length > 0) {
           setFirstProjectId(data[0].id);
         }
@@ -150,8 +208,6 @@ export function OnboardingTour() {
   // Navigate to step route when step changes
   useEffect(() => {
     if (!active || !step?.route) return;
-
-    // Replace __none__ project IDs — skip step if no project
     if (step.route.includes("__none__")) return;
 
     if (pathname !== step.route) {
@@ -174,7 +230,6 @@ export function OnboardingTour() {
     setActive(false);
     localStorage.setItem(LS_KEY, "true");
     cancelAnimationFrame(rafRef.current);
-    // Also persist server-side
     fetch("/api/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -202,11 +257,9 @@ export function OnboardingTour() {
 
   if (!active) return null;
 
-  // Viewport size for SVG
   const vw = typeof window !== "undefined" ? window.innerWidth : 1920;
   const vh = typeof window !== "undefined" ? window.innerHeight : 1080;
 
-  // Tooltip position calculation
   const tooltipW = 360;
   const tooltipH = 220;
   let tooltipX = 0;
@@ -229,7 +282,6 @@ export function OnboardingTour() {
     tooltipY = rect.y;
   }
 
-  // Clamp to viewport
   tooltipX = Math.max(12, Math.min(vw - tooltipW - 12, tooltipX));
   tooltipY = Math.max(12, Math.min(vh - tooltipH - 12, tooltipY));
 
@@ -287,7 +339,6 @@ export function OnboardingTour() {
         className="fixed inset-0"
         style={{ zIndex: 101, pointerEvents: "auto" }}
         onClick={(e) => {
-          // Allow clicks on the highlighted element
           if (rect) {
             const cx = e.clientX;
             const cy = e.clientY;
@@ -326,9 +377,24 @@ export function OnboardingTour() {
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-2">
-              <h3 className="font-display font-bold text-base text-foreground leading-snug">
-                {step.title}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-display font-bold text-base text-foreground leading-snug">
+                  {step.title}
+                </h3>
+                {step.pro && (
+                  <span
+                    className="shrink-0 text-[11px] font-semibold px-1.5 py-0.5"
+                    style={{
+                      background: "rgba(126,184,154,0.15)",
+                      border: "1px solid rgba(126,184,154,0.4)",
+                      color: "#7eb89a",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    ✦ Pro
+                  </span>
+                )}
+              </div>
               <button
                 onClick={complete}
                 className="text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-0.5"
@@ -348,13 +414,13 @@ export function OnboardingTour() {
             {/* Footer */}
             <div className="flex items-center justify-between pt-1">
               {/* Progress dots */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 {steps.map((_, i) => (
                   <div
                     key={i}
                     className="h-1.5 rounded-full transition-all duration-300"
                     style={{
-                      width: i === current ? 20 : 6,
+                      width: i === current ? 16 : 5,
                       backgroundColor:
                         i === current ? "#7eb89a" : "rgba(255,255,255,0.15)",
                     }}

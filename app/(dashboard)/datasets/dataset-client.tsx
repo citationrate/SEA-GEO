@@ -226,7 +226,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
 
       {/* Table */}
       {!loadingRows && filteredRows.length > 0 && (
-        <div className="card overflow-hidden">
+        <div data-tour="dataset-table" className="card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

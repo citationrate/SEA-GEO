@@ -292,7 +292,7 @@ export default async function CompetitorsPage({
 
   return (
     <div className="space-y-6 max-w-[1200px] animate-fade-in">
-      <div className="flex items-center justify-end gap-3">
+      <div data-tour="competitors-tab" className="flex items-center justify-end gap-3">
         <ProjectSelector projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))} />
       </div>
       <CompetitorsClient

@@ -196,7 +196,7 @@ export default function GenerateQueriesPage() {
 
       {/* Step 1: Input Form */}
       {step === 1 && (
-        <div className="card p-6 space-y-5">
+        <div data-tour="query-wizard-step1" className="card p-6 space-y-5">
           <h2 className="font-display font-semibold text-foreground">Descrivi il tuo brand e mercato</h2>
 
           {/* Categoria */}

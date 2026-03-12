@@ -245,7 +245,7 @@ export function CompetitorBar({ data }: { data?: CompetitorData[] }) {
 
   if (compData.length === 0) {
     return (
-      <div className="card p-5">
+      <div data-tour="top-competitors" className="card p-5">
         <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>Top Competitor</h3>
         <div className="flex items-center justify-center py-8">
           <p className="font-mono text-[11px] text-cream-dim">Nessun competitor trovato</p>
@@ -255,7 +255,7 @@ export function CompetitorBar({ data }: { data?: CompetitorData[] }) {
   }
 
   return (
-    <div className="card p-5">
+    <div data-tour="top-competitors" className="card p-5">
       <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>Top Competitor</h3>
       <ResponsiveContainer width="100%" height={Math.max(80, compData.length * 35)}>
         <BarChart data={compData} layout="vertical">
