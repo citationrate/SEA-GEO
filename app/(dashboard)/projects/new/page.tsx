@@ -15,6 +15,7 @@ interface ModelOption {
 interface ProviderOption {
   id: string;
   label: string;
+  badge: string;
   models: ModelOption[];
   comingSoon?: boolean;
 }
@@ -23,6 +24,7 @@ const AVAILABLE_PROVIDERS: ProviderOption[] = [
   {
     id: "openai",
     label: "OpenAI",
+    badge: "ChatGPT",
     models: [
       { id: "gpt-4o-mini", label: "GPT-4o Mini", description: "Veloce, risposte concise" },
       { id: "gpt-4o", label: "GPT-4o", description: "Preciso, risposte elaborate" },
@@ -33,6 +35,7 @@ const AVAILABLE_PROVIDERS: ProviderOption[] = [
   {
     id: "google",
     label: "Google",
+    badge: "Gemini",
     models: [
       { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", description: "Veloce, aggiornato" },
       { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", description: "Massima precisione" },
@@ -41,6 +44,7 @@ const AVAILABLE_PROVIDERS: ProviderOption[] = [
   {
     id: "perplexity",
     label: "Perplexity",
+    badge: "Sonar",
     models: [
       { id: "perplexity-sonar", label: "Sonar", description: "Web search in tempo reale" },
       { id: "perplexity-sonar-pro", label: "Sonar Pro", description: "Web search avanzato, fonti più ricche" },
@@ -49,6 +53,7 @@ const AVAILABLE_PROVIDERS: ProviderOption[] = [
   {
     id: "anthropic",
     label: "Anthropic",
+    badge: "Claude",
     models: [
       { id: "claude-haiku", label: "Claude Haiku 4.5", description: "Veloce e diretto" },
       { id: "claude-sonnet", label: "Claude Sonnet 4.5", description: "Bilanciato e preciso" },
@@ -58,6 +63,7 @@ const AVAILABLE_PROVIDERS: ProviderOption[] = [
   {
     id: "xai",
     label: "xAI",
+    badge: "Grok",
     models: [
       { id: "grok-3", label: "Grok 3", description: "Preciso e aggiornato" },
       { id: "grok-3-mini", label: "Grok 3 Mini", description: "Veloce e diretto" },
@@ -66,6 +72,7 @@ const AVAILABLE_PROVIDERS: ProviderOption[] = [
   {
     id: "microsoft",
     label: "Microsoft",
+    badge: "Copilot",
     comingSoon: true,
     models: [
       { id: "copilot-gpt4", label: "Copilot GPT-4o", description: "GPT-4o su infrastruttura Microsoft Azure" },
@@ -548,7 +555,7 @@ export default function NewProjectPage() {
                       )}
                     </div>
                     <span className={`text-sm font-semibold ${isSoon ? "text-muted-foreground" : "text-foreground"}`}>{provider.label}</span>
-                    <span className="font-mono text-[0.55rem] tracking-wide text-muted-foreground">{provider.id.toUpperCase()}</span>
+                    <span className="font-mono text-[0.55rem] tracking-wide text-muted-foreground">{provider.badge}</span>
                     {isSoon && (
                       <span className="font-mono text-[0.55rem] tracking-wide text-amber-500 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded-[2px] ml-auto">SOON</span>
                     )}
