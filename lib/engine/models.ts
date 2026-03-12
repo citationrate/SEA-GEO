@@ -39,6 +39,30 @@ export const MODEL_MAP = new Map(AI_MODELS.map((m) => [m.id, m]));
 
 export const ALL_MODEL_IDS = AI_MODELS.map((m) => m.id);
 
+/** Required env vars per provider. If any are missing/empty, models for that provider are unavailable. */
+const PROVIDER_ENV_REQUIREMENTS: Record<string, string[]> = {
+  openai:     ["OPENAI_API_KEY"],
+  anthropic:  ["ANTHROPIC_API_KEY"],
+  google:     ["GOOGLE_AI_API_KEY"],
+  xai:        ["XAI_API_KEY"],
+  perplexity: ["PERPLEXITY_API_KEY"],
+  azure:      ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_KEY"],
+};
+
+/** Check if a model's required env vars are configured (server-side only). */
+export function isModelAvailable(modelId: string): boolean {
+  const model = MODEL_MAP.get(modelId);
+  if (!model) return false;
+  const required = PROVIDER_ENV_REQUIREMENTS[model.provider];
+  if (!required) return true;
+  return required.every((key) => !!process.env[key]);
+}
+
+/** Filter out models whose provider credentials are not configured. */
+export function filterAvailableModels(modelIds: string[]): string[] {
+  return modelIds.filter(isModelAvailable);
+}
+
 export const PROVIDER_CONFIG: Record<string, { label: string; color: string }> = {
   openai:     { label: "OpenAI",     color: "text-green-500" },
   anthropic:  { label: "Anthropic",  color: "text-orange-500" },

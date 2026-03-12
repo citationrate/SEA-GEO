@@ -44,6 +44,9 @@ export async function callAIModel(
     const provider = modelDef?.provider ?? "openai";
 
     if (provider === "anthropic") {
+      if (!process.env.ANTHROPIC_API_KEY) {
+        return { text: "", sources: [], error: `[${model}] SKIPPED: ANTHROPIC_API_KEY non configurata` };
+      }
       const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
       const msg = await anthropic.messages.create({
         model: apiModel,
@@ -56,7 +59,10 @@ export async function callAIModel(
     }
 
     if (provider === "google") {
-      const genai = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY ?? "");
+      if (!process.env.GOOGLE_AI_API_KEY) {
+        return { text: "", sources: [], error: `[${model}] SKIPPED: GOOGLE_AI_API_KEY non configurata` };
+      }
+      const genai = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
       const extractGeminiText = (result: any): string => {
         const resp = result.response;
@@ -114,6 +120,9 @@ export async function callAIModel(
     }
 
     if (provider === "perplexity") {
+      if (!process.env.PERPLEXITY_API_KEY) {
+        return { text: "", sources: [], error: `[${model}] SKIPPED: PERPLEXITY_API_KEY non configurata` };
+      }
       return await retryCall(2, async () => {
         const res = await fetch("https://api.perplexity.ai/chat/completions", {
           method: "POST",
@@ -172,9 +181,12 @@ export async function callAIModel(
     }
 
     if (provider === "xai") {
+      if (!process.env.XAI_API_KEY) {
+        return { text: "", sources: [], error: `[${model}] SKIPPED: XAI_API_KEY non configurata` };
+      }
       return await retryCall(2, async () => {
         const client = new OpenAI({
-          apiKey: process.env.XAI_API_KEY ?? "",
+          apiKey: process.env.XAI_API_KEY!,
           baseURL: "https://api.x.ai/v1",
         });
         const completion = await client.chat.completions.create({
@@ -188,6 +200,9 @@ export async function callAIModel(
     }
 
     // OpenAI (default)
+    if (!process.env.OPENAI_API_KEY) {
+      return { text: "", sources: [], error: `[${model}] SKIPPED: OPENAI_API_KEY non configurata` };
+    }
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     if (browsing) {

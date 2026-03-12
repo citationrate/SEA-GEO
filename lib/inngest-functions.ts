@@ -4,6 +4,7 @@ import { extractFromResponse } from "./engine/extractor";
 import { calculateAVI } from "./engine/avi";
 import { type ExtractedSource, mergeSources } from "./engine/sources-extractor";
 import { callAIModel, type AIModelResult } from "./engine/prompt-runner";
+import { filterAvailableModels } from "./engine/models";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /* ─── Helpers ─── */
@@ -412,13 +413,25 @@ export const runAnalysis = inngest.createFunction(
   },
   { event: "analysis/start" },
   async ({ event, step }) => {
-    const { runId, projectId, modelsUsed, runCount, browsing = true } = event.data as {
+    const { runId, projectId, modelsUsed: rawModels, runCount, browsing = true } = event.data as {
       runId: string;
       projectId: string;
       modelsUsed: string[];
       runCount: number;
       browsing?: boolean;
     };
+
+    // Filter out models whose provider credentials are not configured
+    const modelsUsed = filterAvailableModels(rawModels);
+    if (modelsUsed.length === 0) {
+      const supabase = createServiceClient();
+      await supabase.from("analysis_runs").update({
+        status: "failed",
+        error_message: "Nessun modello disponibile — verifica le credenziali API",
+        completed_at: new Date().toISOString(),
+      }).eq("id", runId);
+      return { status: "failed", reason: "no available models" };
+    }
 
     // Step 1: load project data
     const loadedData = await step.run("load-data", async () => {

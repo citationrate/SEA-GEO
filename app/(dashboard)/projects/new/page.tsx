@@ -63,13 +63,14 @@ const AVAILABLE_PROVIDERS: ProviderOption[] = [
       { id: "grok-3-mini", label: "Grok 3 Mini", description: "Veloce e diretto" },
     ],
   },
-  {
-    id: "microsoft",
-    label: "Microsoft",
-    models: [
-      { id: "copilot-gpt4", label: "Copilot GPT-4o", description: "Richiede credenziali Azure \u2022 GPT-4o su infrastruttura Microsoft" },
-    ],
-  },
+  // TODO: re-enable when Azure credentials confirmed
+  // {
+  //   id: "microsoft",
+  //   label: "Microsoft",
+  //   models: [
+  //     { id: "copilot-gpt4", label: "Copilot GPT-4o", description: "Richiede credenziali Azure • GPT-4o su infrastruttura Microsoft" },
+  //   ],
+  // },
 ];
 
 const COUNTRIES = [
