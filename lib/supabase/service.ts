@@ -10,5 +10,7 @@ export function createServiceClient() {
   if (!url || !key) {
     console.error("[supabase/service] MISSING ENV:", { url: !!url, key: !!key });
   }
-  return createClient(url as string, key as string);
+  return createClient(url as string, key as string, {
+    global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) },
+  });
 }
