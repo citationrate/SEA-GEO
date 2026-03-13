@@ -99,6 +99,12 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     .select("*")
     .eq("run_id", params.runId);
 
+  // Fetch competitor AVI scores from DB (pre-computed by inngest)
+  const { data: competitorAviData } = await supabase
+    .from("competitor_avi")
+    .select("competitor_name, avi_score, presence_score, rank_score, sentiment_score, consistency_score, mention_count")
+    .eq("run_id", params.runId);
+
   const { data: topics } = await supabase
     .from("topics")
     .select("*")
@@ -141,31 +147,6 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
 
   // Unique models for filter pills
   const models = Array.from(new Set((prompts ?? []).map((p: any) => p.model as string)));
-
-  // Compute per-model AVI (for multi-model runs)
-  const perModelAvi: { model: string; avi: number }[] = [];
-  if (models.length > 1 && analysesList.length > 0) {
-    const promptsList = (prompts ?? []) as any[];
-    for (const model of models) {
-      const modelPromptIds = new Set(promptsList.filter((p: any) => p.model === model).map((p: any) => p.id));
-      const modelAnalyses = analysesList.filter((a: any) => modelPromptIds.has(a.prompt_executed_id));
-      if (modelAnalyses.length === 0) continue;
-      const mentioned = modelAnalyses.filter((a: any) => a.brand_mentioned).length;
-      const presence = (mentioned / modelAnalyses.length) * 100;
-      const rankVals = modelAnalyses.map((a: any) => {
-        if (!a.brand_mentioned || !a.brand_rank || a.brand_rank <= 0) return 0;
-        return Math.max(0, 100 - (a.brand_rank - 1) * 20);
-      });
-      const rankS = rankVals.reduce((s: number, v: number) => s + v, 0) / rankVals.length;
-      const sentVals = modelAnalyses.map((a: any) => {
-        if (!a.brand_mentioned || a.sentiment_score == null) return 0;
-        return (a.sentiment_score + 1) * 50;
-      });
-      const sentS = sentVals.reduce((s: number, v: number) => s + v, 0) / sentVals.length;
-      const modelAvi = Math.round((presence * 0.40 + rankS * 0.35 + sentS * 0.25) * 10) / 10;
-      perModelAvi.push({ model, avi: Math.max(0, Math.min(100, modelAvi)) });
-    }
-  }
 
   // Stability data: check if run_count >= 3
   const runCount = r.run_count ?? 1;
@@ -342,8 +323,8 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         competitorMentions={mentionsList}
         brandAviScore={aviData?.avi_score ?? 0}
         targetBrand={proj?.target_brand ?? ""}
-        perModelAvi={perModelAvi}
         queries={queries ?? []}
+        competitorAviData={competitorAviData ?? []}
       />
 
       {/* Segment/Persona analysis (only if segments are present) */}

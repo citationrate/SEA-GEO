@@ -12,8 +12,8 @@ interface RunMetricsProps {
   competitorMentions: any[];
   brandAviScore: number;
   targetBrand: string;
-  perModelAvi?: { model: string; avi: number }[];
   queries?: any[];
+  competitorAviData?: any[];
 }
 
 function sentimentSign(v: number): string {
@@ -76,7 +76,7 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
   other: "Altro",
 };
 
-export function RunMetrics({ prompts, analyses, sources, models, competitorMentions, brandAviScore, targetBrand, perModelAvi, queries }: RunMetricsProps) {
+export function RunMetrics({ prompts, analyses, sources, models, competitorMentions, brandAviScore, targetBrand, queries, competitorAviData }: RunMetricsProps) {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [funnelFilter, setFunnelFilter] = useState<string | null>(null);
 
@@ -152,36 +152,10 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       });
     });
 
-    // Compute competitor AVI from competitor_mentions filtered by model
-    const filteredMentions = selectedModel
-      ? competitorMentions.filter((m) => {
-          const prompt = prompts.find((p: any) => p.id === m.prompt_executed_id);
-          return prompt?.model === selectedModel;
-        })
-      : competitorMentions;
-
-    const mentionGrouped = new Map<string, any[]>();
-    filteredMentions.forEach((m: any) => {
-      if (!mentionGrouped.has(m.competitor_name)) mentionGrouped.set(m.competitor_name, []);
-      mentionGrouped.get(m.competitor_name)!.push(m);
-    });
-
+    // Use pre-computed competitor AVI from DB
     const computedCompAviMap: Record<string, number> = {};
-    Array.from(mentionGrouped.entries()).forEach(([name, mentions]) => {
-      const totalP = filteredPrompts.length;
-      const prominence = totalP > 0 ? (mentions.length / totalP) * 100 : 0;
-      const withRank = mentions.filter((m: any) => m.rank != null && m.rank > 0);
-      const avgR = withRank.length > 0
-        ? withRank.reduce((s: number, m: any) => s + m.rank, 0) / withRank.length
-        : 3;
-      const rankScore = Math.max(0, 100 - ((avgR - 1) * 25));
-      const withSent = mentions.filter((m: any) => m.sentiment != null);
-      const avgS = withSent.length > 0
-        ? withSent.reduce((s: number, m: any) => s + m.sentiment, 0) / withSent.length
-        : 0;
-      const sentimentScore = ((avgS + 1) / 2) * 100;
-      const avi = (prominence * 0.4) + (rankScore * 0.3) + (sentimentScore * 0.3);
-      computedCompAviMap[name] = Math.round(avi * 10) / 10;
+    (competitorAviData ?? []).forEach((c: any) => {
+      computedCompAviMap[c.competitor_name] = c.avi_score;
     });
 
     const competitorList = Array.from(competitorsMap.entries()).sort((a, b) => {
@@ -189,24 +163,6 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       const aviB = computedCompAviMap[b[0]] ?? 0;
       return aviB - aviA || b[1] - a[1];
     });
-
-    // Compute brand AVI for selected model
-    let brandModelScore: number | null = null;
-    if (selectedModel && filteredAnalyses.length > 0) {
-      const mentioned = filteredAnalyses.filter((a: any) => a.brand_mentioned).length;
-      const presence = (mentioned / filteredAnalyses.length) * 100;
-      const rankVals = filteredAnalyses.map((a: any) => {
-        if (!a.brand_mentioned || !a.brand_rank || a.brand_rank <= 0) return 0;
-        return 1 / a.brand_rank;
-      });
-      const avgRankInv = rankVals.reduce((s: number, v: number) => s + v, 0) / rankVals.length;
-      const rankS = avgRankInv * 100;
-      const wSent = filteredAnalyses.filter((a: any) => a.sentiment_score != null);
-      const sentAvg = wSent.length > 0 ? wSent.reduce((s: number, a: any) => s + a.sentiment_score, 0) / wSent.length : 0.5;
-      const sentS = ((sentAvg + 1) / 2) * 100;
-      brandModelScore = Math.round((presence * 0.35 + rankS * 0.25 + sentS * 0.20 + 100 * 0.20) * 10) / 10;
-      brandModelScore = Math.max(0, Math.min(100, brandModelScore));
-    }
 
     const topicsMap = new Map<string, number>();
     filteredAnalyses.forEach((a) => {
@@ -240,7 +196,6 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       avgRec,
       totalOccurrences,
       computedCompAviMap,
-      brandModelScore,
       competitorList,
       topicList,
       sourcesByType,
@@ -263,7 +218,6 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
     avgRec,
     totalOccurrences,
     computedCompAviMap,
-    brandModelScore,
     competitorList,
     topicList,
     sourcesByType,
@@ -299,9 +253,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
             >
               Tutti
             </button>
-            {models.map((model) => {
-              const modelAvi = perModelAvi?.find((m) => m.model === model);
-              return (
+            {models.map((model) => (
                 <button
                   key={model}
                   onClick={() => setSelectedModel(model)}
@@ -313,12 +265,8 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                   }
                 >
                   {MODEL_LABELS[model] ?? model}
-                  {modelAvi != null && (
-                    <span className="ml-1.5 opacity-70">{Math.round(modelAvi.avi)}</span>
-                  )}
                 </button>
-              );
-            })}
+              ))}
           </>
         )}
 
@@ -431,7 +379,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
 
       {/* Benchmark vs Competitors */}
       {competitorList.length > 0 && (() => {
-        const effectiveBrandScore = brandModelScore ?? brandAviScore;
+        const effectiveBrandScore = brandAviScore;
         const top5 = competitorList.slice(0, 5).map(([name]) => ({
           name,
           avi: computedCompAviMap[name] ?? 0,
