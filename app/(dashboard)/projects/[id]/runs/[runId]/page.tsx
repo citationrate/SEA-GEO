@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createServiceClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, Archive } from "lucide-react";
 import { RunAVIRing } from "./run-avi-ring";
@@ -100,7 +100,10 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     .eq("run_id", params.runId);
 
   // Fetch competitor AVI scores from DB (pre-computed by inngest)
-  const { data: competitorAviData } = await (supabase.from("competitor_avi") as any)
+  // Use service client: competitor_avi table was created via exec_sql and may lack
+  // GRANT/RLS policies for the authenticated role.
+  const svc = createServiceClient();
+  const { data: competitorAviData } = await (svc.from("competitor_avi") as any)
     .select("competitor_name, avi_score, presence_score, rank_score, sentiment_score, consistency_score, mention_count")
     .eq("run_id", params.runId);
 

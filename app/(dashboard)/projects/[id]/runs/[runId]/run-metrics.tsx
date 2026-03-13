@@ -152,15 +152,16 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       });
     });
 
-    // Use pre-computed competitor AVI from DB
+    // Use pre-computed competitor AVI from DB (case-insensitive keys)
     const computedCompAviMap: Record<string, number> = {};
     (competitorAviData ?? []).forEach((c: any) => {
       computedCompAviMap[c.competitor_name] = c.avi_score;
+      computedCompAviMap[c.competitor_name.toLowerCase().trim()] = c.avi_score;
     });
 
     const competitorList = Array.from(competitorsMap.entries()).sort((a, b) => {
-      const aviA = computedCompAviMap[a[0]] ?? 0;
-      const aviB = computedCompAviMap[b[0]] ?? 0;
+      const aviA = computedCompAviMap[a[0]] ?? computedCompAviMap[a[0].toLowerCase().trim()] ?? 0;
+      const aviB = computedCompAviMap[b[0]] ?? computedCompAviMap[b[0].toLowerCase().trim()] ?? 0;
       return aviB - aviA || b[1] - a[1];
     });
 
@@ -200,7 +201,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       topicList,
       sourcesByType,
     };
-  }, [selectedModel, funnelFilter, prompts, analyses, sources, competitorMentions, queryMap]);
+  }, [selectedModel, funnelFilter, prompts, analyses, sources, competitorMentions, queryMap, competitorAviData]);
 
   const {
     filteredPrompts,
@@ -382,7 +383,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
         const effectiveBrandScore = brandAviScore;
         const top5 = competitorList.slice(0, 5).map(([name]) => ({
           name,
-          avi: computedCompAviMap[name] ?? 0,
+          avi: computedCompAviMap[name] ?? computedCompAviMap[name.toLowerCase().trim()] ?? 0,
         }));
         return (
           <div className="card p-5 space-y-4">
@@ -435,7 +436,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           ) : (
             <div className="flex flex-wrap gap-2">
               {competitorList.map(([name, count]) => {
-                const cAvi = computedCompAviMap[name];
+                const cAvi = computedCompAviMap[name] ?? computedCompAviMap[name.toLowerCase().trim()];
                 const aviColor = cAvi != null
                   ? cAvi >= 70 ? "text-success" : cAvi >= 40 ? "text-amber-500" : "text-destructive"
                   : "";
