@@ -108,7 +108,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
   const svc = createServiceClient();
   console.log("[DEBUG competitor_avi] BEFORE query — params.runId:", params.runId, "type:", typeof params.runId);
   const { data: competitorAviData, error: competitorAviError } = await (svc.from("competitor_avi") as any)
-    .select("competitor_name, avi_score, presence_score, rank_score, sentiment_score, consistency_score, mention_count")
+    .select("competitor_name, avi_score, prominence_score, rank_score, sentiment_score, consistency_score, mention_count")
     .eq("run_id", params.runId);
 
   // DEBUG: trace competitor_avi fetch (check Vercel server logs)

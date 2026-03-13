@@ -13,7 +13,7 @@ export async function POST() {
         run_id UUID NOT NULL REFERENCES analysis_runs(id) ON DELETE CASCADE,
         competitor_name TEXT NOT NULL,
         avi_score INT NOT NULL DEFAULT 0,
-        presence_score NUMERIC NOT NULL DEFAULT 0,
+        prominence_score NUMERIC NOT NULL DEFAULT 0,
         rank_score NUMERIC NOT NULL DEFAULT 0,
         sentiment_score NUMERIC NOT NULL DEFAULT 0,
         consistency_score NUMERIC NOT NULL DEFAULT 0,
@@ -127,7 +127,7 @@ export async function POST() {
           -- AVI = presenza×0.40 + posizione×0.35 + sentiment×0.25 (consistency esclusa)
           v_avi := ROUND(v_presence * 40 + v_rank * 35 + v_sentiment * 25);
 
-          INSERT INTO competitor_avi (project_id, run_id, competitor_name, avi_score, presence_score, rank_score, sentiment_score, consistency_score, mention_count, computed_at)
+          INSERT INTO competitor_avi (project_id, run_id, competitor_name, avi_score, prominence_score, rank_score, sentiment_score, consistency_score, mention_count, computed_at)
           VALUES (v_project_id, p_run_id, v_comp.name, v_avi,
                   v_presence, v_rank, v_sentiment, v_consistency,
                   (SELECT COUNT(*) FROM response_analysis ra

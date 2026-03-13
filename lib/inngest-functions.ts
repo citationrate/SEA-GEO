@@ -200,7 +200,7 @@ async function computeCompetitorAVI(
       run_id: runId,
       competitor_name: name,
       avi_score: Math.min(100, Math.max(0, aviScore)),
-      presence_score: prominence,
+      prominence_score: prominence,
       rank_score: rankScore,
       sentiment_score: sentimentScore,
       consistency_score: consistency,
