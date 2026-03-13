@@ -136,12 +136,23 @@ async function computeCompetitorAVI(
   projectId: string,
   totalPrompts: number,
 ) {
-  const { data: mentions } = await (supabase.from("competitor_mentions") as any)
+  console.log(`[inngest] computeCompetitorAVI CALLED — runId=${runId}, projectId=${projectId}, totalPrompts=${totalPrompts}`);
+  try {
+  const { data: mentions, error: mentionsError } = await (supabase.from("competitor_mentions") as any)
     .select("*")
     .eq("run_id", runId);
 
+  if (mentionsError) {
+    console.error("[inngest] competitor_mentions query error:", mentionsError.message);
+    return;
+  }
+
   const rows = (mentions ?? []) as any[];
-  if (rows.length === 0) return;
+  console.log(`[inngest] competitor_mentions rows for run ${runId}:`, rows.length);
+  if (rows.length === 0) {
+    console.log(`[inngest] computeCompetitorAVI: 0 mentions found, skipping`);
+    return;
+  }
 
   // Group by competitor name
   const byCompetitor = new Map<string, any[]>();
@@ -194,6 +205,7 @@ async function computeCompetitorAVI(
       sentiment_score: sentimentScore,
       consistency_score: consistency,
       mention_count: count,
+      computed_at: new Date().toISOString(),
     });
   }
 
@@ -204,7 +216,10 @@ async function computeCompetitorAVI(
     if (error) console.error("[inngest] competitor_avi upsert error:", error.message);
     else console.log("[inngest] competitor_avi upsert OK");
   } else {
-    console.log(`[inngest] competitor_avi: no mentions found for run ${runId}, skipping`);
+    console.log(`[inngest] competitor_avi: no upsert rows built for run ${runId}, skipping`);
+  }
+  } catch (e: any) {
+    console.error(`[inngest] computeCompetitorAVI CRASHED for run ${runId}:`, e?.message ?? e);
   }
 }
 
