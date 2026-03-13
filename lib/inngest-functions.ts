@@ -122,7 +122,9 @@ async function computeAndSaveAVI(
     }, { onConflict: "project_id,run_id" });
 
   if (aviError) {
-    console.error("avi_history upsert error:", aviError.message);
+    console.error("[inngest] avi_history upsert error:", aviError.message);
+  } else {
+    console.log(`[inngest] avi_history upsert OK for run ${runId}: AVI=${result.avi_score}`);
   }
 }
 
@@ -153,28 +155,31 @@ async function computeCompetitorAVI(
   for (const [name, mentionRows] of Array.from(byCompetitor.entries())) {
     const count = mentionRows.length;
 
-    // Prominence: % of prompts where competitor appears
+    // Prominence: mentions / total_prompts × 100
     const prominence = Math.min(100, (count / totalPrompts) * 100);
 
-    // Rank score: average rank converted to 0-100
-    const withRank = mentionRows.filter((m: any) => m.rank != null && m.rank > 0);
-    const avgRank = withRank.length > 0
-      ? withRank.reduce((s: number, m: any) => s + m.rank, 0) / withRank.length
-      : 3; // default if no rank data
-    const rankScore = Math.max(0, 100 - ((avgRank - 1) * 25));
+    // Rank score: SUM(rank > 0 ? MAX(0, 100-(rank-1)*20) : 0) / total_prompts
+    const rankSum = mentionRows.reduce((s: number, m: any) => {
+      if (m.rank != null && m.rank > 0) {
+        return s + Math.max(0, 100 - (m.rank - 1) * 20);
+      }
+      return s;
+    }, 0);
+    const rankScore = Math.min(100, rankSum / totalPrompts);
 
-    // Sentiment score: average sentiment converted to 0-100
-    const withSentiment = mentionRows.filter((m: any) => m.sentiment != null);
-    const avgSentiment = withSentiment.length > 0
-      ? withSentiment.reduce((s: number, m: any) => s + m.sentiment, 0) / withSentiment.length
-      : 0;
-    const sentimentScore = ((avgSentiment + 1) / 2) * 100;
+    // Sentiment score: SUM((sentiment+1)*50) / total_prompts
+    const sentimentSum = mentionRows.reduce((s: number, m: any) => {
+      if (m.sentiment != null) {
+        return s + (m.sentiment + 1) * 50;
+      }
+      return s;
+    }, 0);
+    const sentimentScore = Math.min(100, sentimentSum / totalPrompts);
 
-    // Consistency: check how stable mentions are across different prompt_executed_ids (separate metric)
-    const uniquePrompts = new Set(mentionRows.map((m: any) => m.prompt_executed_id)).size;
-    const consistency = Math.min(100, (uniquePrompts / Math.max(1, totalPrompts)) * 100);
+    // Consistency: mention_count / total_prompts × 100
+    const consistency = Math.min(100, (count / totalPrompts) * 100);
 
-    // AVI formula: Presenza 40% + Posizione 35% + Sentiment 25% (consistency esclusa)
+    // AVI = prominence×0.40 + rank_score×0.35 + sentiment_score×0.25
     const aviScore = Math.round(
       (prominence * 0.40) + (rankScore * 0.35) + (sentimentScore * 0.25)
     );
@@ -193,9 +198,13 @@ async function computeCompetitorAVI(
   }
 
   if (upsertRows.length > 0) {
+    console.log(`[inngest] competitor_avi: upserting ${upsertRows.length} rows for run ${runId}`, upsertRows.map(r => `${r.competitor_name}=${r.avi_score}`).join(", "));
     const { error } = await (supabase.from("competitor_avi") as any)
       .upsert(upsertRows, { onConflict: "project_id,run_id,competitor_name" });
     if (error) console.error("[inngest] competitor_avi upsert error:", error.message);
+    else console.log("[inngest] competitor_avi upsert OK");
+  } else {
+    console.log(`[inngest] competitor_avi: no mentions found for run ${runId}, skipping`);
   }
 }
 
