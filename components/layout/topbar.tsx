@@ -1,10 +1,14 @@
 "use client";
 
+import { ThemeToggle } from "@/components/theme-toggle";
+
 export function TopBar() {
   return (
     <header
-      className="h-12 flex-shrink-0 border-b border-border px-6 flex items-center"
-      style={{ background: "rgba(11,13,15,0.8)", backdropFilter: "blur(8px)" }}
-    />
+      className="h-12 flex-shrink-0 border-b border-border px-6 flex items-center justify-end gap-3"
+      style={{ background: "var(--surface)", backdropFilter: "blur(8px)" }}
+    >
+      <ThemeToggle />
+    </header>
   );
 }

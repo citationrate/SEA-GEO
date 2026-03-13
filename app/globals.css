@@ -40,6 +40,45 @@
     --radius: 2px;
   }
 
+  html.light {
+    --background:         #f5f2ed;
+    --surface:            #edeae4;
+    --surface-2:          #e4e0d8;
+    --primary:            #3e7c5a;
+    --primary-hover:      #2d5c42;
+    --primary-glow:       rgba(62,124,90,0.08);
+    --foreground:         #1a1714;
+    --cream:              #2c2820;
+    --muted-foreground:   #6b6560;
+    --destructive:        #b5402a;
+    --border:             rgba(0,0,0,0.08);
+    --border-light:       rgba(0,0,0,0.04);
+
+    --ink:                var(--background);
+    --ink-2:              var(--surface);
+    --ink-3:              var(--surface-2);
+    --line:               var(--border);
+    --line-sage:          rgba(62,124,90,0.25);
+    --sage:               var(--primary);
+    --sage-dim:           var(--primary-hover);
+    --sage-glow:          var(--primary-glow);
+    --white:              var(--foreground);
+    --cream-dim:          var(--muted-foreground);
+    --red-note:           var(--destructive);
+
+    --primary-foreground: #f5f2ed;
+    --accent:             var(--cream);
+    --accent-foreground:  var(--background);
+    --muted:              var(--surface-2);
+    --success:            #3a8a5c;
+    --warning:            #b8922e;
+
+    --shadow-sm:   0 1px  4px rgba(0,0,0,0.06);
+    --shadow-md:   0 4px 16px rgba(0,0,0,0.08);
+    --shadow-lg:   0 8px 32px rgba(0,0,0,0.10);
+    --shadow-sage: 0 4px 20px rgba(62,124,90,0.12);
+  }
+
   * {
     box-sizing: border-box;
     border-color: var(--border);
@@ -235,5 +274,11 @@
     background-color: rgba(91,169,123,0.1);
     color: var(--success);
     border: 1px solid rgba(91,169,123,0.2);
+  }
+
+  /* Light mode card shadows */
+  html.light .card,
+  html.light [class*="card"] {
+    box-shadow: var(--shadow-sm);
   }
 }
