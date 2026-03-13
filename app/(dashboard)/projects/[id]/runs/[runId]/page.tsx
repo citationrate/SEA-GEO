@@ -243,8 +243,8 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         <div className="flex flex-wrap items-center gap-1"><span className="text-muted-foreground">Modelli:</span>{" "}<span className="text-foreground font-medium break-words">{r.models_used?.join(", ")}</span></div>
         <div><span className="text-muted-foreground">Prompt:</span>{" "}<span className="text-foreground font-medium">{r.completed_prompts}/{r.total_prompts}</span></div>
         <div><span className="text-muted-foreground">Run per prompt:</span>{" "}<span className="text-foreground font-medium">{r.run_count}</span></div>
-        {r.started_at && <div><span className="text-muted-foreground">Inizio:</span>{" "}<span className="text-foreground">{new Date(r.started_at).toLocaleString("it-IT")}</span></div>}
-        {r.completed_at && <div><span className="text-muted-foreground">Fine:</span>{" "}<span className="text-foreground">{new Date(r.completed_at).toLocaleString("it-IT")}</span></div>}
+        {r.started_at && <div><span className="text-muted-foreground">Inizio:</span>{" "}<span className="text-foreground" suppressHydrationWarning>{new Date(r.started_at).toLocaleString("it-IT")}</span></div>}
+        {r.completed_at && <div><span className="text-muted-foreground">Fine:</span>{" "}<span className="text-foreground" suppressHydrationWarning>{new Date(r.completed_at).toLocaleString("it-IT")}</span></div>}
       </div>
 
       {/* Loading banner when running */}
@@ -323,9 +323,6 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
           </div>
         </>
       )}
-
-      {/* DEBUG: log what gets passed to RunMetrics */}
-      {(() => { console.log("[DEBUG RunMetrics prop] competitorAviData length:", (competitorAviData ?? []).length, "sample:", JSON.stringify((competitorAviData ?? []).slice(0, 2))); return null; })()}
 
       {/* Filterable metrics, competitors, topics, sources, prompts */}
       <RunMetrics

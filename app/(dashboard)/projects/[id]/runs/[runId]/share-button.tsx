@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Share2, Link2, X, Loader2, Check } from "lucide-react";
 
 export function ShareButton({ runId, initialToken }: { runId: string; initialToken?: string | null }) {
@@ -8,8 +8,13 @@ export function ShareButton({ runId, initialToken }: { runId: string; initialTok
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [origin, setOrigin] = useState("");
 
-  const shareUrl = token ? `${window.location.origin}/share/${token}` : null;
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+
+  const shareUrl = token && origin ? `${origin}/share/${token}` : null;
 
   async function handleShare() {
     if (token) {
