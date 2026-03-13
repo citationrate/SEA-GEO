@@ -100,8 +100,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     .eq("run_id", params.runId);
 
   // Fetch competitor AVI scores from DB (pre-computed by inngest)
-  const { data: competitorAviData } = await supabase
-    .from("competitor_avi")
+  const { data: competitorAviData } = await (supabase.from("competitor_avi") as any)
     .select("competitor_name, avi_score, presence_score, rank_score, sentiment_score, consistency_score, mention_count")
     .eq("run_id", params.runId);
 
