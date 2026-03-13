@@ -1,4 +1,5 @@
-import { createServerClient, createServiceClient } from "@/lib/supabase/server";
+import { createServerClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, Archive } from "lucide-react";
 import { RunAVIRing } from "./run-avi-ring";
