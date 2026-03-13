@@ -1,4 +1,5 @@
 import { createServerClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { ProjectSelector } from "@/components/project-selector";
 
 import { resolveProjectId } from "@/lib/utils/resolve-project";
@@ -282,7 +283,8 @@ export default async function CompetitorsPage({
   // Fetch competitor AVI scores per project (case-insensitive keys)
   const compAviMap = new Map<string, number>();
   for (const pid of targetIds) {
-    const { data: compAviRows } = await (supabase.from("competitor_avi") as any)
+    const svc = createServiceClient();
+    const { data: compAviRows } = await (svc.from("competitor_avi") as any)
       .select("competitor_name, avi_score")
       .eq("project_id", pid)
       .order("computed_at", { ascending: false });

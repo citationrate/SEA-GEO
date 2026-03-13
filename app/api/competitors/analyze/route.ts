@@ -1,7 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 
 const bodySchema = z.object({
   project_id: z.string().uuid(),
@@ -89,13 +89,13 @@ export async function POST(request: Request) {
       });
     });
 
-    // Check OpenAI API key
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ error: "API key OpenAI non configurata" }, { status: 500 });
+    // Check Anthropic API key
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: "API key Anthropic non configurata" }, { status: 500 });
     }
 
-    // Analyze each competitor with GPT-4o-mini
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    // Analyze each competitor with Claude Haiku
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const results: { id: string; name: string; analysis: any }[] = [];
 
     for (const comp of competitors as any[]) {
@@ -132,14 +132,14 @@ Testi:
 ${truncated}`;
 
       try {
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
+        const message = await anthropic.messages.create({
+          model: "claude-haiku-4-5-20251001",
           temperature: 0.3,
           max_tokens: 1000,
           messages: [{ role: "user", content: prompt }],
         });
 
-        const raw = completion.choices[0]?.message?.content ?? "";
+        const raw = message.content[0]?.type === "text" ? message.content[0].text : "";
         // Extract JSON from response
         const jsonMatch = raw.match(/\{[\s\S]*\}/);
         let analysis: any = { macro_themes: [], positioning_summary: "" };
