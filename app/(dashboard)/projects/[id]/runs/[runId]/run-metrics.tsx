@@ -154,10 +154,13 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
 
     // Use pre-computed competitor AVI from DB (case-insensitive keys)
     const computedCompAviMap: Record<string, number> = {};
+    console.log("[DEBUG RunMetrics] competitorAviData received:", competitorAviData?.length ?? "null/undefined", JSON.stringify((competitorAviData ?? []).slice(0, 2)));
+    console.log("[DEBUG RunMetrics] competitors_found sample:", Array.from(competitorsMap.keys()).slice(0, 5));
     (competitorAviData ?? []).forEach((c: any) => {
       computedCompAviMap[c.competitor_name] = c.avi_score;
       computedCompAviMap[c.competitor_name.toLowerCase().trim()] = c.avi_score;
     });
+    console.log("[DEBUG RunMetrics] computedCompAviMap keys:", Object.keys(computedCompAviMap).slice(0, 10));
 
     const competitorList = Array.from(competitorsMap.entries()).sort((a, b) => {
       const aviA = computedCompAviMap[a[0]] ?? computedCompAviMap[a[0].toLowerCase().trim()] ?? 0;

@@ -103,9 +103,15 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
   // Use service client: competitor_avi table was created via exec_sql and may lack
   // GRANT/RLS policies for the authenticated role.
   const svc = createServiceClient();
-  const { data: competitorAviData } = await (svc.from("competitor_avi") as any)
+  const { data: competitorAviData, error: competitorAviError } = await (svc.from("competitor_avi") as any)
     .select("competitor_name, avi_score, presence_score, rank_score, sentiment_score, consistency_score, mention_count")
     .eq("run_id", params.runId);
+
+  // DEBUG: trace competitor_avi fetch (check Vercel server logs)
+  console.log("[DEBUG competitor_avi] run_id used:", params.runId);
+  console.log("[DEBUG competitor_avi] error:", competitorAviError);
+  console.log("[DEBUG competitor_avi] row count:", competitorAviData?.length ?? "null");
+  console.log("[DEBUG competitor_avi] raw data:", JSON.stringify(competitorAviData?.slice(0, 3)));
 
   const { data: topics } = await supabase
     .from("topics")
@@ -315,6 +321,9 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
           </div>
         </>
       )}
+
+      {/* DEBUG: log what gets passed to RunMetrics */}
+      {(() => { console.log("[DEBUG RunMetrics prop] competitorAviData length:", (competitorAviData ?? []).length, "sample:", JSON.stringify((competitorAviData ?? []).slice(0, 2))); return null; })()}
 
       {/* Filterable metrics, competitors, topics, sources, prompts */}
       <RunMetrics
