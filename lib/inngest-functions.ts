@@ -3,6 +3,7 @@ import { createServiceClient } from "./supabase/service";
 import { extractFromResponse } from "./engine/extractor";
 import { calculateAVI } from "./engine/avi";
 import { type ExtractedSource, mergeSources } from "./engine/sources-extractor";
+import { canonicalizeCompetitorName } from "./engine/competitor-names";
 import { callAIModel, type AIModelResult } from "./engine/prompt-runner";
 import { filterAvailableModels } from "./engine/models";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -284,7 +285,7 @@ async function executePrompt(
       position_score: extraction.position_score,
       recommendation_score: extraction.recommendation_score,
       topics: extraction.topics,
-      competitors_found: extraction.competitors_found.map(c => c.name),
+      competitors_found: extraction.competitors_found.map(c => canonicalizeCompetitorName(c.name)),
       avi_score: null,
       avi_components: null,
     });
@@ -294,7 +295,7 @@ async function executePrompt(
     const mentions = extraction.competitors_found.map((c) => ({
       run_id: task.runId,
       project_id: task.projectId,
-      competitor_name: c.name,
+      competitor_name: canonicalizeCompetitorName(c.name),
       prompt_executed_id: promptRecord.id,
       rank: c.rank ?? null,
       sentiment: c.sentiment ?? null,
@@ -335,14 +336,16 @@ async function executePrompt(
     if (error) console.error("Sources upsert error:", error.message);
   }
 
-  // Batch upsert competitors (with normalization)
+  // Batch upsert competitors (with normalization + canonical)
   const compRows: any[] = [];
   for (const rawComp of extraction.competitors_found || []) {
     const normalizedName = normalizeCompetitorName(rawComp.name, task.targetBrand, normCache);
     if (!normalizedName || normalizedName === task.targetBrand) continue;
+    const canonicalName = canonicalizeCompetitorName(normalizedName);
+    if (canonicalName === task.targetBrand) continue;
     compRows.push({
       project_id: task.projectId,
-      name: normalizedName,
+      name: canonicalName,
       is_manual: false,
       discovered_at_run_id: task.runId,
       mention_count: 1,

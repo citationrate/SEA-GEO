@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { canonicalizeCompetitorName } from "./competitor-names";
 
 export interface ExtractionResult {
   brand_mentioned: boolean;
@@ -235,11 +236,12 @@ ${cleanResponse}`;
     return {
       topics: Array.isArray(parsed.topics) ? parsed.topics : [],
       competitors_found: Array.isArray(parsed.competitors_found)
-        ? parsed.competitors_found.map((c: any) =>
-            typeof c === "string"
-              ? { name: c, type: "direct" as const, rank: null, sentiment: null, recommendation: null }
-              : { name: c.name, type: c.type ?? "direct", rank: c.rank ?? null, sentiment: c.sentiment ?? null, recommendation: c.recommendation ?? null }
-          )
+        ? parsed.competitors_found.map((c: any) => {
+            const raw = typeof c === "string" ? c : c.name;
+            return typeof c === "string"
+              ? { name: canonicalizeCompetitorName(raw), type: "direct" as const, rank: null, sentiment: null, recommendation: null }
+              : { name: canonicalizeCompetitorName(raw), type: c.type ?? "direct", rank: c.rank ?? null, sentiment: c.sentiment ?? null, recommendation: c.recommendation ?? null };
+          })
         : [],
       sources: Array.isArray(parsed.sources)
         ? parsed.sources.map((s: any) => ({
@@ -446,11 +448,12 @@ FORMATO: Restituisci SOLO il nome commerciale.`;
       topics: Array.isArray(parsed.topics) ? parsed.topics : [],
       competitors_found: (() => {
         const competitorsRaw = Array.isArray(parsed.competitors_found) ? parsed.competitors_found : [];
-        return competitorsRaw.map((c: any) =>
-          typeof c === 'string'
-            ? { name: c, type: "direct" as const, rank: null, sentiment: null, recommendation: null }
-            : { name: c.name, type: c.type ?? "direct", rank: c.rank ?? null, sentiment: c.sentiment ?? null, recommendation: c.recommendation ?? null }
-        );
+        return competitorsRaw.map((c: any) => {
+          const raw = typeof c === 'string' ? c : c.name;
+          return typeof c === 'string'
+            ? { name: canonicalizeCompetitorName(raw), type: "direct" as const, rank: null, sentiment: null, recommendation: null }
+            : { name: canonicalizeCompetitorName(raw), type: c.type ?? "direct", rank: c.rank ?? null, sentiment: c.sentiment ?? null, recommendation: c.recommendation ?? null };
+        });
       })(),
       sources: Array.isArray(parsed.sources)
         ? parsed.sources.map((s: any) => ({
