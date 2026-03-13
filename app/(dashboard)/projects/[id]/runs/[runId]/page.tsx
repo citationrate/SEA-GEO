@@ -104,15 +104,16 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
   // Use service client: competitor_avi table was created via exec_sql and may lack
   // GRANT/RLS policies for the authenticated role.
   const svc = createServiceClient();
+  console.log("[DEBUG competitor_avi] BEFORE query — params.runId:", params.runId, "type:", typeof params.runId);
   const { data: competitorAviData, error: competitorAviError } = await (svc.from("competitor_avi") as any)
     .select("competitor_name, avi_score, presence_score, rank_score, sentiment_score, consistency_score, mention_count")
     .eq("run_id", params.runId);
 
   // DEBUG: trace competitor_avi fetch (check Vercel server logs)
-  console.log("[DEBUG competitor_avi] run_id used:", params.runId);
-  console.log("[DEBUG competitor_avi] error:", competitorAviError);
-  console.log("[DEBUG competitor_avi] row count:", competitorAviData?.length ?? "null");
-  console.log("[DEBUG competitor_avi] raw data:", JSON.stringify(competitorAviData?.slice(0, 3)));
+  console.log("[DEBUG competitor_avi] AFTER query — error:", competitorAviError);
+  console.log("[DEBUG competitor_avi] AFTER query — row count:", competitorAviData?.length ?? "null");
+  console.log("[DEBUG competitor_avi] AFTER query — raw data:", JSON.stringify(competitorAviData));
+  console.log("[DEBUG competitor_avi] AFTER query — svc url:", process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 30));
 
   const { data: topics } = await supabase
     .from("topics")

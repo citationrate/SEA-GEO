@@ -382,6 +382,18 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       </div>
 
       {/* Benchmark vs Competitors */}
+      {(() => {
+        console.log("[BENCHMARK] competitorAviData:", competitorAviData);
+        console.log("[BENCHMARK] competitorList (from response_analysis):", competitorList.map(([n, c]) => `${n}(${c})`));
+        console.log("[BENCHMARK] computedCompAviMap:", computedCompAviMap);
+        console.log("[BENCHMARK] name match test:", competitorList.map(([name]) => ({
+          name,
+          exactMatch: computedCompAviMap[name],
+          lowerMatch: computedCompAviMap[name.toLowerCase().trim()],
+          found: (competitorAviData ?? []).find((r: any) => r.competitor_name === name),
+        })));
+        return null;
+      })()}
       {competitorList.length > 0 && (() => {
         const effectiveBrandScore = brandAviScore;
         const top5 = competitorList.slice(0, 5).map(([name]) => ({
