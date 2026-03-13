@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import ReactMarkdown from "react-markdown";
 import { Database, ChevronDown, X, Loader2, ExternalLink } from "lucide-react";
 
 interface Project {
@@ -248,7 +249,8 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
                   const stBadge = SET_TYPE_BADGES[row.set_type] || SET_TYPE_BADGES.manual;
                   const funnelCls = FUNNEL_BADGES[row.funnel_stage] || "border-border text-muted-foreground";
                   const response = row.raw_response || "";
-                  const truncated = response.length > 120 ? response.slice(0, 120) + "..." : response;
+                  const plain = response.replace(/#{1,6}\s/g, "").replace(/\*{1,2}([^*]+)\*{1,2}/g, "$1").replace(/^[-*]\s/gm, "").replace(/\n+/g, " ").trim();
+                  const truncated = plain.length > 120 ? plain.slice(0, 120) + "..." : plain;
 
                   return (
                     <tr
@@ -466,8 +468,23 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
                 <p className="text-sm text-destructive">{row.error}</p>
               </div>
             ) : row.raw_response ? (
-              <div className="bg-muted border border-border rounded-[2px] px-4 py-3 max-h-[400px] overflow-y-auto">
-                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{row.raw_response}</p>
+              <div className="bg-muted border border-border rounded-[2px] px-4 py-3 max-h-[400px] overflow-y-auto prose-ai">
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <p className="text-sm text-foreground leading-relaxed mb-2 last:mb-0">{children}</p>,
+                    strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                    em: ({ children }) => <em className="italic text-foreground">{children}</em>,
+                    h1: ({ children }) => <h1 className="text-base font-semibold text-foreground mb-2 mt-3 first:mt-0">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-[15px] font-semibold text-foreground mb-2 mt-3 first:mt-0">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-sm font-semibold text-foreground mb-1.5 mt-2.5 first:mt-0">{children}</h3>,
+                    ul: ({ children }) => <ul className="list-disc list-outside ml-4 mb-2 space-y-0.5">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-outside ml-4 mb-2 space-y-0.5">{children}</ol>,
+                    li: ({ children }) => <li className="text-sm text-foreground leading-relaxed">{children}</li>,
+                    code: ({ children }) => <code className="font-mono text-[13px] bg-surface-2 px-1 py-0.5 rounded-[2px]">{children}</code>,
+                  }}
+                >
+                  {row.raw_response}
+                </ReactMarkdown>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">Nessuna risposta</p>
