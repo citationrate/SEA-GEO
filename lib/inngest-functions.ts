@@ -169,13 +169,13 @@ async function computeCompetitorAVI(
       : 0;
     const sentimentScore = ((avgSentiment + 1) / 2) * 100;
 
-    // Consistency: check how stable mentions are across different prompt_executed_ids
+    // Consistency: check how stable mentions are across different prompt_executed_ids (separate metric)
     const uniquePrompts = new Set(mentionRows.map((m: any) => m.prompt_executed_id)).size;
     const consistency = Math.min(100, (uniquePrompts / Math.max(1, totalPrompts)) * 100);
 
-    // AVI formula
+    // AVI formula: Presenza 40% + Posizione 35% + Sentiment 25% (consistency esclusa)
     const aviScore = Math.round(
-      (prominence * 0.4) + (rankScore * 0.3) + (sentimentScore * 0.2) + (consistency * 0.1)
+      (prominence * 0.40) + (rankScore * 0.35) + (sentimentScore * 0.25)
     );
 
     upsertRows.push({
@@ -183,10 +183,10 @@ async function computeCompetitorAVI(
       run_id: runId,
       competitor_name: name,
       avi_score: Math.min(100, Math.max(0, aviScore)),
-      prominence,
+      presence_score: prominence,
       rank_score: rankScore,
       sentiment_score: sentimentScore,
-      consistency,
+      consistency_score: consistency,
       mention_count: count,
     });
   }

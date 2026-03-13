@@ -125,19 +125,25 @@ export async function GET(
 </div>
 
 ${a ? `
-<h2>AVI Components</h2>
+<h2>Componenti AVI</h2>
 <div class="avi-box">
   ${[
-    { label: "Prominence", val: a.presence_score ?? 0 },
-    { label: "Rank", val: a.rank_score ?? 0 },
+    { label: "Presenza", val: a.presence_score ?? 0 },
+    { label: "Posizione", val: a.rank_score ?? 0 },
     { label: "Sentiment", val: a.sentiment_score ?? 0 },
-    { label: "Consistency", val: a.stability_score ?? 0 },
   ].map((c) => `
   <div class="bar-row">
     <span class="bar-label">${c.label}</span>
     <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, c.val)}%"></div></div>
     <span class="bar-val">${Math.round(c.val)}</span>
   </div>`).join("")}
+</div>
+<div style="margin-top:12px;padding:8px 12px;border-radius:6px;font-size:12px;display:inline-block;${
+  (a.stability_score ?? 0) > 80 ? 'background:#e8f5e9;color:#2e7d32' : (a.stability_score ?? 0) >= 50 ? 'background:#fff8e1;color:#f57f17' : 'background:#ffebee;color:#c62828'
+}">
+  Affidabilità: ${Math.round(a.stability_score ?? 0)} — ${
+    (a.stability_score ?? 0) > 80 ? 'Alta affidabilità' : (a.stability_score ?? 0) >= 50 ? 'Affidabilità media' : 'Bassa affidabilità'
+  } <span style="color:#888;font-size:10px">(non influisce sull'AVI)</span>
 </div>
 ` : ""}
 

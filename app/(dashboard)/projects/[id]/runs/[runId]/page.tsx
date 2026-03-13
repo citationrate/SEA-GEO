@@ -20,10 +20,9 @@ const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = 
 };
 
 const AVI_COMPONENTS = [
-  { key: "presence_score",   label: "Prominence",  color: "#e8956d", desc: "Quanto spesso il brand appare nelle risposte AI" },
-  { key: "rank_score",       label: "Rank",        color: "#7eb3d4", desc: "Posizione media del brand quando viene citato" },
-  { key: "sentiment_score",  label: "Sentiment",   color: "#7eb89a", desc: "Tono con cui l'AI descrive il brand" },
-  { key: "stability_score",  label: "Consistency", color: "#c4a882", desc: "Coerenza delle risposte tra modelli e run" },
+  { key: "presence_score",   label: "Presenza",   color: "#e8956d", desc: "% risposte AI in cui il brand viene citato" },
+  { key: "rank_score",       label: "Posizione",  color: "#7eb3d4", desc: "Posizione media mediata su tutti i prompt" },
+  { key: "sentiment_score",  label: "Sentiment",  color: "#7eb89a", desc: "Tono delle citazioni mediato su tutti i prompt" },
 ];
 
 export default async function RunDetailPage({ params }: { params: { id: string; runId: string } }) {
@@ -155,14 +154,15 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
       const presence = (mentioned / modelAnalyses.length) * 100;
       const rankVals = modelAnalyses.map((a: any) => {
         if (!a.brand_mentioned || !a.brand_rank || a.brand_rank <= 0) return 0;
-        return 1 / a.brand_rank;
+        return Math.max(0, 100 - (a.brand_rank - 1) * 20);
       });
-      const avgRankInv = rankVals.reduce((s: number, v: number) => s + v, 0) / rankVals.length;
-      const rankS = avgRankInv * 100;
-      const withSent = modelAnalyses.filter((a: any) => a.sentiment_score != null);
-      const sentAvg = withSent.length > 0 ? withSent.reduce((s: number, a: any) => s + a.sentiment_score, 0) / withSent.length : 0.5;
-      const sentS = ((sentAvg + 1) / 2) * 100;
-      const modelAvi = Math.round((presence * 0.35 + rankS * 0.25 + sentS * 0.20 + 100 * 0.20) * 10) / 10;
+      const rankS = rankVals.reduce((s: number, v: number) => s + v, 0) / rankVals.length;
+      const sentVals = modelAnalyses.map((a: any) => {
+        if (!a.brand_mentioned || a.sentiment_score == null) return 0;
+        return (a.sentiment_score + 1) * 50;
+      });
+      const sentS = sentVals.reduce((s: number, v: number) => s + v, 0) / sentVals.length;
+      const modelAvi = Math.round((presence * 0.40 + rankS * 0.35 + sentS * 0.25) * 10) / 10;
       perModelAvi.push({ model, avi: Math.max(0, Math.min(100, modelAvi)) });
     }
   }
@@ -280,10 +280,10 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
                 trend={trend}
                 noBrandMentions={aviData.avi_score === 0 && aviData.presence_score === 0}
                 components={[
-                  { label: "Prominence", v: aviData.presence_score != null ? Math.round(aviData.presence_score) : null },
-                  { label: "Rank",       v: aviData.rank_score != null ? Math.round(aviData.rank_score) : null },
+                  { label: "Presenza",   v: aviData.presence_score != null ? Math.round(aviData.presence_score) : null },
+                  { label: "Posizione",  v: aviData.rank_score != null ? Math.round(aviData.rank_score) : null },
                   { label: "Sentiment",  v: aviData.sentiment_score != null ? Math.round(aviData.sentiment_score) : null },
-                  { label: "Consistency", v: aviData.stability_score != null ? Math.round(aviData.stability_score) : null },
+                  { label: "Affidabilità", v: aviData.stability_score != null ? Math.round(aviData.stability_score) : null },
                 ]}
               />
             </div>
@@ -296,6 +296,23 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
               value: aviData[c.key] != null ? Math.round(aviData[c.key]) : null,
             }))} />
           </div>
+
+          {/* Consistency badge */}
+          {aviData.stability_score != null && (
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm font-mono text-[12px] font-medium ${
+                aviData.stability_score > 80
+                  ? "bg-green-500/15 text-green-400 border border-green-500/30"
+                  : aviData.stability_score >= 50
+                  ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
+                  : "bg-red-500/15 text-red-400 border border-red-500/30"
+              }`}>
+                Affidabilità: {Math.round(aviData.stability_score)}
+                {aviData.stability_score > 80 ? " — Alta affidabilità" : aviData.stability_score >= 50 ? " — Affidabilità media" : " — Bassa affidabilità — esegui più run"}
+              </span>
+              <span className="text-xs text-muted-foreground">Stabilità delle risposte tra run diverse. Non influisce sull&apos;AVI.</span>
+            </div>
+          )}
 
           {/* AVI Component Comparison Bar */}
           <div className="card p-5 space-y-3">

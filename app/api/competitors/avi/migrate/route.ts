@@ -124,7 +124,8 @@ export async function POST() {
             v_consistency := 0;
           END IF;
 
-          v_avi := ROUND(v_presence * 35 + v_rank * 25 + v_sentiment * 20 + v_consistency * 20);
+          -- AVI = presenza×0.40 + posizione×0.35 + sentiment×0.25 (consistency esclusa)
+          v_avi := ROUND(v_presence * 40 + v_rank * 35 + v_sentiment * 25);
 
           INSERT INTO competitor_avi (project_id, run_id, competitor_name, avi_score, presence_score, rank_score, sentiment_score, consistency_score, mention_count, computed_at)
           VALUES (v_project_id, p_run_id, v_comp.name, v_avi,

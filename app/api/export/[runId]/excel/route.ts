@@ -98,10 +98,12 @@ export async function GET(
     [],
     ["--- AVI Score ---"],
     ["AVI Score", aviData?.avi_score ?? "—"],
-    ["Presence", aviData?.presence_score ?? "—"],
-    ["Rank", aviData?.rank_score ?? "—"],
+    ["Presenza", aviData?.presence_score ?? "—"],
+    ["Posizione", aviData?.rank_score ?? "—"],
     ["Sentiment", aviData?.sentiment_score ?? "—"],
-    ["Stability", aviData?.stability_score ?? "—"],
+    [],
+    ["--- Affidabilità (non inclusa nell'AVI) ---"],
+    ["Affidabilità", aviData?.stability_score ?? "—"],
   ];
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
   XLSX.utils.book_append_sheet(wb, wsSummary, "Riepilogo AVI");

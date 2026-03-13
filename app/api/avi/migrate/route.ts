@@ -37,19 +37,19 @@ export async function POST() {
 
         IF v_total = 0 THEN RETURN; END IF;
 
-        -- Prominence (ex Presence): brand mention rate
+        -- Presenza: (prompt con brand / totale prompt) × 100
         SELECT COUNT(*) INTO v_mentioned
         FROM response_analysis ra
         JOIN prompts_executed pe ON pe.id = ra.prompt_executed_id
         WHERE pe.run_id = p_run_id AND ra.brand_mentioned = true;
 
-        v_presence := v_mentioned::NUMERIC / v_total;
+        v_presence := (v_mentioned::NUMERIC / v_total) * 100;
 
-        -- Rank score: avg of max(0, 1-(rank-1)/10), 0 if null
+        -- Rank score: avg of max(0, 100-(rank-1)*20) su tutti i prompt, 0 se non menzionato
         SELECT COALESCE(
           AVG(CASE
-            WHEN ra.brand_rank IS NOT NULL AND ra.brand_rank > 0
-            THEN GREATEST(0, 1.0 - (ra.brand_rank - 1)::NUMERIC / 10)
+            WHEN ra.brand_mentioned = true AND ra.brand_rank IS NOT NULL AND ra.brand_rank > 0
+            THEN GREATEST(0, 100.0 - (ra.brand_rank - 1)::NUMERIC * 20)
             ELSE 0
           END), 0
         ) INTO v_rank
@@ -57,13 +57,17 @@ export async function POST() {
         JOIN prompts_executed pe ON pe.id = ra.prompt_executed_id
         WHERE pe.run_id = p_run_id;
 
-        -- Sentiment: normalized (avg+1)/2
+        -- Sentiment: AVG((sentiment+1)*50) su tutti i prompt, 0 se non menzionato
         SELECT COALESCE(
-          (AVG(ra.sentiment_score) + 1) / 2, 0.5
+          AVG(CASE
+            WHEN ra.brand_mentioned = true AND ra.sentiment_score IS NOT NULL
+            THEN (ra.sentiment_score + 1) * 50
+            ELSE 0
+          END), 0
         ) INTO v_sentiment
         FROM response_analysis ra
         JOIN prompts_executed pe ON pe.id = ra.prompt_executed_id
-        WHERE pe.run_id = p_run_id AND ra.sentiment_score IS NOT NULL;
+        WHERE pe.run_id = p_run_id;
 
         -- Consistency (ex Stability): per query+segment pair, % agreement
         v_pair_scores := ARRAY[]::NUMERIC[];
@@ -93,8 +97,8 @@ export async function POST() {
           v_consistency := 1;
         END IF;
 
-        -- AVI = prominence*35 + rank*25 + sentiment*20 + consistency*20
-        v_avi := ROUND(v_presence * 35 + v_rank * 25 + v_sentiment * 20 + v_consistency * 20);
+        -- AVI = presenza×0.40 + posizione×0.35 + sentiment×0.25 (consistency esclusa)
+        v_avi := ROUND(v_presence * 0.40 + v_rank * 0.35 + v_sentiment * 0.25);
 
         -- Upsert
         INSERT INTO avi_history (project_id, run_id, avi_score, presence_score, rank_score, sentiment_score, stability_score, computed_at)

@@ -92,7 +92,7 @@ export async function GET(
       presence: aviData.presence_score,
       rank: aviData.rank_score,
       sentiment: aviData.sentiment_score,
-      stability: aviData.stability_score,
+      consistency: aviData.stability_score,
     } : null,
     mentionRate,
     competitors,

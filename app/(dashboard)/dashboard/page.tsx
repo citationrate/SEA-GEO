@@ -126,10 +126,10 @@ export default async function DashboardPage({
 
   // Build AVI components for ring
   const aviComponents = lastAvi ? [
-    { label: "Prominence", v: lastAvi.presence_score != null ? Math.round(lastAvi.presence_score) : null },
-    { label: "Rank",       v: lastAvi.rank_score != null ? Math.round(lastAvi.rank_score) : null },
-    { label: "Sentiment",  v: lastAvi.sentiment_score != null ? Math.round(lastAvi.sentiment_score) : null },
-    { label: "Consistency", v: lastAvi.stability_score != null ? Math.round(lastAvi.stability_score) : null },
+    { label: "Presenza",    v: lastAvi.presence_score != null ? Math.round(lastAvi.presence_score) : null },
+    { label: "Posizione",   v: lastAvi.rank_score != null ? Math.round(lastAvi.rank_score) : null },
+    { label: "Sentiment",   v: lastAvi.sentiment_score != null ? Math.round(lastAvi.sentiment_score) : null },
+    { label: "Affidabilità", v: lastAvi.stability_score != null ? Math.round(lastAvi.stability_score) : null },
   ] : undefined;
 
   // Extract unique models for per-model trend lines
@@ -159,12 +159,11 @@ export default async function DashboardPage({
         if (mAnalyses.length === 0) continue;
         const mentioned = mAnalyses.filter((a: any) => a.brand_mentioned).length;
         const presence = (mentioned / mAnalyses.length) * 100;
-        const rankVals = mAnalyses.map((a: any) => (!a.brand_mentioned || !a.brand_rank || a.brand_rank <= 0) ? 0 : 1 / a.brand_rank);
-        const rankS = (rankVals.reduce((s: number, v: number) => s + v, 0) / rankVals.length) * 100;
-        const withS = mAnalyses.filter((a: any) => a.sentiment_score != null);
-        const sentAvg = withS.length > 0 ? withS.reduce((s: number, a: any) => s + a.sentiment_score, 0) / withS.length : 0.5;
-        const sentS = ((sentAvg + 1) / 2) * 100;
-        modelAvis[model] = Math.round((presence * 0.35 + rankS * 0.25 + sentS * 0.20 + 100 * 0.20) * 10) / 10;
+        const rankVals = mAnalyses.map((a: any) => (!a.brand_mentioned || !a.brand_rank || a.brand_rank <= 0) ? 0 : Math.max(0, 100 - (a.brand_rank - 1) * 20));
+        const rankS = rankVals.reduce((s: number, v: number) => s + v, 0) / rankVals.length;
+        const sentVals = mAnalyses.map((a: any) => (!a.brand_mentioned || a.sentiment_score == null) ? 0 : (a.sentiment_score + 1) * 50);
+        const sentS = sentVals.reduce((s: number, v: number) => s + v, 0) / sentVals.length;
+        modelAvis[model] = Math.round((presence * 0.40 + rankS * 0.35 + sentS * 0.25) * 10) / 10;
       }
       perModelAviByRun.set(run.id, modelAvis);
     }

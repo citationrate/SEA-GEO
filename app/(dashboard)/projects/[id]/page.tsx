@@ -101,14 +101,15 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         const presence = (mentioned / modelAnalyses.length) * 100;
         const rankVals = modelAnalyses.map((a: any) => {
           if (!a.brand_mentioned || !a.brand_rank || a.brand_rank <= 0) return 0;
-          return 1 / a.brand_rank;
+          return Math.max(0, 100 - (a.brand_rank - 1) * 20);
         });
-        const avgRankInv = rankVals.reduce((s: number, v: number) => s + v, 0) / rankVals.length;
-        const rankS = avgRankInv * 100;
-        const withSent = modelAnalyses.filter((a: any) => a.sentiment_score != null);
-        const sentAvg = withSent.length > 0 ? withSent.reduce((s: number, a: any) => s + a.sentiment_score, 0) / withSent.length : 0.5;
-        const sentS = ((sentAvg + 1) / 2) * 100;
-        modelAvis[model] = Math.round((presence * 0.35 + rankS * 0.25 + sentS * 0.20 + 100 * 0.20) * 10) / 10;
+        const rankS = rankVals.reduce((s: number, v: number) => s + v, 0) / rankVals.length;
+        const sentVals = modelAnalyses.map((a: any) => {
+          if (!a.brand_mentioned || a.sentiment_score == null) return 0;
+          return (a.sentiment_score + 1) * 50;
+        });
+        const sentS = sentVals.reduce((s: number, v: number) => s + v, 0) / sentVals.length;
+        modelAvis[model] = Math.round((presence * 0.40 + rankS * 0.35 + sentS * 0.25) * 10) / 10;
       }
       perModelAviByRun.set(run.id, modelAvis);
     }
@@ -195,12 +196,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               <p className="font-display font-bold text-3xl text-primary">{(lastAvi as any).avi_score}</p>
             </div>
             <div className="h-12 w-px bg-border" />
-            <div className="grid grid-cols-4 gap-4 flex-1">
+            <div className="grid grid-cols-3 gap-4 flex-1">
               {[
-                { label: "Presence", value: (lastAvi as any).presence_score },
-                { label: "Rank", value: (lastAvi as any).rank_score },
+                { label: "Presenza", value: (lastAvi as any).presence_score },
+                { label: "Posizione", value: (lastAvi as any).rank_score },
                 { label: "Sentiment", value: (lastAvi as any).sentiment_score },
-                { label: "Stability", value: (lastAvi as any).stability_score },
               ].map((c) => (
                 <div key={c.label} className="text-center">
                   <p className="text-xs text-muted-foreground">{c.label}</p>

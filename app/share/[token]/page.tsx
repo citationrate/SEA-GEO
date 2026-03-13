@@ -18,7 +18,7 @@ interface ReportData {
     presence: number;
     rank: number;
     sentiment: number;
-    stability: number;
+    consistency: number;
   } | null;
   mentionRate: number;
   competitors: { name: string; count: number }[];
@@ -120,10 +120,23 @@ export default function SharedReportPage() {
           <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6">
             <AVIRing score={avi.score} />
             <div className="space-y-3 self-center">
-              <ComponentBar label="Prominence" value={avi.presence} color="#e8956d" />
-              <ComponentBar label="Rank" value={avi.rank} color="#7eb3d4" />
+              <ComponentBar label="Presenza" value={avi.presence} color="#e8956d" />
+              <ComponentBar label="Posizione" value={avi.rank} color="#7eb3d4" />
               <ComponentBar label="Sentiment" value={avi.sentiment} color="#7eb89a" />
-              <ComponentBar label="Consistency" value={avi.stability} color="#c4a882" />
+              {/* Consistency badge — separate from AVI */}
+              <div className="pt-2 border-t border-gray-700">
+                <span className={`inline-block px-3 py-1 rounded text-xs font-medium ${
+                  avi.consistency > 80
+                    ? "bg-green-900/40 text-green-400"
+                    : avi.consistency >= 50
+                    ? "bg-yellow-900/40 text-yellow-400"
+                    : "bg-red-900/40 text-red-400"
+                }`}>
+                  Affidabilità: {Math.round(avi.consistency)} — {
+                    avi.consistency > 80 ? "Alta affidabilità" : avi.consistency >= 50 ? "Affidabilità media" : "Bassa affidabilità"
+                  }
+                </span>
+              </div>
             </div>
           </div>
         )}

@@ -24,25 +24,25 @@ export function AVIRing({ score, trend, components, noBrandMentions }: AVIRingPr
     : trend > 0 ? "text-success" : "text-destructive";
 
   const COMP_COLORS: Record<string, string> = {
-    Prominence:  "#e8956d",
-    Rank:        "#7eb3d4",
-    Sentiment:   "#7eb89a",
-    Consistency: "#c4a882",
+    Presenza:   "#e8956d",
+    Posizione:  "#7eb3d4",
+    Sentiment:  "#7eb89a",
   };
 
   const COMP_TOOLTIPS: Record<string, string> = {
-    Prominence:  "Quanto spesso il brand appare nelle risposte AI",
-    Rank:        "Posizione media del brand quando viene citato",
-    Sentiment:   "Tono con cui l'AI descrive il brand (positivo/negativo)",
-    Consistency: "Quanto le risposte sono coerenti tra diversi modelli e run",
+    Presenza:   "% risposte AI in cui il brand viene citato",
+    Posizione:  "Posizione media mediata su tutti i prompt",
+    Sentiment:  "Tono delle citazioni mediato su tutti i prompt",
   };
 
-  const comps = components ?? [
-    { label: "Prominence", v: null },
-    { label: "Rank",       v: null },
-    { label: "Sentiment",  v: null },
-    { label: "Consistency", v: null },
+  // Separate consistency from AVI components
+  const allComps = components ?? [
+    { label: "Presenza",  v: null },
+    { label: "Posizione", v: null },
+    { label: "Sentiment", v: null },
   ];
+  const consistencyComp = allComps.find(c => c.label === "Affidabilità");
+  const comps = allComps.filter(c => c.label !== "Affidabilità");
 
   return (
     <div data-tour="avi-ring" className="card p-5 h-full flex flex-col items-center gap-3">
@@ -100,6 +100,23 @@ export function AVIRing({ score, trend, components, noBrandMentions }: AVIRingPr
               </div>
             </div>
           ))}
+          {/* Consistency badge — separate from AVI */}
+          {consistencyComp && consistencyComp.v != null && (
+            <div className="pt-2 border-t border-border mt-2">
+              <div className="flex items-center gap-1.5">
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-sm font-mono text-[11px] font-medium ${
+                  consistencyComp.v > 80
+                    ? "bg-green-500/15 text-green-400 border border-green-500/30"
+                    : consistencyComp.v >= 50
+                    ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
+                    : "bg-red-500/15 text-red-400 border border-red-500/30"
+                }`}>
+                  {consistencyComp.v > 80 ? "Alta affidabilità" : consistencyComp.v >= 50 ? "Affidabilità media" : "Bassa affidabilità — esegui più run"}
+                </span>
+                <InfoTooltip text="Stabilità delle risposte tra run diverse. Non influisce sull'AVI." />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -192,9 +209,9 @@ export function AVITrend({ data, models }: { data?: TrendDataPoint[]; models?: s
   }
 
   const legendItems = [
-    { label: "AVI",        color: "#7eb89a" },
-    { label: "Prominence", color: "#e8956d" },
-    { label: "Sentiment",  color: "#7eb3d4" },
+    { label: "AVI",      color: "#7eb89a" },
+    { label: "Presenza", color: "#e8956d" },
+    { label: "Sentiment",color: "#7eb3d4" },
     ...(showModels ? modelKeys.map((m) => ({ label: shortModelName(m), color: getModelColor(m) })) : []),
   ];
 
