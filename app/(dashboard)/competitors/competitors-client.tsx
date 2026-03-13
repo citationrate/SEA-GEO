@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Trophy, Users, Sparkles,
+  Trophy, Users, Sparkles, Crown,
   Loader2, X, Tag, BarChart3, MessageSquareQuote,
   Check, Info,
 } from "lucide-react";
@@ -47,20 +47,6 @@ const COMP_TYPE_CONFIG: Record<string, { label: string; border: string; text: st
 };
 
 /* ─── Helpers ─── */
-function sentimentLabel(s: number | null): { text: string; cls: string } {
-  if (s == null) return { text: "N/D", cls: "text-muted-foreground" };
-  if (s >= 0.6) return { text: "Positivo", cls: "text-success" };
-  if (s >= 0.4) return { text: "Neutro", cls: "text-muted-foreground" };
-  return { text: "Negativo", cls: "text-destructive" };
-}
-
-function sentimentDot(s: number | null): string {
-  if (s == null) return "bg-muted-foreground";
-  if (s >= 0.6) return "bg-success";
-  if (s >= 0.4) return "bg-muted-foreground";
-  return "bg-destructive";
-}
-
 const FUNNEL_LABELS: Record<string, { text: string; cls: string }> = {
   tofu: { text: "TOFU", cls: "badge-primary" },
   mofu: { text: "MOFU", cls: "badge-success" },
@@ -93,6 +79,15 @@ export function CompetitorsClient({
   const [analyzeModel, setAnalyzeModel] = useState<string | null>(null);
   const [drawerTheme, setDrawerTheme] = useState<{ compName: string; theme: MacroTheme } | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [isPro, setIsPro] = useState(false);
+  const [showProGate, setShowProGate] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((r) => r.json())
+      .then((p) => setIsPro(p?.plan === "pro" || p?.plan === "agency"))
+      .catch(() => {});
+  }, []);
 
   const filteredRows = typeFilter ? rows.filter((r) => r.competitorType === typeFilter) : rows;
 
@@ -149,17 +144,41 @@ export function CompetitorsClient({
               ))}
             </select>
           )}
-          {/* Analyze button */}
+          {/* Analyze button (Pro only) */}
           {rows.length > 0 && (
-            <button
-              data-tour="analyze-contexts-btn"
-              onClick={analyzeContexts}
-              disabled={analyzing}
-              className="flex items-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-3.5 py-2 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
-            >
-              {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {analyzing ? "Analisi in corso..." : "Analizza Contesti con AI"}
-            </button>
+            <div className="relative">
+              <button
+                data-tour="analyze-contexts-btn"
+                onClick={() => {
+                  if (!isPro) { setShowProGate(true); return; }
+                  analyzeContexts();
+                }}
+                disabled={analyzing}
+                className={`flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-[2px] transition-colors disabled:opacity-50 ${
+                  isPro
+                    ? "bg-primary text-primary-foreground hover:bg-primary/85"
+                    : "bg-[#c4a882]/20 text-[#c4a882] border border-[#c4a882]/30 cursor-default"
+                }`}
+              >
+                {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {analyzing ? "Analisi in corso..." : "Analizza Contesti con AI"}
+                {!isPro && (
+                  <span className="inline-flex items-center gap-0.5 font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px] ml-1">
+                    <Crown className="w-2.5 h-2.5" /> PRO
+                  </span>
+                )}
+              </button>
+              {showProGate && !isPro && (
+                <div className="absolute right-0 top-full mt-2 z-30 w-64 p-3 rounded-[2px] border border-[#c4a882]/30 bg-[#111416] shadow-xl text-sm">
+                  <p className="text-foreground font-medium mb-1">Funzionalità disponibile nel piano Pro</p>
+                  <p className="text-muted-foreground text-xs mb-2">Passa a Pro per analizzare i contesti competitivi con AI.</p>
+                  <div className="flex items-center justify-between">
+                    <a href="/settings#piano" className="text-[#c4a882] text-xs font-semibold hover:text-[#c4a882]/80 transition-colors">Passa a Pro &rarr;</a>
+                    <button onClick={() => setShowProGate(false)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Chiudi</button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
         </div>
@@ -336,7 +355,6 @@ function CompetitorCard({
   rank: number;
   onThemeClick: (compName: string, theme: MacroTheme) => void;
 }) {
-  const sentiment = sentimentLabel(row.avgSentiment);
   const themes = row.themeAnalysis?.macro_themes ?? [];
   const summary = row.themeAnalysis?.positioning_summary;
 
@@ -451,11 +469,6 @@ function CompetitorCard({
             <span key={qt} className="badge badge-muted">{qt.toUpperCase()}</span>
           );
         })}
-
-        <span className="flex items-center gap-1.5 text-xs">
-          <span className={`w-2 h-2 rounded-full ${sentimentDot(row.avgSentiment)}`} />
-          <span className={sentiment.cls}>{sentiment.text}</span>
-        </span>
 
         <span className="text-xs text-muted-foreground">
           {row.analysisCount} analisi
