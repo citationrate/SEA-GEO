@@ -330,7 +330,7 @@ export default function NewProjectPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="card p-6 space-y-5">
+      <form onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA" && (e.target as HTMLElement).getAttribute("type") !== "submit") e.preventDefault(); }} className="card p-6 space-y-5">
         {/* Nome progetto */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Nome progetto</label>
