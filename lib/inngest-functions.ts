@@ -212,7 +212,7 @@ async function computeCompetitorAVI(
   if (upsertRows.length > 0) {
     console.log(`[inngest] competitor_avi: upserting ${upsertRows.length} rows for run ${runId}`, upsertRows.map(r => `${r.competitor_name}=${r.avi_score}`).join(", "));
     const { error } = await (supabase.from("competitor_avi") as any)
-      .upsert(upsertRows, { onConflict: "project_id,run_id,competitor_name" });
+      .upsert(upsertRows, { onConflict: "run_id,competitor_name" });
     if (error) console.error("[inngest] competitor_avi upsert error:", error.message);
     else console.log("[inngest] competitor_avi upsert OK");
   } else {
