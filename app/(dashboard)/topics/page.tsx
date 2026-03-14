@@ -1,8 +1,8 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
 import { resolveProjectId } from "@/lib/utils/resolve-project";
-import { Tag } from "lucide-react";
 import { TopicsClient } from "./topics-client";
+import { TopicsHeader, TopicsEmpty } from "./topics-header";
 
 export const metadata = { title: "Topic" };
 
@@ -130,25 +130,14 @@ export default async function TopicsPage({
   return (
     <div data-tour="topics-page" className="space-y-6 max-w-[1200px] animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <Tag className="w-6 h-6 text-accent" />
-          <div>
-            <h1 className="font-display font-bold text-2xl text-foreground">Topic</h1>
-            <p className="text-sm text-muted-foreground">
-              {topicItems.length} topic rilevanti emersi dalle risposte AI
-            </p>
-          </div>
-        </div>
+        <TopicsHeader count={topicItems.length} />
         <div className="flex items-center gap-3">
           <ProjectSelector projects={projectsList.map((p) => ({ id: p.id, name: p.name }))} />
         </div>
       </div>
 
       {topicItems.length === 0 ? (
-        <div className="card p-12 text-center">
-          <Tag className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground">Nessun topic trovato. Lancia un&apos;analisi per scoprirli.</p>
-        </div>
+        <TopicsEmpty />
       ) : (
         <TopicsClient topics={topicItems} brand={brand} />
       )}

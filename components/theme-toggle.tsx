@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { Sun, Moon } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 export function ThemeToggle() {
+  const { t } = useTranslation();
   const [light, setLight] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -25,7 +27,7 @@ export function ThemeToggle() {
     <button
       onClick={toggle}
       className="w-8 h-8 flex items-center justify-center rounded-[2px] border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
-      title={light ? "Passa al tema scuro" : "Passa al tema chiaro"}
+      title={light ? t("theme.switchDark") : t("theme.switchLight")}
     >
       {light ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
     </button>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Syne, DM_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { LanguageProvider } from "@/lib/i18n/context";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -33,7 +34,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it" suppressHydrationWarning>
+    <html suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
           try {
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}} />
       </head>
       <body className={`${cormorant.variable} ${syne.variable} ${dmMono.variable} font-sans antialiased`}>
+        <LanguageProvider>
         {children}
         <Toaster
           position="bottom-right"
@@ -56,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             },
           }}
         />
+        </LanguageProvider>
       </body>
     </html>
   );

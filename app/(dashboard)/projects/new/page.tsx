@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, X, Loader2, Lock, Check, ArrowRight, Crown, Search, ChevronDown } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import confetti from "canvas-confetti";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface ModelOption {
   id: string;
@@ -19,66 +20,6 @@ interface ProviderOption {
   models: ModelOption[];
   comingSoon?: boolean;
 }
-
-const AVAILABLE_PROVIDERS: ProviderOption[] = [
-  {
-    id: "openai",
-    label: "OpenAI",
-    badge: "ChatGPT",
-    models: [
-      { id: "gpt-4o-mini", label: "GPT-4o Mini", description: "Veloce, risposte concise" },
-      { id: "gpt-4o", label: "GPT-4o", description: "Preciso, risposte elaborate" },
-      { id: "gpt-5.4", label: "GPT-5.4", description: "Ultimo modello OpenAI, massima qualità" },
-      { id: "o1-mini", label: "o1 Mini", description: "Ragionamento approfondito" },
-    ],
-  },
-  {
-    id: "google",
-    label: "Google",
-    badge: "Gemini",
-    models: [
-      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", description: "Veloce, aggiornato" },
-      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", description: "Massima precisione" },
-    ],
-  },
-  {
-    id: "perplexity",
-    label: "Perplexity",
-    badge: "Sonar",
-    models: [
-      { id: "perplexity-sonar", label: "Sonar", description: "Web search in tempo reale" },
-      { id: "perplexity-sonar-pro", label: "Sonar Pro", description: "Web search avanzato, fonti più ricche" },
-    ],
-  },
-  {
-    id: "anthropic",
-    label: "Anthropic",
-    badge: "Claude",
-    models: [
-      { id: "claude-haiku", label: "Claude Haiku 4.5", description: "Veloce e diretto" },
-      { id: "claude-sonnet", label: "Claude Sonnet 4.5", description: "Bilanciato e preciso" },
-      { id: "claude-opus", label: "Claude Opus 4.5", description: "Massima qualità" },
-    ],
-  },
-  {
-    id: "xai",
-    label: "xAI",
-    badge: "Grok",
-    models: [
-      { id: "grok-3", label: "Grok 3", description: "Preciso e aggiornato" },
-      { id: "grok-3-mini", label: "Grok 3 Mini", description: "Veloce e diretto" },
-    ],
-  },
-  {
-    id: "microsoft",
-    label: "Microsoft",
-    badge: "Copilot",
-    comingSoon: true,
-    models: [
-      { id: "copilot-gpt4", label: "Copilot GPT-4o", description: "GPT-4o su infrastruttura Microsoft Azure" },
-    ],
-  },
-];
 
 const COUNTRIES = [
   "Globale / Worldwide",
@@ -136,6 +77,7 @@ const BASE_MODEL_LIMIT = 3;
 
 export default function NewProjectPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPlanSelector, setShowPlanSelector] = useState(false);
@@ -143,7 +85,79 @@ export default function NewProjectPage() {
   const [existingProjectCount, setExistingProjectCount] = useState<number | null>(null);
   const [isPro, setIsPro] = useState(false);
 
-  // Check how many projects the user has & pro status
+  const AVAILABLE_PROVIDERS: ProviderOption[] = [
+    {
+      id: "openai", label: "OpenAI", badge: "ChatGPT",
+      models: [
+        { id: "gpt-4o-mini", label: "GPT-4o Mini", description: t("modelDescriptions.gpt-4o-mini") },
+        { id: "gpt-4o", label: "GPT-4o", description: t("modelDescriptions.gpt-4o") },
+        { id: "gpt-5.4", label: "GPT-5.4", description: t("modelDescriptions.gpt-5.4") },
+        { id: "o1-mini", label: "o1 Mini", description: t("modelDescriptions.o1-mini") },
+      ],
+    },
+    {
+      id: "google", label: "Google", badge: "Gemini",
+      models: [
+        { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", description: t("modelDescriptions.gemini-2.5-flash") },
+        { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", description: t("modelDescriptions.gemini-2.5-pro") },
+      ],
+    },
+    {
+      id: "perplexity", label: "Perplexity", badge: "Sonar",
+      models: [
+        { id: "perplexity-sonar", label: "Sonar", description: t("modelDescriptions.perplexity-sonar") },
+        { id: "perplexity-sonar-pro", label: "Sonar Pro", description: t("modelDescriptions.perplexity-sonar-pro") },
+      ],
+    },
+    {
+      id: "anthropic", label: "Anthropic", badge: "Claude",
+      models: [
+        { id: "claude-haiku", label: "Claude Haiku 4.5", description: t("modelDescriptions.claude-haiku") },
+        { id: "claude-sonnet", label: "Claude Sonnet 4.5", description: t("modelDescriptions.claude-sonnet") },
+        { id: "claude-opus", label: "Claude Opus 4.5", description: t("modelDescriptions.claude-opus") },
+      ],
+    },
+    {
+      id: "xai", label: "xAI", badge: "Grok",
+      models: [
+        { id: "grok-3", label: "Grok 3", description: t("modelDescriptions.grok-3") },
+        { id: "grok-3-mini", label: "Grok 3 Mini", description: t("modelDescriptions.grok-3-mini") },
+      ],
+    },
+    {
+      id: "microsoft", label: "Microsoft", badge: "Copilot", comingSoon: true,
+      models: [
+        { id: "copilot-gpt4", label: "Copilot GPT-4o", description: t("modelDescriptions.copilot-gpt4") },
+      ],
+    },
+  ];
+
+  const SECTORS = [
+    { value: "Turismo", label: t("sectors.tourism") },
+    { value: "Alimentare", label: t("sectors.food") },
+    { value: "Bevande", label: t("sectors.beverages") },
+    { value: "Tech", label: t("sectors.tech") },
+    { value: "Moda", label: t("sectors.fashion") },
+    { value: "Finance", label: t("sectors.finance") },
+    { value: "Automotive", label: t("sectors.automotive") },
+    { value: "Pharma", label: t("sectors.pharma") },
+    { value: "Energia", label: t("sectors.energy") },
+    { value: "Altro", label: t("sectors.other") },
+  ];
+
+  const BRAND_TYPES = [
+    { value: "manufacturer", label: t("brandTypes.manufacturer") },
+    { value: "retailer", label: t("brandTypes.retailer") },
+    { value: "service", label: t("brandTypes.service") },
+    { value: "financial", label: t("brandTypes.financial") },
+    { value: "platform", label: t("brandTypes.platform") },
+    { value: "local", label: t("brandTypes.local") },
+    { value: "publisher", label: t("brandTypes.publisher") },
+    { value: "pharma", label: t("brandTypes.pharma") },
+    { value: "utility", label: t("brandTypes.utility") },
+    { value: "altro", label: t("brandTypes.other") },
+  ];
+
   useEffect(() => {
     fetch("/api/projects")
       .then((r) => r.ok ? r.json() : [])
@@ -171,7 +185,6 @@ export default function NewProjectPage() {
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const countryRef = useRef<HTMLDivElement>(null);
 
-  // Close country dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (countryRef.current && !countryRef.current.contains(e.target as Node)) {
@@ -186,7 +199,6 @@ export default function NewProjectPage() {
     c.toLowerCase().includes(countrySearch.toLowerCase())
   );
 
-  // Track which providers are active and which model is selected per provider
   const [activeProviders, setActiveProviders] = useState<Set<string>>(new Set(["openai"]));
   const [selectedModelPerProvider, setSelectedModelPerProvider] = useState<Record<string, string>>({
     openai: "gpt-4o-mini",
@@ -199,19 +211,15 @@ export default function NewProjectPage() {
     setActiveProviders((prev) => {
       const next = new Set(prev);
       if (next.has(provider.id)) {
-        // Always allow deselection (no minimum)
         next.delete(provider.id);
-        // Also clear the selected model for this provider
         setSelectedModelPerProvider((m) => {
           const copy = { ...m };
           delete copy[provider.id];
           return copy;
         });
       } else {
-        // Check limit for non-Pro users
         if (!isPro && next.size >= BASE_MODEL_LIMIT) return prev;
         next.add(provider.id);
-        // Set default model if none selected
         if (!selectedModelPerProvider[provider.id]) {
           setSelectedModelPerProvider((m) => ({ ...m, [provider.id]: provider.models[0].id }));
         }
@@ -223,7 +231,6 @@ export default function NewProjectPage() {
   function selectModel(providerId: string, modelId: string) {
     const currentModel = selectedModelPerProvider[providerId];
     if (currentModel === modelId) {
-      // Clicking selected model deselects the entire provider
       setActiveProviders((prev) => {
         const next = new Set(prev);
         next.delete(providerId);
@@ -239,7 +246,6 @@ export default function NewProjectPage() {
     }
   }
 
-  // Build models_config array from active providers
   function getModelsConfig(): string[] {
     return AVAILABLE_PROVIDERS
       .filter((p) => activeProviders.has(p.id))
@@ -263,7 +269,7 @@ export default function NewProjectPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (activeProviders.size === 0) {
-      setError("Seleziona almeno un modello AI");
+      setError(t("projects.selectAtLeastOne"));
       return;
     }
     setError("");
@@ -289,10 +295,9 @@ export default function NewProjectPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Errore durante il salvataggio");
+        throw new Error(data.error || t("projects.saveError"));
       }
 
-      // First project → show plan selector
       if (existingProjectCount === 0) {
         setNewProjectId(data.id);
         setShowPlanSelector(true);
@@ -308,7 +313,7 @@ export default function NewProjectPage() {
       router.push(`/projects/${data.id}`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore sconosciuto");
+      setError(err instanceof Error ? err.message : t("projects.unknownError"));
     } finally {
       setLoading(false);
     }
@@ -317,145 +322,88 @@ export default function NewProjectPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div>
-        <a
-          href="/projects"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
-        >
+        <a href="/projects" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
           <ArrowLeft className="w-4 h-4" />
-          Torna ai progetti
+          {t("projects.backToProjects")}
         </a>
-        <h1 className="font-display font-bold text-2xl text-foreground">Nuovo Progetto</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Configura il brand e il contesto di mercato per l&apos;analisi AI
-        </p>
+        <h1 className="font-display font-bold text-2xl text-foreground">{t("projects.newProjectTitle")}</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">{t("projects.newProjectSubtitle")}</p>
       </div>
 
       <form onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA" && (e.target as HTMLElement).getAttribute("type") !== "submit") e.preventDefault(); }} className="card p-6 space-y-5">
         {/* Nome progetto */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Nome progetto</label>
-          <input
-            type="text"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Es. Analisi Brand 2026"
-            className="input-base"
-          />
+          <label className="text-sm font-medium text-foreground">{t("projects.projectName")}</label>
+          <input type="text" required value={name} onChange={(e) => setName(e.target.value)}
+            placeholder={t("projects.projectNamePlaceholder")} className="input-base" />
         </div>
 
         {/* Brand rilevato */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-            Brand rilevato
-            <InfoTooltip text="Il brand che verrà cercato nelle risposte AI" />
+            {t("projects.targetBrand")}
+            <InfoTooltip text={t("projects.targetBrandTooltip")} />
           </label>
-          <input
-            type="text"
-            required
-            value={targetBrand}
-            onChange={(e) => setTargetBrand(e.target.value)}
-            placeholder="Es. Lumora"
-            className="input-base"
-          />
+          <input type="text" required value={targetBrand} onChange={(e) => setTargetBrand(e.target.value)}
+            placeholder={t("projects.targetBrandPlaceholder")} className="input-base" />
         </div>
 
         {/* Settore e Tipo Brand */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              Settore
-              <InfoTooltip text="Usato per suggerire query rilevanti per il tuo mercato" />
+              {t("projects.sector")}
+              <InfoTooltip text={t("projects.sectorTooltip")} />
             </label>
-            <select
-              value={sector}
-              onChange={(e) => { setSector(e.target.value); if (e.target.value !== "Altro") setCustomSector(""); }}
-              className="input-base"
-            >
-              <option value="">Seleziona...</option>
-              {["Turismo", "Alimentare", "Bevande", "Tech", "Moda", "Finance", "Automotive", "Pharma", "Energia", "Altro"].map((s) => (
-                <option key={s} value={s}>{s}</option>
+            <select value={sector} onChange={(e) => { setSector(e.target.value); if (e.target.value !== "Altro") setCustomSector(""); }} className="input-base">
+              <option value="">{t("projects.selectSector")}</option>
+              {SECTORS.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
             {sector === "Altro" && (
-              <input
-                type="text"
-                value={customSector}
-                onChange={(e) => setCustomSector(e.target.value)}
-                placeholder="Inserisci il settore..."
-                className="input-base mt-1.5"
-              />
+              <input type="text" value={customSector} onChange={(e) => setCustomSector(e.target.value)}
+                placeholder={t("projects.selectSector")} className="input-base mt-1.5" />
             )}
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              Tipo Brand
-              <InfoTooltip text="Aiuta l'AI a classificare correttamente i competitor" />
+              {t("projects.brandType")}
+              <InfoTooltip text={t("projects.brandTypeTooltip")} />
             </label>
-            <select
-              value={brandType}
-              onChange={(e) => { setBrandType(e.target.value); if (e.target.value !== "altro") setCustomBrandType(""); }}
-              className="input-base"
-            >
-              <option value="manufacturer">Produttore / Brand</option>
-              <option value="retailer">Retailer / GDO</option>
-              <option value="service">Servizio / Subscription</option>
-              <option value="financial">Finanziario / Assicurativo</option>
-              <option value="platform">Piattaforma / Marketplace</option>
-              <option value="local">Business Locale / Catena</option>
-              <option value="publisher">Media / Editore / Publisher</option>
-              <option value="pharma">Pharma / Healthcare</option>
-              <option value="utility">Utility / Energia / Telco</option>
-              <option value="altro">Altro</option>
+            <select value={brandType} onChange={(e) => { setBrandType(e.target.value); if (e.target.value !== "altro") setCustomBrandType(""); }} className="input-base">
+              {BRAND_TYPES.map((bt) => (
+                <option key={bt.value} value={bt.value}>{bt.label}</option>
+              ))}
             </select>
             {brandType === "altro" && (
-              <input
-                type="text"
-                value={customBrandType}
-                onChange={(e) => setCustomBrandType(e.target.value)}
-                placeholder="Inserisci il tipo di brand..."
-                className="input-base mt-1.5"
-              />
+              <input type="text" value={customBrandType} onChange={(e) => setCustomBrandType(e.target.value)}
+                placeholder={t("projects.brandType")} className="input-base mt-1.5" />
             )}
           </div>
         </div>
 
-        {/* Sito web ufficiale */}
+        {/* Sito web */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-            Sito web ufficiale
-            <InfoTooltip text="Usato per rilevare le fonti owned nei risultati" />
+            {t("projects.website")}
+            <InfoTooltip text={t("projects.websiteTooltip")} />
           </label>
-          <input
-            type="text"
-            value={websiteUrl}
-            onChange={(e) => setWebsiteUrl(e.target.value)}
-            placeholder="Es. lumora.it"
-            className="input-base"
-          />
+          <input type="text" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)}
+            placeholder={t("projects.websitePlaceholder")} className="input-base" />
         </div>
 
-        {/* Competitor conosciuti */}
+        {/* Competitor */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Competitor conosciuti</label>
-          <input
-            type="text"
-            value={competitorInput}
-            onChange={(e) => setCompetitorInput(e.target.value)}
-            onKeyDown={handleCompetitorKeyDown}
-            placeholder="Scrivi un nome e premi Invio"
-            className="input-base"
-          />
+          <label className="text-sm font-medium text-foreground">{t("projects.knownCompetitors")}</label>
+          <input type="text" value={competitorInput} onChange={(e) => setCompetitorInput(e.target.value)}
+            onKeyDown={handleCompetitorKeyDown} placeholder={t("projects.competitorPlaceholder")} className="input-base" />
           {competitors.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
               {competitors.map((c) => (
                 <span key={c} className="badge badge-primary flex items-center gap-1">
                   {c}
-                  <button
-                    type="button"
-                    onClick={() => removeCompetitor(c)}
-                    className="hover:text-foreground transition-colors"
-                  >
+                  <button type="button" onClick={() => removeCompetitor(c)} className="hover:text-foreground transition-colors">
                     <X className="w-3 h-3" />
                   </button>
                 </span>
@@ -464,45 +412,32 @@ export default function NewProjectPage() {
           )}
         </div>
 
-        {/* Contesto di mercato */}
+        {/* Contesto */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Contesto di mercato</label>
-          <textarea
-            value={marketContext}
-            onChange={(e) => setMarketContext(e.target.value)}
-            placeholder="Descrivi il settore, il posizionamento e il pubblico target..."
-            rows={4}
-            className="input-base resize-none"
-          />
+          <label className="text-sm font-medium text-foreground">{t("projects.marketContext")}</label>
+          <textarea value={marketContext} onChange={(e) => setMarketContext(e.target.value)}
+            placeholder={t("projects.marketContextPlaceholder")} rows={4} className="input-base resize-none" />
         </div>
 
         {/* Lingua e Paese */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Lingua</label>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as "it" | "en")}
-              className="input-base"
-            >
+            <label className="text-sm font-medium text-foreground">{t("projects.language")}</label>
+            <select value={language} onChange={(e) => setLanguage(e.target.value as "it" | "en")} className="input-base">
               <option value="it">Italiano</option>
               <option value="en">English</option>
             </select>
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              Paese
-              <InfoTooltip text="Determina la lingua e il contesto geografico dell'analisi" />
+              {t("projects.country")}
+              <InfoTooltip text={t("projects.countryTooltip")} />
             </label>
-            {/* Searchable multi-select country dropdown */}
             <div ref={countryRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
-                className="input-base w-full flex items-center justify-between text-left"
-              >
+              <button type="button" onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
+                className="input-base w-full flex items-center justify-between text-left">
                 <span className={countries.length > 0 ? "text-foreground" : "text-muted-foreground"}>
-                  {countries.length > 0 ? `${countries.length} selezionat${countries.length === 1 ? "o" : "i"}` : "Seleziona paesi..."}
+                  {countries.length > 0 ? `${countries.length} ${countries.length === 1 ? t("projects.selected") : t("projects.selectedPlural")}` : t("projects.selectCountries")}
                 </span>
                 <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
@@ -523,41 +458,27 @@ export default function NewProjectPage() {
                   <div className="p-2 border-b border-border">
                     <div className="flex items-center gap-2 input-base">
                       <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      <input
-                        type="text"
-                        value={countrySearch}
-                        onChange={(e) => setCountrySearch(e.target.value)}
-                        placeholder="Cerca paese..."
-                        className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground flex-1"
-                        autoFocus
-                      />
+                      <input type="text" value={countrySearch} onChange={(e) => setCountrySearch(e.target.value)}
+                        placeholder={t("projects.searchCountry")}
+                        className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground flex-1" autoFocus />
                     </div>
                   </div>
                   <div className="overflow-y-auto max-h-44">
                     {filteredCountries.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-3">Nessun risultato</p>
+                      <p className="text-xs text-muted-foreground text-center py-3">{t("common.noResults")}</p>
                     ) : (
                       filteredCountries.map((c) => {
                         const isSelected = countries.includes(c);
                         return (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => {
-                              setCountries(isSelected ? countries.filter((x) => x !== c) : [...countries, c]);
-                            }}
+                          <button key={c} type="button"
+                            onClick={() => { setCountries(isSelected ? countries.filter((x) => x !== c) : [...countries, c]); }}
                             className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
-                              isSelected
-                                ? "bg-primary/10 text-primary font-medium"
-                                : "text-foreground hover:bg-muted/30"
-                            }`}
-                          >
+                              isSelected ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-muted/30"
+                            }`}>
                             <div className={`w-3.5 h-3.5 rounded-[2px] border flex items-center justify-center shrink-0 ${
                               isSelected ? "border-primary bg-primary" : "border-muted-foreground"
                             }`}>
-                              {isSelected && (
-                                <Check className="w-2.5 h-2.5 text-primary-foreground" />
-                              )}
+                              {isSelected && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
                             </div>
                             {c}
                           </button>
@@ -571,12 +492,12 @@ export default function NewProjectPage() {
           </div>
         </div>
 
-        {/* Modelli AI - Two-level provider → model */}
+        {/* Modelli AI */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Modelli AI</label>
+          <label className="text-sm font-medium text-foreground">{t("projects.aiModels")}</label>
           <p className="text-xs text-muted-foreground">
-            Seleziona i provider e il modello specifico per ogni analisi
-            {!isPro && ` (max ${BASE_MODEL_LIMIT})`}
+            {t("projects.selectProviderModel")}
+            {!isPro && ` (${t("projects.maxModels").replace("{n}", String(BASE_MODEL_LIMIT))})`}
           </p>
           <div className="space-y-2">
             {AVAILABLE_PROVIDERS.map((provider) => {
@@ -586,27 +507,15 @@ export default function NewProjectPage() {
               const isDisabled = isSoon || (!isActive && atLimit);
 
               return (
-                <div
-                  key={provider.id}
+                <div key={provider.id}
                   className={`rounded-sm border transition-all ${
-                    isSoon
-                      ? "border-border opacity-50"
-                      : isActive
-                        ? "border-primary/50 bg-primary/5"
-                        : isDisabled
-                          ? "border-border opacity-40"
-                          : "border-border"
-                  }`}
-                >
-                  {/* Provider header */}
-                  <button
-                    type="button"
-                    onClick={() => !isDisabled && toggleProvider(provider)}
-                    disabled={isDisabled}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${
-                      isDisabled ? "cursor-not-allowed" : "cursor-pointer"
-                    }`}
-                  >
+                    isSoon ? "border-border opacity-50"
+                      : isActive ? "border-primary/50 bg-primary/5"
+                      : isDisabled ? "border-border opacity-40"
+                      : "border-border"
+                  }`}>
+                  <button type="button" onClick={() => !isDisabled && toggleProvider(provider)} disabled={isDisabled}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
                     <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${
                       isActive ? "border-primary bg-primary" : "border-muted-foreground"
                     }`}>
@@ -623,32 +532,22 @@ export default function NewProjectPage() {
                     )}
                   </button>
 
-                  {/* Model radio buttons */}
                   {isActive && (
                     <div className="px-4 pb-3 pt-0 space-y-0.5">
                       {provider.models.map((model) => {
                         const isSelected = currentModel === model.id;
                         return (
-                          <label
-                            key={model.id}
-                            onClick={() => selectModel(provider.id, model.id)}
+                          <label key={model.id} onClick={() => selectModel(provider.id, model.id)}
                             className={`flex items-center gap-2 p-2 rounded-[2px] cursor-pointer transition-colors ${
-                              isSelected
-                                ? "bg-primary/10"
-                                : "hover:bg-muted/30"
-                            }`}
-                          >
+                              isSelected ? "bg-primary/10" : "hover:bg-muted/30"
+                            }`}>
                             <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
                               isSelected ? "border-primary" : "border-muted-foreground"
                             }`}>
-                              {isSelected && (
-                                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                              )}
+                              {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <span className={`text-sm font-medium ${
-                                isSelected ? "text-primary" : "text-foreground"
-                              }`}>{model.label}</span>
+                              <span className={`text-sm font-medium ${isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
                               <p className="text-xs text-muted-foreground">{model.description}</p>
                             </div>
                           </label>
@@ -661,95 +560,65 @@ export default function NewProjectPage() {
             })}
           </div>
 
-          {/* Model counter */}
           <div className="flex items-center justify-between">
             <div className="flex items-start gap-2">
               <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground">
-                I modelli selezionati saranno fissi per tutta la durata del progetto per garantire dati comparabili nel tempo.
-              </p>
+              <p className="text-xs text-muted-foreground">{t("projects.modelsFixed")}</p>
             </div>
             <p className="text-xs text-muted-foreground shrink-0 ml-4">
               <span className="text-foreground font-bold">{activeProviders.size}</span>
-              {isPro ? " modelli selezionati" : ` / ${BASE_MODEL_LIMIT} modelli`}
+              {isPro ? ` ${t("projects.modelsSelected")}` : ` / ${BASE_MODEL_LIMIT} ${t("projects.modelsOf")}`}
             </p>
           </div>
 
-          {/* Limit warning for Base plan */}
           {atLimit && (
             <p className="text-xs text-[#c4a882]">
-              Hai raggiunto il limite di {BASE_MODEL_LIMIT} modelli AI per il piano Base. Passa a Pro per selezionare tutti i modelli.
+              {t("projects.modelLimitReached").replace("{n}", String(BASE_MODEL_LIMIT))}
             </p>
           )}
         </div>
 
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={loading || activeProviders.size === 0}
-          className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
-        >
+        <button type="submit" disabled={loading || activeProviders.size === 0}
+          className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50">
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-          {loading ? "Salvataggio..." : "Crea Progetto"}
+          {loading ? t("common.saving") : t("projects.createProject")}
         </button>
       </form>
 
-      {/* Plan selector — shown after first project creation */}
+      {/* Plan selector */}
       {showPlanSelector && newProjectId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
           <div className="relative w-full max-w-2xl bg-[#111416] border border-[rgba(255,255,255,0.08)] rounded-lg shadow-2xl overflow-hidden animate-fade-in">
             <div className="px-8 py-8 space-y-6">
               <div className="text-center space-y-2">
-                <h2 className="font-display font-bold text-2xl text-foreground">
-                  Scegli il tuo piano
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Inizia gratis o sblocca tutte le funzionalit&agrave; con Pro
-                </p>
+                <h2 className="font-display font-bold text-2xl text-foreground">{t("projects.choosePlan")}</h2>
+                <p className="text-sm text-muted-foreground">{t("projects.startFreeOrPro")}</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Starter Plan */}
+                {/* Starter */}
                 <div className="rounded-lg border border-border p-6 space-y-4">
                   <div>
-                    <h3 className="font-display font-bold text-lg text-foreground">Base (Starter)</h3>
-                    <p className="text-2xl font-bold text-foreground mt-1">Gratis</p>
+                    <h3 className="font-display font-bold text-lg text-foreground">{t("settings.baseStarter")}</h3>
+                    <p className="text-2xl font-bold text-foreground mt-1">{t("settings.free")}</p>
                   </div>
                   <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0" />
-                      100 query / mese
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0" />
-                      Max 3 progetti
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0" />
-                      Max 3 modelli AI
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0" />
-                      AVI base
-                    </li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary shrink-0" />100 {t("settings.queriesMonth")}</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary shrink-0" />{t("settings.maxProjects").replace("{n}", "3")}</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary shrink-0" />{t("settings.maxModels").replace("{n}", "3")}</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary shrink-0" />{t("settings.basicAvi")}</li>
                   </ul>
-                  <button
-                    onClick={() => {
-                      router.push(`/projects/${newProjectId}`);
-                      router.refresh();
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-border text-foreground rounded-[2px] text-sm font-semibold hover:bg-surface-2 transition-colors"
-                  >
-                    Inizia gratis
+                  <button onClick={() => { router.push(`/projects/${newProjectId}`); router.refresh(); }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-border text-foreground rounded-[2px] text-sm font-semibold hover:bg-surface-2 transition-colors">
+                    {t("projects.startFree")}
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
 
-                {/* Pro Plan */}
+                {/* Pro */}
                 <div className="rounded-lg border border-[#c4a882]/30 bg-[#c4a882]/5 p-6 space-y-4 relative">
                   <div className="absolute top-3 right-3">
                     <span className="inline-flex items-center gap-1 font-mono text-[0.75rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">
@@ -763,40 +632,17 @@ export default function NewProjectPage() {
                     </p>
                   </div>
                   <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
-                      500 query / mese
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
-                      Max 10 progetti
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
-                      Tutti i modelli AI sbloccati
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
-                      10 rilevazioni Confronto / mese
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
-                      Genera Prompt con AI
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-[#c4a882] shrink-0" />
-                      Dataset + AVI completo
-                    </li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#c4a882] shrink-0" />500 {t("settings.queriesMonth")}</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#c4a882] shrink-0" />{t("settings.maxProjects").replace("{n}", "10")}</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#c4a882] shrink-0" />{t("settings.allModelsUnlocked")}</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#c4a882] shrink-0" />10 {t("settings.compareDetections")}</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#c4a882] shrink-0" />{t("settings.generatePromptAI")}</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#c4a882] shrink-0" />{t("settings.datasetPlusAvi")}</li>
                   </ul>
-                  <button
-                    onClick={() => {
-                      router.push("/settings#piano");
-                      router.refresh();
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#c4a882] text-black rounded-[2px] text-sm font-semibold hover:bg-[#c4a882]/80 transition-colors"
-                  >
+                  <button onClick={() => { router.push("/settings#piano"); router.refresh(); }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#c4a882] text-black rounded-[2px] text-sm font-semibold hover:bg-[#c4a882]/80 transition-colors">
                     <Crown className="w-4 h-4" />
-                    Passa a Pro
+                    {t("projects.goToPro")}
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>

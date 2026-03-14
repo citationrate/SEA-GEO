@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { useTranslation } from "@/lib/i18n/context";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const supabase = createClient();
+  const { t } = useTranslation();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,9 +39,9 @@ export function ForgotPasswordForm() {
             <path d="M22 2L15 22L11 13L2 9L22 2Z" />
           </svg>
         </div>
-        <p className="text-sm text-foreground font-sans font-medium">Email inviata!</p>
+        <p className="text-sm text-foreground font-sans font-medium">{t("auth.emailSent")}</p>
         <p className="text-xs text-muted-foreground font-sans">
-          Controlla la tua email per il link di reset della password.
+          {t("auth.checkEmail")}
         </p>
       </div>
     );
@@ -48,26 +50,19 @@ export function ForgotPasswordForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-3">
       <div>
-        <label className="block text-xs text-muted-foreground mb-1.5 font-sans font-medium">Email</label>
-        <input
-          type="email"
-          required
-          placeholder="nome@azienda.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="input-base"
-        />
+        <label className="block text-xs text-muted-foreground mb-1.5 font-sans font-medium">{t("auth.email")}</label>
+        <input type="email" required placeholder={t("auth.emailPlaceholder")}
+          value={email} onChange={(e) => setEmail(e.target.value)} className="input-base" />
       </div>
       <button
-        type="submit"
-        disabled={loading}
+        type="submit" disabled={loading}
         className="w-full font-sans font-semibold uppercase tracking-wide rounded-[2px] px-4 py-2.5 text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-1"
         style={{ background: "var(--primary)", color: "var(--background)" }}
         onMouseEnter={(e) => { e.currentTarget.style.background = "var(--cream)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.transform = "none"; }}
       >
         {loading && <Spinner />}
-        Invia link di reset
+        {t("auth.sendResetLink")}
       </button>
     </form>
   );

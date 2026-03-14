@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Search, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 const STATUS_ICON: Record<string, any> = {
   pending: Clock,
@@ -9,14 +10,6 @@ const STATUS_ICON: Record<string, any> = {
   completed: CheckCircle,
   failed: XCircle,
   cancelled: XCircle,
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  pending: "In attesa",
-  running: "In corso",
-  completed: "Completata",
-  failed: "Fallita",
-  cancelled: "Annullata",
 };
 
 const STATUS_BADGE: Record<string, string> = {
@@ -43,7 +36,16 @@ interface RunRow {
 }
 
 export function ResultsTable({ rows }: { rows: RunRow[] }) {
+  const { t, locale } = useTranslation();
   const [search, setSearch] = useState("");
+
+  const STATUS_LABEL: Record<string, string> = {
+    pending: t("results.pending"),
+    running: t("results.running"),
+    completed: t("results.completed"),
+    failed: t("results.failed"),
+    cancelled: t("results.cancelled"),
+  };
 
   const filtered = rows.filter((r) => {
     if (!search) return true;
@@ -60,7 +62,7 @@ export function ResultsTable({ rows }: { rows: RunRow[] }) {
       <div className="flex items-center gap-2 border border-border rounded-[2px] px-3 py-1.5 w-72 focus-within:border-primary/30 transition-colors" style={{ background: "var(--surface)" }}>
         <Search className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
         <input
-          placeholder="Cerca per progetto o modello..."
+          placeholder={t("results.searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
@@ -71,13 +73,13 @@ export function ResultsTable({ rows }: { rows: RunRow[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-xs text-muted-foreground bg-muted/30">
-              <th className="text-left py-3 px-4 font-medium">Progetto</th>
-              <th className="text-left py-3 px-4 font-medium">Versione</th>
-              <th className="text-left py-3 px-4 font-medium">Modelli</th>
-              <th className="text-left py-3 px-4 font-medium">Prompt</th>
-              <th className="text-left py-3 px-4 font-medium">AVI</th>
-              <th className="text-left py-3 px-4 font-medium">Stato</th>
-              <th className="text-left py-3 px-4 font-medium">Data</th>
+              <th className="text-left py-3 px-4 font-medium">{t("results.project")}</th>
+              <th className="text-left py-3 px-4 font-medium">{t("results.version")}</th>
+              <th className="text-left py-3 px-4 font-medium">{t("results.models")}</th>
+              <th className="text-left py-3 px-4 font-medium">{t("results.prompt")}</th>
+              <th className="text-left py-3 px-4 font-medium">{t("results.avi")}</th>
+              <th className="text-left py-3 px-4 font-medium">{t("results.status")}</th>
+              <th className="text-left py-3 px-4 font-medium">{t("results.date")}</th>
             </tr>
           </thead>
           <tbody>
@@ -114,7 +116,7 @@ export function ResultsTable({ rows }: { rows: RunRow[] }) {
                     </span>
                   </td>
                   <td className="py-3 px-4 text-muted-foreground text-xs">
-                    {new Date(r.completed_at ?? r.created_at).toLocaleString("it-IT")}
+                    {new Date(r.completed_at ?? r.created_at).toLocaleString(locale)}
                   </td>
                 </tr>
               );
@@ -122,7 +124,7 @@ export function ResultsTable({ rows }: { rows: RunRow[] }) {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
-                  Nessun risultato trovato
+                  {t("results.noResultFound")}
                 </td>
               </tr>
             )}

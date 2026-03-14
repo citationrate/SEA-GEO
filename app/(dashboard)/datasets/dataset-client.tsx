@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { Database, ChevronDown, X, Loader2, ExternalLink } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface Project {
   id: string;
@@ -68,6 +69,7 @@ const FUNNEL_BADGES: Record<string, string> = {
 };
 
 export function DatasetClient({ projects }: { projects: Project[] }) {
+  const { t, locale } = useTranslation();
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [runs, setRuns] = useState<Run[]>([]);
   const [selectedRun, setSelectedRun] = useState<string>("");
@@ -120,8 +122,8 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
       <div className="flex items-center gap-3">
         <Database className="w-6 h-6 text-primary" />
         <div>
-          <h1 className="font-display font-bold text-2xl text-foreground">Dataset</h1>
-          <p className="text-sm text-muted-foreground">Dati raw delle risposte AI — prompt per prompt</p>
+          <h1 className="font-display font-bold text-2xl text-foreground">{t("datasets.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("datasets.subtitleFull")}</p>
         </div>
       </div>
 
@@ -129,14 +131,14 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
       <div data-tour="dataset-filters" className="card p-4 flex flex-wrap gap-4 items-end">
         {/* Project */}
         <div className="space-y-1 min-w-[200px]">
-          <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Progetto</label>
+          <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.project")}</label>
           <div className="relative">
             <select
               value={selectedProject}
               onChange={(e) => setSelectedProject(e.target.value)}
               className="input-base w-full appearance-none pr-8"
             >
-              <option value="">Seleziona progetto...</option>
+              <option value="">{t("datasets.selectProject")}</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
@@ -147,7 +149,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
 
         {/* Run */}
         <div className="space-y-1 min-w-[220px]">
-          <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Analisi</label>
+          <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.analysis")}</label>
           <div className="relative">
             <select
               value={selectedRun}
@@ -156,11 +158,11 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
               className="input-base w-full appearance-none pr-8 disabled:opacity-50"
             >
               <option value="">
-                {loadingRuns ? "Caricamento..." : runs.length === 0 && selectedProject ? "Nessuna analisi" : "Seleziona analisi..."}
+                {loadingRuns ? t("common.loading") : runs.length === 0 && selectedProject ? t("datasets.noAnalysis") : t("datasets.selectAnalysis")}
               </option>
               {runs.map((r) => (
                 <option key={r.id} value={r.id}>
-                  v{r.version} — {new Date(r.created_at).toLocaleDateString("it-IT")} ({r.status})
+                  v{r.version} — {new Date(r.created_at).toLocaleDateString(locale)} ({r.status})
                 </option>
               ))}
             </select>
@@ -171,7 +173,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
         {/* Model pills */}
         {models.length > 0 && (
           <div className="space-y-1">
-            <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Modello AI</label>
+            <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.aiModel")}</label>
             <div className="flex flex-wrap gap-1.5">
               <button
                 onClick={() => setSelectedModel(null)}
@@ -181,7 +183,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
               >
-                Tutti
+                {t("common.all")}
               </button>
               {models.map((m) => (
                 <button
@@ -213,7 +215,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
         <div className="card p-16 text-center border border-dashed border-border/50">
           <Database className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
           <p className="text-muted-foreground text-sm">
-            Seleziona un progetto e un&apos;analisi per visualizzare i dati raw
+            {t("datasets.selectProjectAndAnalysis")}
           </p>
         </div>
       )}
@@ -232,16 +234,16 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left">
-                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground min-w-[200px]">Query</th>
-                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Tipo</th>
-                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Layer</th>
-                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Famiglia</th>
-                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Modello</th>
-                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Run</th>
-                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Brand</th>
-                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Rank</th>
-                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Sent.</th>
-                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground min-w-[160px]">Risposta AI</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground min-w-[200px]">{t("datasets.query")}</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.type")}</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.layer")}</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.family")}</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.model")}</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.run")}</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.brand")}</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.rank")}</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.sent")}</th>
+                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground min-w-[160px]">{t("datasets.aiResponse")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -311,7 +313,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
                       </td>
                       <td className="px-3 py-2">
                         {row.error ? (
-                          <span className="text-destructive text-[13px]">Errore</span>
+                          <span className="text-destructive text-[13px]">{t("common.error")}</span>
                         ) : response ? (
                           <span className="text-muted-foreground text-[13px] line-clamp-2">{truncated}</span>
                         ) : (
@@ -330,7 +332,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
       {/* No results after filter */}
       {!loadingRows && selectedRun && filteredRows.length === 0 && rows.length > 0 && (
         <div className="card p-8 text-center">
-          <p className="text-muted-foreground text-sm">Nessun prompt per il filtro selezionato</p>
+          <p className="text-muted-foreground text-sm">{t("datasets.noPromptForFilter")}</p>
         </div>
       )}
 
@@ -343,6 +345,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
 }
 
 function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) {
+  const { t, locale } = useTranslation();
   const stBadge = SET_TYPE_BADGES[row.set_type] || SET_TYPE_BADGES.manual;
   const funnelCls = FUNNEL_BADGES[row.funnel_stage] || "border-border text-muted-foreground";
 
@@ -380,7 +383,7 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
               )}
               {row.persona_mode && (
                 <span className="font-mono text-[0.625rem] text-purple-400 border border-purple-500/30 px-1.5 py-0.5 rounded-[2px]">
-                  {row.persona_mode === "demographic" ? "Demografica" : "Decision Drivers"}
+                  {row.persona_mode === "demographic" ? t("datasets.demographic") : "Decision Drivers"}
                 </span>
               )}
             </div>
@@ -394,13 +397,13 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
         <div className="p-5 space-y-5">
           {/* Metadata row */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs">
-            <div><span className="text-muted-foreground">Modello:</span> <span className="text-foreground font-medium">{MODEL_LABELS[row.model] ?? row.model}</span></div>
-            <div><span className="text-muted-foreground">Run:</span> <span className="text-foreground">#{row.run_number}</span></div>
+            <div><span className="text-muted-foreground">{t("datasets.modelLabel")}</span> <span className="text-foreground font-medium">{MODEL_LABELS[row.model] ?? row.model}</span></div>
+            <div><span className="text-muted-foreground">{t("datasets.runLabel")}</span> <span className="text-foreground">#{row.run_number}</span></div>
             {row.executed_at && (
-              <div><span className="text-muted-foreground">Eseguito:</span> <span className="text-foreground">{new Date(row.executed_at).toLocaleString("it-IT")}</span></div>
+              <div><span className="text-muted-foreground">{t("datasets.executedAt")}</span> <span className="text-foreground">{new Date(row.executed_at).toLocaleString(locale)}</span></div>
             )}
             <div>
-              <span className="text-muted-foreground">Brand citato:</span>{" "}
+              <span className="text-muted-foreground">{t("datasets.brandCited")}</span>{" "}
               {row.brand_mentioned === true ? (
                 <span className="text-primary font-semibold">Si</span>
               ) : (
@@ -427,7 +430,7 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
           {/* Competitors */}
           {row.competitors_found && row.competitors_found.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Competitor trovati</p>
+              <p className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.competitorsFound")}</p>
               <div className="flex flex-wrap gap-1.5">
                 {row.competitors_found.map((c, i) => (
                   <span key={i} className="text-xs bg-muted border border-border rounded-[2px] px-2 py-0.5 text-foreground">
@@ -441,7 +444,7 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
           {/* Sources */}
           {row.sources && row.sources.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Fonti consultate dall&apos;AI</p>
+              <p className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.sourcesConsulted")}</p>
               <div className="flex flex-wrap gap-1.5">
                 {row.sources.map((s, i) => (
                   <a
@@ -462,7 +465,7 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
 
           {/* Full response */}
           <div className="space-y-1.5">
-            <p className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Risposta AI</p>
+            <p className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.aiResponse")}</p>
             {row.error ? (
               <div className="bg-destructive/10 border border-destructive/30 rounded-[2px] px-4 py-3">
                 <p className="text-sm text-destructive">{row.error}</p>
@@ -487,7 +490,7 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
                 </ReactMarkdown>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Nessuna risposta</p>
+              <p className="text-sm text-muted-foreground">{t("datasets.noResponse")}</p>
             )}
           </div>
         </div>

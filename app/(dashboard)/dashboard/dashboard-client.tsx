@@ -2,6 +2,8 @@
 
 import { AVIRing, StatsRow, AVITrend, CompetitorBar, RecentRuns } from "@/components/dashboard/index";
 import { ProjectSelector } from "@/components/project-selector";
+import { useTranslation } from "@/lib/i18n/context";
+
 interface DashboardClientProps {
   aviScore: number | null;
   aviTrend: number | null;
@@ -27,30 +29,29 @@ export function DashboardClient({
   projects,
   models,
 }: DashboardClientProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-6 animate-fade-in max-w-[1400px]">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-display font-bold text-2xl text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Panoramica della visibilita AI dei tuoi brand</p>
+          <h1 className="font-display font-bold text-2xl text-foreground">{t("dashboard.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{t("dashboard.subtitle")}</p>
         </div>
         <div className="flex items-center gap-3">
           {projects && <ProjectSelector projects={projects} />}
         </div>
       </div>
 
-      {/* Top row: AVI Ring + Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
         <AVIRing score={aviScore} trend={aviTrend} components={aviComponents} noBrandMentions={noBrandMentions} />
         <StatsRow stats={stats} />
       </div>
 
-      {/* Trend chart */}
       <div data-tour="avi-trend">
         <AVITrend data={trendData} models={models} />
       </div>
 
-      {/* Bottom row: Competitors + Recent Runs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <CompetitorBar data={competitorBarData} />
         <div data-tour="recent-runs">
