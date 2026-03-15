@@ -200,7 +200,11 @@ export const runCompetitiveAnalysis = inngest.createFunction(
         .eq("analysis_id", analysisId)
         .eq("status", "completed");
 
-      const prompts = (allPrompts ?? []) as any[];
+      const prompts = (allPrompts ?? []).map((p: any) => ({
+        ...p,
+        recommendation: p.recommendation != null ? Number(p.recommendation) : null,
+        first_mention: typeof p.first_mention === "string" ? p.first_mention.trim() : p.first_mention,
+      }));
       const total = prompts.length;
       if (total === 0) {
         await (supabase.from("competitive_analyses") as any)
