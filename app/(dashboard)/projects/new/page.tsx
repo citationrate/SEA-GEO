@@ -18,6 +18,7 @@ interface ProviderOption {
   id: string;
   label: string;
   badge: string;
+  color: string;
   models: ModelOption[];
   comingSoon?: boolean;
 }
@@ -90,6 +91,7 @@ export default function NewProjectPage() {
     id: g.id,
     label: g.label,
     badge: g.badge,
+    color: g.color,
     comingSoon: g.comingSoon,
     models: g.models.map((m) => ({
       id: m.id,
@@ -491,7 +493,7 @@ export default function NewProjectPage() {
                         </svg>
                       )}
                     </div>
-                    <span className={`text-sm font-semibold ${isSoon ? "text-muted-foreground" : "text-foreground"}`}>{provider.label}</span>
+                    <span className={`text-sm font-semibold ${isSoon ? "text-muted-foreground" : provider.color}`}>{provider.label}</span>
                     <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{provider.badge}</span>
                     {isSoon && (
                       <span className="font-mono text-[0.69rem] tracking-wide text-amber-500 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded-[2px] ml-auto">SOON</span>

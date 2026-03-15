@@ -54,6 +54,7 @@ export default async function NewCompetitivePage() {
       id: g.id,
       label: g.label,
       badge: g.badge,
+      color: g.color,
       models: g.models
         .filter((m) => availableIds.has(m.id))
         .map((m) => ({ id: m.id, label: m.label, descriptionKey: m.descriptionKey })),

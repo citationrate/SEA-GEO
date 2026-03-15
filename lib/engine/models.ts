@@ -9,6 +9,7 @@ export const AI_MODELS: AIModel[] = [
   // OpenAI
   { id: "gpt-4o-mini",  label: "GPT-4o Mini",       desc: "Veloce, risposte concise",                    provider: "openai" },
   { id: "gpt-4o",       label: "GPT-4o",             desc: "Preciso, risposte elaborate",                 provider: "openai" },
+  { id: "gpt-5.4",      label: "GPT-5.4",            desc: "Ultimo modello OpenAI, massima qualità",      provider: "openai" },
   // Anthropic (short IDs — canonical)
   { id: "claude-haiku",   label: "Claude Haiku 4.5",   desc: "Veloce e diretto",                          provider: "anthropic" },
   { id: "claude-sonnet",  label: "Claude Sonnet 4.5",  desc: "Bilanciato e preciso",                      provider: "anthropic" },
@@ -88,27 +89,29 @@ export interface ProviderGroup {
   id: string;
   label: string;
   badge: string;
+  color: string;
   models: { id: string; label: string; descriptionKey: string }[];
   comingSoon?: boolean;
 }
 
 export const PROVIDER_GROUPS: ProviderGroup[] = [
   {
-    id: "openai", label: "OpenAI", badge: "ChatGPT",
+    id: "openai", label: "OpenAI", badge: "ChatGPT", color: "text-green-500",
     models: [
       { id: "gpt-4o-mini", label: "GPT-4o Mini", descriptionKey: "modelDescriptions.gpt-4o-mini" },
       { id: "gpt-4o", label: "GPT-4o", descriptionKey: "modelDescriptions.gpt-4o" },
+      { id: "gpt-5.4", label: "GPT-5.4", descriptionKey: "modelDescriptions.gpt-5.4" },
     ],
   },
   {
-    id: "google", label: "Google", badge: "Gemini",
+    id: "google", label: "Google", badge: "Gemini", color: "text-blue-500",
     models: [
       { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", descriptionKey: "modelDescriptions.gemini-2.5-flash" },
       { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", descriptionKey: "modelDescriptions.gemini-2.5-pro" },
     ],
   },
   {
-    id: "anthropic", label: "Anthropic", badge: "Claude",
+    id: "anthropic", label: "Anthropic", badge: "Claude", color: "text-orange-500",
     models: [
       { id: "claude-haiku", label: "Claude Haiku 4.5", descriptionKey: "modelDescriptions.claude-haiku" },
       { id: "claude-sonnet", label: "Claude Sonnet 4.5", descriptionKey: "modelDescriptions.claude-sonnet" },
@@ -116,21 +119,21 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
     ],
   },
   {
-    id: "xai", label: "xAI", badge: "Grok",
+    id: "xai", label: "xAI", badge: "Grok", color: "text-gray-400",
     models: [
       { id: "grok-3", label: "Grok 3", descriptionKey: "modelDescriptions.grok-3" },
       { id: "grok-3-mini", label: "Grok 3 Mini", descriptionKey: "modelDescriptions.grok-3-mini" },
     ],
   },
   {
-    id: "perplexity", label: "Perplexity", badge: "Sonar",
+    id: "perplexity", label: "Perplexity", badge: "Sonar", color: "text-cyan-500",
     models: [
       { id: "perplexity-sonar", label: "Sonar", descriptionKey: "modelDescriptions.perplexity-sonar" },
       { id: "perplexity-sonar-pro", label: "Sonar Pro", descriptionKey: "modelDescriptions.perplexity-sonar-pro" },
     ],
   },
   {
-    id: "microsoft", label: "Microsoft", badge: "Copilot", comingSoon: true,
+    id: "microsoft", label: "Microsoft", badge: "Copilot", color: "text-sky-500", comingSoon: true,
     models: [
       { id: "copilot-gpt4", label: "Copilot GPT-4o", descriptionKey: "modelDescriptions.copilot-gpt4" },
     ],

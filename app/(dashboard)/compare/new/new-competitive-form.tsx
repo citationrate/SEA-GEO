@@ -21,6 +21,7 @@ interface ProviderGroup {
   id: string;
   label: string;
   badge: string;
+  color: string;
   models: { id: string; label: string; descriptionKey: string }[];
 }
 
@@ -207,21 +208,18 @@ export function NewCompetitiveForm({
                 }`}
               >
                 <div className="flex items-center gap-3 px-4 py-3">
-                  <span className="text-sm font-semibold text-foreground">{group.label}</span>
+                  <span className={`text-sm font-semibold ${group.color}`}>{group.label}</span>
                   <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{group.badge}</span>
                 </div>
-                <div className="px-4 pb-3 pt-0 grid grid-cols-2 gap-2">
+                <div className="px-4 pb-3 pt-0 space-y-0.5">
                   {group.models.map((m) => {
                     const selected = selectedModels.includes(m.id);
                     return (
-                      <button
+                      <label
                         key={m.id}
-                        type="button"
                         onClick={() => toggleModel(m.id)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-[2px] border text-sm transition-colors text-left ${
-                          selected
-                            ? "border-primary bg-primary/10 text-foreground"
-                            : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40"
+                        className={`flex items-center gap-2 p-2 rounded-[2px] cursor-pointer transition-colors ${
+                          selected ? "bg-primary/10" : "hover:bg-muted/30"
                         }`}
                       >
                         <div className={`w-4 h-4 rounded-[2px] border flex items-center justify-center flex-shrink-0 ${
@@ -229,8 +227,11 @@ export function NewCompetitiveForm({
                         }`}>
                           {selected && <Check className="w-3 h-3 text-primary-foreground" />}
                         </div>
-                        <span className="truncate">{m.label}</span>
-                      </button>
+                        <div className="flex-1 min-w-0">
+                          <span className={`text-sm font-medium ${selected ? "text-primary" : "text-foreground"}`}>{m.label}</span>
+                          <p className="text-xs text-muted-foreground">{t(m.descriptionKey)}</p>
+                        </div>
+                      </label>
                     );
                   })}
                 </div>
