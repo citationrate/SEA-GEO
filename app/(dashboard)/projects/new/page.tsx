@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, X, Loader2, Lock, Check, ArrowRight, Crown, Search, ChevronDown } from "lucide-react";
+import { PROVIDER_GROUPS } from "@/lib/engine/models";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import confetti from "canvas-confetti";
 import { useTranslation } from "@/lib/i18n/context";
@@ -85,52 +86,17 @@ export default function NewProjectPage() {
   const [existingProjectCount, setExistingProjectCount] = useState<number | null>(null);
   const [isPro, setIsPro] = useState(false);
 
-  const AVAILABLE_PROVIDERS: ProviderOption[] = [
-    {
-      id: "openai", label: "OpenAI", badge: "ChatGPT",
-      models: [
-        { id: "gpt-4o-mini", label: "GPT-4o Mini", description: t("modelDescriptions.gpt-4o-mini") },
-        { id: "gpt-4o", label: "GPT-4o", description: t("modelDescriptions.gpt-4o") },
-        { id: "gpt-5.4", label: "GPT-5.4", description: t("modelDescriptions.gpt-5.4") },
-        { id: "o1-mini", label: "o1 Mini", description: t("modelDescriptions.o1-mini") },
-      ],
-    },
-    {
-      id: "google", label: "Google", badge: "Gemini",
-      models: [
-        { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", description: t("modelDescriptions.gemini-2.5-flash") },
-        { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", description: t("modelDescriptions.gemini-2.5-pro") },
-      ],
-    },
-    {
-      id: "perplexity", label: "Perplexity", badge: "Sonar",
-      models: [
-        { id: "perplexity-sonar", label: "Sonar", description: t("modelDescriptions.perplexity-sonar") },
-        { id: "perplexity-sonar-pro", label: "Sonar Pro", description: t("modelDescriptions.perplexity-sonar-pro") },
-      ],
-    },
-    {
-      id: "anthropic", label: "Anthropic", badge: "Claude",
-      models: [
-        { id: "claude-haiku", label: "Claude Haiku 4.5", description: t("modelDescriptions.claude-haiku") },
-        { id: "claude-sonnet", label: "Claude Sonnet 4.5", description: t("modelDescriptions.claude-sonnet") },
-        { id: "claude-opus", label: "Claude Opus 4.5", description: t("modelDescriptions.claude-opus") },
-      ],
-    },
-    {
-      id: "xai", label: "xAI", badge: "Grok",
-      models: [
-        { id: "grok-3", label: "Grok 3", description: t("modelDescriptions.grok-3") },
-        { id: "grok-3-mini", label: "Grok 3 Mini", description: t("modelDescriptions.grok-3-mini") },
-      ],
-    },
-    {
-      id: "microsoft", label: "Microsoft", badge: "Copilot", comingSoon: true,
-      models: [
-        { id: "copilot-gpt4", label: "Copilot GPT-4o", description: t("modelDescriptions.copilot-gpt4") },
-      ],
-    },
-  ];
+  const AVAILABLE_PROVIDERS: ProviderOption[] = PROVIDER_GROUPS.map((g) => ({
+    id: g.id,
+    label: g.label,
+    badge: g.badge,
+    comingSoon: g.comingSoon,
+    models: g.models.map((m) => ({
+      id: m.id,
+      label: m.label,
+      description: t(m.descriptionKey),
+    })),
+  }));
 
   const SECTORS = [
     { value: "Turismo", label: t("sectors.tourism") },

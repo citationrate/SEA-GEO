@@ -17,20 +17,21 @@ const DRIVER_OPTIONS = [
   "Trasparenza",
 ];
 
-interface AvailableModel {
+interface ProviderGroup {
   id: string;
   label: string;
-  provider: string;
+  badge: string;
+  models: { id: string; label: string; descriptionKey: string }[];
 }
 
 export function NewCompetitiveForm({
   projects,
   topCompetitors,
-  availableModels,
+  providerGroups,
 }: {
   projects: { id: string; name: string; brand: string }[];
   topCompetitors: Record<string, string>;
-  availableModels: AvailableModel[];
+  providerGroups: ProviderGroup[];
 }) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -49,13 +50,15 @@ export function NewCompetitiveForm({
   const [driver, setDriver] = useState(DRIVER_OPTIONS[0]);
   const [customDriver, setCustomDriver] = useState("");
   const [selectedModels, setSelectedModels] = useState<string[]>(
-    availableModels.length > 0 ? [availableModels[0].id] : [],
+    providerGroups[0]?.models[0] ? [providerGroups[0].models[0].id] : [],
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const selectedProject = projects.find((p) => p.id === projectId);
   const effectiveDriver = driver === "Altro" ? customDriver : driver;
+
+  const allModelIds = providerGroups.flatMap((g) => g.models.map((m) => m.id));
 
   function handleProjectChange(newId: string) {
     setProjectId(newId);
@@ -69,10 +72,10 @@ export function NewCompetitiveForm({
   }
 
   function toggleAll() {
-    if (selectedModels.length === availableModels.length) {
+    if (selectedModels.length === allModelIds.length) {
       setSelectedModels([]);
     } else {
-      setSelectedModels(availableModels.map((m) => m.id));
+      setSelectedModels(allModelIds);
     }
   }
 
@@ -181,7 +184,7 @@ export function NewCompetitiveForm({
         )}
       </div>
 
-      {/* Modelli AI */}
+      {/* Modelli AI — grouped by provider */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium text-foreground">{t("projects.aiModels")} *</label>
@@ -190,30 +193,48 @@ export function NewCompetitiveForm({
             onClick={toggleAll}
             className="text-xs text-primary hover:text-primary/80 transition-colors"
           >
-            {selectedModels.length === availableModels.length ? t("generateQueries.deselectAll") : t("generateQueries.selectAll")}
+            {selectedModels.length === allModelIds.length ? t("generateQueries.deselectAll") : t("generateQueries.selectAll")}
           </button>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {availableModels.map((m) => {
-            const selected = selectedModels.includes(m.id);
+        <div className="space-y-2">
+          {providerGroups.map((group) => {
+            const hasSelected = group.models.some((m) => selectedModels.includes(m.id));
             return (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => toggleModel(m.id)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-[2px] border text-sm transition-colors text-left ${
-                  selected
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40"
+              <div
+                key={group.id}
+                className={`rounded-sm border transition-all ${
+                  hasSelected ? "border-primary/50 bg-primary/5" : "border-border"
                 }`}
               >
-                <div className={`w-4 h-4 rounded-[2px] border flex items-center justify-center flex-shrink-0 ${
-                  selected ? "bg-primary border-primary" : "border-muted-foreground/40"
-                }`}>
-                  {selected && <Check className="w-3 h-3 text-primary-foreground" />}
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="text-sm font-semibold text-foreground">{group.label}</span>
+                  <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{group.badge}</span>
                 </div>
-                <span className="truncate">{m.label}</span>
-              </button>
+                <div className="px-4 pb-3 pt-0 grid grid-cols-2 gap-2">
+                  {group.models.map((m) => {
+                    const selected = selectedModels.includes(m.id);
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => toggleModel(m.id)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-[2px] border text-sm transition-colors text-left ${
+                          selected
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40"
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-[2px] border flex items-center justify-center flex-shrink-0 ${
+                          selected ? "bg-primary border-primary" : "border-muted-foreground/40"
+                        }`}>
+                          {selected && <Check className="w-3 h-3 text-primary-foreground" />}
+                        </div>
+                        <span className="truncate">{m.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>

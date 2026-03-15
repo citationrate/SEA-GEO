@@ -2,7 +2,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ArrowLeft, GitCompare } from "lucide-react";
 import { isProUser } from "@/lib/utils/is-pro";
-import { AI_MODELS, filterAvailableModels } from "@/lib/engine/models";
+import { PROVIDER_GROUPS, filterAvailableModels } from "@/lib/engine/models";
 import { NewCompetitiveForm } from "./new-competitive-form";
 import { T } from "@/components/translated-label";
 
@@ -44,6 +44,22 @@ export default async function NewCompetitivePage() {
     if (top?.competitor_name) topCompetitors[p.id] = top.competitor_name;
   }
 
+  // Build available provider groups filtering by env availability
+  const allModelIds = PROVIDER_GROUPS.flatMap((g) => g.models.map((m) => m.id));
+  const availableIds = new Set(filterAvailableModels(allModelIds));
+
+  const availableGroups = PROVIDER_GROUPS
+    .filter((g) => !g.comingSoon)
+    .map((g) => ({
+      id: g.id,
+      label: g.label,
+      badge: g.badge,
+      models: g.models
+        .filter((m) => availableIds.has(m.id))
+        .map((m) => ({ id: m.id, label: m.label, descriptionKey: m.descriptionKey })),
+    }))
+    .filter((g) => g.models.length > 0);
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div>
@@ -72,13 +88,7 @@ export default async function NewCompetitivePage() {
           brand: p.target_brand,
         }))}
         topCompetitors={topCompetitors}
-        availableModels={(() => {
-          const uniqueModels = AI_MODELS.filter((m, i, arr) => arr.findIndex((x) => x.id === m.id) === i);
-          const availableIds = filterAvailableModels(uniqueModels.map((m) => m.id));
-          return uniqueModels
-            .filter((m) => availableIds.includes(m.id))
-            .map((m) => ({ id: m.id, label: m.label, provider: m.provider }));
-        })()}
+        providerGroups={availableGroups}
       />
     </div>
   );
