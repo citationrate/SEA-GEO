@@ -12,10 +12,18 @@ interface AVIComponent {
   value: number | null;
 }
 
-export function AVIBars({ items }: { items: AVIComponent[] }) {
+export function AVIBars({
+  items,
+  stabilityScore,
+  showSingleRunNote,
+}: {
+  items: AVIComponent[];
+  stabilityScore?: number | null;
+  showSingleRunNote?: boolean;
+}) {
   const { t } = useTranslation();
   return (
-    <div className="card p-5 space-y-3">
+    <div className="card p-5 space-y-4">
       {items.map((c) => {
         const label = c.labelKey ? t(c.labelKey) : c.label ?? "";
         const desc = c.descKey ? t(c.descKey) : c.desc ?? "";
@@ -37,6 +45,29 @@ export function AVIBars({ items }: { items: AVIComponent[] }) {
           </div>
         );
       })}
+
+      {/* Stability badge — inline at the bottom */}
+      {stabilityScore != null && (
+        <div className="pt-2 border-t border-border flex items-center justify-end gap-2">
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] font-mono text-[12px] font-medium ${
+            stabilityScore > 80
+              ? "bg-green-500/15 text-green-400 border border-green-500/30"
+              : stabilityScore >= 50
+              ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
+              : "bg-red-500/15 text-red-400 border border-red-500/30"
+          }`}>
+            {stabilityScore > 80
+              ? t("dashboard.highReliability")
+              : stabilityScore >= 50
+              ? t("dashboard.mediumReliability")
+              : t("dashboard.lowReliability")} ({Math.round(stabilityScore)})
+          </span>
+          <InfoTooltip text={t("dashboard.reliabilityTooltip")} />
+        </div>
+      )}
+      {showSingleRunNote && stabilityScore != null && (
+        <p className="text-xs text-muted-foreground text-right">{t("dashboard.singleRunNote")}</p>
+      )}
     </div>
   );
 }

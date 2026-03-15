@@ -4,7 +4,6 @@ import { createServerClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, Archive } from "lucide-react";
-import { RunAVIRing } from "./run-avi-ring";
 import { ExportButtons } from "./export-buttons";
 import { RunAutoRefresh } from "./run-auto-refresh";
 import { RunMetrics } from "./run-metrics";
@@ -13,7 +12,7 @@ import { ShareButton } from "./share-button";
 import { StabilitySection } from "./stability-section";
 import { SegmentSection } from "./segment-section";
 import { AVIBars } from "./avi-bars";
-import { TranslatedStatus, TranslatedLabel, TranslatedReliability, TranslatedReliabilityTooltip, TranslatedSingleRunNote } from "./run-i18n";
+import { TranslatedStatus, TranslatedLabel } from "./run-i18n";
 
 const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = {
   pending:   { label: "In attesa",   class: "badge-muted",    icon: Clock },
@@ -267,64 +266,33 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         </div>
       )}
 
-      {/* AVI Score: Ring + Component Breakdown */}
+      {/* AVI Component Bars */}
       {aviData && (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-6">
-            <div className="space-y-3">
-              <RunAVIRing
-                score={aviData.avi_score}
-                trend={trend}
-                noBrandMentions={aviData.avi_score === 0 && aviData.presence_score === 0}
-                components={[
-                  { labelKey: "dashboard.presence",    v: aviData.presence_score != null ? Math.round(aviData.presence_score) : null },
-                  { labelKey: "dashboard.position",    v: aviData.rank_score != null ? Math.round(aviData.rank_score) : null },
-                  { labelKey: "dashboard.sentiment",   v: aviData.sentiment_score != null ? Math.round(aviData.sentiment_score) : null },
-                  { labelKey: "dashboard.reliability", v: aviData.stability_score != null ? Math.round(aviData.stability_score) : null },
-                ]}
-              />
-            </div>
-
-            {/* AVI Component Cards */}
-            <AVIBars items={AVI_COMPONENTS.map((c) => ({
+          <AVIBars
+            items={AVI_COMPONENTS.map((c) => ({
               labelKey: c.labelKey,
               color: c.color,
               descKey: c.descKey,
               value: aviData[c.key] != null ? Math.round(aviData[c.key]) : null,
-            }))} />
-          </div>
+            }))}
+            stabilityScore={aviData.stability_score}
+            showSingleRunNote={totalActiveRuns <= 1}
+          />
 
-          {/* Consistency badge */}
-          {aviData.stability_score != null && (
-            <>
-              <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm font-mono text-[12px] font-medium ${
-                  aviData.stability_score > 80
-                    ? "bg-green-500/15 text-green-400 border border-green-500/30"
-                    : aviData.stability_score >= 50
-                    ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
-                    : "bg-red-500/15 text-red-400 border border-red-500/30"
-                }`}>
-                  <TranslatedReliability score={aviData.stability_score} />
-                </span>
-                <TranslatedReliabilityTooltip />
-              </div>
-              {totalActiveRuns <= 1 && <TranslatedSingleRunNote />}
-            </>
-          )}
-
-          {/* AVI Component Comparison Bar */}
-          <div className="card p-5 space-y-3">
+          {/* AVI Component Comparison Blocks */}
+          <div className="card p-5 space-y-4">
             <h2 className="font-display font-semibold text-foreground text-sm"><TranslatedLabel tkey="runDetail.aviComparison" /></h2>
-            <div className="flex items-end gap-4" style={{ height: 140 }}>
+            <div className="grid grid-cols-4 gap-3">
               {AVI_COMPONENTS.map((c) => {
                 const value = aviData[c.key] != null ? Math.round(aviData[c.key]) : 0;
-                const barHeight = Math.max(2, (value / 100) * 100);
                 return (
-                  <div key={c.key} className="flex-1 flex flex-col items-center justify-end h-full">
-                    <span className="font-mono text-[12px] font-bold text-foreground mb-1">{value}</span>
-                    <div className="w-full rounded-t-[2px] transition-all duration-700" style={{ height: `${barHeight}%`, backgroundColor: c.color }} />
-                    <span className="font-mono text-[11px] text-muted-foreground text-center mt-1.5 leading-tight"><TranslatedLabel tkey={c.labelKey} /></span>
+                  <div key={c.key} className="flex flex-col items-center gap-2 rounded-[4px] border border-border p-4">
+                    <span className="font-display font-bold text-2xl text-foreground">{value}</span>
+                    <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value}%`, backgroundColor: c.color }} />
+                    </div>
+                    <span className="font-mono text-[11px] text-muted-foreground text-center leading-tight"><TranslatedLabel tkey={c.labelKey} /></span>
                   </div>
                 );
               })}
