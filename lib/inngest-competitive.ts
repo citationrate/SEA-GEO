@@ -149,7 +149,8 @@ export const runCompetitiveAnalysis = inngest.createFunction(
       await step.run(`execute-batch-${i}`, async () => {
         const supabase = createServiceClient();
 
-        for (const promptId of batches[i]) {
+        for (let j = 0; j < batches[i].length; j++) {
+          const promptId = batches[i][j];
           const { data: prompt } = await (supabase.from("competitive_prompts") as any)
             .select("*")
             .eq("id", promptId)
@@ -157,8 +158,26 @@ export const runCompetitiveAnalysis = inngest.createFunction(
 
           if (!prompt) continue;
 
+          // Delay between calls to avoid rate limiting (especially Gemini free tier)
+          if (j > 0) {
+            const isGemini = prompt.model?.startsWith("gemini");
+            await new Promise((r) => setTimeout(r, isGemini ? 2000 : 500));
+          }
+
           try {
-            const result = await callAIModel(prompt.query_text, prompt.model);
+            let result = await callAIModel(prompt.query_text, prompt.model);
+
+            // If first attempt returned an error (e.g. rate limit), retry once with backoff
+            if (!result.text && result.error) {
+              console.warn(`[competitive] ${prompt.model} failed for ${promptId}: ${result.error} — retrying in 5s`);
+              await new Promise((r) => setTimeout(r, 5000));
+              result = await callAIModel(prompt.query_text, prompt.model);
+            }
+
+            if (!result.text && result.error) {
+              console.error(`[competitive] ${prompt.model} failed permanently for ${promptId}: ${result.error}`);
+            }
+
             const responseText = result.text;
 
             await (supabase.from("competitive_prompts") as any)
@@ -168,7 +187,7 @@ export const runCompetitiveAnalysis = inngest.createFunction(
               })
               .eq("id", promptId);
           } catch (e: any) {
-            console.error(`[competitive] model call failed for ${promptId}:`, e?.message);
+            console.error(`[competitive] model call threw for ${promptId}:`, e?.message);
             await (supabase.from("competitive_prompts") as any)
               .update({ status: "error" })
               .eq("id", promptId);
