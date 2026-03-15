@@ -306,7 +306,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
                 }`}>
                   <TranslatedReliability score={aviData.stability_score} />
                 </span>
-                <span className="text-xs text-muted-foreground"><TranslatedReliabilityTooltip /></span>
+                <TranslatedReliabilityTooltip />
               </div>
               {totalActiveRuns <= 1 && <TranslatedSingleRunNote />}
             </>

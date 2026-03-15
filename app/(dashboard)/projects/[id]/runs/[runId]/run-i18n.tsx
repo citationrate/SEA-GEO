@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslation } from "@/lib/i18n/context";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 export function TranslatedStatus({ status }: { status: string }) {
   const { t } = useTranslation();
@@ -31,7 +32,7 @@ export function TranslatedReliability({ score }: { score: number }) {
 
 export function TranslatedReliabilityTooltip() {
   const { t } = useTranslation();
-  return <>{t("dashboard.reliabilityTooltip")}</>;
+  return <InfoTooltip text={t("dashboard.reliabilityTooltip")} />;
 }
 
 export function TranslatedSingleRunNote() {
