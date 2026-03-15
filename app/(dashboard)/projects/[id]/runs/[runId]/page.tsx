@@ -4,16 +4,12 @@ import { createServerClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, Archive } from "lucide-react";
-import { RunAVIRing } from "./run-avi-ring";
 import { ExportButtons } from "./export-buttons";
 import { RunAutoRefresh } from "./run-auto-refresh";
-import { RunMetrics } from "./run-metrics";
 import { DeleteRunButton, RestoreRunButton } from "./run-actions";
 import { ShareButton } from "./share-button";
-import { StabilitySection } from "./stability-section";
-import { SegmentSection } from "./segment-section";
-import { AVIBars } from "./avi-bars";
 import { TranslatedStatus, TranslatedLabel } from "./run-i18n";
+import { RunDetailClient } from "./run-detail-client";
 
 const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = {
   pending:   { label: "In attesa",   class: "badge-muted",    icon: Clock },
@@ -23,11 +19,7 @@ const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = 
   cancelled: { label: "Annullata",   class: "badge-muted",    icon: XCircle },
 };
 
-const AVI_MAIN_COMPONENTS = [
-  { key: "presence_score",   labelKey: "dashboard.presence",   color: "#e8956d", descKey: "dashboard.presenceTooltip" },
-  { key: "rank_score",       labelKey: "dashboard.position",   color: "#7eb3d4", descKey: "dashboard.positionTooltip" },
-  { key: "sentiment_score",  labelKey: "dashboard.sentiment",  color: "#7eb89a", descKey: "dashboard.sentimentTooltip" },
-];
+// AVI_MAIN_COMPONENTS moved to run-detail-client.tsx
 
 export default async function RunDetailPage({ params }: { params: { id: string; runId: string } }) {
   const supabase = createServerClient();
@@ -266,59 +258,22 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         </div>
       )}
 
-      {/* AVI Score: Ring + Component Bars */}
-      {aviData && (
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
-          <RunAVIRing
-            score={aviData.avi_score}
-            trend={trend}
-            noBrandMentions={aviData.avi_score === 0 && aviData.presence_score === 0}
-          />
-          <AVIBars
-            items={AVI_MAIN_COMPONENTS.map((c) => ({
-              labelKey: c.labelKey,
-              color: c.color,
-              descKey: c.descKey,
-              value: aviData[c.key] != null ? Math.round(aviData[c.key]) : null,
-            }))}
-            stabilityScore={aviData.stability_score}
-            showSingleRunNote={totalActiveRuns <= 1}
-          />
-        </div>
-      )}
-
-      {/* Filterable metrics, competitors, topics, sources, prompts */}
-      <RunMetrics
+      {/* AVI + Model filter + Metrics — all controlled by shared model selector */}
+      <RunDetailClient
+        aviData={aviData}
+        trend={trend}
+        totalActiveRuns={totalActiveRuns}
         prompts={prompts ?? []}
         analyses={analyses ?? []}
         sources={sources ?? []}
         models={models}
         competitorMentions={mentionsList}
-        brandAviScore={aviData?.avi_score ?? 0}
         targetBrand={proj?.target_brand ?? ""}
         queries={queries ?? []}
         competitorAviData={competitorAviData ?? []}
+        segments={(segments ?? []) as any[]}
+        runCount={runCount}
       />
-
-      {/* Segment/Persona analysis (only if segments are present) */}
-      {(segments ?? []).length > 0 && (
-        <SegmentSection
-          prompts={prompts ?? []}
-          analyses={analyses ?? []}
-          segments={segments ?? []}
-          queries={queries ?? []}
-        />
-      )}
-
-      {/* Stability section (only if 3+ runs per prompt) */}
-      {runCount >= 3 && (
-        <StabilitySection
-          prompts={prompts ?? []}
-          analyses={analyses ?? []}
-          queries={queries ?? []}
-          runCount={runCount}
-        />
-      )}
     </div>
   );
 }

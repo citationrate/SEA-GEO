@@ -15,6 +15,7 @@ interface RunMetricsProps {
   targetBrand: string;
   queries?: any[];
   competitorAviData?: any[];
+  externalSelectedModel?: string | null;
 }
 
 function sentimentSign(v: number): string {
@@ -77,9 +78,12 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
   other: "Altro",
 };
 
-export function RunMetrics({ prompts, analyses, sources, models, competitorMentions, brandAviScore, targetBrand, queries, competitorAviData }: RunMetricsProps) {
+export function RunMetrics({ prompts, analyses, sources, models, competitorMentions, brandAviScore, targetBrand, queries, competitorAviData, externalSelectedModel }: RunMetricsProps) {
   const { t } = useTranslation();
-  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const hasExternalModel = externalSelectedModel !== undefined;
+  const [internalModel, setInternalModel] = useState<string | null>(null);
+  const selectedModel = hasExternalModel ? externalSelectedModel : internalModel;
+  const setSelectedModel = setInternalModel;
   const [funnelFilter, setFunnelFilter] = useState<string | null>(null);
 
   const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null);
@@ -245,8 +249,8 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
     <>
       {/* Filter pills row */}
       <div className="flex flex-wrap gap-2 items-center">
-        {/* Model filter */}
-        {models.length > 1 && (
+        {/* Model filter — only shown when NOT controlled externally */}
+        {!hasExternalModel && models.length > 1 && (
           <>
             <button
               onClick={() => setSelectedModel(null)}
@@ -277,7 +281,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
         )}
 
         {/* Separator */}
-        {models.length > 1 && funnelStages.length > 0 && (
+        {!hasExternalModel && models.length > 1 && funnelStages.length > 0 && (
           <div className="w-px h-5 bg-border mx-1" />
         )}
 
