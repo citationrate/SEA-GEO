@@ -57,10 +57,11 @@ function compScoreLabel(score: number | null): { text: string; cls: string } {
   return { text: "compare.disadvantaged", cls: "text-destructive" };
 }
 
-function recLabel(rec: number | null, brandA: string, brandB: string): { text: string; cls: string; isKey?: boolean } {
-  if (rec === 1) return { text: brandA, cls: "text-primary" };
-  if (rec === 2) return { text: brandB, cls: "text-destructive" };
-  if (rec === 0.5) return { text: "compare.draw", cls: "text-[#c4a882]", isKey: true };
+function recLabel(rec: number | string | null, brandA: string, brandB: string): { text: string; cls: string; isKey?: boolean } {
+  const n = rec != null ? Number(rec) : null;
+  if (n === 1) return { text: brandA, cls: "text-primary" };
+  if (n === 2) return { text: brandB, cls: "text-destructive" };
+  if (n === 0.5) return { text: "compare.draw", cls: "text-[#c4a882]", isKey: true };
   return { text: "compare.none", cls: "text-muted-foreground", isKey: true };
 }
 

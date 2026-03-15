@@ -177,14 +177,19 @@ export const runCompetitiveAnalysis = inngest.createFunction(
 
         try {
           const evaluation = await evaluateResponse(prompt.response_text, brandA, brandB);
+          console.log(`[competitive] evaluate ${prompt.id}: rec=${evaluation.recommendation} (type=${typeof evaluation.recommendation}), fm=${evaluation.first_mention}`);
 
-          await (supabase.from("competitive_prompts") as any)
+          const { error: updateErr } = await (supabase.from("competitive_prompts") as any)
             .update({
               recommendation: evaluation.recommendation,
               first_mention: evaluation.first_mention,
               key_arguments: evaluation.key_arguments,
             })
             .eq("id", prompt.id);
+
+          if (updateErr) {
+            console.error(`[competitive] update failed for ${prompt.id}:`, updateErr.message);
+          }
         } catch (e: any) {
           console.error(`[competitive] evaluation failed for ${prompt.id}:`, e?.message);
         }
@@ -195,10 +200,24 @@ export const runCompetitiveAnalysis = inngest.createFunction(
     await step.run("calculate-kpis", async () => {
       const supabase = createServiceClient();
 
-      const { data: allPrompts } = await (supabase.from("competitive_prompts") as any)
-        .select("recommendation, first_mention")
+      const { data: allPrompts, error: fetchErr } = await (supabase.from("competitive_prompts") as any)
+        .select("id, recommendation, first_mention")
         .eq("analysis_id", analysisId)
         .eq("status", "completed");
+
+      if (fetchErr) {
+        console.error(`[competitive/kpis] fetch error:`, fetchErr.message);
+      }
+
+      // Log raw DB values before any conversion
+      console.log(`[competitive/kpis] raw DB rows (${(allPrompts ?? []).length}):`,
+        (allPrompts ?? []).map((p: any) => ({
+          id: p.id?.slice(0, 8),
+          rec_raw: p.recommendation,
+          rec_type: typeof p.recommendation,
+          fm: p.first_mention,
+        }))
+      );
 
       const prompts = (allPrompts ?? []).map((p: any) => ({
         ...p,
@@ -207,17 +226,31 @@ export const runCompetitiveAnalysis = inngest.createFunction(
       }));
       const total = prompts.length;
       if (total === 0) {
+        console.log(`[competitive/kpis] no completed prompts, skipping`);
         await (supabase.from("competitive_analyses") as any)
           .update({ status: "completed" })
           .eq("id", analysisId);
         return;
       }
 
-      const validRec = prompts.filter((p: any) => p.recommendation > 0);
+      // Log converted values
+      console.log(`[competitive/kpis] after Number() conversion:`,
+        prompts.map((p: any) => ({
+          id: p.id?.slice(0, 8),
+          rec: p.recommendation,
+          rec_type: typeof p.recommendation,
+          fm: p.first_mention,
+        }))
+      );
+
+      const validRec = prompts.filter((p: any) => p.recommendation != null && p.recommendation > 0);
       const validTotal = validRec.length || 1;
 
       const winsA = validRec.filter((p: any) => p.recommendation === 1).length;
       const winsB = validRec.filter((p: any) => p.recommendation === 2).length;
+      const draws = validRec.filter((p: any) => p.recommendation === 0.5).length;
+
+      console.log(`[competitive/kpis] total=${total}, validRec=${validRec.length}, winsA=${winsA}, winsB=${winsB}, draws=${draws}, validTotal=${validTotal}`);
 
       const winRateA = Math.round((winsA / validTotal) * 1000) / 10;
       const winRateB = Math.round((winsB / validTotal) * 1000) / 10;
@@ -226,6 +259,8 @@ export const runCompetitiveAnalysis = inngest.createFunction(
       const fmrB = Math.round((prompts.filter((p: any) => p.first_mention === "B").length / total) * 1000) / 10;
 
       const compScoreA = Math.round((0.6 * winRateA + 0.4 * fmrA) * 10) / 10;
+
+      console.log(`[competitive/kpis] FINAL: winRateA=${winRateA}%, winRateB=${winRateB}%, fmrA=${fmrA}%, fmrB=${fmrB}%, compScoreA=${compScoreA}`);
 
       await (supabase.from("competitive_analyses") as any)
         .update({

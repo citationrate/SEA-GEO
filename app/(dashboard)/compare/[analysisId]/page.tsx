@@ -34,11 +34,34 @@ export default async function CompetitiveResultsPage({
     .eq("status", "completed")
     .order("created_at", { ascending: true });
 
+  // Normalize NUMERIC columns (Supabase returns NUMERIC as strings)
+  const numOrNull = (v: any) => v != null ? Number(v) : null;
+  const normalizedAnalysis = {
+    ...analysis,
+    win_rate_a: numOrNull(analysis.win_rate_a),
+    win_rate_b: numOrNull(analysis.win_rate_b),
+    fmr_a: numOrNull(analysis.fmr_a),
+    fmr_b: numOrNull(analysis.fmr_b),
+    comp_score_a: numOrNull(analysis.comp_score_a),
+  };
+  const normalizedPrompts = (prompts ?? []).map((p: any) => ({
+    ...p,
+    recommendation: numOrNull(p.recommendation),
+  }));
+  const normalizedHistory = (historicalAnalyses ?? []).map((h: any) => ({
+    ...h,
+    win_rate_a: numOrNull(h.win_rate_a),
+    win_rate_b: numOrNull(h.win_rate_b),
+    fmr_a: numOrNull(h.fmr_a),
+    fmr_b: numOrNull(h.fmr_b),
+    comp_score_a: numOrNull(h.comp_score_a),
+  }));
+
   return (
     <CompetitiveResults
-      analysis={analysis}
-      prompts={(prompts ?? []) as any[]}
-      historicalAnalyses={(historicalAnalyses ?? []) as any[]}
+      analysis={normalizedAnalysis}
+      prompts={normalizedPrompts as any[]}
+      historicalAnalyses={normalizedHistory as any[]}
       currentAnalysisId={params.analysisId}
     />
   );
