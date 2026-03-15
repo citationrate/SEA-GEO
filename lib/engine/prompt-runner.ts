@@ -82,19 +82,26 @@ export async function callAIModel(
 
         try {
           const text = resp.text();
-          if (text) return text;
+          if (text) {
+            console.log(`[Gemini] text extracted via resp.text(), length=${text.length}`);
+            return text;
+          }
         } catch { /* .text() throws if no text candidates */ }
 
         const parts = candidate?.content?.parts;
         if (parts?.length > 0) {
           const text = parts.map((p: any) => p.text ?? "").join("");
-          if (text) return text;
+          if (text) {
+            console.log(`[Gemini] text extracted via parts, length=${text.length}`);
+            return text;
+          }
         }
 
         console.error("[Gemini] empty response. Raw:", JSON.stringify({
           finishReason,
           candidatesCount: resp.candidates?.length,
           parts: parts?.map((p: any) => ({ type: Object.keys(p), len: p.text?.length })),
+          fullResponse: JSON.stringify(resp).slice(0, 500),
         }));
         return "";
       };
@@ -149,6 +156,9 @@ export async function callAIModel(
         }
         const data = await res.json();
         const text = data.choices?.[0]?.message?.content ?? "";
+        if (!text) {
+          console.warn(`[Perplexity] empty text from response. Keys: ${Object.keys(data).join(",")}, choices: ${JSON.stringify(data.choices?.[0]).slice(0, 200)}`);
+        }
         return { text, sources: extractFromText(text, brandDomain ?? undefined) };
       }, "Perplexity");
     }

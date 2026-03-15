@@ -115,14 +115,30 @@ interface BrandDetection {
   matchedVariant: string | null;
 }
 
+/** Strip markdown formatting: **bold**, *italic*, _underline_, `code`, [links](url) */
+function stripMarkdown(s: string): string {
+  return s
+    .replace(/\*\*(.+?)\*\*/g, "$1")     // **bold**
+    .replace(/\*(.+?)\*/g, "$1")          // *italic*
+    .replace(/__(.+?)__/g, "$1")          // __underline__
+    .replace(/_(.+?)_/g, "$1")            // _italic_
+    .replace(/`(.+?)`/g, "$1")            // `code`
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // [text](url)
+    .replace(/#{1,6}\s/g, "");            // # headings
+}
+
 /**
  * Detect brand mentions using multiple strategies:
  * 1. Exact full-name match (case-insensitive, accent-insensitive)
  * 2. International name variations
  * 3. First-word partial match (for multi-word brands)
+ *
+ * Strips markdown formatting before comparison to handle
+ * bold/italic brand names (e.g. **Lattebusche**).
  */
 function detectBrandMention(response: string, targetBrand: string): BrandDetection {
-  const responseLower = response.toLowerCase();
+  const cleaned = stripMarkdown(response);
+  const responseLower = cleaned.toLowerCase();
   const responseNorm = stripAccents(responseLower);
   const variants = buildBrandVariants(targetBrand);
 
@@ -270,6 +286,8 @@ export async function extractFromResponse(
   // Robust brand detection with variants and partial matching
   const detection = detectBrandMention(response, targetBrand);
 
+  console.log(`[extractor] brand="${targetBrand}" detected=${detection.mentioned} occurrences=${detection.occurrences} variant="${detection.matchedVariant}" responseLen=${response.length}`);
+
   // If brand not present, use a lighter prompt for competitors/topics/sources only
   if (!detection.mentioned) {
     const partialResult = await extractCompetitorsTopicsSources(
@@ -412,6 +430,8 @@ FORMATO: Restituisci SOLO il nome commerciale.`;
     ? message.content[0].text
     : "{}";
 
+  console.log(`[extractor] Haiku raw output (first 400): ${raw.slice(0, 400)}`);
+
   try {
     // Strip markdown code fences if present
     const cleaned = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
@@ -466,19 +486,29 @@ FORMATO: Restituisci SOLO il nome commerciale.`;
           }))
         : [],
     };
-  } catch {
+  } catch (parseErr) {
+    // CRITICAL: Do not silently discard brand detection when JSON parsing fails.
+    // The robust `detectBrandMention` result is still valid even if Claude Haiku
+    // returned malformed JSON.
+    console.error("[extractor] JSON parse failed for brand extraction. raw:", raw?.slice(0, 300), "error:", parseErr);
+
+    // Still attempt partial extraction for competitors/topics
+    const partialResult = await extractCompetitorsTopicsSources(
+      response, targetBrand, knownCompetitors, sector, brandType
+    );
+
     return {
-      brand_mentioned: false,
-      brand_rank: null,
-      brand_occurrences: 0,
-      sentiment_score: null,
+      brand_mentioned: detection.mentioned,
+      brand_rank: detection.mentioned ? 1 : null,
+      brand_occurrences: detection.occurrences,
+      sentiment_score: detection.mentioned ? 0 : null,
       tone_score: null,
       position_score: null,
       recommendation_score: null,
       brand_adjectives: [],
-      topics: [],
-      competitors_found: [] as ExtractionResult["competitors_found"],
-      sources: [],
+      topics: partialResult.topics,
+      competitors_found: partialResult.competitors_found,
+      sources: partialResult.sources,
     };
   }
 }

@@ -297,6 +297,11 @@ async function executePrompt(
 
   const extraction = await extractFromResponse(rawText, task.targetBrand, task.knownCompetitors, task.sector ?? undefined, task.brandType ?? undefined);
 
+  // Validation: warn if long response but no brand/competitors detected
+  if (rawText.length > 100 && !extraction.brand_mentioned && extraction.competitors_found.length === 0) {
+    console.warn(`[executePrompt] EXTRACTION WARNING: model=${task.model} brand="${task.targetBrand}" text=${rawText.length}chars but brand_mentioned=false, competitors=0. First 300 chars: ${rawText.slice(0, 300)}`);
+  }
+
   // Save response_analysis
   await (supabase.from("response_analysis") as any)
     .insert({
