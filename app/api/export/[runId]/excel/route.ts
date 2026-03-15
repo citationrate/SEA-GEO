@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { getServerTranslator, getLocaleFromRequest } from "@/lib/i18n/server";
+import { isProUser } from "@/lib/utils/is-pro";
 
 export async function GET(
   request: Request,
@@ -11,6 +12,17 @@ export async function GET(
   const runId = params.runId;
   const locale = getLocaleFromRequest(request);
   const t = getServerTranslator(locale);
+
+  // Check user plan
+  const { data: { user } } = await supabase.auth.getUser();
+  let isPro = false;
+  if (user) {
+    const { data: profile } = await (supabase.from("profiles") as any)
+      .select("plan")
+      .eq("id", user.id)
+      .single();
+    isPro = isProUser(profile, user.user_metadata);
+  }
 
   // Fetch run
   const { data: run } = await supabase
@@ -114,14 +126,17 @@ export async function GET(
   XLSX.utils.book_append_sheet(wb, wsSummary, "AVI Summary");
 
   // Sheet 2: Prompt Detail
-  const promptHeaders = [
+  const baseHeaders = [
     "Query", "Segment", t("datasets.model"), "Run #",
     t("datasets.brandCited"), t("datasets.rank"), "Occurrences", t("dashboard.sentiment"),
-    t("sidebar.competitors"), "Topic", "Response (truncated)",
+    t("sidebar.competitors"), "Topic",
   ];
+  const promptHeaders = isPro
+    ? [...baseHeaders, "Response"]
+    : baseHeaders;
   const promptRows = (prompts ?? []).map((p: any) => {
     const a = analysisMap.get(p.id);
-    return [
+    const baseRow = [
       queryTextMap.get(p.query_id) ?? p.query_id ?? "—",
       segmentLabelMap.get(p.segment_id) ?? p.segment_id ?? "—",
       p.model,
@@ -132,8 +147,11 @@ export async function GET(
       a?.sentiment_score ?? "—",
       (a?.competitors_found ?? []).join(", "),
       (a?.topics ?? []).join(", "),
-      (p.raw_response ?? "").substring(0, 500),
     ];
+    if (isPro) {
+      baseRow.push(p.raw_response ?? "");
+    }
+    return baseRow;
   });
   const wsPrompts = XLSX.utils.aoa_to_sheet([promptHeaders, ...promptRows]);
   XLSX.utils.book_append_sheet(wb, wsPrompts, "Prompt Detail");
