@@ -14,9 +14,10 @@ interface AVIRingProps {
   trend: number | null;
   components?: { label: string; v: number | null }[];
   noBrandMentions?: boolean;
+  hideComponents?: boolean;
 }
 
-export function AVIRing({ score, trend, components, noBrandMentions }: AVIRingProps) {
+export function AVIRing({ score, trend, components, noBrandMentions, hideComponents }: AVIRingProps) {
   const { t } = useTranslation();
   const R = 52, C = 2 * Math.PI * R;
   const dash = score != null && !noBrandMentions ? (score / 100) * C : 0;
@@ -91,7 +92,7 @@ export function AVIRing({ score, trend, components, noBrandMentions }: AVIRingPr
         </div>
       )}
 
-      {score != null && (
+      {score != null && !hideComponents && (
         <div className="w-full space-y-2.5 pt-2 border-t border-border">
           {comps.map(c => (
             <div key={c.label}>
