@@ -27,6 +27,7 @@ const AVI_COMPONENTS = [
   { key: "presence_score",   labelKey: "dashboard.presence",   color: "#e8956d", descKey: "dashboard.presenceTooltip" },
   { key: "rank_score",       labelKey: "dashboard.position",   color: "#7eb3d4", descKey: "dashboard.positionTooltip" },
   { key: "sentiment_score",  labelKey: "dashboard.sentiment",  color: "#7eb89a", descKey: "dashboard.sentimentTooltip" },
+  { key: "stability_score",  labelKey: "dashboard.reliability", color: "#c4a882", descKey: "dashboard.reliabilityTooltip" },
 ];
 
 export default async function RunDetailPage({ params }: { params: { id: string; runId: string } }) {
@@ -315,14 +316,15 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
           {/* AVI Component Comparison Bar */}
           <div className="card p-5 space-y-3">
             <h2 className="font-display font-semibold text-foreground text-sm"><TranslatedLabel tkey="runDetail.aviComparison" /></h2>
-            <div className="flex items-end gap-4 h-32">
+            <div className="flex items-end gap-4" style={{ height: 140 }}>
               {AVI_COMPONENTS.map((c) => {
                 const value = aviData[c.key] != null ? Math.round(aviData[c.key]) : 0;
+                const barHeight = Math.max(2, (value / 100) * 100);
                 return (
-                  <div key={c.key} className="flex-1 flex flex-col items-center gap-1">
-                    <span className="font-mono text-[12px] font-bold text-foreground">{value}</span>
-                    <div className="w-full rounded-t-[2px] transition-all duration-700" style={{ height: `${value}%`, backgroundColor: c.color }} />
-                    <span className="font-mono text-[11px] text-muted-foreground text-center"><TranslatedLabel tkey={c.labelKey} /></span>
+                  <div key={c.key} className="flex-1 flex flex-col items-center justify-end h-full">
+                    <span className="font-mono text-[12px] font-bold text-foreground mb-1">{value}</span>
+                    <div className="w-full rounded-t-[2px] transition-all duration-700" style={{ height: `${barHeight}%`, backgroundColor: c.color }} />
+                    <span className="font-mono text-[11px] text-muted-foreground text-center mt-1.5 leading-tight"><TranslatedLabel tkey={c.labelKey} /></span>
                   </div>
                 );
               })}
