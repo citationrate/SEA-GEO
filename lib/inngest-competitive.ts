@@ -16,18 +16,31 @@ function generateQueries(brandA: string, brandB: string, driver: string): { patt
   ];
 }
 
+const VALID_RECOMMENDATIONS = new Set([1, 2, 0.5]);
+
 async function evaluateResponse(
   responseText: string,
   brandA: string,
   brandB: string,
 ): Promise<{ recommendation: number; first_mention: string; key_arguments: string[] }> {
-  const prompt = `Leggi questa risposta AI a una query comparativa tra "${brandA}" e "${brandB}".
-Rispondi SOLO con un JSON valido, senza markdown o testo aggiuntivo:
-{
-  "recommendation": 1 se preferisce ${brandA}, 2 se preferisce ${brandB}, 0.5 se pareggio, 0 se nessuna raccomandazione,
-  "first_mention": "A" se ${brandA} è citato per primo, "B" se ${brandB}, "tie" se simultanei,
-  "key_arguments": [lista di max 3 argomenti principali usati dall'AI per giustificare la scelta]
-}
+  const prompt = `Sei un analista competitivo. Leggi questa risposta AI a una query comparativa tra "${brandA}" e "${brandB}".
+
+REGOLE TASSATIVE:
+- recommendation DEVE essere esattamente 1, 2, o 0.5. Nessun altro valore è ammesso. Mai 0, mai 1.5, mai null.
+  - 1 = la risposta favorisce "${brandA}" (più vantaggi, tono più positivo, raccomandazione più esplicita)
+  - 2 = la risposta favorisce "${brandB}" (più vantaggi, tono più positivo, raccomandazione più esplicita)
+  - 0.5 = pareggio REALE — SOLO se entrambi i brand ricevono peso identico senza alcuna preferenza rilevabile
+- Sii decisivo: anche se la risposta è diplomatica, identifica quale brand viene presentato con PIÙ vantaggi o raccomandato PIÙ esplicitamente. Usa 0.5 SOLO se è davvero impossibile distinguere una preferenza.
+- first_mention: "A" se "${brandA}" appare per primo nel testo, "B" se "${brandB}" appare per primo, "tie" se appaiono nella stessa frase iniziale.
+- key_arguments: max 3 argomenti principali usati nella risposta.
+
+ESEMPI:
+- "Entrambi sono ottimi, dipende dalle preferenze" ma poi elenca 3 vantaggi di ${brandB} e solo 1 di ${brandA} → recommendation: 2
+- "${brandA} è leader di mercato con navi moderne e ottime recensioni" → recommendation: 1
+- "Sono intercambiabili, stessa qualità, stesso prezzo, stesse rotte" → recommendation: 0.5
+
+Rispondi SOLO con questo JSON, senza testo aggiuntivo:
+{"recommendation": 1, "first_mention": "A", "key_arguments": ["arg1", "arg2"]}
 
 Risposta AI da valutare:
 
@@ -36,7 +49,7 @@ ${responseText}`;
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const msg = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 500,
+    max_tokens: 300,
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -46,14 +59,15 @@ ${responseText}`;
   try {
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(jsonMatch?.[0] ?? cleaned);
+    const rec = typeof parsed.recommendation === "number" ? parsed.recommendation : 0.5;
     return {
-      recommendation: typeof parsed.recommendation === "number" ? parsed.recommendation : 0,
+      recommendation: VALID_RECOMMENDATIONS.has(rec) ? rec : 0.5,
       first_mention: ["A", "B", "tie"].includes(parsed.first_mention) ? parsed.first_mention : "tie",
       key_arguments: Array.isArray(parsed.key_arguments) ? parsed.key_arguments.slice(0, 3) : [],
     };
   } catch {
     console.error("[competitive] evaluation parse failed:", cleaned.substring(0, 200));
-    return { recommendation: 0, first_mention: "tie", key_arguments: [] };
+    return { recommendation: 0.5, first_mention: "tie", key_arguments: [] };
   }
 }
 
