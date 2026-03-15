@@ -315,7 +315,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       </div>
 
       {/* Brand Mention Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-start">
         <div className="card p-4 text-center">
           <Eye className="w-5 h-5 text-primary mx-auto mb-2" />
           <p className="font-display font-bold text-2xl text-foreground">{mentionRate}%</p>
