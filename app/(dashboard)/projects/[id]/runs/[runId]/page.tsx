@@ -4,6 +4,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, Archive } from "lucide-react";
+import { RunAVIRing } from "./run-avi-ring";
 import { ExportButtons } from "./export-buttons";
 import { RunAutoRefresh } from "./run-auto-refresh";
 import { RunMetrics } from "./run-metrics";
@@ -22,11 +23,10 @@ const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = 
   cancelled: { label: "Annullata",   class: "badge-muted",    icon: XCircle },
 };
 
-const AVI_COMPONENTS = [
+const AVI_MAIN_COMPONENTS = [
   { key: "presence_score",   labelKey: "dashboard.presence",   color: "#e8956d", descKey: "dashboard.presenceTooltip" },
   { key: "rank_score",       labelKey: "dashboard.position",   color: "#7eb3d4", descKey: "dashboard.positionTooltip" },
   { key: "sentiment_score",  labelKey: "dashboard.sentiment",  color: "#7eb89a", descKey: "dashboard.sentimentTooltip" },
-  { key: "stability_score",  labelKey: "dashboard.reliability", color: "#c4a882", descKey: "dashboard.reliabilityTooltip" },
 ];
 
 export default async function RunDetailPage({ params }: { params: { id: string; runId: string } }) {
@@ -266,11 +266,16 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         </div>
       )}
 
-      {/* AVI Component Bars */}
+      {/* AVI Score: Ring + Component Bars */}
       {aviData && (
-        <>
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+          <RunAVIRing
+            score={aviData.avi_score}
+            trend={trend}
+            noBrandMentions={aviData.avi_score === 0 && aviData.presence_score === 0}
+          />
           <AVIBars
-            items={AVI_COMPONENTS.map((c) => ({
+            items={AVI_MAIN_COMPONENTS.map((c) => ({
               labelKey: c.labelKey,
               color: c.color,
               descKey: c.descKey,
@@ -279,26 +284,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
             stabilityScore={aviData.stability_score}
             showSingleRunNote={totalActiveRuns <= 1}
           />
-
-          {/* AVI Component Comparison Blocks */}
-          <div className="card p-5 space-y-4">
-            <h2 className="font-display font-semibold text-foreground text-sm"><TranslatedLabel tkey="runDetail.aviComparison" /></h2>
-            <div className="grid grid-cols-4 gap-3">
-              {AVI_COMPONENTS.map((c) => {
-                const value = aviData[c.key] != null ? Math.round(aviData[c.key]) : 0;
-                return (
-                  <div key={c.key} className="flex flex-col items-center gap-2 rounded-[4px] border border-border p-4">
-                    <span className="font-display font-bold text-2xl text-foreground">{value}</span>
-                    <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>
-                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value}%`, backgroundColor: c.color }} />
-                    </div>
-                    <span className="font-mono text-[11px] text-muted-foreground text-center leading-tight"><TranslatedLabel tkey={c.labelKey} /></span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </>
+        </div>
       )}
 
       {/* Filterable metrics, competitors, topics, sources, prompts */}
