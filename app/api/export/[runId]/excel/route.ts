@@ -1,13 +1,16 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
+import { getServerTranslator, getLocaleFromRequest } from "@/lib/i18n/server";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: { runId: string } }
 ) {
   const supabase = createServiceClient();
   const runId = params.runId;
+  const locale = getLocaleFromRequest(request);
+  const t = getServerTranslator(locale);
 
   // Fetch run
   const { data: run } = await supabase
@@ -85,34 +88,36 @@ export async function GET(
 
   // Sheet 1: Riepilogo AVI
   const summaryRows = [
-    ["SeaGeo - Export Analisi"],
+    ["SeaGeo - Export"],
     [],
-    ["Progetto", proj?.name ?? "—"],
-    ["Brand", proj?.target_brand ?? "—"],
-    ["Versione Run", `v${r.version}`],
-    ["Status", r.status],
-    ["Data", r.completed_at ? new Date(r.completed_at).toLocaleString("it-IT") : "—"],
-    ["Modelli", (r.models_used ?? []).join(", ")],
-    ["Prompt Totali", r.total_prompts],
-    ["Prompt Completati", r.completed_prompts],
+    [t("results.project"), proj?.name ?? "—"],
+    [t("datasets.brand"), proj?.target_brand ?? "—"],
+    [t("results.version"), `v${r.version}`],
+    [t("results.status"), r.status],
+    [t("results.date"), r.completed_at ? new Date(r.completed_at).toLocaleString(locale) : "—"],
+    [t("results.models"), (r.models_used ?? []).join(", ")],
+    ["Prompt Total", r.total_prompts],
+    ["Prompt Completed", r.completed_prompts],
     [],
     ["--- AVI Score ---"],
     ["AVI Score", aviData?.avi_score ?? "—"],
-    ["Presenza", aviData?.presence_score ?? "—"],
-    ["Posizione", aviData?.rank_score ?? "—"],
-    ["Sentiment", aviData?.sentiment_score ?? "—"],
+    [t("dashboard.presence"), aviData?.presence_score ?? "—"],
+    [t("dashboard.position"), aviData?.rank_score ?? "—"],
+    [t("dashboard.sentiment"), aviData?.sentiment_score ?? "—"],
     [],
-    ["--- Affidabilità (non inclusa nell'AVI) ---"],
-    ["Affidabilità", aviData?.stability_score ?? "—"],
+    [`--- ${t("dashboard.reliability")} ---`],
+    [t("dashboard.reliability"), aviData?.stability_score != null
+      ? `${(aviData.stability_score > 80 ? t("dashboard.highReliability") : aviData.stability_score >= 50 ? t("dashboard.mediumReliability") : t("dashboard.lowReliability"))} (${Math.round(aviData.stability_score)})`
+      : "—"],
   ];
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
-  XLSX.utils.book_append_sheet(wb, wsSummary, "Riepilogo AVI");
+  XLSX.utils.book_append_sheet(wb, wsSummary, "AVI Summary");
 
-  // Sheet 2: Dettaglio Prompt
+  // Sheet 2: Prompt Detail
   const promptHeaders = [
-    "Query", "Segmento", "Modello", "Run #",
-    "Brand Menzionato", "Rank", "Occorrenze", "Sentiment",
-    "Competitor", "Topic", "Risposta (troncata)",
+    "Query", "Segment", t("datasets.model"), "Run #",
+    t("datasets.brandCited"), t("datasets.rank"), "Occurrences", t("dashboard.sentiment"),
+    t("sidebar.competitors"), "Topic", "Response (truncated)",
   ];
   const promptRows = (prompts ?? []).map((p: any) => {
     const a = analysisMap.get(p.id);
@@ -121,7 +126,7 @@ export async function GET(
       segmentLabelMap.get(p.segment_id) ?? p.segment_id ?? "—",
       p.model,
       p.run_number,
-      a?.brand_mentioned ? "Sì" : "No",
+      a?.brand_mentioned ? t("common.yes") : t("common.no"),
       a?.brand_rank ?? "—",
       a?.brand_occurrences ?? 0,
       a?.sentiment_score ?? "—",
@@ -131,7 +136,7 @@ export async function GET(
     ];
   });
   const wsPrompts = XLSX.utils.aoa_to_sheet([promptHeaders, ...promptRows]);
-  XLSX.utils.book_append_sheet(wb, wsPrompts, "Dettaglio Prompt");
+  XLSX.utils.book_append_sheet(wb, wsPrompts, "Prompt Detail");
 
   // Sheet 3: Competitor
   const analysesList = (analyses ?? []) as any[];
@@ -151,7 +156,7 @@ export async function GET(
       }
     });
   });
-  const compHeaders = ["Competitor", "Citazioni", "Sentiment Medio"];
+  const compHeaders = [t("sidebar.competitors"), t("sources.citationsLabel"), t("runMetrics.avgSentiment")];
   const compRows = Array.from(allCompetitors.entries())
     .sort((a, b) => b[1].count - a[1].count)
     .map(([name, stats]) => [
@@ -169,25 +174,25 @@ export async function GET(
       allTopics.set(t, (allTopics.get(t) ?? 0) + 1);
     });
   });
-  const topicHeaders = ["Topic", "Frequenza"];
+  const topicHeaders = ["Topic", "Frequency"];
   const topicRows = Array.from(allTopics.entries())
     .sort((a, b) => b[1] - a[1])
     .map(([name, count]) => [name, count]);
   const wsTopics = XLSX.utils.aoa_to_sheet([topicHeaders, ...topicRows]);
   XLSX.utils.book_append_sheet(wb, wsTopics, "Topic");
 
-  // Sheet 5: Fonti
-  const sourceHeaders = ["Dominio", "URL", "Label", "Tipo", "Citazioni", "Brand Owned"];
+  // Sheet 5: Sources
+  const sourceHeaders = ["Domain", "URL", "Label", "Type", t("sources.citationsLabel"), t("sources.brandOwned")];
   const sourceRows = (sources ?? []).map((s: any) => [
     s.domain ?? "—",
     s.url ?? "—",
     s.label ?? "—",
     s.source_type ?? "—",
     s.citation_count ?? 1,
-    s.is_brand_owned ? "Sì" : "No",
+    s.is_brand_owned ? t("common.yes") : t("common.no"),
   ]);
   const wsSources = XLSX.utils.aoa_to_sheet([sourceHeaders, ...sourceRows]);
-  XLSX.utils.book_append_sheet(wb, wsSources, "Fonti");
+  XLSX.utils.book_append_sheet(wb, wsSources, t("sources.title"));
 
   // Generate buffer
   const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });

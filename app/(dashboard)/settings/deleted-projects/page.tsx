@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { DeletedProjectsList } from "./deleted-projects-list";
+import { T } from "@/components/translated-label";
 
 export const metadata = { title: "Progetti eliminati" };
 
@@ -23,13 +24,13 @@ export default async function DeletedProjectsPage() {
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Impostazioni
+          <T k="sidebar.settings" />
         </a>
         <div className="flex items-center gap-3">
           <Trash2 className="w-6 h-6 text-destructive" />
           <div>
-            <h1 className="font-display font-bold text-2xl text-foreground">Progetti eliminati</h1>
-            <p className="text-sm text-muted-foreground">Ripristina o elimina definitivamente i progetti archiviati</p>
+            <h1 className="font-display font-bold text-2xl text-foreground"><T k="settings.deletedProjects" /></h1>
+            <p className="text-sm text-muted-foreground"><T k="settings.restoreDeleted" /></p>
           </div>
         </div>
       </div>

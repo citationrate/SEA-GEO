@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Loader2, Cpu, Info } from "lucide-react";
 import { toast } from "sonner";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { useTranslation } from "@/lib/i18n/context";
 
 const SECTOR_OPTIONS = [
   "Turismo",
@@ -49,11 +50,12 @@ export default function EditProjectPage() {
   const [language, setLanguage] = useState<"it" | "en">("it");
   const [country, setCountry] = useState("");
   const [modelsConfig, setModelsConfig] = useState<string[]>([]);
+  const { t } = useTranslation();
   useEffect(() => {
     async function load() {
       const res = await fetch(`/api/projects/${projectId}`);
       if (!res.ok) {
-        setError("Impossibile caricare il progetto");
+        setError(t("editProject.loadError"));
         setLoading(false);
         return;
       }
@@ -95,14 +97,14 @@ export default function EditProjectPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Errore durante il salvataggio");
+        throw new Error(data.error || t("projects.saveError"));
       }
 
       toast.success("Progetto aggiornato");
       router.push(`/projects/${projectId}`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore sconosciuto");
+      setError(err instanceof Error ? err.message : t("projects.unknownError"));
     } finally {
       setSaving(false);
     }
@@ -124,18 +126,18 @@ export default function EditProjectPage() {
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Torna al progetto
+          {t("nav.backToProject")}
         </a>
-        <h1 className="font-display font-bold text-2xl text-foreground">Modifica Progetto</h1>
+        <h1 className="font-display font-bold text-2xl text-foreground">{t("editProject.title")}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Aggiorna le informazioni del progetto
+          {t("editProject.subtitle")}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA" && (e.target as HTMLElement).getAttribute("type") !== "submit") e.preventDefault(); }} className="card p-6 space-y-5">
         {/* Nome progetto */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Nome progetto *</label>
+          <label className="text-sm font-medium text-foreground">{t("projects.projectName")} *</label>
           <input
             type="text"
             required
@@ -149,7 +151,7 @@ export default function EditProjectPage() {
         {/* Brand rilevato */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-            Brand rilevato *
+            {t("projects.targetBrand")} *
             <InfoTooltip text="Il brand che verrà cercato nelle risposte AI" />
           </label>
           <input
@@ -165,7 +167,7 @@ export default function EditProjectPage() {
         {/* Sito web */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-            Sito web ufficiale *
+            {t("projects.website")} *
             <InfoTooltip text="Usato per rilevare le fonti owned nei risultati" />
           </label>
           <input
@@ -182,7 +184,7 @@ export default function EditProjectPage() {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              Settore
+              {t("projects.sector")}
               <InfoTooltip text="Usato per suggerire query rilevanti per il tuo mercato" />
             </label>
             <select
@@ -190,7 +192,7 @@ export default function EditProjectPage() {
               onChange={(e) => setSector(e.target.value)}
               className="input-base"
             >
-              <option value="">Seleziona...</option>
+              <option value="">{t("projects.selectSector")}</option>
               {SECTOR_OPTIONS.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
@@ -198,7 +200,7 @@ export default function EditProjectPage() {
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              Tipo Brand
+              {t("projects.brandType")}
               <InfoTooltip text="Aiuta l'AI a classificare correttamente i competitor" />
             </label>
             <select
@@ -216,7 +218,7 @@ export default function EditProjectPage() {
         {/* Lingua e Paese */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Lingua</label>
+            <label className="text-sm font-medium text-foreground">{t("projects.language")}</label>
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value as "it" | "en")}
@@ -227,7 +229,7 @@ export default function EditProjectPage() {
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Paese</label>
+            <label className="text-sm font-medium text-foreground">{t("projects.country")}</label>
             <input
               type="text"
               value={country}
@@ -240,7 +242,7 @@ export default function EditProjectPage() {
 
         {/* Contesto di mercato */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Contesto di mercato</label>
+          <label className="text-sm font-medium text-foreground">{t("projects.marketContext")}</label>
           <textarea
             value={marketContext}
             onChange={(e) => setMarketContext(e.target.value)}
@@ -252,7 +254,7 @@ export default function EditProjectPage() {
 
         {/* Modelli AI — read-only */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Modelli AI</label>
+          <label className="text-sm font-medium text-foreground">{t("projects.aiModels")}</label>
           <div className="flex items-start gap-2 flex-wrap bg-muted/50 border border-border rounded-[2px] px-4 py-3">
             <Cpu className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
             {modelsConfig.length > 0 ? (
@@ -260,13 +262,13 @@ export default function EditProjectPage() {
                 <span key={m} className="badge badge-primary text-[12px]">{m}</span>
               ))
             ) : (
-              <span className="text-xs text-muted-foreground">Nessun modello configurato</span>
+              <span className="text-xs text-muted-foreground">{t("editProject.noModelConfigured")}</span>
             )}
           </div>
           <div className="flex items-center gap-1.5 mt-1">
             <Info className="w-3 h-3 text-muted-foreground shrink-0" />
             <p className="text-xs text-muted-foreground">
-              I modelli AI sono fissi per garantire dati comparabili nel tempo
+              {t("editProject.modelsFixed")}
             </p>
           </div>
         </div>
@@ -281,7 +283,7 @@ export default function EditProjectPage() {
           className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
         >
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-          {saving ? "Salvataggio..." : "Salva Modifiche"}
+          {saving ? t("common.saving") : t("editProject.saveChanges")}
         </button>
       </form>
     </div>

@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner";
 import { generateQueries, type GenerationInputs, type GeneratedQuery, type Persona } from "@/lib/query-generator";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { useTranslation } from "@/lib/i18n/context";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -24,10 +25,10 @@ const FUNNEL_COLORS: Record<string, string> = {
 };
 
 const QUERY_COUNT_OPTIONS = [
-  { value: 5, label: "5 query", desc: "rapido" },
-  { value: 10, label: "10 query", desc: "consigliato" },
-  { value: 20, label: "20 query", desc: "approfondito" },
-  { value: 50, label: "50 query", desc: "completo" },
+  { value: 5, label: "5 query", descKey: "generateQueries.quick" },
+  { value: 10, label: "10 query", descKey: "generateQueries.recommended" },
+  { value: 20, label: "20 query", descKey: "generateQueries.detailed" },
+  { value: 50, label: "50 query", descKey: "generateQueries.complete" },
 ];
 
 export default function GenerateQueriesPage() {
@@ -35,6 +36,7 @@ export default function GenerateQueriesPage() {
   const router = useRouter();
   const projectId = params.id as string;
 
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>(1);
   const [saving, setSaving] = useState(false);
   const [isPro, setIsPro] = useState(false);
@@ -123,7 +125,7 @@ export default function GenerateQueriesPage() {
   }
 
   function goToStep2() {
-    if (!categoria.trim()) { toast.error("Inserisci la categoria"); return; }
+    if (!categoria.trim()) { toast.error(t("generateQueries.insertCategory")); return; }
     setStep(2);
   }
 
@@ -191,12 +193,12 @@ export default function GenerateQueriesPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Errore");
+        throw new Error(data.error || t("common.error"));
       }
-      toast.success(`${activeQueries.length} query generate e salvate`);
+      toast.success(`${activeQueries.length} ${t("generateQueries.queriesSaved")}`);
       router.push(`/projects/${projectId}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore nel salvataggio");
+      toast.error(err instanceof Error ? err.message : t("generateQueries.saveError"));
     } finally {
       setSaving(false);
     }
@@ -217,7 +219,7 @@ export default function GenerateQueriesPage() {
           obiezioni,
         }),
       });
-      if (!res.ok) throw new Error("Errore");
+      if (!res.ok) throw new Error(t("common.error"));
       const data = await res.json();
       if (Array.isArray(data.questions) && data.questions.length > 0) {
         setAiQuestions(data.questions.slice(0, 3));
@@ -225,7 +227,7 @@ export default function GenerateQueriesPage() {
         setShowAiIntake(true);
       }
     } catch {
-      toast.error("Impossibile generare le domande AI");
+      toast.error(t("generateQueries.aiQuestionsError"));
     } finally {
       setAiQuestionsLoading(false);
     }
@@ -244,13 +246,13 @@ export default function GenerateQueriesPage() {
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Torna alle query
+          {t("nav.backToQueries")}
         </a>
         <div className="flex items-center gap-3">
           <Sparkles className="w-6 h-6 text-primary" />
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-display font-bold text-2xl text-foreground">Genera Prompt con AI</h1>
+              <h1 className="font-display font-bold text-2xl text-foreground">{t("settings.generatePromptAI")}</h1>
               {isPro && (
                 <span className="inline-flex items-center gap-1 font-mono text-[0.75rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">
                   <Crown className="w-3 h-3" /> PRO
@@ -258,7 +260,7 @@ export default function GenerateQueriesPage() {
               )}
             </div>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Generazione strutturata con famiglie, layer e personas
+              {t("generateQueries.subtitle")}
             </p>
           </div>
         </div>
@@ -269,18 +271,17 @@ export default function GenerateQueriesPage() {
         <div className="card border-[#c4a882]/20 bg-[#c4a882]/5 p-6 space-y-3">
           <div className="flex items-center gap-2">
             <Crown className="w-5 h-5 text-[#c4a882]" />
-            <h2 className="font-display font-semibold text-foreground">Funzionalità Pro</h2>
+            <h2 className="font-display font-semibold text-foreground">{t("generateQueries.proFeature")}</h2>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Genera Prompt con AI è disponibile con il piano Pro. Passa a Pro per generare query strutturate
-            con famiglie, layer, personas e distribuzione TOFU/MOFU personalizzata.
+            {t("generateQueries.proDesc")}
           </p>
           <a
             href="/settings"
             className="inline-flex items-center gap-2 bg-[#c4a882] text-black text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-[#c4a882]/80 transition-colors"
           >
             <Crown className="w-4 h-4" />
-            Passa a Pro
+            {t("generateQueries.upgradePro")}
           </a>
         </div>
       )}
@@ -291,10 +292,10 @@ export default function GenerateQueriesPage() {
       {/* Step indicator */}
       <div className="flex items-center gap-2">
         {[
-          { n: 1, label: "Contesto Brand" },
-          { n: 2, label: "Personas & Pubblico" },
-          { n: 3, label: "Quante query" },
-          { n: 4, label: "Anteprima" },
+          { n: 1, label: t("generateQueries.stepBrandContext") },
+          { n: 2, label: t("generateQueries.stepPersonas") },
+          { n: 3, label: t("generateQueries.stepHowMany") },
+          { n: 4, label: t("generateQueries.stepPreview") },
         ].map((s, i) => (
           <div key={s.n} className="flex items-center gap-2">
             {i > 0 && <div className="w-6 h-px bg-border" />}
@@ -315,13 +316,13 @@ export default function GenerateQueriesPage() {
       {/* ═══════════════════════════════════════════════════════ */}
       {step === 1 && (
         <div data-tour="query-wizard-step1" className="card p-6 space-y-5">
-          <h2 className="font-display font-semibold text-foreground">Contesto Brand</h2>
+          <h2 className="font-display font-semibold text-foreground">{t("generateQueries.stepBrandContext")}</h2>
 
           {/* Categoria */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              Categoria *
-              <InfoTooltip text="La categoria di prodotto o servizio del tuo brand, es. 'pasta artigianale', 'skincare naturale'" />
+              {t("generateQueries.category")} *
+              <InfoTooltip text={t("generateQueries.categoryTooltip")} />
             </label>
             <input
               type="text"
@@ -335,8 +336,8 @@ export default function GenerateQueriesPage() {
           {/* Mercato */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              Mercato *
-              <InfoTooltip text="Il mercato di riferimento del tuo brand, es. 'Italia', 'Europa', 'B2B internazionale'" />
+              {t("generateQueries.market")} *
+              <InfoTooltip text={t("generateQueries.marketTooltip")} />
             </label>
             <input
               type="text"
@@ -350,8 +351,8 @@ export default function GenerateQueriesPage() {
           {/* Luogo */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              Luogo
-              <InfoTooltip text="Specifica una città, regione o paese per generare query geolocalizzate. Aumenta la rilevanza per brand con presenza locale." />
+              {t("generateQueries.place")}
+              <InfoTooltip text={t("generateQueries.placeTooltip")} />
             </label>
             <input
               type="text"
@@ -364,8 +365,8 @@ export default function GenerateQueriesPage() {
 
           {/* Punti di forza */}
           <TagInput
-            label="Punti di forza"
-            tooltip="Cosa rende unico il tuo brand? L'AI userà questi elementi per costruire query in cui il tuo brand emerge positivamente."
+            label={t("generateQueries.strengths")}
+            tooltip={t("generateQueries.strengthsTooltip")}
             tags={puntiDiForza}
             input={puntiInput}
             setInput={setPuntiInput}
@@ -376,8 +377,8 @@ export default function GenerateQueriesPage() {
 
           {/* Principali competitor */}
           <TagInput
-            label="Principali competitor"
-            tooltip="I competitor che vuoi monitorare nelle query MOFU comparative."
+            label={t("generateQueries.mainCompetitors")}
+            tooltip={t("generateQueries.competitorsTooltip")}
             tags={competitor}
             input={competitorInput}
             setInput={setCompetitorInput}
@@ -388,8 +389,8 @@ export default function GenerateQueriesPage() {
 
           {/* Obiezioni comuni */}
           <TagInput
-            label="Obiezioni comuni"
-            tooltip="Le obiezioni tipiche dei clienti. Aiuta l'AI a generare query che riflettono dubbi reali del mercato."
+            label={t("generateQueries.objections")}
+            tooltip={t("generateQueries.objectionsTooltip")}
             tags={obiezioni}
             input={obiezioniInput}
             setInput={setObiezioniInput}
@@ -404,9 +405,9 @@ export default function GenerateQueriesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-foreground font-medium">
-                    Vuoi che l&apos;AI ti faccia alcune domande per capire meglio il tuo brand?
+                    {t("generateQueries.aiIntakeQuestion")}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Opzionale — migliora la qualità delle query generate</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("generateQueries.aiIntakeOptional")}</p>
                 </div>
                 <button
                   onClick={generateAiQuestions}
@@ -418,14 +419,14 @@ export default function GenerateQueriesPage() {
                   ) : (
                     <MessageCircleQuestion className="w-4 h-4" />
                   )}
-                  Sì, rispondi a 3 domande &rarr;
+                  {t("generateQueries.aiIntakeYes")} &rarr;
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <MessageCircleQuestion className="w-4 h-4 text-primary" />
-                  <p className="text-sm font-medium text-foreground">Domande dall&apos;AI</p>
+                  <p className="text-sm font-medium text-foreground">{t("generateQueries.aiIntakeTitle")}</p>
                 </div>
                 {aiQuestions.map((q, i) => (
                   <div key={i} className="space-y-1.5 animate-fade-in" style={{ animationDelay: `${i * 150}ms` }}>
@@ -438,7 +439,7 @@ export default function GenerateQueriesPage() {
                         next[i] = e.target.value;
                         setAiAnswers(next);
                       }}
-                      placeholder="La tua risposta (opzionale)"
+                      placeholder={t("generateQueries.yourAnswer")}
                       className="input-base w-full"
                     />
                   </div>
@@ -447,7 +448,7 @@ export default function GenerateQueriesPage() {
                   onClick={() => { setShowAiIntake(false); setAiQuestions([]); setAiAnswers(["", "", ""]); }}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Chiudi domande
+                  {t("generateQueries.aiIntakeClose")}
                 </button>
               </div>
             )}
@@ -458,7 +459,7 @@ export default function GenerateQueriesPage() {
               onClick={goToStep2}
               className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors"
             >
-              Avanti
+              {t("common.next")}
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -472,15 +473,13 @@ export default function GenerateQueriesPage() {
         <div className="card p-6 space-y-5">
           <div className="flex items-center gap-3">
             <Users className="w-5 h-5 text-purple-400" />
-            <h2 className="font-display font-semibold text-foreground">Personas &amp; Pubblico Target</h2>
-            <InfoTooltip text="Ogni persona attiva moltiplica le query generate. Con 2 personas ottieni query da 2 prospettive diverse — utile per brand con target eterogeneo." />
+            <h2 className="font-display font-semibold text-foreground">{t("generateQueries.personasTitle")}</h2>
+            <InfoTooltip text={t("generateQueries.personasTooltip")} />
           </div>
 
           <div className="rounded-[2px] border border-primary/20 bg-primary/5 px-4 py-3">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Le personas definiscono il tipo di utente che fa le domande all&apos;AI.
-              Ogni persona genera un set di query con prospettiva diversa,
-              aumentando la copertura dell&apos;analisi.
+              {t("generateQueries.personasDesc")}
             </p>
           </div>
 
@@ -494,7 +493,7 @@ export default function GenerateQueriesPage() {
             >
               <div className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform ${personasEnabled ? "translate-x-5" : "translate-x-0.5"}`} />
             </div>
-            <span className="text-sm font-medium text-foreground">Attiva Personas</span>
+            <span className="text-sm font-medium text-foreground">{t("generateQueries.activatePersonas")}</span>
             <span className="text-xs text-muted-foreground">(max 3)</span>
           </label>
 
@@ -511,7 +510,7 @@ export default function GenerateQueriesPage() {
 
                   {/* Nome persona */}
                   <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Nome persona</label>
+                    <label className="text-xs text-muted-foreground">{t("generateQueries.personaName")}</label>
                     <input
                       type="text"
                       value={p.nome || ""}
@@ -530,7 +529,7 @@ export default function GenerateQueriesPage() {
                         p.mode === "demographic" ? "border-purple-500/40 bg-purple-500/10 text-purple-400" : "border-border text-muted-foreground"
                       }`}
                     >
-                      B2C (demografico)
+                      {t("generateQueries.b2cDemographic")}
                     </button>
                     <button
                       type="button"
@@ -539,42 +538,42 @@ export default function GenerateQueriesPage() {
                         p.mode === "decision_drivers" ? "border-purple-500/40 bg-purple-500/10 text-purple-400" : "border-border text-muted-foreground"
                       }`}
                     >
-                      B2B (decisore aziendale)
+                      {t("generateQueries.b2bDecisionMaker")}
                     </button>
                   </div>
 
                   {p.mode === "demographic" ? (
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Età</label>
+                        <label className="text-xs text-muted-foreground">{t("generateQueries.age")}</label>
                         <input type="text" value={p.eta || ""} onChange={(e) => updatePersona(idx, { eta: e.target.value })} placeholder="es. 30-45" className="input-base w-full" />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Sesso</label>
+                        <label className="text-xs text-muted-foreground">{t("generateQueries.gender")}</label>
                         <select value={p.sesso || ""} onChange={(e) => updatePersona(idx, { sesso: e.target.value })} className="input-base w-full">
                           <option value="">—</option>
-                          <option value="M">Uomo</option>
-                          <option value="F">Donna</option>
-                          <option value="altro">Altro</option>
+                          <option value="M">{t("generateQueries.man")}</option>
+                          <option value="F">{t("generateQueries.woman")}</option>
+                          <option value="altro">{t("sources.other")}</option>
                         </select>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Situazione</label>
+                        <label className="text-xs text-muted-foreground">{t("generateQueries.situation")}</label>
                         <input type="text" value={p.situazione || ""} onChange={(e) => updatePersona(idx, { situazione: e.target.value })} placeholder="es. cucina per la famiglia" className="input-base w-full" />
                       </div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Ruolo</label>
+                        <label className="text-xs text-muted-foreground">{t("generateQueries.role")}</label>
                         <input type="text" value={p.ruolo || ""} onChange={(e) => updatePersona(idx, { ruolo: e.target.value })} placeholder="es. responsabile acquisti" className="input-base w-full" />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Settore</label>
+                        <label className="text-xs text-muted-foreground">{t("generateQueries.sector")}</label>
                         <input type="text" value={p.settore || ""} onChange={(e) => updatePersona(idx, { settore: e.target.value })} placeholder="es. ristorazione" className="input-base w-full" />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs text-muted-foreground">Problema principale</label>
+                        <label className="text-xs text-muted-foreground">{t("generateQueries.mainProblem")}</label>
                         <input type="text" value={p.problema || ""} onChange={(e) => updatePersona(idx, { problema: e.target.value })} placeholder="es. costi di approvvigionamento" className="input-base w-full" />
                       </div>
                     </div>
@@ -589,7 +588,7 @@ export default function GenerateQueriesPage() {
                   className="flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
-                  Aggiungi Persona
+                  {t("generateQueries.addPersona")}
                 </button>
               )}
             </div>
@@ -601,13 +600,13 @@ export default function GenerateQueriesPage() {
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
-              Indietro
+              {t("common.back")}
             </button>
             <button
               onClick={goToStep3}
               className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors"
             >
-              Avanti
+              {t("common.next")}
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -619,7 +618,7 @@ export default function GenerateQueriesPage() {
       {/* ═══════════════════════════════════════════════════════ */}
       {step === 3 && (
         <div className="card p-6 space-y-5">
-          <h2 className="font-display font-semibold text-foreground">Quante query vuoi generare?</h2>
+          <h2 className="font-display font-semibold text-foreground">{t("generateQueries.howManyQueries")}</h2>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {QUERY_COUNT_OPTIONS.map((opt) => {
@@ -638,7 +637,7 @@ export default function GenerateQueriesPage() {
                   <p className={`text-lg font-display font-bold ${isSelected ? "text-primary" : "text-foreground"}`}>
                     {opt.label}
                   </p>
-                  <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                  <p className="text-xs text-muted-foreground">{t(opt.descKey)}</p>
                 </button>
               );
             })}
@@ -655,7 +654,7 @@ export default function GenerateQueriesPage() {
                   : "border-border text-muted-foreground hover:border-primary/30"
               }`}
             >
-              Personalizzato
+              {t("generateQueries.custom")}
             </button>
             {queryCount === -1 && (
               <input
@@ -672,8 +671,8 @@ export default function GenerateQueriesPage() {
           {/* TOFU / MOFU split selector */}
           <div className="space-y-3">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              Distribuzione TOFU / MOFU
-              <InfoTooltip text="TOFU (Top of Funnel): query informative e generiche. MOFU (Middle of Funnel): query comparative e valutative. Bilancia la copertura del funnel." />
+              {t("generateQueries.tofuMofuDistribution")}
+              <InfoTooltip text={t("generateQueries.tofuMofuTooltip")} />
             </label>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -722,10 +721,10 @@ export default function GenerateQueriesPage() {
           <div className="space-y-2 pt-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">
-                Hai utilizzato <span className="text-foreground font-bold">{usedThisMonth}</span> / {monthlyLimit} query questo mese
+                {t("generateQueries.usedQueries")} <span className="text-foreground font-bold">{usedThisMonth}</span> / {monthlyLimit} {t("generateQueries.queriesThisMonth")}
               </span>
               <span className={`font-mono ${wouldExceed ? "text-destructive" : "text-muted-foreground"}`}>
-                {isPro ? "Piano Pro" : "Piano Base"}
+                {isPro ? t("generateQueries.planPro") : t("generateQueries.planBase")}
               </span>
             </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -739,7 +738,7 @@ export default function GenerateQueriesPage() {
             </div>
             {wouldExceed && (
               <p className="text-xs text-destructive">
-                Hai superato il limite mensile. Riduci il numero di query o passa al piano Pro.
+                {t("generateQueries.exceededLimit")}
               </p>
             )}
           </div>
@@ -750,14 +749,14 @@ export default function GenerateQueriesPage() {
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
-              Indietro
+              {t("common.back")}
             </button>
             <button
               onClick={goToStep4}
               disabled={wouldExceed}
               className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
             >
-              Genera Anteprima
+              {t("generateQueries.generatePreview")}
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -773,15 +772,15 @@ export default function GenerateQueriesPage() {
           <div className="card p-4 flex items-center justify-between">
             <div className="text-sm">
               <span className="font-bold text-foreground">{selectedIndexes.size}</span>
-              <span className="text-muted-foreground"> query selezionate su </span>
+              <span className="text-muted-foreground"> {t("generateQueries.queriesSelected")} </span>
               <span className="text-foreground">{generatedQueries.length}</span>
-              <span className="text-muted-foreground"> generate</span>
+              <span className="text-muted-foreground"> {t("generateQueries.generated")}</span>
             </div>
             <button
               onClick={toggleAll}
               className="text-xs text-primary hover:text-primary/80 transition-colors font-medium"
             >
-              {selectedIndexes.size === generatedQueries.length ? "Deseleziona tutte" : "Seleziona tutte"}
+              {selectedIndexes.size === generatedQueries.length ? t("generateQueries.deselectAll") : t("generateQueries.selectAll")}
             </button>
           </div>
 
@@ -792,7 +791,7 @@ export default function GenerateQueriesPage() {
               .filter((q) => q.set_type === setType);
             if (groupQueries.length === 0) return null;
 
-            const label = setType === "generale" ? "Generali" : setType === "verticale" ? "Verticali" : "Personas";
+            const label = setType === "generale" ? t("queries.filterGeneral") : setType === "verticale" ? t("queries.filterVertical") : t("queries.filterPersonas");
 
             return (
               <div key={setType} className="card p-5 space-y-3">
@@ -801,7 +800,7 @@ export default function GenerateQueriesPage() {
                     {label}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {groupQueries.filter((q) => selectedIndexes.has(q.originalIndex)).length}/{groupQueries.length} selezionate
+                    {groupQueries.filter((q) => selectedIndexes.has(q.originalIndex)).length}/{groupQueries.length} {t("generateQueries.selected")}
                   </span>
                 </div>
                 <div className="space-y-1.5">
@@ -847,7 +846,7 @@ export default function GenerateQueriesPage() {
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
-              Indietro
+              {t("common.back")}
             </button>
             <button
               onClick={saveQueries}
@@ -855,7 +854,7 @@ export default function GenerateQueriesPage() {
               className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              Salva {activeQueries.length} query selezionate &rarr;
+              {t("generateQueries.saveQueries")} {activeQueries.length} {t("generateQueries.queriesSelectedSuffix")} &rarr;
             </button>
           </div>
         </div>

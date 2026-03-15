@@ -13,6 +13,7 @@ import { ShareButton } from "./share-button";
 import { StabilitySection } from "./stability-section";
 import { SegmentSection } from "./segment-section";
 import { AVIBars } from "./avi-bars";
+import { TranslatedStatus, TranslatedLabel, TranslatedReliability, TranslatedReliabilityTooltip, TranslatedSingleRunNote } from "./run-i18n";
 
 const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = {
   pending:   { label: "In attesa",   class: "badge-muted",    icon: Clock },
@@ -23,9 +24,9 @@ const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = 
 };
 
 const AVI_COMPONENTS = [
-  { key: "presence_score",   label: "Presenza",   color: "#e8956d", desc: "% risposte AI in cui il brand viene citato" },
-  { key: "rank_score",       label: "Posizione",  color: "#7eb3d4", desc: "Posizione media mediata su tutti i prompt" },
-  { key: "sentiment_score",  label: "Sentiment",  color: "#7eb89a", desc: "Tono delle citazioni mediato su tutti i prompt" },
+  { key: "presence_score",   labelKey: "dashboard.presence",   color: "#e8956d", descKey: "dashboard.presenceTooltip" },
+  { key: "rank_score",       labelKey: "dashboard.position",   color: "#7eb3d4", descKey: "dashboard.positionTooltip" },
+  { key: "sentiment_score",  labelKey: "dashboard.sentiment",  color: "#7eb89a", descKey: "dashboard.sentimentTooltip" },
 ];
 
 export default async function RunDetailPage({ params }: { params: { id: string; runId: string } }) {
@@ -54,6 +55,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
 
   // Trend vs previous run (exclude archived runs)
   let trend: number | null = null;
+  let totalActiveRuns = 1;
   if (avi) {
     const { data: activeRuns } = await supabase
       .from("analysis_runs")
@@ -61,6 +63,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
       .eq("project_id", params.id)
       .is("deleted_at", null);
     const activeRunIds = (activeRuns ?? []).map((r: any) => r.id);
+    totalActiveRuns = activeRunIds.length;
 
     const { data: allAvi } = activeRunIds.length > 0
       ? await supabase
@@ -178,7 +181,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
           <div className="flex items-center gap-2">
             <Archive className="w-4 h-4 text-muted-foreground" />
             <span className="text-muted-foreground">
-              Questa analisi &egrave; archiviata e non viene inclusa nei calcoli AVI.
+              <TranslatedLabel tkey="runDetail.archived" />
             </span>
           </div>
           <RestoreRunButton runId={params.runId} />
@@ -215,11 +218,11 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Torna al progetto
+          <TranslatedLabel tkey="nav.backToProject" />
         </a>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="font-display font-bold text-2xl text-foreground">Analisi v{r.version}</h1>
+            <h1 className="font-display font-bold text-2xl text-foreground"><TranslatedLabel tkey="runDetail.analysisVersion" /> v{r.version}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               {proj?.name === proj?.target_brand ? proj?.name : `${proj?.name} \u00B7 ${proj?.target_brand}`}
             </p>
@@ -234,7 +237,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
             )}
             <span className={`badge ${statusInfo.class} flex items-center gap-1`}>
               <StatusIcon className={`w-3.5 h-3.5 ${r.status === "running" ? "animate-spin" : ""}`} />
-              {statusInfo.label}
+              <TranslatedStatus status={r.status} />
             </span>
           </div>
         </div>
@@ -242,11 +245,11 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
 
       {/* Run metadata */}
       <div className="card p-4 flex flex-wrap gap-x-6 gap-y-2 text-sm break-words">
-        <div className="flex flex-wrap items-center gap-1"><span className="text-muted-foreground">Modelli:</span>{" "}<span className="text-foreground font-medium break-words">{r.models_used?.join(", ")}</span></div>
-        <div><span className="text-muted-foreground">Prompt:</span>{" "}<span className="text-foreground font-medium">{r.completed_prompts}/{r.total_prompts}</span></div>
-        <div><span className="text-muted-foreground">Run per prompt:</span>{" "}<span className="text-foreground font-medium">{r.run_count}</span></div>
-        {r.started_at && <div><span className="text-muted-foreground">Inizio:</span>{" "}<span className="text-foreground" suppressHydrationWarning>{new Date(r.started_at).toLocaleString("it-IT")}</span></div>}
-        {r.completed_at && <div><span className="text-muted-foreground">Fine:</span>{" "}<span className="text-foreground" suppressHydrationWarning>{new Date(r.completed_at).toLocaleString("it-IT")}</span></div>}
+        <div className="flex flex-wrap items-center gap-1"><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.modelsLabel" />:</span>{" "}<span className="text-foreground font-medium break-words">{r.models_used?.join(", ")}</span></div>
+        <div><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.promptLabel" />:</span>{" "}<span className="text-foreground font-medium">{r.completed_prompts}/{r.total_prompts}</span></div>
+        <div><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.runsPerPrompt" />:</span>{" "}<span className="text-foreground font-medium">{r.run_count}</span></div>
+        {r.started_at && <div><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.startLabel" />:</span>{" "}<span className="text-foreground" suppressHydrationWarning>{new Date(r.started_at).toLocaleString("it-IT")}</span></div>}
+        {r.completed_at && <div><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.endLabel" />:</span>{" "}<span className="text-foreground" suppressHydrationWarning>{new Date(r.completed_at).toLocaleString("it-IT")}</span></div>}
       </div>
 
       {/* Loading banner when running */}
@@ -258,7 +261,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
             className="w-full max-w-2xl object-contain"
           />
           <p className="text-sm text-muted-foreground animate-pulse">
-            Analisi in corso...
+            <TranslatedLabel tkey="runDetail.analysisInProgress" />
           </p>
         </div>
       )}
@@ -273,43 +276,45 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
                 trend={trend}
                 noBrandMentions={aviData.avi_score === 0 && aviData.presence_score === 0}
                 components={[
-                  { label: "Presenza",   v: aviData.presence_score != null ? Math.round(aviData.presence_score) : null },
-                  { label: "Posizione",  v: aviData.rank_score != null ? Math.round(aviData.rank_score) : null },
-                  { label: "Sentiment",  v: aviData.sentiment_score != null ? Math.round(aviData.sentiment_score) : null },
-                  { label: "Affidabilità", v: aviData.stability_score != null ? Math.round(aviData.stability_score) : null },
+                  { labelKey: "dashboard.presence",    v: aviData.presence_score != null ? Math.round(aviData.presence_score) : null },
+                  { labelKey: "dashboard.position",    v: aviData.rank_score != null ? Math.round(aviData.rank_score) : null },
+                  { labelKey: "dashboard.sentiment",   v: aviData.sentiment_score != null ? Math.round(aviData.sentiment_score) : null },
+                  { labelKey: "dashboard.reliability", v: aviData.stability_score != null ? Math.round(aviData.stability_score) : null },
                 ]}
               />
             </div>
 
             {/* AVI Component Cards */}
             <AVIBars items={AVI_COMPONENTS.map((c) => ({
-              label: c.label,
+              labelKey: c.labelKey,
               color: c.color,
-              desc: c.desc,
+              descKey: c.descKey,
               value: aviData[c.key] != null ? Math.round(aviData[c.key]) : null,
             }))} />
           </div>
 
           {/* Consistency badge */}
           {aviData.stability_score != null && (
-            <div className="flex items-center gap-2">
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm font-mono text-[12px] font-medium ${
-                aviData.stability_score > 80
-                  ? "bg-green-500/15 text-green-400 border border-green-500/30"
-                  : aviData.stability_score >= 50
-                  ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
-                  : "bg-red-500/15 text-red-400 border border-red-500/30"
-              }`}>
-                Affidabilità: {Math.round(aviData.stability_score)}
-                {aviData.stability_score > 80 ? " — Alta affidabilità" : aviData.stability_score >= 50 ? " — Affidabilità media" : " — Bassa affidabilità — esegui più run"}
-              </span>
-              <span className="text-xs text-muted-foreground">Stabilità delle risposte tra run diverse. Non influisce sull&apos;AVI.</span>
-            </div>
+            <>
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm font-mono text-[12px] font-medium ${
+                  aviData.stability_score > 80
+                    ? "bg-green-500/15 text-green-400 border border-green-500/30"
+                    : aviData.stability_score >= 50
+                    ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
+                    : "bg-red-500/15 text-red-400 border border-red-500/30"
+                }`}>
+                  <TranslatedReliability score={aviData.stability_score} />
+                </span>
+                <span className="text-xs text-muted-foreground"><TranslatedReliabilityTooltip /></span>
+              </div>
+              {totalActiveRuns <= 1 && <TranslatedSingleRunNote />}
+            </>
           )}
 
           {/* AVI Component Comparison Bar */}
           <div className="card p-5 space-y-3">
-            <h2 className="font-display font-semibold text-foreground text-sm">Confronto Componenti AVI</h2>
+            <h2 className="font-display font-semibold text-foreground text-sm"><TranslatedLabel tkey="runDetail.aviComparison" /></h2>
             <div className="flex items-end gap-4 h-32">
               {AVI_COMPONENTS.map((c) => {
                 const value = aviData[c.key] != null ? Math.round(aviData[c.key]) : 0;
@@ -317,7 +322,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
                   <div key={c.key} className="flex-1 flex flex-col items-center gap-1">
                     <span className="font-mono text-[12px] font-bold text-foreground">{value}</span>
                     <div className="w-full rounded-t-[2px] transition-all duration-700" style={{ height: `${value}%`, backgroundColor: c.color }} />
-                    <span className="font-mono text-[11px] text-muted-foreground text-center">{c.label}</span>
+                    <span className="font-mono text-[11px] text-muted-foreground text-center"><TranslatedLabel tkey={c.labelKey} /></span>
                   </div>
                 );
               })}

@@ -6,6 +6,7 @@ import {
   ArrowLeft, Plus, Save, Loader2, Users, Trash2, X,
   ToggleLeft, ToggleRight, Eye, Sparkles,
 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 /* ─── Types ─── */
 interface PersonaAttributes {
@@ -112,6 +113,7 @@ function generatePrompt(name: string, a: PersonaAttributes): string {
 export default function SegmentsPage() {
   const params = useParams();
   const projectId = params.id as string;
+  const { t } = useTranslation();
 
   const [segments, setSegments] = useState<Segment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,11 +148,11 @@ export default function SegmentsPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Errore durante la creazione");
+        throw new Error(data.error || t("segments.createError"));
       }
       await fetchSegments();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore durante la creazione");
+      setError(err instanceof Error ? err.message : t("segments.createError"));
     } finally {
       setSaving(null);
     }
@@ -167,7 +169,7 @@ export default function SegmentsPage() {
       if (!res.ok) throw new Error();
       setSegments((prev) => prev.map((s) => s.id === seg.id ? { ...s, is_active: !s.is_active } : s));
     } catch {
-      setError("Errore durante l'aggiornamento");
+      setError(t("segments.updateError"));
     } finally {
       setSaving(null);
     }
@@ -180,7 +182,7 @@ export default function SegmentsPage() {
       if (!res.ok) throw new Error();
       setSegments((prev) => prev.filter((s) => s.id !== id));
     } catch {
-      setError("Errore durante l'eliminazione");
+      setError(t("queries.deleteError"));
     } finally {
       setSaving(null);
     }
@@ -203,11 +205,11 @@ export default function SegmentsPage() {
       <div>
         <a href={`/projects/${projectId}`}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
-          <ArrowLeft className="w-4 h-4" /> Torna al progetto
+          <ArrowLeft className="w-4 h-4" /> {t("nav.backToProject")}
         </a>
-        <h1 className="font-display font-bold text-2xl text-foreground">Personas Audience</h1>
+        <h1 className="font-display font-bold text-2xl text-foreground">{t("segments.title")}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Configura i profili utente per personalizzare i prompt AI
+          {t("segments.subtitle")}
         </p>
       </div>
 
@@ -216,9 +218,9 @@ export default function SegmentsPage() {
       {/* SECTION A: Templates */}
       <section>
         <h2 className="font-display font-semibold text-lg text-foreground mb-3 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" /> Template Preimpostati
+          <Sparkles className="w-4 h-4 text-primary" /> {t("segments.templates")}
         </h2>
-        <p className="text-sm text-muted-foreground mb-4">Aggiungi una persona con un click, oppure crea la tua da zero.</p>
+        <p className="text-sm text-muted-foreground mb-4">{t("segments.templatesDesc")}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {TEMPLATES.map((tpl) => (
             <div key={tpl.label} className="card p-4 flex flex-col gap-2 hover:border-primary/40 transition-colors">
@@ -233,7 +235,7 @@ export default function SegmentsPage() {
                 className="mt-1 text-xs font-semibold text-primary hover:text-primary/70 transition-colors self-start flex items-center gap-1"
               >
                 {saving === "template" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-                Usa questo
+                {t("segments.useThis")}
               </button>
             </div>
           ))}
@@ -244,13 +246,13 @@ export default function SegmentsPage() {
       <section>
         <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
           <h2 className="font-display font-semibold text-lg text-foreground flex items-center gap-2">
-            <Users className="w-4 h-4 text-primary" /> I Miei Personas
+            <Users className="w-4 h-4 text-primary" /> {t("segments.myPersonas")}
           </h2>
           <button
             onClick={() => setDrawerOpen(true)}
             className="flex items-center justify-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-3 py-1.5 rounded-[2px] hover:bg-primary/85 transition-colors mx-auto sm:mx-0"
           >
-            <Plus className="w-4 h-4" /> Crea Persona Custom
+            <Plus className="w-4 h-4" /> {t("segments.createCustom")}
           </button>
         </div>
 
@@ -261,8 +263,8 @@ export default function SegmentsPage() {
         ) : segments.length === 0 ? (
           <div className="card flex flex-col items-center justify-center py-12 text-center">
             <Users className="w-10 h-10 text-muted-foreground/40 mb-3" />
-            <p className="text-sm text-muted-foreground">Nessuna persona configurata</p>
-            <p className="text-xs text-muted-foreground mt-1">Usa un template sopra o crea un persona custom</p>
+            <p className="text-sm text-muted-foreground">{t("segments.noPersona")}</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("segments.noPersonaHint")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -378,6 +380,7 @@ function PersonaDrawer({
   const [customSingles, setCustomSingles] = useState<Partial<Record<keyof PersonaAttributes, string[]>>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const { t } = useTranslation();
 
   // Single-select helpers
   function setSingle(key: keyof PersonaAttributes, val: string) {
@@ -424,11 +427,11 @@ function PersonaDrawer({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Errore durante il salvataggio");
+        throw new Error(data.error || t("projects.saveError"));
       }
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore durante il salvataggio");
+      setError(err instanceof Error ? err.message : t("projects.saveError"));
     } finally {
       setSaving(false);
     }
@@ -443,7 +446,7 @@ function PersonaDrawer({
       <div className="fixed top-0 right-0 h-full w-full max-w-lg border-l border-border z-50 flex flex-col animate-slide-in-right" style={{ background: "var(--ink-2)" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
-          <h2 className="font-display font-bold text-lg text-foreground">Crea Persona</h2>
+          <h2 className="font-display font-bold text-lg text-foreground">{t("segments.createPersona")}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -452,7 +455,7 @@ function PersonaDrawer({
         {/* Body */}
         <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
           {/* Name */}
-          <FieldLabel>Nome persona *</FieldLabel>
+          <FieldLabel>{t("segments.personaName")} *</FieldLabel>
           <input
             type="text"
             value={name}
@@ -462,7 +465,7 @@ function PersonaDrawer({
           />
 
           {/* DEMOGRAFICHE */}
-          <SectionLabel>Demografiche</SectionLabel>
+          <SectionLabel>{t("segments.demographics")}</SectionLabel>
 
           <FieldLabel>Sesso</FieldLabel>
           <div className="flex flex-wrap gap-2">
@@ -531,7 +534,7 @@ function PersonaDrawer({
           <CustomChipInput placeholder="Reddito custom..." onAdd={(v) => addCustomSingle("reddito", v)} />
 
           {/* PSICOGRAFICHE */}
-          <SectionLabel>Psicografiche</SectionLabel>
+          <SectionLabel>{t("segments.psychographics")}</SectionLabel>
 
           <FieldLabel>Interessi</FieldLabel>
           <div className="flex flex-wrap gap-2">
@@ -567,14 +570,14 @@ function PersonaDrawer({
           <CustomChipInput placeholder="Stile custom..." onAdd={(v) => addCustomMulti("stile_vita", v)} />
 
           {/* ANTEPRIMA PROMPT */}
-          <SectionLabel>Anteprima Prompt</SectionLabel>
+          <SectionLabel>{t("segments.promptPreview")}</SectionLabel>
           <div className="card p-4 border-primary/20">
             <div className="flex items-center gap-1.5 mb-2">
               <Eye className="w-3.5 h-3.5 text-primary" />
               <span className="text-[12px] font-semibold uppercase tracking-widest text-primary">Preview</span>
             </div>
             <p className="text-sm text-foreground/80 italic leading-relaxed">
-              {prompt || "Seleziona gli attributi per generare l'anteprima del prompt"}
+              {prompt || t("segments.selectForPreview")}
             </p>
           </div>
         </div>
@@ -588,7 +591,7 @@ function PersonaDrawer({
             className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-3 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Salva Persona
+            {t("segments.savePersona")}
           </button>
         </div>
       </div>

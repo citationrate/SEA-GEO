@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, Loader2, MessageSquare, Sparkles, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface Query {
   id: string;
@@ -36,6 +37,7 @@ type FilterLayer = "all" | "A" | "B" | "C";
 export default function QueriesPage() {
   const params = useParams();
   const projectId = params.id as string;
+  const { t } = useTranslation();
 
   const [queries, setQueries] = useState<Query[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,13 +92,13 @@ export default function QueriesPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Errore");
+        throw new Error(data.error || t("common.error"));
       }
       if (stage === "tofu") setTofuText("");
       else setMofuText("");
       await fetchQueries();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore");
+      setError(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setSubmitting(false);
     }
@@ -106,10 +108,10 @@ export default function QueriesPage() {
     setError("");
     try {
       const res = await fetch(`/api/queries?id=${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Errore durante l'eliminazione");
+      if (!res.ok) throw new Error(t("queries.deleteError"));
       setQueries(queries.filter((q) => q.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore");
+      setError(err instanceof Error ? err.message : t("common.error"));
     }
   }
 
@@ -137,13 +139,13 @@ export default function QueriesPage() {
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Torna al progetto
+          {t("nav.backToProject")}
         </a>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="font-display font-bold text-2xl text-foreground">Gestione Query</h1>
+            <h1 className="font-display font-bold text-2xl text-foreground">{t("queries.manageTitle")}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {queries.length} query &middot; Aggiungi o genera domande per i modelli AI
+              {queries.length} query &middot; {t("queries.addOrGenerate")}
             </p>
           </div>
           <a
@@ -151,7 +153,7 @@ export default function QueriesPage() {
             className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-primary/85 transition-colors"
           >
             <Sparkles className="w-4 h-4" />
-            Genera Prompt con AI
+            {t("settings.generatePromptAI")}
             <span className="font-mono text-[0.69rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px] bg-[#c4a882]/10">PRO</span>
           </a>
         </div>
@@ -164,7 +166,7 @@ export default function QueriesPage() {
         <div className="flex flex-wrap gap-4">
           {/* Set type filter */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground mr-1">Tipo</span>
+            <span className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground mr-1">{t("queries.filterType")}</span>
             {(["all", "generale", "verticale", "persona", "manual"] as const).map((v) => (
               <button
                 key={v}
@@ -175,7 +177,7 @@ export default function QueriesPage() {
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {v === "all" ? "Tutti" : v === "generale" ? "Generali" : v === "verticale" ? "Verticali" : v === "persona" ? "Personas" : "Manuali"}
+                {v === "all" ? t("common.all") : v === "generale" ? t("queries.filterGeneral") : v === "verticale" ? t("queries.filterVertical") : v === "persona" ? t("queries.filterPersonas") : t("queries.filterManual")}
               </button>
             ))}
           </div>
@@ -192,7 +194,7 @@ export default function QueriesPage() {
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {v === "all" ? "Tutti" : v.toUpperCase()}
+                {v === "all" ? t("common.all") : v.toUpperCase()}
               </button>
             ))}
           </div>
@@ -209,7 +211,7 @@ export default function QueriesPage() {
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {v === "all" ? "Tutti" : v}
+                {v === "all" ? t("common.all") : v}
               </button>
             ))}
           </div>
@@ -224,7 +226,7 @@ export default function QueriesPage() {
             <h2 className="font-display font-semibold text-foreground">TOFU</h2>
             <span className="badge badge-muted text-[12px]">{tofuQueries.length}</span>
           </div>
-          <p className="text-xs text-muted-foreground">Domande top-of-funnel, generiche e informative</p>
+          <p className="text-xs text-muted-foreground">{t("queries.tofuDesc")}</p>
           <div className="flex gap-2">
             <input
               type="text"
@@ -246,7 +248,7 @@ export default function QueriesPage() {
           {loading ? (
             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
           ) : tofuQueries.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Nessuna query TOFU</p>
+            <p className="text-sm text-muted-foreground text-center py-4">{t("queries.noQueryTofu")}</p>
           ) : (
             <ul className="space-y-2">
               {tofuQueries.map((q) => (
@@ -263,7 +265,7 @@ export default function QueriesPage() {
             <h2 className="font-display font-semibold text-foreground">MOFU</h2>
             <span className="badge badge-muted text-[12px]">{mofuQueries.length}</span>
           </div>
-          <p className="text-xs text-muted-foreground">Domande middle-of-funnel, comparative e valutative</p>
+          <p className="text-xs text-muted-foreground">{t("queries.mofuDesc")}</p>
           <div className="flex gap-2">
             <input
               type="text"
@@ -285,7 +287,7 @@ export default function QueriesPage() {
           {loading ? (
             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
           ) : mofuQueries.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Nessuna query MOFU</p>
+            <p className="text-sm text-muted-foreground text-center py-4">{t("queries.noQueryMofu")}</p>
           ) : (
             <ul className="space-y-2">
               {mofuQueries.map((q) => (
@@ -300,11 +302,12 @@ export default function QueriesPage() {
 }
 
 function BrandWarning({ brand }: { brand: string }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-start gap-2 px-3 py-2 rounded-[2px] border border-[#c4a882]/30 bg-[#c4a882]/5 animate-fade-in">
       <AlertTriangle className="w-4 h-4 text-[#c4a882] shrink-0 mt-0.5" />
       <p className="text-[13px] text-[#c4a882] leading-snug">
-        La query contiene <span className="font-semibold">&ldquo;{brand}&rdquo;</span>. Inserire il nome del brand nelle query potrebbe creare bias nei risultati dell&apos;analisi.
+        <span className="font-semibold">&ldquo;{brand}&rdquo;</span> — {t("queries.brandBiasWarning")}
       </p>
     </div>
   );

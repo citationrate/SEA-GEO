@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Play, Check } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 const RUNS_PER_QUERY = 3;
 
@@ -32,6 +33,17 @@ export function NewCompetitiveForm({
   availableModels: AvailableModel[];
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
+
+  const driverLabels: Record<string, string> = {
+    "Prezzo/Convenienza": t("competitiveForm.driverPrice"),
+    "Qualità del prodotto": t("competitiveForm.driverQuality"),
+    "Esperienza digitale": t("competitiveForm.driverDigital"),
+    "Servizio clienti": t("competitiveForm.driverService"),
+    "Reputazione/Trust": t("competitiveForm.driverReputation"),
+    "Velocità/Tempi": t("competitiveForm.driverSpeed"),
+    "Trasparenza": t("competitiveForm.driverTransparency"),
+  };
   const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
   const [brandB, setBrandB] = useState(topCompetitors[projects[0]?.id] ?? "");
   const [driver, setDriver] = useState(DRIVER_OPTIONS[0]);
@@ -85,11 +97,11 @@ export function NewCompetitiveForm({
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Errore");
+      if (!res.ok) throw new Error(data.error || t("common.error"));
 
       router.push(`/compare/${data.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore");
+      setError(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setLoading(false);
     }
@@ -99,7 +111,7 @@ export function NewCompetitiveForm({
     return (
       <div className="card p-8 text-center">
         <p className="text-muted-foreground">
-          Nessun progetto trovato. Crea prima un progetto per avviare un&apos;analisi competitiva.
+          {t("competitiveForm.noProjectFound")}
         </p>
       </div>
     );
@@ -109,7 +121,7 @@ export function NewCompetitiveForm({
     <form onSubmit={handleSubmit} className="card p-6 space-y-5">
       {/* Progetto */}
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-foreground">Progetto *</label>
+        <label className="text-sm font-medium text-foreground">{t("competitiveForm.project")} *</label>
         <select
           value={projectId}
           onChange={(e) => handleProjectChange(e.target.value)}
@@ -126,13 +138,13 @@ export function NewCompetitiveForm({
       {/* Brand A / Brand B */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Il tuo brand</label>
+          <label className="text-sm font-medium text-foreground">{t("competitiveForm.yourBrand")}</label>
           <div className="input-base bg-muted/50 text-muted-foreground cursor-not-allowed">
             {selectedProject?.brand ?? "—"}
           </div>
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Competitor *</label>
+          <label className="text-sm font-medium text-foreground">{t("competitiveForm.competitor")} *</label>
           <input
             type="text"
             required
@@ -146,23 +158,23 @@ export function NewCompetitiveForm({
 
       {/* Driver */}
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-foreground">Driver di confronto *</label>
+        <label className="text-sm font-medium text-foreground">{t("competitiveForm.comparisonDriver")} *</label>
         <select
           value={driver}
           onChange={(e) => setDriver(e.target.value)}
           className="input-base"
         >
           {DRIVER_OPTIONS.map((d) => (
-            <option key={d} value={d}>{d}</option>
+            <option key={d} value={d}>{driverLabels[d] || d}</option>
           ))}
-          <option value="Altro">Altro (testo libero)</option>
+          <option value="Altro">{t("competitiveForm.otherFreeText")}</option>
         </select>
         {driver === "Altro" && (
           <input
             type="text"
             value={customDriver}
             onChange={(e) => setCustomDriver(e.target.value)}
-            placeholder="Specifica il driver..."
+            placeholder={t("competitiveForm.specifyDriver")}
             className="input-base mt-2"
             required
           />
@@ -172,13 +184,13 @@ export function NewCompetitiveForm({
       {/* Modelli AI */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-foreground">Modelli AI *</label>
+          <label className="text-sm font-medium text-foreground">{t("projects.aiModels")} *</label>
           <button
             type="button"
             onClick={toggleAll}
             className="text-xs text-primary hover:text-primary/80 transition-colors"
           >
-            {selectedModels.length === availableModels.length ? "Deseleziona tutti" : "Seleziona tutti"}
+            {selectedModels.length === availableModels.length ? t("generateQueries.deselectAll") : t("generateQueries.selectAll")}
           </button>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -210,7 +222,7 @@ export function NewCompetitiveForm({
       {/* Config info */}
       <div className="bg-muted/30 border border-border rounded-[2px] px-4 py-3">
         <p className="text-xs text-muted-foreground">
-          3 query × {selectedModels.length} modell{selectedModels.length === 1 ? "o" : "i"} × {RUNS_PER_QUERY} run = {totalPrompts} risposte totali
+          3 query × {selectedModels.length} modell{selectedModels.length === 1 ? "o" : "i"} × {RUNS_PER_QUERY} run = {totalPrompts} {t("competitiveForm.totalResponses")}
         </p>
       </div>
 
@@ -222,7 +234,7 @@ export function NewCompetitiveForm({
         className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-        {loading ? "Avvio in corso..." : "Avvia Analisi"}
+        {loading ? t("competitiveForm.starting") : t("analysisLauncher.startAnalysis")}
       </button>
     </form>
   );

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { useTranslation } from "@/lib/i18n/context";
 
 export function LoginForm() {
   const [email, setEmail]       = useState("");
@@ -12,6 +13,7 @@ export function LoginForm() {
   const [gLoading, setGLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+  const { t } = useTranslation();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,27 +43,27 @@ export function LoginForm() {
         style={{ background: "var(--surface-2)" }}
       >
         {gLoading ? <Spinner /> : <GoogleLogo />}
-        Continua con Google
+        {t("auth.continueGoogle")}
       </button>
 
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-        <span className="text-xs text-muted-foreground font-mono">oppure</span>
+        <span className="text-xs text-muted-foreground font-mono">{t("common.or")}</span>
         <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
       </div>
 
       {/* Email + Password */}
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
-          <label className="block text-xs text-muted-foreground mb-1.5 font-sans font-medium">Email</label>
-          <input type="email" required placeholder="nome@azienda.com"
+          <label className="block text-xs text-muted-foreground mb-1.5 font-sans font-medium">{t("auth.email")}</label>
+          <input type="email" required placeholder={t("auth.emailPlaceholder")}
             value={email} onChange={e => setEmail(e.target.value)}
             className="input-base" />
         </div>
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs text-muted-foreground font-sans font-medium">Password</label>
-            <a href="/forgot-password" className="text-xs text-primary hover:text-primary-hover transition-colors font-sans">Password dimenticata?</a>
+            <label className="text-xs text-muted-foreground font-sans font-medium">{t("auth.password")}</label>
+            <a href="/forgot-password" className="text-xs text-primary hover:text-primary-hover transition-colors font-sans">{t("auth.forgotPassword")}</a>
           </div>
           <input type="password" required placeholder="••••••••"
             value={password} onChange={e => setPassword(e.target.value)}
@@ -75,7 +77,7 @@ export function LoginForm() {
           onMouseLeave={e => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.transform = "none"; }}
         >
           {loading && <Spinner />}
-          Accedi
+          {t("auth.login")}
         </button>
       </form>
     </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCcw, Loader2 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface DeletedProject {
   id: string;
@@ -13,6 +14,7 @@ interface DeletedProject {
 
 export function DeletedProjectsList({ projects }: { projects: DeletedProject[] }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [restoring, setRestoring] = useState<string | null>(null);
 
   async function handleRestore(projectId: string) {
@@ -34,7 +36,7 @@ export function DeletedProjectsList({ projects }: { projects: DeletedProject[] }
   if (projects.length === 0) {
     return (
       <div className="card p-8 text-center">
-        <p className="text-muted-foreground">Nessun progetto eliminato</p>
+        <p className="text-muted-foreground">{t("deletedProjects.noDeleted")}</p>
       </div>
     );
   }
@@ -46,7 +48,7 @@ export function DeletedProjectsList({ projects }: { projects: DeletedProject[] }
           <div>
             <p className="font-medium text-foreground">{p.name}</p>
             <p className="text-xs text-muted-foreground">
-              {p.target_brand} &middot; Eliminato il {new Date(p.deleted_at).toLocaleDateString("it-IT")}
+              {p.target_brand} &middot; {t("deletedProjects.deletedOn")} {new Date(p.deleted_at).toLocaleDateString("it-IT")}
             </p>
           </div>
           <button
@@ -55,7 +57,7 @@ export function DeletedProjectsList({ projects }: { projects: DeletedProject[] }
             className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-[2px] border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
           >
             {restoring === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
-            Ripristina
+            {t("deletedProjects.restore")}
           </button>
         </div>
       ))}

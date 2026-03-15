@@ -1,8 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { AI_MODELS, PROVIDER_CONFIG } from "@/lib/engine/models";
-import { Settings, Cpu, Trash2, PlayCircle } from "lucide-react";
-import { RestartTourButton } from "./restart-tour-button";
 import { SettingsClient } from "./settings-client";
+import { SettingsHeader, AIModelsSection, TourSection, DeletedProjectsSection } from "./settings-sections";
 
 export const metadata = { title: "Impostazioni" };
 
@@ -30,13 +29,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-[900px] animate-fade-in">
-      <div className="flex items-center gap-3">
-        <Settings className="w-6 h-6 text-accent" />
-        <div>
-          <h1 className="font-display font-bold text-2xl text-foreground">Impostazioni</h1>
-          <p className="text-sm text-muted-foreground">Gestisci profilo, modelli e preferenze</p>
-        </div>
-      </div>
+      <SettingsHeader />
 
       {/* Client-side interactive sections */}
       <SettingsClient
@@ -48,11 +41,7 @@ export default async function SettingsPage() {
       />
 
       {/* Modelli AI disponibili (read-only reference) */}
-      <div className="card p-6 space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Cpu className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-semibold text-foreground">Tutti i Modelli AI</h2>
-        </div>
+      <AIModelsSection>
         <div className="space-y-4">
           {Array.from(modelsByProvider.entries()).map(([provider, models]) => {
             const config = PROVIDER_CONFIG[provider];
@@ -77,36 +66,10 @@ export default async function SettingsPage() {
             );
           })}
         </div>
-      </div>
+      </AIModelsSection>
 
-      {/* Tour guidato */}
-      <div data-tour="settings-tour" className="card p-6 space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <PlayCircle className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-semibold text-foreground">Tour guidato</h2>
-        </div>
-        <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
-          <p className="text-sm text-muted-foreground">Rivedi il tour introduttivo di SeaGeo</p>
-          <RestartTourButton />
-        </div>
-      </div>
-
-      {/* Progetti eliminati */}
-      <div className="card p-6 space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Trash2 className="w-5 h-5 text-destructive" />
-          <h2 className="font-display font-semibold text-foreground">Progetti eliminati</h2>
-        </div>
-        <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
-          <p className="text-sm text-muted-foreground">Ripristina progetti che sono stati eliminati</p>
-          <a
-            href="/settings/deleted-projects"
-            className="px-4 py-2 bg-muted/30 border border-[rgba(255,255,255,0.1)] text-foreground rounded-[2px] text-sm font-medium hover:bg-muted/50 transition-colors"
-          >
-            Gestisci
-          </a>
-        </div>
-      </div>
+      <TourSection />
+      <DeletedProjectsSection />
     </div>
   );
 }

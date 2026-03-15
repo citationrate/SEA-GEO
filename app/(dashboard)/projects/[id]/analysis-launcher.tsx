@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Play, X, Loader2, Cpu, Globe, AlertTriangle } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { useTranslation } from "@/lib/i18n/context";
 
 const RUN_OPTIONS = [
   { value: 1, label: "1 run", desc: "Veloce" },
@@ -25,6 +26,7 @@ export function AnalysisLauncher({
   modelsConfig: string[];
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   // Allow external components to open the modal via custom event
@@ -81,7 +83,7 @@ export function AnalysisLauncher({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Errore durante l'avvio");
+        throw new Error(data.error || t("analysisLauncher.startError"));
       }
 
       const data = await res.json();
@@ -93,7 +95,7 @@ export function AnalysisLauncher({
         router.refresh();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore sconosciuto");
+      setError(err instanceof Error ? err.message : t("projects.unknownError"));
     } finally {
       setLoading(false);
     }
@@ -105,11 +107,11 @@ export function AnalysisLauncher({
     <>
       <button
         data-tour="launch-analysis-btn"
-        onClick={() => canStart ? setOpen(true) : setError("Configura almeno una query prima di lanciare")}
+        onClick={() => canStart ? setOpen(true) : setError(t("analysisLauncher.configureQueries"))}
         className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-primary/85 transition-colors"
       >
         <Play className="w-4 h-4" />
-        Lancia Analisi
+        {t("analysisLauncher.launchAnalysis")}
       </button>
 
       {!canStart && error && (
@@ -124,7 +126,7 @@ export function AnalysisLauncher({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Cpu className="w-5 h-5 text-primary" />
-                <h2 className="font-display font-bold text-lg text-foreground">Avvia Analisi</h2>
+                <h2 className="font-display font-bold text-lg text-foreground">{t("analysisLauncher.startAnalysis")}</h2>
               </div>
               <button onClick={() => !loading && setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
                 <X className="w-5 h-5" />
@@ -133,7 +135,7 @@ export function AnalysisLauncher({
 
             {/* Models info (readonly pills) */}
             <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Modelli AI del progetto</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("analysisLauncher.projectAIModels")}</p>
               <div className="flex flex-wrap gap-2">
                 {modelsConfig.map((modelId) => (
                   <span
@@ -145,14 +147,14 @@ export function AnalysisLauncher({
                   </span>
                 ))}
               </div>
-              <p className="text-[13px] text-cream-dim">I modelli sono fissati alla creazione del progetto</p>
+              <p className="text-[13px] text-cream-dim">{t("analysisLauncher.modelsFixedAtCreation")}</p>
             </div>
 
             {/* Run count selector */}
             <div className="space-y-2">
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                Numero di Run
-                <InfoTooltip text="Ogni run esegue tutte le query una volta. Con 3 run ottieni il punteggio Consistency che misura quanto le risposte AI sono stabili nel tempo. 1 run = veloce | 2 run = bilanciato | 3 run = Preciso (con Consistency)" />
+                {t("analysisLauncher.runCount")}
+                <InfoTooltip text={t("analysisLauncher.preciseWithConsistency")} />
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {RUN_OPTIONS.map((opt) => (
@@ -176,7 +178,7 @@ export function AnalysisLauncher({
             {/* Browsing toggle */}
             <div className="space-y-2">
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                Web Browsing
+                {t("analysisLauncher.webBrowsing")}
                 <InfoTooltip text="Abilita la navigazione web per i modelli AI. Produce risposte più aggiornate e più fonti, ma è più lento." />
               </p>
               <button
@@ -194,7 +196,7 @@ export function AnalysisLauncher({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <Globe className="w-3.5 h-3.5 text-primary" />
-                    <p className="text-sm font-medium text-foreground">Browsing attivo</p>
+                    <p className="text-sm font-medium text-foreground">{t("analysisLauncher.browsingActive")}</p>
                   </div>
                   <p className="text-[13px] text-muted-foreground mt-0.5">
                     I modelli cercano informazioni aggiornate sul web (piu lento, piu fonti)
@@ -206,14 +208,14 @@ export function AnalysisLauncher({
             {/* Query cost breakdown */}
             <div className="space-y-2 rounded-[2px] border border-border bg-muted/20 px-4 py-3">
               <p className="text-sm text-muted-foreground">
-                Questa analisi utilizzer&agrave; <span className="text-foreground font-bold">{queryCost}</span> query sul tuo piano
+                {t("analysisLauncher.thisAnalysisWillUse")} <span className="text-foreground font-bold">{queryCost}</span> query sul tuo piano
               </p>
               <p className="text-xs text-muted-foreground">
                 ({queryCount} query &times; {modelsConfig.length} modell{modelsConfig.length === 1 ? "o" : "i"} &times; {runCount} run)
               </p>
               {profileLoaded && (
                 <p className="text-xs text-muted-foreground">
-                  Hai <span className="text-foreground font-medium">{remaining}</span> query rimanenti questo mese ({queriesUsed}/{monthlyLimit} utilizzate)
+                  Hai <span className="text-foreground font-medium">{remaining}</span> {t("analysisLauncher.queriesRemaining")} ({queriesUsed}/{monthlyLimit} utilizzate)
                 </p>
               )}
             </div>
@@ -223,7 +225,7 @@ export function AnalysisLauncher({
               <div className="flex items-start gap-2.5 rounded-[2px] border border-destructive/30 bg-destructive/10 px-4 py-3">
                 <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
                 <p className="text-xs text-destructive">
-                  Non hai abbastanza query disponibili questo mese. Hai {remaining} query rimanenti, questa analisi ne richiede {queryCost}.
+                  {t("analysisLauncher.notEnoughQueries")}
                 </p>
               </div>
             )}
@@ -231,7 +233,7 @@ export function AnalysisLauncher({
             {/* Footer info */}
             <p className="text-sm text-muted-foreground text-center">
               <span className="text-foreground font-medium">{modelsConfig.length}</span> modell{modelsConfig.length === 1 ? "o" : "i"} &middot;{" "}
-              <span className="text-foreground font-medium">{totalPrompts}</span> prompt totali
+              <span className="text-foreground font-medium">{totalPrompts}</span> {t("analysisLauncher.totalPrompts")}
             </p>
 
             {error && <p className="text-sm text-destructive">{error}</p>}
@@ -243,7 +245,7 @@ export function AnalysisLauncher({
                 disabled={loading}
                 className="flex-1 text-sm font-semibold py-2.5 rounded-sm border border-border text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
               >
-                Annulla
+                {t("common.cancel")}
               </button>
               <button
                 onClick={startAnalysis}
@@ -253,12 +255,12 @@ export function AnalysisLauncher({
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Analisi in corso...
+                    {t("analysisLauncher.analysisInProgress")}
                   </>
                 ) : (
                   <>
                     <Play className="w-4 h-4" />
-                    Avvia Analisi
+                    {t("analysisLauncher.startAnalysis")}
                   </>
                 )}
               </button>
@@ -266,7 +268,7 @@ export function AnalysisLauncher({
 
             {loading && (
               <p className="text-xs text-muted-foreground text-center">
-                L&apos;analisi puo richiedere diversi minuti. Non chiudere la pagina.
+                {t("analysisLauncher.analysisTime")}
               </p>
             )}
           </div>

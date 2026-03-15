@@ -3,6 +3,7 @@
 import { useState, useMemo, Fragment } from "react";
 import { Globe, Tag, Users, ExternalLink, Eye, Hash, TrendingUp, TrendingDown, AlertTriangle, X, ChevronDown, ChevronRight } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface RunMetricsProps {
   prompts: any[];
@@ -52,9 +53,9 @@ const MODEL_LABELS: Record<string, string> = {
 function classifyError(error: string | null): string {
   if (!error) return "";
   const lower = error.toLowerCase();
-  if (lower.includes("429") || lower.includes("quota") || lower.includes("rate")) return "Quota esaurita";
+  if (lower.includes("429") || lower.includes("quota") || lower.includes("rate")) return "runMetrics.quotaExhausted";
   if (lower.includes("timeout")) return "Timeout";
-  return "Errore API";
+  return "runMetrics.apiError";
 }
 
 const SOURCE_TYPE_COLORS: Record<string, string> = {
@@ -77,6 +78,7 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
 };
 
 export function RunMetrics({ prompts, analyses, sources, models, competitorMentions, brandAviScore, targetBrand, queries, competitorAviData }: RunMetricsProps) {
+  const { t } = useTranslation();
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [funnelFilter, setFunnelFilter] = useState<string | null>(null);
 
@@ -255,7 +257,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                   : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
               }
             >
-              Tutti
+              {t("common.all")}
             </button>
             {models.map((model) => (
                 <button
@@ -291,7 +293,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                   : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
               }
             >
-              Tutti
+              {t("common.all")}
             </button>
             {funnelStages.map((stage) => (
               <button
@@ -317,25 +319,25 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
         <div className="card p-4 text-center">
           <Eye className="w-5 h-5 text-primary mx-auto mb-2" />
           <p className="font-display font-bold text-2xl text-foreground">{mentionRate}%</p>
-          <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">Menzioni Brand <InfoTooltip text="Percentuale di risposte AI in cui il brand viene citato" /></p>
+          <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">{t("runMetrics.brandMentions")} <InfoTooltip text={t("runMetrics.brandMentionTooltip")} /></p>
           <p className="text-[12px] text-muted-foreground">{mentionCount}/{totalAnalysed} prompt</p>
         </div>
         <div className="card p-4 text-center">
           <Hash className="w-5 h-5 text-accent mx-auto mb-2" />
           <p className="font-display font-bold text-2xl text-foreground">{totalOccurrences}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Occorrenze Totali</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("runMetrics.totalOccurrences")}</p>
         </div>
         <div className="card p-4 text-center">
           <TrendingUp className="w-5 h-5 text-success mx-auto mb-2" />
           <p className="font-display font-bold text-2xl text-foreground">{avgRank}</p>
-          <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">Rank Medio <InfoTooltip text="Posizione media del brand nelle liste AI (1 = primo citato)" /></p>
-          <p className="text-[12px] text-muted-foreground">{ranked.length} risposte con rank</p>
+          <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">{t("runMetrics.avgRank")} <InfoTooltip text={t("runMetrics.avgRankTooltip")} /></p>
+          <p className="text-[12px] text-muted-foreground">{ranked.length} {t("runMetrics.responsesWithRank")}</p>
         </div>
         <div className="card p-4 text-center">
           <TrendingDown className="w-5 h-5 text-primary mx-auto mb-2" />
           <p className={`font-display font-bold text-2xl ${avgSentimentColor}`}>{avgSentiment}</p>
-          <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">Sentiment Medio <InfoTooltip text="Tono con cui l'AI descrive il brand, da -1 (negativo) a +1 (positivo)" /></p>
-          <p className="text-[12px] text-muted-foreground">scala -1 / +1</p>
+          <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">{t("runMetrics.avgSentiment")} <InfoTooltip text={t("runMetrics.avgSentimentTooltip")} /></p>
+          <p className="text-[12px] text-muted-foreground">{t("runMetrics.scale")} -1 / +1</p>
           {avgTone !== null && avgPosition !== null && avgRec !== null && (
             <div className="space-y-1 mt-2">
               <div className="flex items-center gap-2">
@@ -402,7 +404,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
         }));
         return (
           <div className="card p-5 space-y-4">
-            <h2 className="font-display font-semibold text-foreground text-sm">Benchmark</h2>
+            <h2 className="font-display font-semibold text-foreground text-sm">{t("runMetrics.benchmark")}</h2>
             <div className="space-y-2.5">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-bold text-primary w-32 truncate">{targetBrand || "Il tuo brand"}</span>
@@ -443,11 +445,11 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
         <div className="card p-5 space-y-3">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-primary" />
-            <h2 className="font-display font-semibold text-foreground">Competitor Trovati</h2>
+            <h2 className="font-display font-semibold text-foreground">{t("runMetrics.competitorsFound")}</h2>
             <span className="badge badge-muted text-[12px]">{competitorList.length}</span>
           </div>
           {competitorList.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Nessun competitor individuato</p>
+            <p className="text-sm text-muted-foreground text-center py-4">{t("runMetrics.noCompetitor")}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {competitorList.map(([name, count]) => {
@@ -472,11 +474,11 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
         <div className="card p-5 space-y-3">
           <div className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-accent" />
-            <h2 className="font-display font-semibold text-foreground">Topic Emersi</h2>
+            <h2 className="font-display font-semibold text-foreground">{t("runMetrics.topicsFound")}</h2>
             <span className="badge badge-muted text-[12px]">{topicList.length}</span>
           </div>
           {topicList.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Nessun topic individuato</p>
+            <p className="text-sm text-muted-foreground text-center py-4">{t("runMetrics.noTopic")}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {topicList.map(([name, count]) => {
@@ -498,7 +500,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
         <div className="card p-5 space-y-4">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-primary" />
-            <h2 className="font-display font-semibold text-foreground">Fonti consultate dall&apos;AI</h2>
+            <h2 className="font-display font-semibold text-foreground">{t("runMetrics.sourcesConsulted")}</h2>
             <span className="badge badge-muted text-[12px]">{filteredSources.length}</span>
           </div>
 
@@ -509,7 +511,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                 key={type}
                 className={`inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-1 rounded-[2px] border ${SOURCE_TYPE_COLORS[type] ?? "border-border bg-muted/30 text-foreground"}`}
               >
-                {SOURCE_TYPE_LABELS[type] ?? type}
+                {type === "other" ? t("runMetrics.other") : (SOURCE_TYPE_LABELS[type] ?? type)}
                 <span className="opacity-70">{items.length}</span>
               </span>
             ))}
@@ -518,7 +520,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           {/* Source chips grouped */}
           {Array.from(sourcesByType.entries()).map(([type, items]) => (
             <div key={type} className="space-y-1.5">
-              <p className="font-mono text-[0.75rem] uppercase tracking-wide text-muted-foreground">{SOURCE_TYPE_LABELS[type] ?? type}</p>
+              <p className="font-mono text-[0.75rem] uppercase tracking-wide text-muted-foreground">{type === "other" ? t("runMetrics.other") : (SOURCE_TYPE_LABELS[type] ?? type)}</p>
               <div className="flex flex-wrap gap-2">
                 {items.map((s: any) => {
                   const label = s.label || s.domain || "\u2014";
@@ -546,7 +548,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
       {/* Prompt results table */}
       {filteredPrompts.length > 0 && (
         <div className="card p-5 space-y-3">
-          <h2 className="font-display font-semibold text-foreground">Prompt Eseguiti ({filteredPrompts.length})</h2>
+          <h2 className="font-display font-semibold text-foreground">{t("runMetrics.promptsExecuted")} ({filteredPrompts.length})</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -610,7 +612,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                           {isError
                             ? <span className="badge badge-muted text-destructive text-[12px] flex items-center gap-1">
                                 <AlertTriangle className="w-3 h-3" />
-                                {errorLabel || "Errore"}
+                                {errorLabel ? t(errorLabel) : t("common.error")}
                               </span>
                             : p.raw_response
                               ? <span className="badge badge-success text-[12px]">OK</span>
@@ -654,7 +656,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between">
-              <h3 className="font-display font-bold text-lg text-foreground">Dettaglio Risposta</h3>
+              <h3 className="font-display font-bold text-lg text-foreground">{t("runMetrics.responseDetail")}</h3>
               <button onClick={() => setModalPrompt(null)} className="text-muted-foreground hover:text-foreground transition-colors">
                 <X className="w-5 h-5" />
               </button>
@@ -724,7 +726,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
             {/* Competitors found */}
             {modalPrompt.analysis?.competitors_found?.length > 0 && (
               <div className="space-y-1">
-                <p className="font-mono text-[0.75rem] uppercase tracking-wide text-muted-foreground">Competitor trovati</p>
+                <p className="font-mono text-[0.75rem] uppercase tracking-wide text-muted-foreground">{t("runMetrics.competitorsFound")}</p>
                 <div className="flex flex-wrap gap-2">
                   {modalPrompt.analysis.competitors_found.map((c: string) => (
                     <span key={c} className="badge badge-primary text-xs">{c}</span>

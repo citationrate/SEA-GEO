@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Search, FolderOpen } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface ProjectItem {
   id: string;
@@ -10,6 +11,7 @@ interface ProjectItem {
 }
 
 export function ProjectsList({ projects }: { projects: ProjectItem[] }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
 
   const filtered = projects.filter((p) => {
@@ -23,7 +25,7 @@ export function ProjectsList({ projects }: { projects: ProjectItem[] }) {
       <div className="flex items-center gap-2 border border-border rounded-[2px] px-3 py-1.5 w-72 focus-within:border-primary/30 transition-colors" style={{ background: "var(--surface)" }}>
         <Search className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
         <input
-          placeholder="Cerca per nome progetto..."
+          placeholder={t("projects.searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
@@ -34,7 +36,7 @@ export function ProjectsList({ projects }: { projects: ProjectItem[] }) {
         <div className="card flex flex-col items-center justify-center py-24 text-center">
           <FolderOpen className="w-10 h-10 text-muted-foreground/40 mb-3" />
           <p className="text-sm text-muted-foreground">
-            {search ? "Nessun progetto trovato" : "Nessun progetto ancora."}
+            {search ? t("projects.noProjectFound") : t("projects.noProjectYet")}
           </p>
         </div>
       ) : (

@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown, Minus, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { useTranslation } from "@/lib/i18n/context";
 
 /* ─── AVI Ring ─── */
 interface AVIRingProps {
@@ -16,6 +17,7 @@ interface AVIRingProps {
 }
 
 export function AVIRing({ score, trend, components, noBrandMentions }: AVIRingProps) {
+  const { t } = useTranslation();
   const R = 52, C = 2 * Math.PI * R;
   const dash = score != null && !noBrandMentions ? (score / 100) * C : 0;
 
@@ -29,13 +31,19 @@ export function AVIRing({ score, trend, components, noBrandMentions }: AVIRingPr
     Sentiment:  "#7eb89a",
   };
 
-  const COMP_TOOLTIPS: Record<string, string> = {
-    Presenza:   "% risposte AI in cui il brand viene citato",
-    Posizione:  "Posizione media mediata su tutti i prompt",
-    Sentiment:  "Tono delle citazioni mediato su tutti i prompt",
+  const labelMap: Record<string, string> = {
+    Presenza:     t("dashboard.presence"),
+    Posizione:    t("dashboard.position"),
+    Sentiment:    t("dashboard.sentiment"),
+    "Affidabilità": t("dashboard.reliability"),
   };
 
-  // Separate consistency from AVI components
+  const tooltipMap: Record<string, string> = {
+    Presenza:   t("dashboard.presenceTooltip"),
+    Posizione:  t("dashboard.positionTooltip"),
+    Sentiment:  t("dashboard.sentimentTooltip"),
+  };
+
   const allComps = components ?? [
     { label: "Presenza",  v: null },
     { label: "Posizione", v: null },
@@ -47,7 +55,7 @@ export function AVIRing({ score, trend, components, noBrandMentions }: AVIRingPr
   return (
     <div data-tour="avi-ring" className="card p-5 h-full flex flex-col items-center gap-3">
       <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-cream-dim">
-        AI Visibility Index
+        {t("dashboard.aviIndex")}
       </p>
 
       <div className="relative w-[140px] h-[140px]">
@@ -72,14 +80,14 @@ export function AVIRing({ score, trend, components, noBrandMentions }: AVIRingPr
 
       {noBrandMentions ? (
         <p className="text-xs text-muted-foreground text-center leading-snug px-2">
-          Il brand non è stato rilevato in nessuna risposta — AVI non calcolabile
+          {t("dashboard.noBrandDetected")}
         </p>
       ) : (
         <div className={`flex items-center gap-1.5 text-xs font-sans ${trendColor}`}>
           <Icon className="w-3 h-3" />
           {trend != null
-            ? <span>{trend > 0 ? "+" : ""}{trend.toFixed(1)} vs ultima run</span>
-            : <span className="text-cream-dim">Nessun dato precedente</span>}
+            ? <span>{trend > 0 ? "+" : ""}{trend.toFixed(1)} {t("dashboard.vsLastRun")}</span>
+            : <span className="text-cream-dim">{t("dashboard.noPreviousData")}</span>}
         </div>
       )}
 
@@ -89,8 +97,8 @@ export function AVIRing({ score, trend, components, noBrandMentions }: AVIRingPr
             <div key={c.label}>
               <div className="flex items-center justify-between mb-1">
                 <span className="font-mono text-[12px] text-cream-dim flex items-center gap-1">
-                  {c.label}
-                  {COMP_TOOLTIPS[c.label] && <InfoTooltip text={COMP_TOOLTIPS[c.label]} />}
+                  {labelMap[c.label] ?? c.label}
+                  {tooltipMap[c.label] && <InfoTooltip text={tooltipMap[c.label]} />}
                 </span>
                 <span className="font-mono text-[12px] text-cream-dim">{c.v != null ? Math.round(c.v) : "--"}</span>
               </div>
@@ -100,7 +108,6 @@ export function AVIRing({ score, trend, components, noBrandMentions }: AVIRingPr
               </div>
             </div>
           ))}
-          {/* Consistency badge — separate from AVI */}
           {consistencyComp && consistencyComp.v != null && (
             <div className="pt-2 border-t border-border mt-2">
               <div className="flex items-center gap-1.5">
@@ -111,9 +118,9 @@ export function AVIRing({ score, trend, components, noBrandMentions }: AVIRingPr
                     ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
                     : "bg-red-500/15 text-red-400 border border-red-500/30"
                 }`}>
-                  {consistencyComp.v > 80 ? "Alta affidabilità" : consistencyComp.v >= 50 ? "Affidabilità media" : "Bassa affidabilità — esegui più run"}
+                  {consistencyComp.v > 80 ? t("dashboard.highReliability") : consistencyComp.v >= 50 ? t("dashboard.mediumReliability") : t("dashboard.lowReliability")} ({Math.round(consistencyComp.v)})
                 </span>
-                <InfoTooltip text="Stabilità delle risposte tra run diverse. Non influisce sull'AVI." />
+                <InfoTooltip text={t("dashboard.reliabilityTooltip")} />
               </div>
             </div>
           )}
@@ -131,13 +138,14 @@ interface StatItem {
 }
 
 export function StatsRow({ stats }: { stats?: StatItem[] }) {
+  const { t } = useTranslation();
   const items = stats ?? [
-    { label: "Prompt Eseguiti",    value: "--", sub: "in tutte le run"     },
-    { label: "Menzioni Brand",     value: "--", sub: "% delle risposte"    },
-    { label: "Competitor Trovati", value: "--", sub: "discovery automatica"},
-    { label: "Fonti Estratte",     value: "--", sub: "domini unici"        },
-    { label: "Modelli AI",         value: "--", sub: "integrazioni attive"  },
-    { label: "Analisi Eseguite",   value: "--", sub: "totale storico"      },
+    { label: t("dashboard.promptsExecuted"),    value: "--", sub: t("dashboard.inAllRuns")     },
+    { label: t("dashboard.brandMentions"),     value: "--", sub: t("dashboard.pctResponses")    },
+    { label: t("dashboard.competitorsFound"), value: "--", sub: t("dashboard.autoDiscovery")},
+    { label: t("dashboard.sourcesExtracted"),     value: "--", sub: t("dashboard.uniqueDomains")        },
+    { label: t("dashboard.aiModels"),         value: "--", sub: t("dashboard.activeIntegrations")  },
+    { label: t("dashboard.analysesRun"),   value: "--", sub: t("dashboard.totalHistory")      },
   ];
 
   return (
@@ -172,7 +180,6 @@ const TOOLTIP_STYLE = {
   color: "var(--white)",
 };
 
-const MODEL_COLORS: Record<string, string> = {};
 function getModelColor(model: string): string {
   if (model.startsWith("gpt")) return "#e8956d";
   if (model.startsWith("claude")) return "#c4a882";
@@ -193,6 +200,7 @@ function shortModelName(model: string): string {
 }
 
 export function AVITrend({ data, models }: { data?: TrendDataPoint[]; models?: string[] }) {
+  const { t } = useTranslation();
   const trendData = data ?? [];
   const modelKeys = (models ?? []).filter((m) => trendData.some((d) => d[m] != null));
   const showModels = modelKeys.length > 1;
@@ -200,9 +208,9 @@ export function AVITrend({ data, models }: { data?: TrendDataPoint[]; models?: s
   if (trendData.length === 0) {
     return (
       <div className="card p-5">
-        <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>AVI nel Tempo</h3>
+        <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>{t("dashboard.aviOverTime")}</h3>
         <div className="flex items-center justify-center py-8">
-          <p className="font-mono text-[13px] text-cream-dim">Esegui almeno un&apos;analisi per vedere il trend</p>
+          <p className="font-mono text-[13px] text-cream-dim">{t("dashboard.runAnalysisForTrend")}</p>
         </div>
       </div>
     );
@@ -210,7 +218,7 @@ export function AVITrend({ data, models }: { data?: TrendDataPoint[]; models?: s
 
   const legendItems = [
     { label: "AVI",      color: "#7eb89a" },
-    { label: "Presenza", color: "#e8956d" },
+    { label: t("dashboard.presence"), color: "#e8956d" },
     { label: "Sentiment",color: "#7eb3d4" },
     ...(showModels ? modelKeys.map((m) => ({ label: shortModelName(m), color: getModelColor(m) })) : []),
   ];
@@ -219,8 +227,8 @@ export function AVITrend({ data, models }: { data?: TrendDataPoint[]; models?: s
     <div className="card p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="font-display text-sm text-foreground" style={{ fontWeight: 300 }}>AVI nel Tempo</h3>
-          <p className="font-mono text-[12px] text-cream-dim mt-0.5">Punteggio di visibilita tra le analisi</p>
+          <h3 className="font-display text-sm text-foreground" style={{ fontWeight: 300 }}>{t("dashboard.aviOverTime")}</h3>
+          <p className="font-mono text-[12px] text-cream-dim mt-0.5">{t("dashboard.visibilityScore")}</p>
         </div>
         <div className="flex items-center gap-4 font-mono text-[12px] text-cream-dim flex-wrap">
           {legendItems.map(l => (
@@ -267,14 +275,15 @@ interface CompetitorData {
 }
 
 export function CompetitorBar({ data }: { data?: CompetitorData[] }) {
+  const { t } = useTranslation();
   const compData = (data ?? []).sort((a, b) => b.count - a.count);
 
   if (compData.length === 0) {
     return (
       <div data-tour="top-competitors" className="card p-5">
-        <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>Top Competitor</h3>
+        <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>{t("dashboard.topCompetitors")}</h3>
         <div className="flex items-center justify-center py-8">
-          <p className="font-mono text-[13px] text-cream-dim">Nessun competitor trovato</p>
+          <p className="font-mono text-[13px] text-cream-dim">{t("dashboard.noCompetitorFound")}</p>
         </div>
       </div>
     );
@@ -282,12 +291,12 @@ export function CompetitorBar({ data }: { data?: CompetitorData[] }) {
 
   return (
     <div data-tour="top-competitors" className="card p-5">
-      <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>Top Competitor</h3>
+      <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>{t("dashboard.topCompetitors")}</h3>
       <ResponsiveContainer width="100%" height={Math.max(80, compData.length * 35)}>
         <BarChart data={compData} layout="vertical">
           <XAxis type="number" tick={{ fontSize: 10, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false} allowDecimals={false}/>
           <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false} width={90}/>
-          <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => [`${value} menzioni`, "Menzioni"]}/>
+          <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => [`${value} ${t("dashboard.mentions")}`, t("dashboard.mentions")]}/>
           <Bar dataKey="count" radius={[0,2,2,0]}>
             {compData.map((_, i) => (
               <Cell key={i} fill={i === 0 ? "#e8956d" : i === 1 ? "#c4a882" : "rgba(196,168,130,0.5)"} />
@@ -318,16 +327,17 @@ const RUN_ICONS: Record<string, React.ReactNode> = {
 };
 
 export function RecentRuns({ runs }: { runs?: RunItem[] }) {
+  const { t } = useTranslation();
   const items = runs ?? [];
 
   return (
     <div className="card p-5">
-      <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>Ultime Analisi</h3>
+      <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>{t("dashboard.recentAnalyses")}</h3>
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <p className="font-mono text-[13px] text-cream-dim">Nessuna analisi ancora.</p>
+          <p className="font-mono text-[13px] text-cream-dim">{t("dashboard.noAnalysisYet")}</p>
           <a href="/projects" className="font-mono text-[13px] text-sage hover:text-sage/70 transition-colors mt-2">
-            Vai ai progetti →
+            {t("common.goToProjects")} →
           </a>
         </div>
       ) : (

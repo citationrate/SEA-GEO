@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ArrowLeft, Swords, Trophy, Eye, BarChart3, Loader2, MessageSquare, TrendingUp } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import { useTranslation } from "@/lib/i18n/context";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from "recharts";
@@ -51,22 +52,22 @@ interface HistoricalAnalysis {
 
 function compScoreLabel(score: number | null): { text: string; cls: string } {
   if (score == null) return { text: "\u2014", cls: "text-muted-foreground" };
-  if (score >= 60) return { text: "Dominante", cls: "text-primary" };
-  if (score >= 40) return { text: "Competitivo", cls: "text-[#c4a882]" };
-  return { text: "Svantaggiato", cls: "text-destructive" };
+  if (score >= 60) return { text: "compare.dominant", cls: "text-primary" };
+  if (score >= 40) return { text: "compare.competitive", cls: "text-[#c4a882]" };
+  return { text: "compare.disadvantaged", cls: "text-destructive" };
 }
 
-function recLabel(rec: number | null, brandA: string, brandB: string): { text: string; cls: string } {
+function recLabel(rec: number | null, brandA: string, brandB: string): { text: string; cls: string; isKey?: boolean } {
   if (rec === 1) return { text: brandA, cls: "text-primary" };
   if (rec === 2) return { text: brandB, cls: "text-destructive" };
-  if (rec === 0.5) return { text: "Pareggio", cls: "text-[#c4a882]" };
-  return { text: "Nessuno", cls: "text-muted-foreground" };
+  if (rec === 0.5) return { text: "compare.draw", cls: "text-[#c4a882]", isKey: true };
+  return { text: "compare.none", cls: "text-muted-foreground", isKey: true };
 }
 
-function fmLabel(fm: string | null, brandA: string, brandB: string): string {
-  if (fm === "A") return brandA;
-  if (fm === "B") return brandB;
-  return "Pareggio";
+function fmLabel(fm: string | null, brandA: string, brandB: string): { text: string; isKey?: boolean } {
+  if (fm === "A") return { text: brandA };
+  if (fm === "B") return { text: brandB };
+  return { text: "compare.draw", isKey: true };
 }
 
 const TOOLTIP_STYLE = {
@@ -89,6 +90,7 @@ export function CompetitiveResults({
   currentAnalysisId?: string;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const a = analysis;
   const isRunning = a.status === "running" || a.status === "pending";
   const label = compScoreLabel(a.comp_score_a);
@@ -130,7 +132,7 @@ export function CompetitiveResults({
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Torna al confronto
+          {t("nav.backToComparison")}
         </a>
         <div className="flex items-center gap-3">
           <Swords className="w-6 h-6 text-primary" />
@@ -149,7 +151,7 @@ export function CompetitiveResults({
         <div className="card p-8 text-center space-y-3">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
           <p className="text-sm text-muted-foreground">
-            Analisi in corso... {prompts.filter((p) => p.status === "completed").length}/{prompts.length} risposte
+            {t("runDetail.analysisInProgress")} {prompts.filter((p) => p.status === "completed").length}/{prompts.length} {t("compare.responses")}
           </p>
         </div>
       )}
@@ -162,7 +164,7 @@ export function CompetitiveResults({
               <div className="flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-primary" />
                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Win Rate</h3>
-                <InfoTooltip text="Percentuale di risposte in cui l'AI preferisce un brand rispetto all'altro" />
+                <InfoTooltip text={t("compare.winRateTooltip")} />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -191,7 +193,7 @@ export function CompetitiveResults({
               <div className="flex items-center gap-2">
                 <Eye className="w-4 h-4 text-primary" />
                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">First Mention</h3>
-                <InfoTooltip text="Quale brand viene menzionato per primo nella risposta AI" />
+                <InfoTooltip text={t("compare.firstMentionTooltip")} />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -220,13 +222,13 @@ export function CompetitiveResults({
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-primary" />
                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">CompScore</h3>
-                <InfoTooltip text="Punteggio competitivo complessivo calcolato da Win Rate e First Mention Rate" />
+                <InfoTooltip text={t("compare.compScoreTooltip")} />
               </div>
               <div className="text-center pt-1">
                 <p className={`font-display font-bold text-4xl ${label.cls}`}>
                   {a.comp_score_a != null ? Math.round(a.comp_score_a) : "\u2014"}
                 </p>
-                <p className={`text-sm font-medium mt-1 ${label.cls}`}>{label.text}</p>
+                <p className={`text-sm font-medium mt-1 ${label.cls}`}>{label.text === "\u2014" ? label.text : t(label.text)}</p>
               </div>
             </div>
           </div>
@@ -236,7 +238,7 @@ export function CompetitiveResults({
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-primary" />
                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                  Argomenti principali usati dall&apos;AI
+                  {t("compare.mainArguments")}
                 </h3>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -256,19 +258,19 @@ export function CompetitiveResults({
           <div className="card overflow-hidden">
             <div className="px-5 py-3 border-b border-border">
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Dettaglio risposte ({prompts.length})
+                {t("compare.responseDetail")} ({prompts.length})
               </h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left">
-                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">Pattern</th>
-                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">Modello</th>
-                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">Run</th>
-                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">Anteprima</th>
-                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">Preferenza</th>
-                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">1a Menzione</th>
+                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("compare.pattern")}</th>
+                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("compare.model")}</th>
+                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("compare.run")}</th>
+                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("compare.preview")}</th>
+                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("compare.preference")}</th>
+                    <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("compare.firstMention")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -287,10 +289,10 @@ export function CompetitiveResults({
                           </p>
                         </td>
                         <td className="px-4 py-2.5">
-                          <span className={`text-xs font-bold ${rec.cls}`}>{rec.text}</span>
+                          <span className={`text-xs font-bold ${rec.cls}`}>{rec.isKey ? t(rec.text) : rec.text}</span>
                         </td>
                         <td className="px-4 py-2.5 text-xs text-muted-foreground">
-                          {fmLabel(p.first_mention, a.brand_a, a.brand_b)}
+                          {(() => { const fm = fmLabel(p.first_mention, a.brand_a, a.brand_b); return fm.isKey ? t(fm.text) : fm.text; })()}
                         </td>
                       </tr>
                     );
@@ -306,8 +308,8 @@ export function CompetitiveResults({
               <div className="card p-5 space-y-4">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-primary" />
-                  <h3 className="font-display font-semibold text-foreground">Trend nel Tempo</h3>
-                  <span className="badge badge-muted text-[12px]">{history.length} analisi</span>
+                  <h3 className="font-display font-semibold text-foreground">{t("compare.trendOverTime")}</h3>
+                  <span className="badge badge-muted text-[12px]">{history.length} {t("compare.analysesCount")}</span>
                 </div>
 
                 <div className="flex items-center gap-4 font-mono text-[12px] text-cream-dim">
@@ -342,14 +344,14 @@ export function CompetitiveResults({
               <div className="card overflow-hidden">
                 <div className="px-5 py-3 border-b border-border">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                    Storico Analisi ({history.length})
+                    {t("compare.historicalAnalyses")} ({history.length})
                   </h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border text-left">
-                        <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">Data</th>
+                        <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("compare.dateCol")}</th>
                         <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">Win Rate {a.brand_a}</th>
                         <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">Win Rate {a.brand_b}</th>
                         <th className="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">FMR {a.brand_a}</th>
@@ -371,7 +373,7 @@ export function CompetitiveResults({
                                 className={`hover:text-primary transition-colors ${isCurrent ? "text-primary font-medium" : "text-foreground"}`}
                               >
                                 {new Date(h.created_at).toLocaleDateString("it-IT")}
-                                {isCurrent && <span className="ml-2 text-[12px] text-primary opacity-70">corrente</span>}
+                                {isCurrent && <span className="ml-2 text-[12px] text-primary opacity-70">{t("compare.current")}</span>}
                               </a>
                             </td>
                             <td className="px-4 py-2.5 font-bold text-primary">{h.win_rate_a ?? 0}%</td>
@@ -396,8 +398,8 @@ export function CompetitiveResults({
 
       {a.status === "failed" && (
         <div className="card p-8 text-center space-y-2">
-          <p className="text-destructive font-medium">Analisi fallita</p>
-          <p className="text-sm text-muted-foreground">Si è verificato un errore durante l&apos;elaborazione.</p>
+          <p className="text-destructive font-medium">{t("compare.analysisFailed")}</p>
+          <p className="text-sm text-muted-foreground">{t("compare.errorOccurred")}</p>
         </div>
       )}
     </div>

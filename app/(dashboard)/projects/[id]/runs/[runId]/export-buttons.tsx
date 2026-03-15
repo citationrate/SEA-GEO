@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 export function ExportButtons({ runId }: { runId: string }) {
+  const { t } = useTranslation();
   const [loadingExcel, setLoadingExcel] = useState(false);
   const [loadingPdf, setLoadingPdf] = useState(false);
 
@@ -40,7 +42,7 @@ export function ExportButtons({ runId }: { runId: string }) {
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] text-xs font-semibold border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
       >
         {loadingExcel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-        Esporta Excel
+        {t("exportData.exportExcel")}
       </button>
       <button
         onClick={openPdf}
@@ -48,7 +50,7 @@ export function ExportButtons({ runId }: { runId: string }) {
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-[2px] text-xs font-semibold border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
       >
         {loadingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-        Esporta PDF
+        {t("exportData.exportPdf")}
       </button>
     </div>
   );

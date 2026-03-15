@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { Share2, Link2, X, Loader2, Check } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 export function ShareButton({ runId, initialToken }: { runId: string; initialToken?: string | null }) {
+  const { t } = useTranslation();
   const [token, setToken] = useState(initialToken ?? null);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -63,7 +65,7 @@ export function ShareButton({ runId, initialToken }: { runId: string; initialTok
         className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-[2px] border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
       >
         {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
-        Condividi
+        {t("share.share")}
       </button>
 
       {showModal && (
@@ -72,13 +74,13 @@ export function ShareButton({ runId, initialToken }: { runId: string; initialTok
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="bg-[#111416] border border-[rgba(255,255,255,0.1)] rounded-[2px] p-6 max-w-md w-full space-y-4 shadow-2xl">
               <div className="flex items-center justify-between">
-                <h3 className="font-display font-bold text-lg text-foreground">Condividi Report</h3>
+                <h3 className="font-display font-bold text-lg text-foreground">{t("share.shareReport")}</h3>
                 <button onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground">
                   <X className="w-4 h-4" />
                 </button>
               </div>
               <p className="text-sm text-muted-foreground">
-                Chiunque abbia il link potr&agrave; visualizzare il report senza effettuare login.
+                {t("share.shareDesc")}
               </p>
               {shareUrl && (
                 <div className="flex items-center gap-2">
@@ -90,7 +92,7 @@ export function ShareButton({ runId, initialToken }: { runId: string; initialTok
                     className="flex items-center gap-1 px-3 py-2 bg-primary text-primary-foreground rounded-[2px] text-sm font-medium hover:bg-primary/80 transition-colors"
                   >
                     {copied ? <Check className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
-                    {copied ? "Copiato" : "Copia"}
+                    {copied ? t("share.copied") : t("share.copy")}
                   </button>
                 </div>
               )}
@@ -100,7 +102,7 @@ export function ShareButton({ runId, initialToken }: { runId: string; initialTok
                   disabled={loading}
                   className="text-sm text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
                 >
-                  {loading ? "Revocando..." : "Revoca link"}
+                  {loading ? t("share.revoking") : t("share.revokeLink")}
                 </button>
               </div>
             </div>

@@ -2,16 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "@/lib/i18n/context";
 
-
-const MESSAGES = [
-  "Interrogando i modelli AI...",
-  "Analizzando le risposte...",
-  "Identificando i competitor...",
-  "Calcolando il sentiment...",
-  "Estraendo i topic emersi...",
-  "Calcolando l'AVI score...",
-];
 
 export function AnalysisProgress({
   runId,
@@ -25,8 +17,18 @@ export function AnalysisProgress({
   totalPrompts: number;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [completed, setCompleted] = useState(initialCompleted);
   const [msgIndex, setMsgIndex] = useState(0);
+
+  const MESSAGES = [
+    t("analysisProgress.queryingModels"),
+    t("analysisProgress.analyzingResponses"),
+    t("analysisProgress.identifyingCompetitors"),
+    t("analysisProgress.calculatingSentiment"),
+    t("analysisProgress.extractingTopics"),
+    t("analysisProgress.calculatingAVI"),
+  ];
 
   // Rotate messages every 3s
   useEffect(() => {
@@ -66,10 +68,10 @@ export function AnalysisProgress({
 
         <div>
           <h2 className="font-display font-bold text-xl text-foreground animate-pulse">
-            Analisi in corso...
+            {t("analysisProgress.inProgress")}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Stiamo interrogando i modelli AI selezionati
+            {t("analysisProgress.queryingSelected")}
           </p>
         </div>
 
@@ -82,7 +84,7 @@ export function AnalysisProgress({
             />
           </div>
           <p className="text-sm text-muted-foreground">
-            <span className="text-foreground font-semibold">{completed}</span> / {totalPrompts} prompt completati
+            <span className="text-foreground font-semibold">{completed}</span> / {totalPrompts} {t("analysisProgress.promptsCompleted")}
           </p>
         </div>
 

@@ -1,12 +1,15 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { getServerTranslator, getLocaleFromRequest } from "@/lib/i18n/server";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: { runId: string } }
 ) {
   const supabase = createServiceClient();
   const runId = params.runId;
+  const locale = getLocaleFromRequest(request);
+  const t = getServerTranslator(locale);
 
   const { data: run } = await supabase
     .from("analysis_runs")
@@ -74,10 +77,10 @@ export async function GET(
   const mentionCount = analysesList.filter((x) => x.brand_mentioned).length;
   const mentionRate = totalAnalysed > 0 ? Math.round((mentionCount / totalAnalysed) * 100) : 0;
 
-  const date = r.completed_at ? new Date(r.completed_at).toLocaleDateString("it-IT") : "N/D";
+  const date = r.completed_at ? new Date(r.completed_at).toLocaleDateString(locale) : "N/D";
 
   const html = `<!DOCTYPE html>
-<html lang="it">
+<html lang="${locale}">
 <head>
 <meta charset="utf-8">
 <title>SeaGeo Report - ${proj?.name ?? ""} v${r.version}</title>
@@ -119,18 +122,18 @@ export async function GET(
 
 <div class="grid">
   <div class="stat"><div class="val">${a?.avi_score ?? "—"}</div><div class="lbl">AVI Score</div></div>
-  <div class="stat"><div class="val">${mentionRate}%</div><div class="lbl">Menzioni Brand</div></div>
-  <div class="stat"><div class="val">${compList.length}</div><div class="lbl">Competitor</div></div>
-  <div class="stat"><div class="val">${domainList.length}</div><div class="lbl">Fonti</div></div>
+  <div class="stat"><div class="val">${mentionRate}%</div><div class="lbl">${t("dashboard.brandMentions")}</div></div>
+  <div class="stat"><div class="val">${compList.length}</div><div class="lbl">${t("sidebar.competitors")}</div></div>
+  <div class="stat"><div class="val">${domainList.length}</div><div class="lbl">${t("sources.title")}</div></div>
 </div>
 
 ${a ? `
-<h2>Componenti AVI</h2>
+<h2>${t("runDetail.aviComparison")}</h2>
 <div class="avi-box">
   ${[
-    { label: "Presenza", val: a.presence_score ?? 0 },
-    { label: "Posizione", val: a.rank_score ?? 0 },
-    { label: "Sentiment", val: a.sentiment_score ?? 0 },
+    { label: t("dashboard.presence"), val: a.presence_score ?? 0 },
+    { label: t("dashboard.position"), val: a.rank_score ?? 0 },
+    { label: t("dashboard.sentiment"), val: a.sentiment_score ?? 0 },
   ].map((c) => `
   <div class="bar-row">
     <span class="bar-label">${c.label}</span>
@@ -141,34 +144,32 @@ ${a ? `
 <div style="margin-top:12px;padding:8px 12px;border-radius:6px;font-size:12px;display:inline-block;${
   (a.stability_score ?? 0) > 80 ? 'background:#e8f5e9;color:#2e7d32' : (a.stability_score ?? 0) >= 50 ? 'background:#fff8e1;color:#f57f17' : 'background:#ffebee;color:#c62828'
 }">
-  Affidabilità: ${Math.round(a.stability_score ?? 0)} — ${
-    (a.stability_score ?? 0) > 80 ? 'Alta affidabilità' : (a.stability_score ?? 0) >= 50 ? 'Affidabilità media' : 'Bassa affidabilità'
-  } <span style="color:#888;font-size:10px">(non influisce sull'AVI)</span>
+  ${(a.stability_score ?? 0) > 80 ? t("dashboard.highReliability") : (a.stability_score ?? 0) >= 50 ? t("dashboard.mediumReliability") : t("dashboard.lowReliability")} (${Math.round(a.stability_score ?? 0)})
 </div>
 ` : ""}
 
-<h2>Competitor (${compList.length})</h2>
+<h2>${t("sidebar.competitors")} (${compList.length})</h2>
 ${compList.length > 0 ? `
 <table>
-  <thead><tr><th>Competitor</th><th>Citazioni</th></tr></thead>
+  <thead><tr><th>${t("sidebar.competitors")}</th><th>${t("sources.citationsLabel")}</th></tr></thead>
   <tbody>${compList.map(([name, count]) => `<tr><td>${name}</td><td>${count}</td></tr>`).join("")}</tbody>
-</table>` : "<p style='color:#888'>Nessun competitor trovato</p>"}
+</table>` : `<p style='color:#888'>${t("dashboard.noCompetitorFound")}</p>`}
 
 <h2>Topic (${topicList.length})</h2>
 <div class="chips">
   ${topicList.map(([name, count]) => `<span class="chip">${name}<span class="chip-count">(${count})</span></span>`).join("")}
 </div>
 
-<h2>Fonti (${domainList.length})</h2>
+<h2>${t("sources.title")} (${domainList.length})</h2>
 ${domainList.length > 0 ? `
 <table>
-  <thead><tr><th>Dominio</th><th>Tipo</th><th>Citazioni</th></tr></thead>
+  <thead><tr><th>Domain</th><th>Type</th><th>${t("sources.citationsLabel")}</th></tr></thead>
   <tbody>${domainList.slice(0, 30).map(([domain, info]) => `<tr><td>${domain}</td><td><span class="badge badge-gray">${info.type}</span></td><td>${info.citations}</td></tr>`).join("")}</tbody>
-</table>` : "<p style='color:#888'>Nessuna fonte trovata</p>"}
+</table>` : `<p style='color:#888'>${t("sources.noSourceFound")}</p>`}
 
-<h2>Prompt Eseguiti (${(prompts ?? []).length})</h2>
+<h2>${t("runMetrics.promptsExecuted")} (${(prompts ?? []).length})</h2>
 <table>
-  <thead><tr><th>#</th><th>Modello</th><th>Brand</th><th>Rank</th><th>Sentiment</th><th>Competitor</th></tr></thead>
+  <thead><tr><th>#</th><th>${t("datasets.model")}</th><th>${t("datasets.brand")}</th><th>${t("datasets.rank")}</th><th>${t("dashboard.sentiment")}</th><th>${t("sidebar.competitors")}</th></tr></thead>
   <tbody>${(prompts ?? []).map((p: any, i: number) => {
     const x = analysisMap.get(p.id) as any;
     return `<tr>
@@ -183,7 +184,7 @@ ${domainList.length > 0 ? `
 </table>
 
 <div class="footer">
-  Generato da SeaGeo &middot; ${new Date().toLocaleDateString("it-IT")} &middot; AI Visibility Intelligence Platform
+  SeaGeo &middot; ${new Date().toLocaleDateString(locale)} &middot; AI Visibility Intelligence Platform
 </div>
 
 <script>window.onload = function() { window.print(); }</script>

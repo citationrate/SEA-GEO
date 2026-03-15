@@ -132,9 +132,7 @@ export default function SharedReportPage() {
                     ? "bg-yellow-900/40 text-yellow-400"
                     : "bg-red-900/40 text-red-400"
                 }`}>
-                  Affidabilità: {Math.round(avi.consistency)} — {
-                    avi.consistency > 80 ? "Alta affidabilità" : avi.consistency >= 50 ? "Affidabilità media" : "Bassa affidabilità"
-                  }
+                  {avi.consistency > 80 ? "Dato stabile" : avi.consistency >= 50 ? "Dato variabile" : "Dato instabile"} ({Math.round(avi.consistency)})
                 </span>
               </div>
             </div>

@@ -4,13 +4,15 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, Globe, Tag, Building2, MessageSquare } from "lucide-react";
 import confetti from "canvas-confetti";
-
-const SECTORS = ["Turismo", "Alimentare", "Bevande", "Tech", "Moda", "Finance", "Automotive", "Pharma", "Energia", "Altro"];
+import { useTranslation } from "@/lib/i18n/context";
 
 const DEFAULT_MODELS = ["gpt-4o-mini", "gemini-2.5-flash"];
 
 export function OnboardingModal() {
+  const { t } = useTranslation();
   const router = useRouter();
+
+  const SECTORS = [t("onboardingModal.sectors.tourism"), t("onboardingModal.sectors.food"), t("onboardingModal.sectors.beverages"), t("onboardingModal.sectors.tech"), t("onboardingModal.sectors.fashion"), t("onboardingModal.sectors.finance"), t("onboardingModal.sectors.automotive"), t("onboardingModal.sectors.pharma"), t("onboardingModal.sectors.energy"), t("onboardingModal.sectors.other")];
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -103,22 +105,20 @@ export function OnboardingModal() {
             <div className="space-y-5 animate-fade-in">
               <div className="space-y-2">
                 <h2 className="font-display font-bold text-2xl text-foreground">
-                  Benvenuto in SeaGeo 👋
+                  {t("onboardingModal.welcomeTitle")} 👋
                 </h2>
                 <p className="text-base text-primary font-medium">
-                  Misura quanto il tuo brand è visibile nelle risposte AI
+                  {t("onboardingModal.welcomeSubtitle")}
                 </p>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                SeaGeo analizza come i principali modelli AI (ChatGPT, Gemini, Claude, Perplexity)
-                parlano del tuo brand. Scopri il tuo <span className="text-foreground font-medium">AI Visibility Index</span>,
-                monitora i competitor e identifica le aree dove migliorare la tua presenza nelle risposte AI.
+                {t("onboardingModal.welcomeDesc")}
               </p>
               <button
                 onClick={() => setStep(2)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold hover:bg-primary/80 transition-colors"
               >
-                Inizia
+                {t("common.start")}
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -129,21 +129,21 @@ export function OnboardingModal() {
             <div className="space-y-4 animate-fade-in">
               <div className="space-y-1">
                 <h2 className="font-display font-bold text-xl text-foreground">
-                  Crea il tuo primo progetto
+                  {t("onboardingModal.createFirstProject")}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Inserisci il brand da monitorare nelle risposte AI
+                  {t("onboardingModal.insertBrand")}
                 </p>
               </div>
 
               <div className="space-y-3">
                 <div>
                   <label className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-1">
-                    <Tag className="w-3 h-3" /> Brand rilevato
+                    <Tag className="w-3 h-3" /> {t("onboardingModal.brandDetected")}
                   </label>
                   <input
                     type="text"
-                    placeholder="es. Lumora"
+                    placeholder={t("onboardingModal.brandPlaceholder")}
                     value={brand}
                     onChange={(e) => setBrand(e.target.value)}
                     className="w-full px-3 py-2 bg-muted/30 border border-border rounded-[2px] text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
@@ -152,11 +152,11 @@ export function OnboardingModal() {
 
                 <div>
                   <label className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-1">
-                    <Globe className="w-3 h-3" /> Sito web
+                    <Globe className="w-3 h-3" /> {t("onboardingModal.websiteLabel")}
                   </label>
                   <input
                     type="text"
-                    placeholder="es. lumora.com"
+                    placeholder={t("onboardingModal.websitePlaceholder")}
                     value={website}
                     onChange={(e) => setWebsite(e.target.value)}
                     className="w-full px-3 py-2 bg-muted/30 border border-border rounded-[2px] text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
@@ -165,14 +165,14 @@ export function OnboardingModal() {
 
                 <div>
                   <label className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-1">
-                    <Building2 className="w-3 h-3" /> Settore
+                    <Building2 className="w-3 h-3" /> {t("onboardingModal.sectorLabel")}
                   </label>
                   <select
                     value={sector}
                     onChange={(e) => setSector(e.target.value)}
                     className="w-full px-3 py-2 bg-muted/30 border border-border rounded-[2px] text-sm text-foreground focus:outline-none focus:border-primary/50"
                   >
-                    <option value="">Seleziona settore</option>
+                    <option value="">{t("onboardingModal.selectSector")}</option>
                     {SECTORS.map((s) => (
                       <option key={s} value={s}>{s}</option>
                     ))}
@@ -181,7 +181,7 @@ export function OnboardingModal() {
 
                 <div>
                   <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1 block">
-                    Modelli AI
+                    {t("onboardingModal.aiModelsLabel")}
                   </label>
                   <div className="flex flex-wrap gap-1.5">
                     {DEFAULT_MODELS.map((m) => (
@@ -199,7 +199,7 @@ export function OnboardingModal() {
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold hover:bg-primary/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-                Crea Progetto
+                {t("onboardingModal.createProjectBtn")}
               </button>
             </div>
           )}
@@ -209,17 +209,17 @@ export function OnboardingModal() {
             <div className="space-y-4 animate-fade-in">
               <div className="space-y-1">
                 <h2 className="font-display font-bold text-xl text-foreground">
-                  Progetto creato! 🎉
+                  {t("onboardingModal.projectCreated")} 🎉
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Ora aggiungi le query personalizzate o usa il generatore AI nella pagina del progetto
+                  {t("onboardingModal.addQueriesDesc")}
                 </p>
               </div>
 
               <div className="border border-dashed border-border rounded-[2px] px-4 py-6 text-center space-y-2">
                 <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto" />
                 <p className="text-sm text-muted-foreground">
-                  Aggiungi le tue query personalizzate o usa il generatore AI
+                  {t("onboardingModal.addQueriesHint")}
                 </p>
               </div>
 
@@ -228,7 +228,7 @@ export function OnboardingModal() {
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold hover:bg-primary/80 transition-colors"
               >
                 <ArrowRight className="w-4 h-4" />
-                Vai al progetto
+                {t("onboardingModal.goToProject")}
               </button>
             </div>
           )}
@@ -238,7 +238,7 @@ export function OnboardingModal() {
             onClick={handleSkip}
             className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors mt-4"
           >
-            Salta
+            {t("onboardingModal.skipBtn")}
           </button>
         </div>
       </div>

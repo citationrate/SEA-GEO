@@ -7,6 +7,7 @@ import {
   Loader2, X, Tag, BarChart3, MessageSquareQuote,
   Check, Info,
 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 /* ─── Types ─── */
 interface MacroTheme {
@@ -74,6 +75,7 @@ export function CompetitorsClient({
   selectedModel?: string | null;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState("");
   const [analyzeModel, setAnalyzeModel] = useState<string | null>(null);
@@ -103,12 +105,12 @@ export function CompetitorsClient({
         });
         if (!res.ok) {
           const data = await res.json();
-          throw new Error(data.error || "Errore");
+          throw new Error(data.error || t("common.error"));
         }
       }
       router.refresh();
     } catch (err) {
-      setAnalyzeError(err instanceof Error ? err.message : "Errore durante l'analisi");
+      setAnalyzeError(err instanceof Error ? err.message : t("competitors.analysisError"));
     } finally {
       setAnalyzing(false);
     }
@@ -123,9 +125,9 @@ export function CompetitorsClient({
         <div className="flex items-center gap-3">
           <Trophy className="w-6 h-6 text-primary" />
           <div>
-            <h1 className="font-display font-bold text-2xl text-foreground">Competitor</h1>
+            <h1 className="font-display font-bold text-2xl text-foreground">{t("competitors.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              {rows.length} competitor individuati in {new Set(rows.flatMap((r) => r.topics)).size} topic
+              {rows.length} {t("competitors.foundInTopics")} {new Set(rows.flatMap((r) => r.topics)).size} topic
             </p>
           </div>
         </div>
@@ -138,7 +140,7 @@ export function CompetitorsClient({
               onChange={(e) => setAnalyzeModel(e.target.value || null)}
               className="h-9 px-2 rounded-[2px] border border-border bg-[hsl(var(--surface))] text-xs text-foreground font-mono"
             >
-              <option value="">Tutti i modelli</option>
+              <option value="">{t("modelSelector.allModels")}</option>
               {(availableModels ?? []).map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}
@@ -161,7 +163,7 @@ export function CompetitorsClient({
                 }`}
               >
                 {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                {analyzing ? "Analisi in corso..." : "Analizza Contesti con AI"}
+                {analyzing ? t("competitors.analyzingContexts") : t("competitors.analyzeContexts")}
                 {!isPro && (
                   <span className="inline-flex items-center gap-0.5 font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px] ml-1">
                     <Crown className="w-2.5 h-2.5" /> PRO
@@ -170,11 +172,11 @@ export function CompetitorsClient({
               </button>
               {showProGate && !isPro && (
                 <div className="absolute right-0 top-full mt-2 z-30 w-64 p-3 rounded-[2px] border border-[#c4a882]/30 bg-[#111416] shadow-xl text-sm">
-                  <p className="text-foreground font-medium mb-1">Funzionalità disponibile nel piano Pro</p>
-                  <p className="text-muted-foreground text-xs mb-2">Passa a Pro per analizzare i contesti competitivi con AI.</p>
+                  <p className="text-foreground font-medium mb-1">{t("competitors.proRequired")}</p>
+                  <p className="text-muted-foreground text-xs mb-2">{t("competitors.proDesc")}</p>
                   <div className="flex items-center justify-between">
-                    <a href="/settings#piano" className="text-[#c4a882] text-xs font-semibold hover:text-[#c4a882]/80 transition-colors">Passa a Pro &rarr;</a>
-                    <button onClick={() => setShowProGate(false)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Chiudi</button>
+                    <a href="/settings#piano" className="text-[#c4a882] text-xs font-semibold hover:text-[#c4a882]/80 transition-colors">{t("settings.upgradePro")} &rarr;</a>
+                    <button onClick={() => setShowProGate(false)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t("common.close")}</button>
                   </div>
                 </div>
               )}
@@ -200,7 +202,7 @@ export function CompetitorsClient({
                 : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
             }
           >
-            Tutti
+            {t("common.all")}
           </button>
           {(availableModels ?? []).map((model) => (
             <button
@@ -234,7 +236,7 @@ export function CompetitorsClient({
               : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
           }
         >
-          Tutti
+          {t("common.all")}
         </button>
         {Object.entries(COMP_TYPE_CONFIG).map(([type, cfg]) => (
           <button
@@ -256,7 +258,7 @@ export function CompetitorsClient({
       {(availableModels ?? []).length > 1 && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Info className="w-3.5 h-3.5 shrink-0" />
-          <span>I competitor scoperti variano per modello AI. Usa i filtri sopra per confrontare i risultati.</span>
+          <span>{t("competitors.modelVariation")}</span>
         </div>
       )}
 
@@ -265,7 +267,7 @@ export function CompetitorsClient({
       {filteredRows.length === 0 ? (
         <div className="card p-12 text-center">
           <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground">Nessun competitor trovato. Lancia un&apos;analisi per scoprirli.</p>
+          <p className="text-muted-foreground">{t("competitors.noCompetitorYet")}</p>
         </div>
       ) : (
         <>
@@ -278,7 +280,7 @@ export function CompetitorsClient({
                 <div className="space-y-2.5">
                   {/* Brand row */}
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold text-primary w-32 truncate">Il tuo brand</span>
+                    <span className="text-sm font-bold text-primary w-32 truncate">{t("competitors.yourBrand")}</span>
                     <div className="flex-1 h-2.5 bg-muted rounded-[2px] overflow-hidden">
                       <div
                         className="h-full rounded-[2px] transition-all duration-700"
@@ -355,6 +357,7 @@ function CompetitorCard({
   rank: number;
   onThemeClick: (compName: string, theme: MacroTheme) => void;
 }) {
+  const { t } = useTranslation();
   const themes = row.themeAnalysis?.macro_themes ?? [];
   const summary = row.themeAnalysis?.positioning_summary;
 
@@ -385,7 +388,7 @@ function CompetitorCard({
             </span>
           )}
           <span className="badge badge-primary font-display font-bold">
-            {row.mentions} citazioni
+            {row.mentions} {t("competitors.citations")}
           </span>
         </div>
       </div>
@@ -471,15 +474,15 @@ function CompetitorCard({
         })}
 
         <span className="text-xs text-muted-foreground">
-          {row.analysisCount} analisi
+          {row.analysisCount} {t("competitors.analyses")}
         </span>
       </div>
 
       {/* Dates + project */}
       <div className="flex items-center justify-between pt-2 border-t border-border text-[13px] text-muted-foreground">
         <div className="flex gap-4">
-          <span>Prima: {row.firstSeen ? new Date(row.firstSeen).toLocaleDateString("it-IT") : "\u2014"}</span>
-          <span>Ultima: {row.lastSeen ? new Date(row.lastSeen).toLocaleDateString("it-IT") : "\u2014"}</span>
+          <span>{t("competitors.firstSeen")} {row.firstSeen ? new Date(row.firstSeen).toLocaleDateString("it-IT") : "\u2014"}</span>
+          <span>{t("competitors.lastSeen")} {row.lastSeen ? new Date(row.lastSeen).toLocaleDateString("it-IT") : "\u2014"}</span>
         </div>
         {row.projects.length > 0 && (
           <span className="text-right truncate max-w-[160px]">
@@ -501,6 +504,7 @@ function ThemeDrawer({
   theme: MacroTheme;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
@@ -522,13 +526,13 @@ function ThemeDrawer({
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
           {/* Description */}
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Descrizione</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">{t("competitors.description")}</h4>
             <p className="text-sm text-foreground leading-relaxed">{theme.description}</p>
           </div>
 
           {/* Frequency */}
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Frequenza</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">{t("competitors.frequency")}</h4>
             <div className="flex items-center gap-2">
               <div className="flex-1 h-2 bg-border rounded-[2px] overflow-hidden">
                 <div
@@ -544,7 +548,7 @@ function ThemeDrawer({
           {theme.keywords.length > 0 && (
             <div>
               <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1.5">
-                <Tag className="w-3 h-3" /> Keywords
+                <Tag className="w-3 h-3" /> {t("competitors.keywords")}
               </h4>
               <div className="flex flex-wrap gap-1.5">
                 {theme.keywords.map((kw) => (
@@ -560,7 +564,7 @@ function ThemeDrawer({
           {theme.excerpts && theme.excerpts.length > 0 && (
             <div>
               <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
-                <MessageSquareQuote className="w-3 h-3" /> Esempi dalle risposte AI
+                <MessageSquareQuote className="w-3 h-3" /> {t("competitors.aiExamples")}
               </h4>
               <div className="space-y-2.5">
                 {theme.excerpts.map((excerpt, i) => (
@@ -577,7 +581,7 @@ function ThemeDrawer({
           {(!theme.excerpts || theme.excerpts.length === 0) && (
             <div className="card p-4 border-border text-center">
               <p className="text-xs text-muted-foreground">
-                Nessun estratto disponibile. Esegui &quot;Analizza Contesti con AI&quot; per generare gli estratti.
+                {t("competitors.noExtracts")}
               </p>
             </div>
           )}

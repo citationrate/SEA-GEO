@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { useTranslation } from "@/lib/i18n/context";
 
 export function RegisterForm() {
   const [fullName, setFullName] = useState("");
@@ -14,16 +15,17 @@ export function RegisterForm() {
   const [gLoading, setGLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+  const { t } = useTranslation();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     if (password.length < 8) {
-      toast.error("La password deve avere almeno 8 caratteri");
+      toast.error(t("auth.pwdMinError"));
       return;
     }
     if (password !== confirmPassword) {
-      toast.error("Le password non corrispondono");
+      toast.error(t("auth.pwdMismatch"));
       return;
     }
 
@@ -42,15 +44,13 @@ export function RegisterForm() {
       return;
     }
 
-    // Auto sign-in after registration
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (signInError) {
-      // Registration succeeded but auto-login failed — still redirect
-      toast.success("Account creato! Effettua il login.");
+      toast.success(t("auth.accountCreated"));
       router.push("/login");
     } else {
       router.push("/dashboard?welcome=1");
@@ -69,7 +69,6 @@ export function RegisterForm() {
 
   return (
     <div className="space-y-4">
-      {/* Google */}
       <button
         onClick={onGoogle}
         disabled={gLoading}
@@ -77,73 +76,45 @@ export function RegisterForm() {
         style={{ background: "var(--surface-2)" }}
       >
         {gLoading ? <Spinner /> : <GoogleLogo />}
-        Continua con Google
+        {t("auth.continueGoogle")}
       </button>
 
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-        <span className="text-xs text-muted-foreground font-mono">oppure</span>
+        <span className="text-xs text-muted-foreground font-mono">{t("common.or")}</span>
         <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
       </div>
 
-      {/* Registration form */}
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
-          <label className="block text-xs text-muted-foreground mb-1.5 font-sans font-medium">Nome completo</label>
-          <input
-            type="text"
-            required
-            placeholder="Mario Rossi"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className="input-base"
-          />
+          <label className="block text-xs text-muted-foreground mb-1.5 font-sans font-medium">{t("auth.fullName")}</label>
+          <input type="text" required placeholder={t("auth.fullNamePlaceholder")}
+            value={fullName} onChange={(e) => setFullName(e.target.value)} className="input-base" />
         </div>
         <div>
-          <label className="block text-xs text-muted-foreground mb-1.5 font-sans font-medium">Email</label>
-          <input
-            type="email"
-            required
-            placeholder="nome@azienda.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="input-base"
-          />
+          <label className="block text-xs text-muted-foreground mb-1.5 font-sans font-medium">{t("auth.email")}</label>
+          <input type="email" required placeholder={t("auth.emailPlaceholder")}
+            value={email} onChange={(e) => setEmail(e.target.value)} className="input-base" />
         </div>
         <div>
-          <label className="block text-xs text-muted-foreground mb-1.5 font-sans font-medium">Password</label>
-          <input
-            type="password"
-            required
-            placeholder="Minimo 8 caratteri"
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="input-base"
-          />
+          <label className="block text-xs text-muted-foreground mb-1.5 font-sans font-medium">{t("auth.password")}</label>
+          <input type="password" required placeholder={t("auth.minChars")} minLength={8}
+            value={password} onChange={(e) => setPassword(e.target.value)} className="input-base" />
         </div>
         <div>
-          <label className="block text-xs text-muted-foreground mb-1.5 font-sans font-medium">Conferma password</label>
-          <input
-            type="password"
-            required
-            placeholder="Ripeti la password"
-            minLength={8}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="input-base"
-          />
+          <label className="block text-xs text-muted-foreground mb-1.5 font-sans font-medium">{t("auth.confirmPassword")}</label>
+          <input type="password" required placeholder={t("auth.repeatPassword")} minLength={8}
+            value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="input-base" />
         </div>
         <button
-          type="submit"
-          disabled={loading}
+          type="submit" disabled={loading}
           className="w-full font-sans font-semibold uppercase tracking-wide rounded-[2px] px-4 py-2.5 text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-1"
           style={{ background: "var(--primary)", color: "var(--background)" }}
           onMouseEnter={(e) => { e.currentTarget.style.background = "var(--cream)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.transform = "none"; }}
         >
           {loading && <Spinner />}
-          Crea account
+          {t("auth.createAccount")}
         </button>
       </form>
     </div>

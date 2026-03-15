@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, Sparkles, Tag, TrendingUp } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface TopicItem {
   name: string;
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function TopicsClient({ topics, brand }: Props) {
+  const { t } = useTranslation();
   const [categories, setCategories] = useState<CategoryGroup[] | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,15 +49,15 @@ export function TopicsClient({ topics, brand }: Props) {
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Errore");
+        throw new Error(data.error || t("common.error"));
       }
       const data = await res.json();
       setCategories(data.categories ?? []);
       setSummary(data.summary ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore");
+      setError(err instanceof Error ? err.message : t("common.error"));
       // Fallback: show all topics in a single group
-      setCategories([{ name: "Tutti i topic", topics: topics.map((t) => t.name) }]);
+      setCategories([{ name: t("topics.allTopics"), topics: topics.map((tp) => tp.name) }]);
     } finally {
       setLoading(false);
     }
@@ -70,7 +72,7 @@ export function TopicsClient({ topics, brand }: Props) {
       {loading && (
         <div className="card p-4 flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin" />
-          Categorizzazione topic in corso...
+          {t("topics.categorizing")}
         </div>
       )}
 
@@ -127,6 +129,7 @@ export function TopicsClient({ topics, brand }: Props) {
 }
 
 function TopicCard({ topic, maxCount, maxRelevance }: { topic: TopicItem; maxCount: number; maxRelevance: number }) {
+  const { t } = useTranslation();
   const barWidth = (topic.count / maxCount) * 100;
   const { tofu, mofu, bofu } = topic.funnelBreakdown;
   const total = tofu + mofu + bofu;
@@ -166,7 +169,7 @@ function TopicCard({ topic, maxCount, maxRelevance }: { topic: TopicItem; maxCou
 
       {/* Relevance indicator */}
       <div className="flex items-center gap-1">
-        <span className="text-[12px] text-muted-foreground">Rilevanza</span>
+        <span className="text-[12px] text-muted-foreground">{t("topics.relevance")}</span>
         <div className="flex gap-px">
           {Array.from({ length: 5 }).map((_, i) => {
             const filled = Math.ceil((topic.relevanceScore / Math.max(maxRelevance, 1)) * 5);

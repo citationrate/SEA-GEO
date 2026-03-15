@@ -6,6 +6,7 @@ import {
   Lightbulb, Shield, Newspaper, Star, ShoppingCart,
   MessageCircle, BookOpen, HelpCircle, Swords,
 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 /* ─── Types ─── */
 interface SourceDomain {
@@ -34,11 +35,11 @@ const TYPE_CONFIG: Record<string, { label: string; cls: string; icon: any }> = {
   brand_owned: { label: "Brand Owned", cls: "bg-primary/15 text-primary border-primary/25", icon: Shield },
   competitor:  { label: "Competitor",  cls: "bg-destructive/15 text-destructive border-destructive/25", icon: Swords },
   media:       { label: "Media",       cls: "bg-purple-500/15 text-purple-400 border-purple-500/25", icon: Newspaper },
-  review:      { label: "Recensioni",  cls: "bg-amber-500/15 text-amber-400 border-amber-500/25", icon: Star },
+  review:      { label: "review",  cls: "bg-amber-500/15 text-amber-400 border-amber-500/25", icon: Star },
   social:      { label: "Social",      cls: "bg-pink-500/15 text-pink-400 border-pink-500/25", icon: MessageCircle },
   ecommerce:   { label: "E-commerce",  cls: "bg-success/15 text-success border-success/25", icon: ShoppingCart },
   wikipedia:   { label: "Wikipedia",   cls: "bg-blue-500/15 text-blue-400 border-blue-500/25", icon: BookOpen },
-  other:       { label: "Altro",       cls: "bg-muted text-muted-foreground border-border", icon: HelpCircle },
+  other:       { label: "other",       cls: "bg-muted text-muted-foreground border-border", icon: HelpCircle },
 };
 
 const ALL_TYPES = ["brand_owned", "competitor", "media", "review", "social", "ecommerce", "wikipedia", "other"];
@@ -57,6 +58,7 @@ export function SourcesClient({
   mediaPct: number;
   brand: string;
 }) {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<string | null>(null);
   const [drawerDomain, setDrawerDomain] = useState<SourceDomain | null>(null);
   const [insights, setInsights] = useState<Insight[] | null>(null);
@@ -98,17 +100,17 @@ export function SourcesClient({
       <div className="flex items-center gap-3">
         <Globe className="w-6 h-6 text-primary" />
         <div>
-          <h1 className="font-display font-bold text-2xl text-foreground">Fonti</h1>
-          <p className="text-sm text-muted-foreground">Da dove le AI citano informazioni sul tuo brand</p>
+          <h1 className="font-display font-bold text-2xl text-foreground">{t("sources.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("sources.subtitle")}</p>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard value={String(domains.length)} label="Domini unici" />
-        <StatCard value={String(totalCitations)} label="Citazioni totali" />
-        <StatCard value={`${brandOwnedPct}%`} label="Brand Owned" highlight />
-        <StatCard value={`${mediaPct}%`} label="Media" />
+        <StatCard value={String(domains.length)} label={t("sources.uniqueDomains")} />
+        <StatCard value={String(totalCitations)} label={t("sources.totalCitations")} />
+        <StatCard value={`${brandOwnedPct}%`} label={t("sources.brandOwned")} highlight />
+        <StatCard value={`${mediaPct}%`} label={t("sources.media")} />
       </div>
 
       {/* AI Insights */}
@@ -120,7 +122,7 @@ export function SourcesClient({
           {loadingInsights ? (
             <div className="card p-6 flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              <span className="text-sm text-muted-foreground">Generazione insight...</span>
+              <span className="text-sm text-muted-foreground">{t("sources.generatingInsights")}</span>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -148,7 +150,7 @@ export function SourcesClient({
               : "border-border text-muted-foreground hover:border-foreground/40"
           }`}
         >
-          Tutti ({domains.length})
+          {t("common.all")} ({domains.length})
         </button>
         {ALL_TYPES.map((type) => {
           const count = typeCounts.get(type) ?? 0;
@@ -174,7 +176,7 @@ export function SourcesClient({
       {filtered.length === 0 ? (
         <div className="card p-12 text-center">
           <Globe className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground">Nessuna fonte trovata.</p>
+          <p className="text-muted-foreground">{t("sources.noSourceFound")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -208,6 +210,7 @@ function StatCard({ value, label, highlight }: { value: string; label: string; h
 
 /* ─── Domain Card ─── */
 function DomainCard({ domain: d, onAnalyze }: { domain: SourceDomain; onAnalyze: () => void }) {
+  const { t } = useTranslation();
   const cfg = TYPE_CONFIG[d.sourceType] ?? TYPE_CONFIG.other;
   const Icon = cfg.icon;
 
@@ -235,10 +238,10 @@ function DomainCard({ domain: d, onAnalyze }: { domain: SourceDomain; onAnalyze:
       {/* Stats row */}
       <div className="flex items-center gap-4 text-xs">
         <span className="font-display font-bold text-foreground">
-          {d.citations} <span className="font-normal text-muted-foreground">citazioni</span>
+          {d.citations} <span className="font-normal text-muted-foreground">{t("sources.citations")}</span>
         </span>
         <span className="text-muted-foreground">
-          {d.analysisCount} analisi
+          {d.analysisCount} {t("sources.analyses")}
         </span>
       </div>
 
@@ -254,7 +257,7 @@ function DomainCard({ domain: d, onAnalyze }: { domain: SourceDomain; onAnalyze:
         onClick={onAnalyze}
         className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/70 transition-colors"
       >
-        <Search className="w-3 h-3" /> Analizza URL
+        <Search className="w-3 h-3" /> {t("sources.analyzeUrl")}
       </button>
     </div>
   );
@@ -270,6 +273,7 @@ function AnalyzeDrawer({
   brand: string;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [analysis, setAnalysis] = useState<DomainAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -291,7 +295,7 @@ function AnalyzeDrawer({
     })
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
       .then((data) => setAnalysis(data))
-      .catch(() => setError("Errore durante l'analisi"))
+      .catch(() => setError(t("sources.analysisError")))
       .finally(() => setLoading(false));
   }
 
@@ -328,18 +332,18 @@ function AnalyzeDrawer({
           <div className="flex gap-4">
             <div className="card p-3 flex-1 text-center">
               <p className="font-display font-bold text-lg text-foreground">{d.citations}</p>
-              <p className="text-[12px] text-muted-foreground">Citazioni</p>
+              <p className="text-[12px] text-muted-foreground">{t("sources.citationsLabel")}</p>
             </div>
             <div className="card p-3 flex-1 text-center">
               <p className="font-display font-bold text-lg text-foreground">{d.analysisCount}</p>
-              <p className="text-[12px] text-muted-foreground">Analisi</p>
+              <p className="text-[12px] text-muted-foreground">{t("sources.analysesLabel")}</p>
             </div>
           </div>
 
           {/* URLs */}
           {d.urls.length > 0 && (
             <div>
-              <h4 className="font-mono text-[0.69rem] font-semibold uppercase tracking-widest text-muted-foreground mb-2">URL TROVATI</h4>
+              <h4 className="font-mono text-[0.69rem] font-semibold uppercase tracking-widest text-muted-foreground mb-2">{t("sources.urlFound")}</h4>
               <div className="space-y-1">
                 {d.urls.slice(0, 5).map((url) => (
                   <a key={url} href={url} target="_blank" rel="noopener noreferrer"
@@ -356,7 +360,7 @@ function AnalyzeDrawer({
           {d.contexts.length > 0 && (
             <div>
               <h4 className="font-mono text-[0.69rem] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-                CONTESTI DI CITAZIONE ({d.contexts.length})
+                {t("sources.citationContexts")} ({d.contexts.length})
               </h4>
               <div className="space-y-2">
                 {d.contexts.map((ctx, i) => (
@@ -371,7 +375,7 @@ function AnalyzeDrawer({
           {/* AI Analysis */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-widest text-primary mb-3 flex items-center gap-1.5">
-              <Lightbulb className="w-3 h-3" /> Cosa dicono le AI di questo sito
+              <Lightbulb className="w-3 h-3" /> {t("sources.whatAISay")}
             </h4>
 
             {!analysis && !loading && (
@@ -379,14 +383,14 @@ function AnalyzeDrawer({
                 onClick={runAnalysis}
                 className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors"
               >
-                <Search className="w-4 h-4" /> Analizza con AI
+                <Search className="w-4 h-4" /> {t("sources.analyzeWithAI")}
               </button>
             )}
 
             {loading && (
               <div className="card p-6 flex items-center justify-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                <span className="text-sm text-muted-foreground">Analisi in corso...</span>
+                <span className="text-sm text-muted-foreground">{t("sources.analysisInProgress")}</span>
               </div>
             )}
 
@@ -394,9 +398,9 @@ function AnalyzeDrawer({
 
             {analysis && (
               <div className="space-y-3">
-                <AnalysisBlock title="Perch\u00E9 le AI lo citano" text={analysis.why_cited} />
-                <AnalysisBlock title="Autorit\u00E0 nel settore" text={analysis.authority} />
-                <AnalysisBlock title="Impatto sul brand" text={analysis.brand_impact} />
+                <AnalysisBlock title={t("sources.whyCited")} text={analysis.why_cited} />
+                <AnalysisBlock title={t("sources.sectorAuthority")} text={analysis.authority} />
+                <AnalysisBlock title={t("sources.brandImpact")} text={analysis.brand_impact} />
               </div>
             )}
           </div>

@@ -4,6 +4,7 @@ import { ArrowLeft, GitCompare } from "lucide-react";
 import { isProUser } from "@/lib/utils/is-pro";
 import { AI_MODELS, filterAvailableModels } from "@/lib/engine/models";
 import { NewCompetitiveForm } from "./new-competitive-form";
+import { T } from "@/components/translated-label";
 
 export const metadata = { title: "Nuova Analisi Competitiva" };
 
@@ -51,14 +52,14 @@ export default async function NewCompetitivePage() {
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Torna al confronto
+          <T k="nav.backToComparison" />
         </a>
         <div className="flex items-center gap-3">
           <GitCompare className="w-6 h-6 text-primary" />
           <div>
-            <h1 className="font-display font-bold text-2xl text-foreground">Nuova Analisi Competitiva</h1>
+            <h1 className="font-display font-bold text-2xl text-foreground"><T k="compare.newCompetitiveTitle" /></h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Confronta il tuo brand con un competitor su un driver specifico
+              <T k="compare.newCompetitiveSubtitle" />
             </p>
           </div>
         </div>

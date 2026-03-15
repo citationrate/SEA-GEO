@@ -126,10 +126,10 @@ export default async function DashboardPage({
 
   // Build AVI components for ring
   const aviComponents = lastAvi ? [
-    { label: "Presenza",    v: lastAvi.presence_score != null ? Math.round(lastAvi.presence_score) : null },
-    { label: "Posizione",   v: lastAvi.rank_score != null ? Math.round(lastAvi.rank_score) : null },
-    { label: "Sentiment",   v: lastAvi.sentiment_score != null ? Math.round(lastAvi.sentiment_score) : null },
-    { label: "Affidabilità", v: lastAvi.stability_score != null ? Math.round(lastAvi.stability_score) : null },
+    { labelKey: "dashboard.presence",    v: lastAvi.presence_score != null ? Math.round(lastAvi.presence_score) : null },
+    { labelKey: "dashboard.position",    v: lastAvi.rank_score != null ? Math.round(lastAvi.rank_score) : null },
+    { labelKey: "dashboard.sentiment",   v: lastAvi.sentiment_score != null ? Math.round(lastAvi.sentiment_score) : null },
+    { labelKey: "dashboard.reliability", v: lastAvi.stability_score != null ? Math.round(lastAvi.stability_score) : null },
   ] : undefined;
 
   // Extract unique models
@@ -160,12 +160,12 @@ export default async function DashboardPage({
   }));
 
   const stats = [
-    { label: "Prompt Eseguiti",    value: String(totalPrompts ?? 0),       sub: "in tutte le run" },
-    { label: "Menzioni Brand",     value: mentionRate,                     sub: "% delle risposte" },
-    { label: "Competitor Trovati", value: String(competitorsCount ?? 0),   sub: "discovery automatica" },
-    { label: "Fonti Estratte",     value: String(sourcesCount ?? 0),       sub: "totale estratte" },
-    { label: "Modelli AI",         value: String(modelsSet.size),          sub: "integrazioni usate" },
-    { label: "Analisi Eseguite",   value: String(runs.length),            sub: "totale storico" },
+    { labelKey: "dashboard.promptsExecuted",    value: String(totalPrompts ?? 0),       subKey: "dashboard.inAllRuns" },
+    { labelKey: "dashboard.brandMentions",       value: mentionRate,                     subKey: "dashboard.pctResponses" },
+    { labelKey: "dashboard.competitorsFound",    value: String(competitorsCount ?? 0),   subKey: "dashboard.autoDiscovery" },
+    { labelKey: "dashboard.sourcesExtracted",    value: String(sourcesCount ?? 0),       subKey: "dashboard.uniqueDomains" },
+    { labelKey: "dashboard.aiModels",            value: String(modelsSet.size),          subKey: "dashboard.activeIntegrations" },
+    { labelKey: "dashboard.analysesRun",         value: String(runs.length),            subKey: "dashboard.totalHistory" },
   ];
 
   // Competitor bar data - only from active (non-archived) runs

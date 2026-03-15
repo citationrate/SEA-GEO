@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Cpu } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 const LS_KEY = "selectedModel";
 
@@ -13,6 +14,7 @@ function ModelSelectorInner({ models }: { models: string[] }) {
   const searchParams = useSearchParams();
   const paramModel = searchParams.get("model");
 
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<string>(paramModel ?? "");
 
   useEffect(() => {
@@ -59,7 +61,7 @@ function ModelSelectorInner({ models }: { models: string[] }) {
         onChange={(e) => handleChange(e.target.value)}
         className="bg-muted border border-border rounded-[2px] px-3 py-1.5 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer"
       >
-        <option value="">Tutti i modelli</option>
+        <option value="">{t("modelSelector.allModels")}</option>
         {models.map((m) => (
           <option key={m} value={m}>{m}</option>
         ))}
