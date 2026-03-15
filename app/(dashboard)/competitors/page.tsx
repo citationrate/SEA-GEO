@@ -37,91 +37,98 @@ export default async function CompetitorsPage({
 
   const selectedModel = searchParams.model || null;
 
-  let filteredRunIds: string[];
-  if (selectedModel && targetIds.length > 0) {
-    const { data: filtered } = await supabase
-      .from("analysis_runs")
-      .select("id")
-      .in("project_id", targetIds)
-      .is("deleted_at", null)
-      .contains("models_used", [selectedModel]);
-    filteredRunIds = (filtered ?? []).map((r: any) => r.id);
-  } else {
-    filteredRunIds = (allRuns ?? []).map((r: any) => r.id);
-  }
-
   // Active (non-archived) run IDs
   const activeRunIds = (allRuns ?? []).map((r: any) => r.id);
 
-  // Fetch competitors discovered in filtered runs (respects model filter)
-  const effectiveRunIds = filteredRunIds.length > 0 ? filteredRunIds : activeRunIds;
-  const { data: competitors } = effectiveRunIds.length > 0
+  // Fetch all competitors (discovery is not model-specific, filtering happens via mentions)
+  const { data: competitors } = activeRunIds.length > 0
     ? await supabase
         .from("competitors")
         .select("*")
         .in("project_id", targetIds)
-        .in("discovered_at_run_id", effectiveRunIds)
+        .in("discovered_at_run_id", activeRunIds)
         .order("created_at", { ascending: true })
     : { data: [] };
 
   const compList = (competitors ?? []) as any[];
 
-  // Fetch mention counts from competitor_mentions (respects model filter)
-  const { data: allMentionRows } = effectiveRunIds.length > 0
-    ? await (supabase.from("competitor_mentions") as any)
-        .select("competitor_name, competitor_type")
-        .in("project_id", targetIds)
-        .in("run_id", effectiveRunIds)
+  // ── Model-level filtering via prompts_executed ──
+  // When a model is selected, filter at the prompt level (not run level),
+  // because a single run can contain data from multiple models.
+  let filteredPromptIds: string[] | null = null; // null = no filter (all)
+
+  // Fetch all prompts for active runs (needed for stats)
+  const { data: allPrompts } = activeRunIds.length > 0
+    ? await supabase
+        .from("prompts_executed")
+        .select("id, run_id, query_id, model")
+        .in("run_id", activeRunIds)
     : { data: [] };
+
+  const allPromptsList = (allPrompts ?? []) as any[];
+
+  if (selectedModel) {
+    filteredPromptIds = allPromptsList
+      .filter((p: any) => p.model === selectedModel)
+      .map((p: any) => p.id);
+  }
+
+  // The prompts to use for stats (filtered by model if selected)
+  const effectivePrompts = selectedModel
+    ? allPromptsList.filter((p: any) => p.model === selectedModel)
+    : allPromptsList;
+  const effectivePromptIds = effectivePrompts.map((p: any) => p.id);
+
+  // Fetch mention counts from competitor_mentions filtered by prompt IDs
+  let mentionQuery;
+  if (filteredPromptIds && filteredPromptIds.length > 0) {
+    mentionQuery = await (supabase.from("competitor_mentions") as any)
+      .select("competitor_name, competitor_type")
+      .in("project_id", targetIds)
+      .in("prompt_executed_id", filteredPromptIds);
+  } else if (!selectedModel && activeRunIds.length > 0) {
+    mentionQuery = await (supabase.from("competitor_mentions") as any)
+      .select("competitor_name, competitor_type")
+      .in("project_id", targetIds)
+      .in("run_id", activeRunIds);
+  } else {
+    mentionQuery = { data: [] };
+  }
+  const allMentionRows = mentionQuery.data ?? [];
 
   const totalMentionMap = new Map<string, number>();
   const compTypeMap = new Map<string, string>();
-  for (const m of (allMentionRows ?? []) as any[]) {
+  for (const m of allMentionRows as any[]) {
     const key = (m.competitor_name as string).toLowerCase().trim();
     totalMentionMap.set(key, (totalMentionMap.get(key) ?? 0) + 1);
-    // Keep latest type (last row wins)
     if (m.competitor_type) compTypeMap.set(key, m.competitor_type);
   }
 
-  // Build per-model mention map for each competitor
-  // Fetch mentions with model info (from the run's models_used)
+  // Build per-model mention map for each competitor (always uses all data for badges)
   const perModelMentionMap = new Map<string, Set<string>>();
   if (activeRunIds.length > 0) {
-    const runModelMap = new Map<string, string[]>();
-    for (const r of (allRuns ?? []) as any[]) {
-      runModelMap.set(r.id, r.models_used ?? []);
-    }
-
     const { data: mentionRowsWithRun } = await (supabase.from("competitor_mentions") as any)
-      .select("competitor_name, run_id, model")
+      .select("competitor_name, prompt_executed_id")
       .in("project_id", targetIds)
       .in("run_id", activeRunIds);
+
+    const promptModelMap = new Map(allPromptsList.map((p: any) => [p.id, p.model]));
 
     for (const m of (mentionRowsWithRun ?? []) as any[]) {
       const key = (m.competitor_name as string).toLowerCase().trim();
       if (!perModelMentionMap.has(key)) perModelMentionMap.set(key, new Set());
-      // Use model field if available, otherwise infer from run's models_used
-      if (m.model) {
-        perModelMentionMap.get(key)!.add(m.model);
-      } else {
-        const runModels = runModelMap.get(m.run_id) ?? [];
-        for (const model of runModels) {
-          perModelMentionMap.get(key)!.add(model);
-        }
-      }
+      const model = promptModelMap.get(m.prompt_executed_id);
+      if (model) perModelMentionMap.get(key)!.add(model);
     }
   }
 
-  // Use filtered run IDs for stats
-  const runIds = filteredRunIds;
-
-  // Get latest brand AVI (from effective runs)
-  const { data: lastAviRow } = effectiveRunIds.length > 0
+  // Get latest brand AVI
+  const { data: lastAviRow } = activeRunIds.length > 0
     ? await supabase
         .from("avi_history")
         .select("avi_score")
         .in("project_id", targetIds)
-        .in("run_id", effectiveRunIds)
+        .in("run_id", activeRunIds)
         .order("computed_at", { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -137,17 +144,10 @@ export default async function CompetitorsPage({
     queryTypes: Set<string>;
   }>();
 
-  let totalPrompts = 0;
+  let totalPrompts = effectivePromptIds.length;
 
-  if (runIds.length > 0) {
-    const { data: prompts } = await supabase
-      .from("prompts_executed")
-      .select("id, run_id, query_id")
-      .in("run_id", runIds);
-
-    const promptMap = new Map((prompts ?? []).map((p: any) => [p.id, p]));
-    const promptIds = (prompts ?? []).map((p: any) => p.id);
-    totalPrompts = promptIds.length;
+  if (effectivePromptIds.length > 0) {
+    const promptMap = new Map(effectivePrompts.map((p: any) => [p.id, p]));
 
     // Get query funnel stages
     const { data: allQueries } = await supabase
@@ -156,33 +156,31 @@ export default async function CompetitorsPage({
       .in("project_id", targetIds);
     const queryStageMap = new Map((allQueries ?? []).map((q: any) => [q.id, q.funnel_stage]));
 
-    if (promptIds.length > 0) {
-      const { data: analyses } = await supabase
-        .from("response_analysis")
-        .select("prompt_executed_id, competitors_found, sentiment_score, topics")
-        .in("prompt_executed_id", promptIds);
+    const { data: analyses } = await supabase
+      .from("response_analysis")
+      .select("prompt_executed_id, competitors_found, sentiment_score, topics")
+      .in("prompt_executed_id", effectivePromptIds);
 
-      (analyses ?? []).forEach((a: any) => {
-        const prompt = promptMap.get(a.prompt_executed_id);
-        const queryType = prompt ? queryStageMap.get(prompt.query_id) : null;
+    (analyses ?? []).forEach((a: any) => {
+      const prompt = promptMap.get(a.prompt_executed_id);
+      const queryType = prompt ? queryStageMap.get(prompt.query_id) : null;
 
-        (a.competitors_found ?? []).forEach((name: string) => {
-          let stats = compStats.get(name);
-          if (!stats) {
-            stats = { mentions: 0, sentimentSum: 0, sentimentCount: 0, runIds: new Set(), topics: new Set(), queryTypes: new Set() };
-            compStats.set(name, stats);
-          }
-          stats.mentions++;
-          if (a.sentiment_score != null) {
-            stats.sentimentSum += a.sentiment_score;
-            stats.sentimentCount++;
-          }
-          if (prompt?.run_id) stats.runIds.add(prompt.run_id);
-          (a.topics ?? []).forEach((t: string) => stats!.topics.add(t));
-          if (queryType) stats.queryTypes.add(queryType);
-        });
+      (a.competitors_found ?? []).forEach((name: string) => {
+        let stats = compStats.get(name);
+        if (!stats) {
+          stats = { mentions: 0, sentimentSum: 0, sentimentCount: 0, runIds: new Set(), topics: new Set(), queryTypes: new Set() };
+          compStats.set(name, stats);
+        }
+        stats.mentions++;
+        if (a.sentiment_score != null) {
+          stats.sentimentSum += a.sentiment_score;
+          stats.sentimentCount++;
+        }
+        if (prompt?.run_id) stats.runIds.add(prompt.run_id);
+        (a.topics ?? []).forEach((t: string) => stats!.topics.add(t));
+        if (queryType) stats.queryTypes.add(queryType);
       });
-    }
+    });
   }
 
   // Build enriched competitor rows
