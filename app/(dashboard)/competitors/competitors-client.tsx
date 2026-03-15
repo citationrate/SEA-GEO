@@ -9,6 +9,33 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 
+const MODEL_LABELS: Record<string, string> = {
+  "gpt-4o-mini": "GPT-4o Mini",
+  "gpt-4o": "GPT-4o",
+  "gpt-5.4": "GPT-5.4",
+  "o1-mini": "o1 Mini",
+  "o3-mini": "o3 Mini",
+  "o3": "o3",
+  "gemini-2.5-flash": "Gemini 2.5 Flash",
+  "gemini-2.5-pro": "Gemini 2.5 Pro",
+  "perplexity-sonar": "Perplexity Sonar",
+  "perplexity-sonar-pro": "Perplexity Sonar Pro",
+  "claude-haiku": "Claude Haiku 4.5",
+  "claude-sonnet": "Claude Sonnet 4.5",
+  "claude-opus": "Claude Opus 4.5",
+  "claude-haiku-4-5-20251001": "Claude Haiku 4.5",
+  "claude-sonnet-4-5": "Claude Sonnet 4.5",
+  "claude-opus-4-5": "Claude Opus 4.5",
+  "grok-3": "Grok 3",
+  "grok-3-mini": "Grok 3 Mini",
+  "grok-2": "Grok 2",
+  "copilot-gpt4": "Copilot GPT-4",
+};
+
+function getModelDisplayName(model: string): string {
+  return MODEL_LABELS[model] ?? model;
+}
+
 /* ─── Types ─── */
 interface MacroTheme {
   theme: string;
@@ -78,7 +105,6 @@ export function CompetitorsClient({
   const { t } = useTranslation();
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState("");
-  const [analyzeModel, setAnalyzeModel] = useState<string | null>(null);
   const [drawerTheme, setDrawerTheme] = useState<{ compName: string; theme: MacroTheme } | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [isPro, setIsPro] = useState(false);
@@ -101,7 +127,7 @@ export function CompetitorsClient({
         const res = await fetch("/api/competitors/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ project_id: pid, ...(analyzeModel ? { model: analyzeModel } : {}) }),
+          body: JSON.stringify({ project_id: pid }),
         });
         if (!res.ok) {
           const data = await res.json();
@@ -133,19 +159,6 @@ export function CompetitorsClient({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Model selector for analysis */}
-          {rows.length > 0 && (availableModels ?? []).length > 1 && (
-            <select
-              value={analyzeModel ?? ""}
-              onChange={(e) => setAnalyzeModel(e.target.value || null)}
-              className="h-9 px-2 rounded-[2px] border border-border bg-[hsl(var(--surface))] text-xs text-foreground font-mono"
-            >
-              <option value="">{t("modelSelector.allModels")}</option>
-              {(availableModels ?? []).map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-          )}
           {/* Analyze button (Pro only) */}
           {rows.length > 0 && (
             <div className="relative">
@@ -195,7 +208,7 @@ export function CompetitorsClient({
               params.delete("model");
               router.push(`?${params.toString()}`);
             }}
-            className="font-mono text-[0.75rem] tracking-wide uppercase px-3 py-1.5 rounded-full border transition-colors"
+            className="font-mono text-[0.75rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
             style={
               !selectedModel
                 ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
@@ -212,14 +225,14 @@ export function CompetitorsClient({
                 params.set("model", model);
                 router.push(`?${params.toString()}`);
               }}
-              className="font-mono text-[0.75rem] tracking-wide uppercase px-3 py-1.5 rounded-full border transition-colors"
+              className="font-mono text-[0.75rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
               style={
                 selectedModel === model
                   ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
                   : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
               }
             >
-              {model}
+              {getModelDisplayName(model)}
             </button>
           ))}
         </div>
