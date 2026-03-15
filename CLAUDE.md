@@ -76,6 +76,24 @@ types/
 - Server components use `<T k="key" />` from `@/components/translated-label`
 - API routes use `getServerTranslator()` from `lib/i18n/server.ts`
 
+## Supabase Type Coercion Gotcha
+PostgreSQL NUMERIC and DECIMAL columns are returned as STRINGS by Supabase/PostgREST in JavaScript (e.g. `"1"` instead of `1`).
+Always wrap numeric DB fields with `Number()` before any strict comparison (`===`) or arithmetic.
+
+- **Affected types:** NUMERIC, DECIMAL, any custom numeric column
+- **Safe types** returned as native JS numbers: INT, BIGINT, FLOAT
+
+Pattern to always use:
+```ts
+const value = Number(row.some_numeric_column);
+if (value === 1) { ... }
+```
+
+Never:
+```ts
+if (row.some_numeric_column === 1) { ... }  // always false
+```
+
 ## Debugging Guidelines
 When data exists in DB but doesn't display in UI, check the full flow BEFORE attempting fixes:
 1. DB query and column names (case sensitivity, RLS policies)
