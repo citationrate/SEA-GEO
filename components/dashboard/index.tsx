@@ -271,12 +271,12 @@ export function AVITrend({ data, models }: { data?: TrendDataPoint[]; models?: s
 /* ─── Competitor Bar ─── */
 interface CompetitorData {
   name: string;
-  count: number;
+  avi: number;
 }
 
 export function CompetitorBar({ data }: { data?: CompetitorData[] }) {
   const { t } = useTranslation();
-  const compData = (data ?? []).sort((a, b) => b.count - a.count);
+  const compData = (data ?? []).sort((a, b) => b.avi - a.avi);
 
   if (compData.length === 0) {
     return (
@@ -294,14 +294,14 @@ export function CompetitorBar({ data }: { data?: CompetitorData[] }) {
       <h3 className="font-display text-sm text-foreground mb-4" style={{ fontWeight: 300 }}>{t("dashboard.topCompetitors")}</h3>
       <ResponsiveContainer width="100%" height={Math.max(80, compData.length * 35)}>
         <BarChart data={compData} layout="vertical">
-          <XAxis type="number" tick={{ fontSize: 10, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false} allowDecimals={false}/>
+          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false}/>
           <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false} width={90}/>
-          <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => [`${value} ${t("dashboard.mentions")}`, t("dashboard.mentions")]}/>
-          <Bar dataKey="count" radius={[0,2,2,0]}>
+          <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value: number) => [`AVI ${value}`, "AVI Score"]}/>
+          <Bar dataKey="avi" radius={[0,2,2,0]}>
             {compData.map((_, i) => (
               <Cell key={i} fill={i === 0 ? "#e8956d" : i === 1 ? "#c4a882" : "rgba(196,168,130,0.5)"} />
             ))}
-            <LabelList dataKey="count" position="right" style={{ fontSize: 11, fill: "var(--cream-dim)" }}/>
+            <LabelList dataKey="avi" position="right" style={{ fontSize: 11, fill: "var(--cream-dim)" }}/>
           </Bar>
         </BarChart>
       </ResponsiveContainer>

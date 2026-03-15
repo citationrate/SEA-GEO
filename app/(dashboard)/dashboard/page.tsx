@@ -1,4 +1,5 @@
 import { createServerClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { ProjectSelector } from "@/components/project-selector";
 import { resolveProjectId } from "@/lib/utils/resolve-project";
 
@@ -168,26 +169,22 @@ export default async function DashboardPage({
     { labelKey: "dashboard.analysesRun",         value: String(runs.length),            subKey: "dashboard.totalHistory" },
   ];
 
-  // Competitor bar data - only from active (non-archived) runs
-  const { data: allCompetitors } = runIds.length > 0
-    ? await supabase.from("competitors").select("name, mention_count").in("project_id", targetIds).in("discovered_at_run_id", runIds)
-    : { data: [] };
-
-  const compCounts = new Map<string, number>();
-  (allCompetitors ?? []).forEach((c: any) => {
-    const key = c.name.toLowerCase().trim();
-    compCounts.set(key, (compCounts.get(key) ?? 0) + (c.mention_count ?? 1));
-  });
-  // Keep original casing from first occurrence
-  const compNameMap = new Map<string, string>();
-  (allCompetitors ?? []).forEach((c: any) => {
-    const key = c.name.toLowerCase().trim();
-    if (!compNameMap.has(key)) compNameMap.set(key, c.name);
-  });
-  const competitorBarData = Array.from(compCounts.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8)
-    .map(([key, count]) => ({ name: compNameMap.get(key) ?? key, count }));
+  // Competitor bar data — use competitor_avi scores from the latest completed run
+  const svc = createServiceClient();
+  // Find the most recent completed run among the filtered runs
+  const latestCompletedRun = runs.find((r: any) => r.status === "completed");
+  let competitorBarData: { name: string; avi: number }[] = [];
+  if (latestCompletedRun) {
+    const { data: compAviRows } = await (svc.from("competitor_avi") as any)
+      .select("competitor_name, avi_score")
+      .eq("run_id", (latestCompletedRun as any).id)
+      .order("avi_score", { ascending: false })
+      .limit(6);
+    competitorBarData = (compAviRows ?? []).map((c: any) => ({
+      name: c.competitor_name,
+      avi: Math.round(c.avi_score * 10) / 10,
+    }));
+  }
 
   return (
     <DashboardClient

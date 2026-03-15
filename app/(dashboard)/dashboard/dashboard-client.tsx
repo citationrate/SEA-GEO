@@ -12,7 +12,7 @@ interface DashboardClientProps {
   stats: { labelKey: string; value: string; subKey: string }[];
   trendData: { run: string; avi: number | null; prominence: number | null; sentiment: number | null; [key: string]: any }[];
   recentRuns: { id: string; project_id: string; project_name: string; version: number; status: string; avi_score: number | null; date: string }[];
-  competitorBarData: { name: string; count: number }[];
+  competitorBarData: { name: string; avi: number }[];
   projects?: { id: string; name: string }[];
   models?: string[];
 }
