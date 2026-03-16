@@ -9,8 +9,9 @@ import {
   LayoutDashboard, FolderOpen, Play, BarChart3,
   Users, Link2, Tag, GitCompare, Settings,
   Database, ChevronRight, Layers, Plus,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, MessageSquareText,
 } from "lucide-react";
+import { useConsultation } from "@/lib/consultation-context";
 
 const PRO_ROUTES = new Set(["/compare", "/datasets"]);
 
@@ -23,6 +24,7 @@ export function Sidebar({ profile }: SidebarProps) {
   const isPro = profile?.plan === "pro" || profile?.plan === "agency";
   const [collapsed, setCollapsed] = useState(false);
   const { t } = useTranslation();
+  const { openModal } = useConsultation();
 
   const NAV = [
     {
@@ -162,6 +164,21 @@ export function Sidebar({ profile }: SidebarProps) {
           </div>
         ))}
       </nav>
+
+      {/* Consultation CTA */}
+      <div className="px-2 pb-2 flex-shrink-0">
+        <button
+          onClick={openModal}
+          className={cn(
+            "w-full flex items-center gap-2 px-2 py-2 rounded-[2px] text-[#c4a882] border border-[#c4a882]/20 bg-[#c4a882]/5 hover:bg-[#c4a882]/10 transition-colors",
+            collapsed && "justify-center px-0",
+          )}
+          title={collapsed ? "Richiedi consulenza" : undefined}
+        >
+          <MessageSquareText className="w-4 h-4 shrink-0" />
+          {!collapsed && <span className="text-xs font-semibold">Richiedi consulenza</span>}
+        </button>
+      </div>
 
       {/* Profile → links to settings */}
       <div className="border-t border-border p-3 flex-shrink-0">

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Syne, DM_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { LanguageProvider } from "@/lib/i18n/context";
+import { ConsultationProvider } from "@/lib/consultation-context";
+import { ConsultationModal } from "@/components/consultation-modal";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -45,7 +47,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${cormorant.variable} ${syne.variable} ${dmMono.variable} font-sans antialiased`}>
         <LanguageProvider>
+        <ConsultationProvider>
         {children}
+        <ConsultationModal />
+        </ConsultationProvider>
         <Toaster
           position="bottom-right"
           toastOptions={{

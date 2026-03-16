@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { MessageSquareText } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
+import { useConsultation } from "@/lib/consultation-context";
 import { RunAVIRing } from "./run-avi-ring";
 import { AVIBars } from "./avi-bars";
 import { RunMetrics } from "./run-metrics";
@@ -203,6 +205,9 @@ export function RunDetailClient({
         </div>
       )}
 
+      {/* Consultation CTA after AVI */}
+      {showAvi && <ConsultationCTA />}
+
       {/* Filterable metrics — model filter is now handled by parent */}
       <RunMetrics
         prompts={prompts}
@@ -237,5 +242,24 @@ export function RunDetailClient({
         />
       )}
     </>
+  );
+}
+
+function ConsultationCTA() {
+  const { openModal } = useConsultation();
+  return (
+    <div className="card p-4 flex items-center justify-between border-[#c4a882]/20 bg-[#c4a882]/5">
+      <div>
+        <p className="text-sm font-semibold text-foreground">Non sai come interpretare il tuo AVI Score?</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Parla con un esperto SeaGeo per un&apos;analisi personalizzata.</p>
+      </div>
+      <button
+        onClick={openModal}
+        className="flex items-center gap-1.5 text-sm font-semibold text-[#c4a882] border border-[#c4a882]/30 px-4 py-2 rounded-[2px] hover:bg-[#c4a882]/10 transition-colors shrink-0"
+      >
+        <MessageSquareText className="w-4 h-4" />
+        Richiedi consulenza
+      </button>
+    </div>
   );
 }
