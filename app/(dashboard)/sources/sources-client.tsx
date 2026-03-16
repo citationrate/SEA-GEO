@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   Globe, X, Loader2, ExternalLink, Search,
-  Lightbulb, Shield, Newspaper, Star, ShoppingCart,
+  Lightbulb, Newspaper, Star, ShoppingCart,
   MessageCircle, BookOpen, HelpCircle, Swords,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
@@ -32,7 +32,6 @@ interface Insight {
 
 /* ─── Type config ─── */
 const TYPE_CONFIG: Record<string, { label: string; cls: string; icon: any }> = {
-  brand_owned: { label: "Brand Owned", cls: "bg-primary/15 text-primary border-primary/25", icon: Shield },
   competitor:  { label: "Competitor",  cls: "bg-destructive/15 text-destructive border-destructive/25", icon: Swords },
   media:       { label: "Media",       cls: "bg-purple-500/15 text-purple-400 border-purple-500/25", icon: Newspaper },
   review:      { label: "review",  cls: "bg-amber-500/15 text-amber-400 border-amber-500/25", icon: Star },
@@ -42,19 +41,17 @@ const TYPE_CONFIG: Record<string, { label: string; cls: string; icon: any }> = {
   other:       { label: "other",       cls: "bg-muted text-muted-foreground border-border", icon: HelpCircle },
 };
 
-const ALL_TYPES = ["brand_owned", "competitor", "media", "review", "social", "ecommerce", "wikipedia", "other"];
+const ALL_TYPES = ["competitor", "media", "review", "social", "ecommerce", "wikipedia", "other"];
 
 /* ─── Main Client ─── */
 export function SourcesClient({
   domains,
   totalCitations,
-  brandOwnedPct,
   mediaPct,
   brand,
 }: {
   domains: SourceDomain[];
   totalCitations: number;
-  brandOwnedPct: number;
   mediaPct: number;
   brand: string;
 }) {
@@ -106,10 +103,9 @@ export function SourcesClient({
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <StatCard value={String(domains.length)} label={t("sources.uniqueDomains")} />
         <StatCard value={String(totalCitations)} label={t("sources.totalCitations")} />
-        <StatCard value={`${brandOwnedPct}%`} label={t("sources.brandOwned")} highlight />
         <StatCard value={`${mediaPct}%`} label={t("sources.media")} />
       </div>
 

@@ -127,9 +127,6 @@ export default async function SourcesPage({
 
   // Compute stats
   const totalCitations = allDomains.reduce((s, d) => s + d.citations, 0);
-  const brandOwnedPct = allDomains.length > 0
-    ? Math.round((allDomains.filter((d) => d.isBrandOwned).length / allDomains.length) * 100)
-    : 0;
   const mediaPct = allDomains.length > 0
     ? Math.round((allDomains.filter((d) => d.sourceType === "media").length / allDomains.length) * 100)
     : 0;
@@ -145,7 +142,6 @@ export default async function SourcesPage({
       <SourcesClient
         domains={allDomains}
         totalCitations={totalCitations}
-        brandOwnedPct={brandOwnedPct}
         mediaPct={mediaPct}
         brand={brand}
       />
