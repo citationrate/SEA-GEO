@@ -14,10 +14,11 @@ const OBIETTIVI = [
 ];
 
 const GESTIONE = [
-  "Io direttamente",
-  "Il mio team marketing interno",
-  "Un\u2019agenzia o consulente esterno",
+  "Direttamente il titolare / founder",
+  "Team marketing interno",
+  "Agenzia o consulente esterno",
   "Non ancora definito",
+  "Altro",
 ];
 
 const SETTORI = [
@@ -36,6 +37,7 @@ const SETTORI = [
   "Marketing Comunicazione e Business Services",
   "Media Eventi e Intrattenimento",
   "Attrazioni Cultura e Sociale",
+  "Altro",
 ];
 
 const DISPONIBILITA = [
@@ -55,7 +57,9 @@ export function ConsultationModal() {
   const [obiettivo, setObiettivo] = useState("");
   const [datiNonChiari, setDatiNonChiari] = useState("");
   const [gestione, setGestione] = useState("");
+  const [gestioneAltro, setGestioneAltro] = useState("");
   const [settore, setSettore] = useState("");
+  const [settoreAltro, setSettoreAltro] = useState("");
   const [disponibilita, setDisponibilita] = useState<string[]>([]);
   const [note, setNote] = useState("");
 
@@ -95,7 +99,9 @@ export function ConsultationModal() {
     if (!urls.trim()) e.add("urls");
     if (!obiettivo) e.add("obiettivo");
     if (!gestione) e.add("gestione");
+    if (gestione === "Altro" && !gestioneAltro.trim()) e.add("gestioneAltro");
     if (!settore) e.add("settore");
+    if (settore === "Altro" && !settoreAltro.trim()) e.add("settoreAltro");
     if (disponibilita.length === 0) e.add("disponibilita");
     setErrors(e);
     return e.size === 0;
@@ -116,8 +122,8 @@ export function ConsultationModal() {
           urls: urls.trim(),
           obiettivo,
           dati_non_chiari: datiNonChiari.trim() || undefined,
-          gestione,
-          settore,
+          gestione: gestione === "Altro" ? `Altro: ${gestioneAltro.trim()}` : gestione,
+          settore: settore === "Altro" ? `Altro: ${settoreAltro.trim()}` : settore,
           disponibilita,
           note: note.trim() || undefined,
         }),
@@ -223,6 +229,9 @@ export function ConsultationModal() {
                 <RadioCard key={g} selected={gestione === g} onClick={() => setGestione(g)} label={g} error={hasErr("gestione")} />
               ))}
             </div>
+            {gestione === "Altro" && (
+              <input type="text" value={gestioneAltro} onChange={(e) => setGestioneAltro(e.target.value)} placeholder="Specifica chi gestisce la presenza AI" className={inputCls(hasErr("gestioneAltro"))} />
+            )}
           </Section>
 
           {/* SECTION 6 — Settore */}
@@ -233,6 +242,9 @@ export function ConsultationModal() {
                 <RadioCard key={s} selected={settore === s} onClick={() => setSettore(s)} label={s} error={hasErr("settore")} />
               ))}
             </div>
+            {settore === "Altro" && (
+              <input type="text" value={settoreAltro} onChange={(e) => setSettoreAltro(e.target.value)} placeholder="Specifica il settore" className={inputCls(hasErr("settoreAltro"))} />
+            )}
           </Section>
 
           {/* SECTION 7 — Disponibilità */}
