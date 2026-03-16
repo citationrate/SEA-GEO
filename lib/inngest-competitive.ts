@@ -8,11 +8,18 @@ import { callAIModel } from "./engine/prompt-runner";
 const DEFAULT_MODELS = ["gpt-4o-mini", "gemini-2.5-flash"];
 const RUNS_PER_QUERY = 3;
 
+/** Capitalize first letter of each word: "mulino bianco" → "Mulino Bianco" */
+function titleCase(s: string): string {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function generateQueries(brandA: string, brandB: string, driver: string): { pattern: string; text: string }[] {
+  const a = titleCase(brandA);
+  const b = titleCase(brandB);
   return [
-    { pattern: "A", text: `Tra ${brandA} e ${brandB}, chi offre ${driver} migliore?` },
-    { pattern: "B", text: `È meglio scegliere ${brandA} o ${brandB} se mi interessa soprattutto ${driver}?` },
-    { pattern: "C", text: `${brandA} o ${brandB}: quale consigli considerando ${driver}?` },
+    { pattern: "A", text: `Tra ${a} e ${b}, chi offre ${driver} migliore?` },
+    { pattern: "B", text: `È meglio scegliere ${a} o ${b} se mi interessa soprattutto ${driver}?` },
+    { pattern: "C", text: `${a} o ${b}: quale consigli considerando ${driver}?` },
   ];
 }
 
@@ -23,20 +30,28 @@ async function evaluateResponse(
   brandA: string,
   brandB: string,
 ): Promise<{ recommendation: number; first_mention: string; key_arguments: string[] }> {
-  const prompt = `Sei un analista competitivo. Leggi questa risposta AI a una query comparativa tra "${brandA}" e "${brandB}".
+  const brandANorm = titleCase(brandA);
+  const brandBNorm = titleCase(brandB);
+  // Show both original and normalized forms so the evaluator can match either
+  const brandALabel = brandA === brandANorm ? `"${brandANorm}"` : `"${brandA}" / "${brandANorm}"`;
+  const brandBLabel = brandB === brandBNorm ? `"${brandBNorm}"` : `"${brandB}" / "${brandBNorm}"`;
+
+  const prompt = `Sei un analista competitivo. Leggi questa risposta AI a una query comparativa tra Brand A (${brandALabel}) e Brand B (${brandBLabel}).
+
+REGOLA CASE-INSENSITIVE: I nomi dei brand possono apparire in qualsiasi capitalizzazione nella risposta. Tratta "${brandA}", "${brandANorm}", "${brandA.toUpperCase()}" come lo stesso brand (Brand A). Tratta "${brandB}", "${brandBNorm}", "${brandB.toUpperCase()}" come lo stesso brand (Brand B).
 
 REGOLE TASSATIVE:
 - recommendation DEVE essere esattamente 1, 2, o 0.5. Nessun altro valore è ammesso. Mai 0, mai 1.5, mai null.
-  - 1 = la risposta favorisce "${brandA}" (più vantaggi, tono più positivo, raccomandazione più esplicita)
-  - 2 = la risposta favorisce "${brandB}" (più vantaggi, tono più positivo, raccomandazione più esplicita)
+  - 1 = la risposta favorisce Brand A ${brandALabel} (più vantaggi, tono più positivo, raccomandazione più esplicita)
+  - 2 = la risposta favorisce Brand B ${brandBLabel} (più vantaggi, tono più positivo, raccomandazione più esplicita)
   - 0.5 = pareggio REALE — SOLO se entrambi i brand ricevono peso identico senza alcuna preferenza rilevabile
 - Sii decisivo: anche se la risposta è diplomatica, identifica quale brand viene presentato con PIÙ vantaggi o raccomandato PIÙ esplicitamente. Usa 0.5 SOLO se è davvero impossibile distinguere una preferenza.
-- first_mention: "A" se "${brandA}" appare per primo nel testo, "B" se "${brandB}" appare per primo, "tie" se appaiono nella stessa frase iniziale.
+- first_mention: "A" se Brand A (${brandALabel}) appare per primo nel testo, "B" se Brand B (${brandBLabel}) appare per primo, "tie" se appaiono nella stessa frase iniziale.
 - key_arguments: max 3 argomenti principali usati nella risposta.
 
 ESEMPI:
-- "Entrambi sono ottimi, dipende dalle preferenze" ma poi elenca 3 vantaggi di ${brandB} e solo 1 di ${brandA} → recommendation: 2
-- "${brandA} è leader di mercato con navi moderne e ottime recensioni" → recommendation: 1
+- "Entrambi sono ottimi, dipende dalle preferenze" ma poi elenca 3 vantaggi di ${brandBNorm} e solo 1 di ${brandANorm} → recommendation: 2
+- "${brandANorm} è leader di mercato con navi moderne e ottime recensioni" → recommendation: 1
 - "Sono intercambiabili, stessa qualità, stesso prezzo, stesse rotte" → recommendation: 0.5
 
 Rispondi SOLO con questo JSON, senza testo aggiuntivo:
@@ -60,13 +75,16 @@ ${responseText}`;
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(jsonMatch?.[0] ?? cleaned);
     const rec = typeof parsed.recommendation === "number" ? parsed.recommendation : 0.5;
-    return {
+    const result = {
       recommendation: VALID_RECOMMENDATIONS.has(rec) ? rec : 0.5,
       first_mention: ["A", "B", "tie"].includes(parsed.first_mention) ? parsed.first_mention : "tie",
       key_arguments: Array.isArray(parsed.key_arguments) ? parsed.key_arguments.slice(0, 3) : [],
     };
+    console.log(`[competitive/eval] brandA="${brandA}" (norm="${brandANorm}"), brandB="${brandB}" (norm="${brandBNorm}"), response_preview="${responseText.substring(0, 100)}", rec=${result.recommendation}, fm=${result.first_mention}`);
+    return result;
   } catch {
     console.error("[competitive] evaluation parse failed:", cleaned.substring(0, 200));
+    console.log(`[competitive/eval-fail] brandA="${brandA}" (norm="${brandANorm}"), brandB="${brandB}" (norm="${brandBNorm}"), response_preview="${responseText.substring(0, 100)}"`);
     return { recommendation: 0.5, first_mention: "tie", key_arguments: [] };
   }
 }
