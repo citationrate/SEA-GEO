@@ -8,7 +8,7 @@ import {
   ToggleLeft, ToggleRight, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { generateQueries, type GenerationInputs, type GeneratedQuery, type Persona, type PersonaAttributes } from "@/lib/query-generator";
+import { type GenerationInputs, type GeneratedQuery, type Persona, type PersonaAttributes } from "@/lib/query-generator";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -199,37 +199,40 @@ export default function GenerateQueriesPage() {
 
   function goToStep3() { setStep(3); }
 
-  function goToStep4() {
-    const inputs = buildInputs();
-    const allQueries = generateQueries(inputs);
+  const [generating, setGenerating] = useState(false);
+
+  async function goToStep4() {
     const targetCount = queryCount === -1 ? customCount : queryCount;
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/queries/ai-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: projectId,
+          count: targetCount,
+          tofu_pct: tofuPercent,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || t("common.error"));
+      }
+      const data = await res.json();
+      const aiQueries: GeneratedQuery[] = (data.queries ?? []).map((q: any) => ({
+        text: q.text,
+        set_type: "generale" as const,
+        funnel_stage: q.funnel_stage === "MOFU" ? "MOFU" as const : "TOFU" as const,
+      }));
 
-    // Split into TOFU/MOFU pools
-    const tofuPool = allQueries.filter((q) => q.funnel_stage === "TOFU");
-    const mofuPool = allQueries.filter((q) => q.funnel_stage === "MOFU");
-
-    const targetTofu = Math.round(targetCount * (tofuPercent / 100));
-    const targetMofu = targetCount - targetTofu;
-
-    // Pick from each pool, then fill remaining from the other
-    let finalTofu = tofuPool.slice(0, targetTofu);
-    let finalMofu = mofuPool.slice(0, targetMofu);
-
-    // If one pool is short, fill from the other
-    const tofuShort = targetTofu - finalTofu.length;
-    const mofuShort = targetMofu - finalMofu.length;
-    if (tofuShort > 0) {
-      finalMofu = mofuPool.slice(0, targetMofu + tofuShort);
+      setGeneratedQueries(aiQueries);
+      setSelectedIndexes(new Set(aiQueries.map((_: any, i: number) => i)));
+      setStep(4);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("generateQueries.saveError"));
+    } finally {
+      setGenerating(false);
     }
-    if (mofuShort > 0) {
-      finalTofu = tofuPool.slice(0, targetTofu + mofuShort);
-    }
-
-    const result = [...finalTofu, ...finalMofu];
-
-    setGeneratedQueries(result);
-    setSelectedIndexes(new Set(result.map((_, i) => i)));
-    setStep(4);
   }
 
   function toggleQuery(idx: number) {
@@ -807,11 +810,11 @@ export default function GenerateQueriesPage() {
             </button>
             <button
               onClick={goToStep4}
-              disabled={wouldExceed}
+              disabled={wouldExceed || generating}
               className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
             >
-              {t("generateQueries.generatePreview")}
-              <ArrowRight className="w-4 h-4" />
+              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {generating ? "Generazione AI in corso..." : t("generateQueries.generatePreview")}
             </button>
           </div>
         </div>
@@ -838,57 +841,45 @@ export default function GenerateQueriesPage() {
             </button>
           </div>
 
-          {/* Grouped queries with checkboxes */}
-          {(["generale", "verticale", "persona"] as const).map((setType) => {
-            const groupQueries = generatedQueries
-              .map((q, i) => ({ ...q, originalIndex: i }))
-              .filter((q) => q.set_type === setType);
-            if (groupQueries.length === 0) return null;
-
-            const label = setType === "generale" ? t("queries.filterGeneral") : setType === "verticale" ? t("queries.filterVertical") : t("queries.filterPersonas");
-
+          {/* TOFU queries */}
+          {(() => {
+            const tofuQueries = generatedQueries.map((q, i) => ({ ...q, idx: i })).filter((q) => q.funnel_stage === "TOFU");
+            const mofuQueries = generatedQueries.map((q, i) => ({ ...q, idx: i })).filter((q) => q.funnel_stage === "MOFU");
             return (
-              <div key={setType} className="card p-5 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-[2px] border ${SET_TYPE_COLORS[setType]}`}>
-                    {label}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {groupQueries.filter((q) => selectedIndexes.has(q.originalIndex)).length}/{groupQueries.length} {t("generateQueries.selected")}
-                  </span>
-                </div>
-                <div className="space-y-1.5">
-                  {groupQueries.map((q) => {
-                    const isSelected = selectedIndexes.has(q.originalIndex);
-                    return (
-                      <button
-                        key={q.originalIndex}
-                        type="button"
-                        onClick={() => toggleQuery(q.originalIndex)}
-                        className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-[2px] border text-left transition-all ${
-                          isSelected ? "border-primary/30 bg-primary/5" : "border-border/50 opacity-50"
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded-[2px] border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                          isSelected ? "border-primary bg-primary" : "border-muted-foreground"
-                        }`}>
-                          {isSelected && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
-                        </div>
-                        <p className={`text-sm flex-1 ${isSelected ? "text-foreground" : "text-muted-foreground line-through"}`}>
-                          {q.text}
-                        </p>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className={`font-mono text-[0.69rem] tracking-wide uppercase px-1.5 py-0.5 rounded-[2px] border ${FUNNEL_COLORS[q.funnel_stage]}`}>
-                            {q.funnel_stage}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <>
+                {tofuQueries.length > 0 && (
+                  <div className="card p-5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`font-mono text-[0.69rem] tracking-wide uppercase px-2 py-0.5 rounded-[2px] border ${FUNNEL_COLORS.TOFU}`}>TOFU</span>
+                      <span className="text-xs text-muted-foreground">{tofuQueries.filter((q) => selectedIndexes.has(q.idx)).length}/{tofuQueries.length}</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {tofuQueries.map((q) => (
+                        <QueryPreviewRow key={q.idx} query={q} idx={q.idx} selected={selectedIndexes.has(q.idx)} onToggle={toggleQuery} onEdit={(idx, text) => {
+                          setGeneratedQueries((prev) => prev.map((p, i) => i === idx ? { ...p, text } : p));
+                        }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {mofuQueries.length > 0 && (
+                  <div className="card p-5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`font-mono text-[0.69rem] tracking-wide uppercase px-2 py-0.5 rounded-[2px] border ${FUNNEL_COLORS.MOFU}`}>MOFU</span>
+                      <span className="text-xs text-muted-foreground">{mofuQueries.filter((q) => selectedIndexes.has(q.idx)).length}/{mofuQueries.length}</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {mofuQueries.map((q) => (
+                        <QueryPreviewRow key={q.idx} query={q} idx={q.idx} selected={selectedIndexes.has(q.idx)} onToggle={toggleQuery} onEdit={(idx, text) => {
+                          setGeneratedQueries((prev) => prev.map((p, i) => i === idx ? { ...p, text } : p));
+                        }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             );
-          })}
+          })()}
 
           {/* Actions */}
           <div className="flex justify-between">
@@ -912,6 +903,63 @@ export default function GenerateQueriesPage() {
       )}
 
       </div>{/* end wizard content wrapper */}
+    </div>
+  );
+}
+
+/* ─── Query preview row with inline edit ─── */
+function QueryPreviewRow({
+  query,
+  idx,
+  selected,
+  onToggle,
+  onEdit,
+}: {
+  query: { text: string; funnel_stage: string };
+  idx: number;
+  selected: boolean;
+  onToggle: (idx: number) => void;
+  onEdit: (idx: number, text: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(query.text);
+
+  return (
+    <div className={`flex items-start gap-3 px-3 py-2.5 rounded-[2px] border transition-all ${
+      selected ? "border-primary/30 bg-primary/5" : "border-border/50 opacity-50"
+    }`}>
+      <button type="button" onClick={() => onToggle(idx)} className="shrink-0 mt-0.5">
+        <div className={`w-4 h-4 rounded-[2px] border-2 flex items-center justify-center transition-colors ${
+          selected ? "border-primary bg-primary" : "border-muted-foreground"
+        }`}>
+          {selected && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
+        </div>
+      </button>
+      {editing ? (
+        <div className="flex-1 flex gap-2">
+          <input
+            type="text"
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { onEdit(idx, editText); setEditing(false); }
+              if (e.key === "Escape") { setEditText(query.text); setEditing(false); }
+            }}
+            className="input-base flex-1 text-sm"
+            autoFocus
+          />
+          <button type="button" onClick={() => { onEdit(idx, editText); setEditing(false); }} className="text-primary text-xs font-semibold shrink-0">OK</button>
+          <button type="button" onClick={() => { setEditText(query.text); setEditing(false); }} className="text-muted-foreground text-xs shrink-0">Annulla</button>
+        </div>
+      ) : (
+        <p
+          className={`text-sm flex-1 cursor-pointer hover:text-primary transition-colors ${selected ? "text-foreground" : "text-muted-foreground line-through"}`}
+          onClick={() => setEditing(true)}
+          title="Clicca per modificare"
+        >
+          {query.text}
+        </p>
+      )}
     </div>
   );
 }
