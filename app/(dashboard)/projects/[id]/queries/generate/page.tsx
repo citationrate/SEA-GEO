@@ -137,8 +137,8 @@ export default function GenerateQueriesPage() {
     const targetCount = queryCount === -1 ? customCount : queryCount;
 
     // Split into TOFU/MOFU pools
-    const tofuPool = allQueries.filter((q) => q.funnel === "TOFU");
-    const mofuPool = allQueries.filter((q) => q.funnel === "MOFU");
+    const tofuPool = allQueries.filter((q) => q.funnel_stage === "TOFU");
+    const mofuPool = allQueries.filter((q) => q.funnel_stage === "MOFU");
 
     const targetTofu = Math.round(targetCount * (tofuPercent / 100));
     const targetMofu = targetCount - targetTofu;
@@ -824,11 +824,8 @@ export default function GenerateQueriesPage() {
                           {q.text}
                         </p>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <span className={`font-mono text-[0.69rem] tracking-wide uppercase px-1.5 py-0.5 rounded-[2px] border ${FUNNEL_COLORS[q.funnel]}`}>
-                            {q.funnel}
-                          </span>
-                          <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground border border-border px-1.5 py-0.5 rounded-[2px]">
-                            {q.layer}
+                          <span className={`font-mono text-[0.69rem] tracking-wide uppercase px-1.5 py-0.5 rounded-[2px] border ${FUNNEL_COLORS[q.funnel_stage]}`}>
+                            {q.funnel_stage}
                           </span>
                         </div>
                       </button>

@@ -24,7 +24,7 @@ interface PromptRow {
   query_text: string;
   funnel_stage: string;
   set_type: string;
-  layer: string | null;
+  layer?: string | null;
   persona_mode: string | null;
   model: string;
   run_number: number;
@@ -236,7 +236,6 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
                 <tr className="border-b border-border text-left">
                   <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground min-w-[200px]">{t("datasets.query")}</th>
                   <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.type")}</th>
-                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.layer")}</th>
                   <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.family")}</th>
                   <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.model")}</th>
                   <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.run")}</th>
@@ -267,9 +266,6 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
                         <span className={`font-mono text-[0.625rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${funnelCls}`}>
                           {row.funnel_stage}
                         </span>
-                      </td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground text-center">
-                        {row.layer || "—"}
                       </td>
                       <td className="px-3 py-2">
                         <span className={`font-mono text-[0.625rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${stBadge.cls}`}>
@@ -376,11 +372,6 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
               <span className={`font-mono text-[0.625rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${stBadge.cls}`}>
                 {stBadge.label}
               </span>
-              {row.layer && (
-                <span className="font-mono text-[0.625rem] text-muted-foreground border border-border px-1.5 py-0.5 rounded-[2px]">
-                  Layer {row.layer}
-                </span>
-              )}
               {row.persona_mode && (
                 <span className="font-mono text-[0.625rem] text-purple-400 border border-purple-500/30 px-1.5 py-0.5 rounded-[2px]">
                   {row.persona_mode === "demographic" ? t("datasets.demographic") : "Decision Drivers"}

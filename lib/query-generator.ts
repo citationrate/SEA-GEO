@@ -1,7 +1,7 @@
 /**
  * Deterministic query generation engine.
  * Generates 3 families of queries: Generali, Verticali, Personas.
- * Each family uses layers A/B/C × TOFU/MOFU.
+ * Each family uses TOFU/MOFU funnel stages.
  */
 
 export interface GenerationInputs {
@@ -46,8 +46,7 @@ export interface Persona {
 export interface GeneratedQuery {
   text: string;
   set_type: "generale" | "verticale" | "persona";
-  layer: "A" | "B" | "C";
-  funnel: "TOFU" | "MOFU";
+  funnel_stage: "TOFU" | "MOFU";
   persona_mode?: "demographic" | "decision_drivers";
   persona_id?: string;
 }
@@ -70,19 +69,19 @@ export function generateQueries(inputs: GenerationInputs): GeneratedQuery[] {
   // --- Family 1: GENERALI (Benchmark) ---
   queries.push({
     text: `Quali aziende sono considerate le migliori in ${cat}?`,
-    set_type: "generale", layer: "A", funnel: "TOFU",
+    set_type: "generale", funnel_stage: "TOFU",
   });
   queries.push({
     text: `Se cerco ${cat} con ${forza1}, quali realtà dovrei valutare?`,
-    set_type: "generale", layer: "B", funnel: "TOFU",
+    set_type: "generale", funnel_stage: "TOFU",
   });
   queries.push({
     text: `Come si confrontano le principali aziende di ${cat}?`,
-    set_type: "generale", layer: "A", funnel: "MOFU",
+    set_type: "generale", funnel_stage: "MOFU",
   });
   queries.push({
     text: `Per scegliere tra le opzioni di ${cat}, cosa conta di più su ${forza1} e ${forza2}?`,
-    set_type: "generale", layer: "B", funnel: "MOFU",
+    set_type: "generale", funnel_stage: "MOFU",
   });
 
   // --- Family 2: VERTICALI ---
@@ -90,11 +89,11 @@ export function generateQueries(inputs: GenerationInputs): GeneratedQuery[] {
   if (luogo) {
     queries.push({
       text: `Chi mi consiglieresti per ${cat} a ${luogo}?`,
-      set_type: "verticale", layer: "A", funnel: "TOFU",
+      set_type: "verticale", funnel_stage: "TOFU",
     });
     queries.push({
       text: `Quali sono i migliori servizi di ${cat} disponibili a ${luogo}?`,
-      set_type: "verticale", layer: "B", funnel: "TOFU",
+      set_type: "verticale", funnel_stage: "TOFU",
     });
   }
 
@@ -102,12 +101,12 @@ export function generateQueries(inputs: GenerationInputs): GeneratedQuery[] {
   if (inputs.punti_di_forza.length > 0) {
     queries.push({
       text: `Chi eccelle in ${cat} per ${forza1}?`,
-      set_type: "verticale", layer: "A", funnel: "TOFU",
+      set_type: "verticale", funnel_stage: "TOFU",
     });
     if (inputs.punti_di_forza.length > 1) {
       queries.push({
         text: `Quale azienda di ${cat} combina meglio ${forza1} e ${forza2}?`,
-        set_type: "verticale", layer: "B", funnel: "MOFU",
+        set_type: "verticale", funnel_stage: "MOFU",
       });
     }
   }
@@ -116,12 +115,12 @@ export function generateQueries(inputs: GenerationInputs): GeneratedQuery[] {
   if (comp1) {
     queries.push({
       text: `Come si posiziona ${comp1} rispetto alle alternative in ${cat}?`,
-      set_type: "verticale", layer: "A", funnel: "MOFU",
+      set_type: "verticale", funnel_stage: "MOFU",
     });
     if (comp2) {
       queries.push({
         text: `Sto valutando ${comp1} e ${comp2} per ${cat}: quale scegliere?`,
-        set_type: "verticale", layer: "B", funnel: "MOFU",
+        set_type: "verticale", funnel_stage: "MOFU",
       });
     }
   }
@@ -130,11 +129,11 @@ export function generateQueries(inputs: GenerationInputs): GeneratedQuery[] {
   if (obiezione1) {
     queries.push({
       text: `${cat}: è vero che ${obiezione1}? Quali alternative risolvono questo problema?`,
-      set_type: "verticale", layer: "B", funnel: "TOFU",
+      set_type: "verticale", funnel_stage: "TOFU",
     });
     queries.push({
       text: `Cerco ${cat} ma mi preoccupa ${obiezione1}: chi affronta meglio questo aspetto?`,
-      set_type: "verticale", layer: "C", funnel: "MOFU",
+      set_type: "verticale", funnel_stage: "MOFU",
     });
   }
 
@@ -142,7 +141,7 @@ export function generateQueries(inputs: GenerationInputs): GeneratedQuery[] {
   if (mercato) {
     queries.push({
       text: `Qual è il panorama di ${cat} nel mercato ${mercato}?`,
-      set_type: "verticale", layer: "A", funnel: "TOFU",
+      set_type: "verticale", funnel_stage: "TOFU",
     });
   }
 
@@ -160,12 +159,12 @@ export function generateQueries(inputs: GenerationInputs): GeneratedQuery[] {
           text: situazione
             ? `Sono una persona che ${situazione}: quale ${cat} mi consigli?`
             : `Cerco ${cat} per ${contesto}: chi mi consiglieresti?`,
-          set_type: "persona", layer: "B", funnel: "TOFU",
+          set_type: "persona", funnel_stage: "TOFU",
           persona_mode: "demographic", persona_id: p.id,
         });
         queries.push({
           text: `Per qualcuno che ${contesto}, quali aziende di ${cat} sono migliori su ${forza1}?`,
-          set_type: "persona", layer: "B", funnel: "MOFU",
+          set_type: "persona", funnel_stage: "MOFU",
           persona_mode: "demographic", persona_id: p.id,
         });
       } else {
@@ -178,18 +177,18 @@ export function generateQueries(inputs: GenerationInputs): GeneratedQuery[] {
           text: problema
             ? `Come ${ruolo}${settore ? ` nel settore ${settore}` : ""}, cerco ${cat} per risolvere ${problema}: quali aziende valutare?`
             : `Come ${ruolo}${settore ? ` nel settore ${settore}` : ""}, cerco ${cat}: quali aziende valutare?`,
-          set_type: "persona", layer: "B", funnel: "TOFU",
+          set_type: "persona", funnel_stage: "TOFU",
           persona_mode: "decision_drivers", persona_id: p.id,
         });
         queries.push({
           text: `Come ${ruolo}, devo scegliere ${cat}: chi eccelle su ${forza1}?`,
-          set_type: "persona", layer: "B", funnel: "MOFU",
+          set_type: "persona", funnel_stage: "MOFU",
           persona_mode: "decision_drivers", persona_id: p.id,
         });
         if (p.no_go) {
           queries.push({
             text: `Come ${ruolo}, devo scegliere ${cat}: chi evita ${p.no_go} e garantisce ${slot(p.must_have, forza1)}?`,
-            set_type: "persona", layer: "C", funnel: "MOFU",
+            set_type: "persona", funnel_stage: "MOFU",
             persona_mode: "decision_drivers", persona_id: p.id,
           });
         }

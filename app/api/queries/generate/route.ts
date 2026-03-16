@@ -24,8 +24,7 @@ const bodySchema = z.object({
   queries: z.array(z.object({
     text: z.string().min(1),
     set_type: z.enum(["generale", "verticale", "persona"]),
-    layer: z.enum(["A", "B", "C"]),
-    funnel: z.enum(["TOFU", "MOFU"]),
+    funnel_stage: z.enum(["TOFU", "MOFU"]),
     persona_mode: z.enum(["demographic", "decision_drivers"]).optional(),
     persona_id: z.string().optional(),
   })),
@@ -84,9 +83,8 @@ export async function POST(request: Request) {
     const rows = queries.map((q) => ({
       project_id,
       text: q.text,
-      funnel_stage: q.funnel.toLowerCase() as "tofu" | "mofu",
+      funnel_stage: q.funnel_stage.toLowerCase() as "tofu" | "mofu",
       set_type: q.set_type,
-      layer: q.layer,
       persona_mode: q.persona_mode || null,
       persona_id: q.persona_id || null,
     }));

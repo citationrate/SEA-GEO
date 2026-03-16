@@ -11,8 +11,6 @@ interface Query {
   text: string;
   funnel_stage: "tofu" | "mofu" | "bofu";
   set_type?: string;
-  layer?: string;
-  funnel?: string;
   created_at: string;
 }
 
@@ -32,7 +30,6 @@ const SET_TYPE_LABELS: Record<string, string> = {
 
 type FilterSetType = "all" | "generale" | "verticale" | "persona" | "manual";
 type FilterFunnel = "all" | "tofu" | "mofu";
-type FilterLayer = "all" | "A" | "B" | "C";
 
 export default function QueriesPage() {
   const params = useParams();
@@ -51,7 +48,6 @@ export default function QueriesPage() {
   // Filters
   const [filterSetType, setFilterSetType] = useState<FilterSetType>("all");
   const [filterFunnel, setFilterFunnel] = useState<FilterFunnel>("all");
-  const [filterLayer, setFilterLayer] = useState<FilterLayer>("all");
 
   async function fetchQueries() {
     const res = await fetch(`/api/queries?project_id=${projectId}`);
@@ -123,10 +119,9 @@ export default function QueriesPage() {
       const st = q.set_type || "manual";
       if (filterSetType !== "all" && st !== filterSetType) return false;
       if (filterFunnel !== "all" && q.funnel_stage !== filterFunnel) return false;
-      if (filterLayer !== "all" && q.layer !== filterLayer) return false;
       return true;
     });
-  }, [queries, filterSetType, filterFunnel, filterLayer]);
+  }, [queries, filterSetType, filterFunnel]);
 
   const tofuQueries = filteredQueries.filter((q) => q.funnel_stage === "tofu");
   const mofuQueries = filteredQueries.filter((q) => q.funnel_stage === "mofu");
@@ -195,23 +190,6 @@ export default function QueriesPage() {
                 }`}
               >
                 {v === "all" ? t("common.all") : v.toUpperCase()}
-              </button>
-            ))}
-          </div>
-          {/* Layer filter */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground mr-1">Layer</span>
-            {(["all", "A", "B", "C"] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setFilterLayer(v)}
-                className={`text-[13px] px-2 py-1 rounded-[2px] border transition-colors ${
-                  filterLayer === v
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {v === "all" ? t("common.all") : v}
               </button>
             ))}
           </div>
@@ -325,16 +303,9 @@ function QueryItem({ query, onDelete }: { query: Query; onDelete: (id: string) =
       </div>
       <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
         {setType !== "manual" && (
-          <>
-            <span className={`font-mono text-[0.625rem] tracking-wide uppercase px-1 py-0.5 rounded-[2px] border ${colorCls}`}>
-              {label}
-            </span>
-            {query.layer && (
-              <span className="font-mono text-[0.625rem] tracking-wide text-muted-foreground border border-border px-1 py-0.5 rounded-[2px]">
-                {query.layer}
-              </span>
-            )}
-          </>
+          <span className={`font-mono text-[0.625rem] tracking-wide uppercase px-1 py-0.5 rounded-[2px] border ${colorCls}`}>
+            {label}
+          </span>
         )}
         <button
           onClick={() => onDelete(query.id)}

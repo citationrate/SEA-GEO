@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     // Fetch query metadata for all query_ids
     const queryIds = Array.from(new Set(promptsList.map((p: any) => p.query_id).filter(Boolean)));
     const { data: queries } = queryIds.length > 0
-      ? await supabase.from("queries").select("id, text, funnel_stage, set_type, layer, persona_mode").in("id", queryIds)
+      ? await supabase.from("queries").select("id, text, funnel_stage, set_type, persona_mode").in("id", queryIds)
       : { data: [] };
     const queryMap = new Map((queries ?? []).map((q: any) => [q.id, q]));
 
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         query_text: q?.text ?? "—",
         funnel_stage: q?.funnel_stage ?? "tofu",
         set_type: q?.set_type ?? "manual",
-        layer: q?.layer ?? null,
+        layer: null,
         persona_mode: q?.persona_mode ?? null,
         model: p.model,
         run_number: p.run_number,

@@ -37,6 +37,9 @@ export interface Database {
           language: "it" | "en";
           country: string | null;
           models_config: string[];
+          website_url: string | null;
+          sector: string | null;
+          brand_type: string | null;
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
@@ -112,6 +115,9 @@ export interface Database {
           brand_rank: number | null;
           brand_occurrences: number;
           sentiment_score: number | null;
+          tone_score: number | null;
+          position_score: number | null;
+          recommendation_score: number | null;
           topics: string[];
           competitors_found: string[];
           avi_score: number | null;
@@ -125,6 +131,8 @@ export interface Database {
         Row: {
           id: string;
           prompt_executed_id: string;
+          project_id: string | null;
+          run_id: string | null;
           url: string | null;
           domain: string | null;
           label: string | null;
@@ -144,8 +152,7 @@ export interface Database {
           name: string;
           is_manual: boolean;
           discovered_at_run_id: string | null;
-          topic_context: string[];
-          query_type: string | null;
+          mention_count: number;
           theme_analysis: Json;
           created_at: string;
         };
@@ -158,6 +165,7 @@ export interface Database {
           project_id: string;
           name: string;
           first_seen_run_id: string | null;
+          frequency: number;
           created_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["topics"]["Row"], "id" | "created_at">;

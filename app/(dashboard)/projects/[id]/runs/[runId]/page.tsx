@@ -121,7 +121,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
   // Fetch queries for funnel stage info
   const queryIds = Array.from(new Set((prompts ?? []).map((p: any) => p.query_id).filter(Boolean)));
   const { data: queries } = queryIds.length > 0
-    ? await supabase.from("queries").select("id, text, funnel_stage, family").in("id", queryIds)
+    ? await supabase.from("queries").select("id, text, funnel_stage").in("id", queryIds)
     : { data: [] };
 
   // Fetch audience segments for this project
