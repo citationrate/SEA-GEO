@@ -5,19 +5,19 @@ import { z } from "zod";
 const personaSchema = z.object({
   id: z.string(),
   nome: z.string().optional(),
-  mode: z.enum(["demographic", "decision_drivers"]),
-  zona: z.string().optional(),
-  contesto_uso: z.string().optional(),
+  prompt_context: z.string().optional(),
+  persona_attributes: z.record(z.unknown()).optional(),
+  // Legacy fields
+  mode: z.enum(["demographic", "decision_drivers"]).optional(),
   eta: z.string().optional(),
   sesso: z.string().optional(),
   situazione: z.string().optional(),
   ruolo: z.string().optional(),
   settore: z.string().optional(),
   problema: z.string().optional(),
-  priorita: z.string().optional(),
   must_have: z.string().optional(),
   no_go: z.string().optional(),
-});
+}).passthrough();
 
 const bodySchema = z.object({
   project_id: z.string().uuid(),
