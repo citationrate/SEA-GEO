@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Trophy, Users, Sparkles, Crown,
   Loader2, X, Tag, BarChart3, MessageSquareQuote,
@@ -102,6 +102,8 @@ export function CompetitorsClient({
   selectedModel?: string | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState("");
@@ -204,9 +206,9 @@ export function CompetitorsClient({
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => {
-              const params = new URLSearchParams(window.location.search);
+              const params = new URLSearchParams(searchParams.toString());
               params.delete("model");
-              router.push(`?${params.toString()}`);
+              router.push(`${pathname}?${params.toString()}`);
             }}
             className="font-mono text-[0.75rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
             style={
@@ -221,9 +223,9 @@ export function CompetitorsClient({
             <button
               key={model}
               onClick={() => {
-                const params = new URLSearchParams(window.location.search);
+                const params = new URLSearchParams(searchParams.toString());
                 params.set("model", model);
-                router.push(`?${params.toString()}`);
+                router.push(`${pathname}?${params.toString()}`);
               }}
               className="font-mono text-[0.75rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
               style={

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createServerClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { ProjectSelector } from "@/components/project-selector";
@@ -217,12 +218,6 @@ export default async function CompetitorsPage({
       if (projInfo && !existing.projects.some((p) => p.id === projInfo.id)) {
         existing.projects.push(projInfo);
       }
-      for (const t of (c.topic_context ?? [])) {
-        if (!existing.topics.includes(t)) existing.topics.push(t);
-      }
-      if (c.query_type && !existing.queryTypes.includes(c.query_type)) {
-        existing.queryTypes.push(c.query_type);
-      }
       if (c.created_at < existing.firstSeen) existing.firstSeen = c.created_at;
       if (c.created_at > existing.lastSeen) existing.lastSeen = c.created_at;
     } else {
@@ -232,8 +227,8 @@ export default async function CompetitorsPage({
         projects: projInfo ? [projInfo] : [],
         mentions: 0,
         analysisCount: 0,
-        topics: [...(c.topic_context ?? [])],
-        queryTypes: c.query_type ? [c.query_type] : [],
+        topics: [],
+        queryTypes: [],
         avgSentiment: null,
         firstSeen: c.created_at,
         lastSeen: c.created_at,
@@ -312,6 +307,7 @@ export default async function CompetitorsPage({
       <div data-tour="competitors-tab" className="flex items-center justify-end gap-3">
         <ProjectSelector projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))} />
       </div>
+      <Suspense fallback={null}>
       <CompetitorsClient
         rows={rows.map((r) => {
           const key = r.name.toLowerCase().trim();
@@ -334,6 +330,7 @@ export default async function CompetitorsPage({
         availableModels={availableModels}
         selectedModel={selectedModel}
       />
+      </Suspense>
     </div>
   );
 }
