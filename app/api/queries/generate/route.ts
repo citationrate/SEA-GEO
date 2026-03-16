@@ -79,14 +79,11 @@ export async function POST(request: Request) {
       ...inputs,
     });
 
-    // Insert queries
+    // Insert queries — only columns that exist: project_id, text, funnel_stage
     const rows = queries.map((q) => ({
       project_id,
       text: q.text,
       funnel_stage: q.funnel_stage.toLowerCase() as "tofu" | "mofu",
-      set_type: q.set_type,
-      persona_mode: q.persona_mode || null,
-      persona_id: q.persona_id || null,
     }));
 
     const { error } = await supabase.from("queries").insert(rows as any);
