@@ -13,60 +13,18 @@ function titleCase(s: string): string {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-interface CompetitivePersona {
-  id: string;
-  nome?: string;
-  mode: "demographic" | "decision_drivers";
-  eta?: string;
-  sesso?: string;
-  situazione?: string;
-  ruolo?: string;
-  settore?: string;
-  problema?: string;
-}
-
-function buildPersonaContext(p: CompetitivePersona): string {
-  if (p.mode === "demographic") {
-    const parts: string[] = [];
-    if (p.eta) parts.push(`${p.eta} anni`);
-    if (p.sesso) parts.push(p.sesso === "M" ? "uomo" : p.sesso === "F" ? "donna" : p.sesso);
-    if (p.situazione) parts.push(p.situazione);
-    return parts.join(", ");
-  }
-  const parts: string[] = [];
-  if (p.ruolo) parts.push(p.ruolo);
-  if (p.settore) parts.push(`settore ${p.settore}`);
-  if (p.problema) parts.push(`problema: ${p.problema}`);
-  return parts.join(", ");
-}
-
 function generateQueries(
   brandA: string,
   brandB: string,
   driver: string,
-  personas?: CompetitivePersona[],
 ): { pattern: string; text: string }[] {
   const a = titleCase(brandA);
   const b = titleCase(brandB);
-  const queries = [
+  return [
     { pattern: "A", text: `Tra ${a} e ${b}, chi offre ${driver} migliore?` },
     { pattern: "B", text: `È meglio scegliere ${a} o ${b} se mi interessa soprattutto ${driver}?` },
     { pattern: "C", text: `${a} o ${b}: quale consigli considerando ${driver}?` },
   ];
-
-  if (personas && personas.length > 0) {
-    for (const p of personas) {
-      const ctx = buildPersonaContext(p);
-      if (!ctx) continue;
-      const label = p.nome ? `Come ${p.nome} (${ctx})` : `Come ${ctx}`;
-      queries.push(
-        { pattern: "P", text: `${label}, è meglio ${a} o ${b} per ${driver}?` },
-        { pattern: "P", text: `${label}, tra ${a} e ${b} quale consigli considerando ${driver}?` },
-      );
-    }
-  }
-
-  return queries;
 }
 
 const VALID_RECOMMENDATIONS = new Set([1, 2, 0.5]);
@@ -158,19 +116,18 @@ export const runCompetitiveAnalysis = inngest.createFunction(
   },
   { event: "competitive/start" },
   async ({ event, step }) => {
-    const { analysisId, brandA, brandB, driver, models: eventModels, personas: eventPersonas } = event.data as {
+    const { analysisId, brandA, brandB, driver, models: eventModels } = event.data as {
       analysisId: string;
       brandA: string;
       brandB: string;
       driver: string;
       models?: string[];
-      personas?: CompetitivePersona[];
     };
 
     const models = eventModels && eventModels.length > 0 ? eventModels : DEFAULT_MODELS;
 
     // Step 1: Generate queries and create prompt rows
-    const queries = generateQueries(brandA, brandB, driver, eventPersonas);
+    const queries = generateQueries(brandA, brandB, driver);
 
     const promptIds = await step.run("create-prompts", async () => {
       const supabase = createServiceClient();

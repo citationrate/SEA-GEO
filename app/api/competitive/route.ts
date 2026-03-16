@@ -3,24 +3,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { inngest } from "@/lib/inngest";
 
-const personaSchema = z.object({
-  id: z.string(),
-  nome: z.string().optional(),
-  mode: z.enum(["demographic", "decision_drivers"]),
-  eta: z.string().optional(),
-  sesso: z.string().optional(),
-  situazione: z.string().optional(),
-  ruolo: z.string().optional(),
-  settore: z.string().optional(),
-  problema: z.string().optional(),
-}).passthrough();
-
 const startSchema = z.object({
   project_id: z.string().uuid(),
   brand_b: z.string().min(1),
   driver: z.string().min(1),
   models: z.array(z.string().min(1)).min(1),
-  personas: z.array(personaSchema).optional(),
 });
 
 export async function POST(request: Request) {
@@ -34,7 +21,7 @@ export async function POST(request: Request) {
     const parsed = startSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { project_id, brand_b, driver, models, personas } = parsed.data;
+    const { project_id, brand_b, driver, models } = parsed.data;
 
     // Get project brand
     const { data: project } = await supabase
@@ -73,7 +60,6 @@ export async function POST(request: Request) {
         brandB: brand_b,
         driver,
         models,
-        personas: personas ?? [],
       },
     });
 
