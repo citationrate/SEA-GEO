@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, X, Loader2, Lock, Check, ArrowRight, Crown, Search, ChevronDown } from "lucide-react";
+import { ArrowLeft, X, Loader2, Lock, Check, Search, ChevronDown } from "lucide-react";
 import { PROVIDER_GROUPS } from "@/lib/engine/models";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import confetti from "canvas-confetti";
@@ -82,8 +82,6 @@ export default function NewProjectPage() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showPlanSelector, setShowPlanSelector] = useState(false);
-  const [newProjectId, setNewProjectId] = useState<string | null>(null);
   const [existingProjectCount, setExistingProjectCount] = useState<number | null>(null);
   const [isPro, setIsPro] = useState(false);
 
@@ -267,14 +265,16 @@ export default function NewProjectPage() {
       }
 
       if (existingProjectCount === 0) {
-        setNewProjectId(data.id);
-        setShowPlanSelector(true);
         confetti({
           particleCount: 150,
           spread: 80,
           origin: { y: 0.6 },
           colors: ["#00d4ff", "#7eb3d4", "#e8956d", "#7eb89a", "#c4a882"],
         });
+        setTimeout(() => {
+          router.push(`/projects/${data.id}`);
+          router.refresh();
+        }, 800);
         return;
       }
 
@@ -555,70 +555,6 @@ export default function NewProjectPage() {
         </button>
       </form>
 
-      {/* Plan selector */}
-      {showPlanSelector && newProjectId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-          <div className="relative w-full max-w-2xl bg-[#111416] border border-[rgba(255,255,255,0.08)] rounded-lg shadow-2xl overflow-hidden animate-fade-in">
-            <div className="px-8 py-8 space-y-6">
-              <div className="text-center space-y-2">
-                <h2 className="font-display font-bold text-2xl text-foreground">{t("projects.choosePlan")}</h2>
-                <p className="text-sm text-muted-foreground">{t("projects.startFreeOrPro")}</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Starter */}
-                <div className="rounded-lg border border-border p-6 space-y-4">
-                  <div>
-                    <h3 className="font-display font-bold text-lg text-foreground">{t("settings.baseStarter")}</h3>
-                    <p className="text-2xl font-bold text-foreground mt-1">{t("settings.free")}</p>
-                  </div>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary shrink-0" />100 {t("settings.queriesMonth")}</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary shrink-0" />{t("settings.maxProjects").replace("{n}", "3")}</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary shrink-0" />{t("settings.maxModels").replace("{n}", "3")}</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary shrink-0" />{t("settings.basicAvi")}</li>
-                  </ul>
-                  <button onClick={() => { router.push(`/projects/${newProjectId}`); router.refresh(); }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-border text-foreground rounded-[2px] text-sm font-semibold hover:bg-surface-2 transition-colors">
-                    {t("projects.startFree")}
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Pro */}
-                <div className="rounded-lg border border-[#c4a882]/30 bg-[#c4a882]/5 p-6 space-y-4 relative">
-                  <div className="absolute top-3 right-3">
-                    <span className="inline-flex items-center gap-1 font-mono text-[0.75rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">
-                      <Crown className="w-3 h-3" /> PRO
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="font-display font-bold text-lg text-foreground">Pro</h3>
-                    <p className="text-2xl font-bold text-foreground mt-1">
-                      &euro;29<span className="text-sm font-normal text-muted-foreground">/mese</span>
-                    </p>
-                  </div>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#c4a882] shrink-0" />500 {t("settings.queriesMonth")}</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#c4a882] shrink-0" />{t("settings.maxProjects").replace("{n}", "10")}</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#c4a882] shrink-0" />{t("settings.allModelsUnlocked")}</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#c4a882] shrink-0" />10 {t("settings.compareDetections")}</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#c4a882] shrink-0" />{t("settings.generatePromptAI")}</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-[#c4a882] shrink-0" />{t("settings.datasetPlusAvi")}</li>
-                  </ul>
-                  <button onClick={() => { router.push("/settings#piano"); router.refresh(); }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#c4a882] text-black rounded-[2px] text-sm font-semibold hover:bg-[#c4a882]/80 transition-colors">
-                    <Crown className="w-4 h-4" />
-                    {t("projects.goToPro")}
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
