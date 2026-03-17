@@ -34,6 +34,17 @@ export async function POST(request: Request) {
 
     const p = project as any;
 
+    // Fetch website content for context if URL is provided
+    let websiteContext = "";
+    if (p.website_url) {
+      try {
+        websiteContext = await fetchWebsiteContext(p.website_url);
+        console.log(`[ai-generate] website context extracted: ${websiteContext.length} chars`);
+      } catch (err) {
+        console.warn(`[ai-generate] website fetch failed for ${p.website_url}:`, err instanceof Error ? err.message : err);
+      }
+    }
+
     // Load existing queries to avoid duplicates
     const { data: existingQueries } = await supabase
       .from("queries")
@@ -45,7 +56,7 @@ export async function POST(request: Request) {
     const nTofu = Math.round(count * (tofu_pct / 100));
     const nMofu = count - nTofu;
 
-    const systemPrompt = buildSystemPrompt(p, existingTexts, count, nTofu, nMofu);
+    const systemPrompt = buildSystemPrompt(p, existingTexts, count, nTofu, nMofu, websiteContext);
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -108,18 +119,77 @@ async function callGeneration(anthropic: Anthropic, prompt: string, expectedCoun
   }
 }
 
+async function fetchWebsiteContext(url: string): Promise<string> {
+  // Normalize URL
+  let finalUrl = url.trim();
+  if (!finalUrl.startsWith("http")) finalUrl = `https://${finalUrl}`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const res = await fetch(finalUrl, {
+      signal: controller.signal,
+      headers: { "User-Agent": "SeaGeo-Bot/1.0 (AI Visibility Analysis)" },
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) return "";
+
+    const html = await res.text();
+
+    // Extract useful content from HTML
+    const title = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim() ?? "";
+    const metaDesc = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["']/i)?.[1]?.trim() ?? "";
+    const h1s = Array.from(html.matchAll(/<h1[^>]*>([^<]*)<\/h1>/gi)).map((m) => m[1].trim()).filter(Boolean).slice(0, 3);
+    const h2s = Array.from(html.matchAll(/<h2[^>]*>([^<]*)<\/h2>/gi)).map((m) => m[1].trim()).filter(Boolean).slice(0, 5);
+
+    // Extract visible text from body (strip tags, scripts, styles)
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    let bodyText = "";
+    if (bodyMatch) {
+      bodyText = bodyMatch[1]
+        .replace(/<script[\s\S]*?<\/script>/gi, "")
+        .replace(/<style[\s\S]*?<\/style>/gi, "")
+        .replace(/<nav[\s\S]*?<\/nav>/gi, "")
+        .replace(/<footer[\s\S]*?<\/footer>/gi, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 2000);
+    }
+
+    const parts: string[] = [];
+    if (title) parts.push(`Titolo: ${title}`);
+    if (metaDesc) parts.push(`Descrizione: ${metaDesc}`);
+    if (h1s.length) parts.push(`H1: ${h1s.join(" | ")}`);
+    if (h2s.length) parts.push(`H2: ${h2s.join(" | ")}`);
+    if (bodyText) parts.push(`Contenuto principale: ${bodyText.slice(0, 1500)}`);
+
+    return parts.join("\n");
+  } catch {
+    clearTimeout(timeout);
+    return "";
+  }
+}
+
 function buildSystemPrompt(
   project: any,
   existingTexts: string[],
   count: number,
   nTofu: number,
   nMofu: number,
+  websiteContext?: string,
 ): string {
   const lang = project.language === "it" ? "italiano" : "English";
   const competitors = (project.known_competitors ?? []).join(", ") || "non specificati";
 
   const existingBlock = existingTexts.length > 0
     ? `\nQuery già presenti nel progetto (NON duplicarle):\n${existingTexts.map((t: string) => `- ${t}`).join("\n")}\n`
+    : "";
+
+  const websiteBlock = websiteContext
+    ? `\n--- CONTENUTO SITO WEB (${project.website_url}) ---\n${websiteContext}\n--- FINE CONTENUTO SITO ---\n\nUsa le informazioni estratte dal sito per capire cosa offre il brand, i suoi prodotti/servizi, il tono di comunicazione, e i punti di forza. Genera query che riflettano i temi reali del brand.\n`
     : "";
 
   return `Sei un esperto di AI Search Optimization. Il tuo compito è generare query realistiche che utenti reali farebbero a ChatGPT, Gemini o Perplexity quando cercano informazioni nel settore di ${project.target_brand}.
@@ -133,7 +203,7 @@ Contesto brand:
 - Sito: ${project.website_url ?? "non specificato"}
 - Competitor noti: ${competitors}
 - Contesto aggiuntivo: ${project.market_context ?? "nessuno"}
-${existingBlock}
+${websiteBlock}${existingBlock}
 Genera esattamente ${count} query uniche e realistiche in ${lang}.
 ${nTofu} TOFU — domande generiche di scoperta SENZA citare "${project.target_brand}"
 ${nMofu} MOFU — domande comparative che INCLUDONO "${project.target_brand}" vs almeno un competitor
@@ -145,6 +215,7 @@ Regole:
 - TOFU: non menzionare mai "${project.target_brand}" esplicitamente
 - MOFU: includi "${project.target_brand}" e almeno un competitor noto
 - NON usare template ripetitivi come "Quali sono i migliori..." — varia la struttura
+- Usa i temi, prodotti e servizi reali del brand emersi dal sito web per rendere le query specifiche e contestualizzate
 - Rispondi SOLO con un JSON array, nessun altro testo
 
 Formato risposta:
