@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { AdminOverviewClient } from "./overview-client";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Overview" };
 
 export default async function AdminOverviewPage() {

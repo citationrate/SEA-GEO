@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { UsersClient } from "./users-client";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Utenti" };
 
 export default async function AdminUsersPage() {

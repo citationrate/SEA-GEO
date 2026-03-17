@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { Swords, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Confronti AI" };
 
 export default async function AdminConfrontiPage() {

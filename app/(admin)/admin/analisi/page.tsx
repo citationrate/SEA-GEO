@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { AnalysisAdminClient } from "./analysis-client";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Analisi Runs" };
 
 export default async function AdminAnalysisPage() {

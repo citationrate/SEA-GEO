@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { Server, CheckCircle, AlertTriangle, Database, Cpu } from "lucide-react";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Sistema" };
 
 export default async function AdminSystemPage() {

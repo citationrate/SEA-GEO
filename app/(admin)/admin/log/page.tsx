@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { ScrollText, CheckCircle, XCircle, Clock, Loader2, Play } from "lucide-react";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Log Attivit\u00e0" };
 
 export default async function AdminLogPage() {

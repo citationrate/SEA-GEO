@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { Trophy, Search } from "lucide-react";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Competitor" };
 
 export default async function AdminCompetitorPage() {

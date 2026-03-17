@@ -1,5 +1,6 @@
 import { Server, Shield } from "lucide-react";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Settings Admin" };
 
 export default function AdminSettingsPage() {

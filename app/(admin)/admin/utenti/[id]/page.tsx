@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { notFound } from "next/navigation";
 import { UserDetailClient } from "./user-detail-client";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Dettaglio Utente" };
 
 export default async function AdminUserDetailPage({ params }: { params: { id: string } }) {

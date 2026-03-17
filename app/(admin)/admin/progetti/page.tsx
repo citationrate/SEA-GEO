@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { ProjectsAdminClient } from "./projects-client";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Progetti" };
 
 export default async function AdminProjectsPage() {
