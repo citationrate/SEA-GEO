@@ -235,9 +235,9 @@ export function SettingsClient({
             </div>
             <button
               onClick={() => toggleNotification("notify_analysis_complete", !notifyAnalysis)}
-              className={`relative w-10 h-5 rounded-full transition-colors ${notifyAnalysis ? "bg-primary" : "bg-muted"}`}
+              className={`relative w-11 h-6 rounded-full transition-colors ${notifyAnalysis ? "bg-primary" : "bg-muted"}`}
             >
-              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${notifyAnalysis ? "left-5" : "left-0.5"}`} />
+              <div className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${notifyAnalysis ? "translate-x-[22px]" : "translate-x-[2px]"}`} />
             </button>
           </div>
         </div>

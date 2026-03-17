@@ -561,9 +561,9 @@ export default function GenerateQueriesPage() {
                   setPersonasEnabled(!personasEnabled);
                   if (personasEnabled) setPersonas([]);
                 }}
-                className={`w-10 h-5 rounded-full transition-colors relative cursor-pointer ${personasEnabled ? "bg-purple-500" : "bg-border"}`}
+                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${personasEnabled ? "bg-purple-500" : "bg-border"}`}
               >
-                <div className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform ${personasEnabled ? "translate-x-5" : "translate-x-0.5"}`} />
+                <div className={`w-5 h-5 rounded-full bg-white shadow-sm absolute top-1/2 -translate-y-1/2 transition-transform duration-200 ${personasEnabled ? "translate-x-[22px]" : "translate-x-[2px]"}`} />
               </div>
               <span className="text-sm font-medium text-foreground">{t("generateQueries.activatePersonas")}</span>
               <span className="text-xs text-muted-foreground">(max 3)</span>

@@ -18,7 +18,7 @@ export function ThemeToggle() {
     try { localStorage.setItem("seageo-theme", next ? "light" : "dark"); } catch {}
   }
 
-  if (!mounted) return <div className="w-12 h-7" />;
+  if (!mounted) return <div className="w-11 h-6" />;
 
   return (
     <div className="flex items-center gap-2">
@@ -27,13 +27,13 @@ export function ThemeToggle() {
       </span>
       <button
         onClick={toggle}
-        className="relative w-12 h-7 rounded-full transition-colors duration-200"
+        className="relative w-11 h-6 rounded-full transition-colors duration-200"
         style={{ backgroundColor: light ? "var(--primary)" : "rgba(255,255,255,0.15)" }}
         aria-label="Toggle theme"
       >
         <div
-          className="absolute top-[3px] w-[22px] h-[22px] rounded-full bg-white shadow-sm transition-transform duration-200"
-          style={{ transform: light ? "translateX(26px)" : "translateX(3px)" }}
+          className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200"
+          style={{ transform: light ? "translateX(22px)" : "translateX(2px)" }}
         />
       </button>
     </div>
