@@ -39,8 +39,7 @@ ${contextList}
 Analizza e rispondi in italiano con questo formato JSON:
 {
   "why_cited": "perch\u00E9 le AI citano questo sito",
-  "authority": "che autorit\u00E0 ha questo sito nel settore",
-  "brand_impact": "se \u00E8 positivo o negativo per il brand che le AI lo citino e perch\u00E9"
+  "authority": "che autorit\u00E0 ha questo sito nel settore"
 }
 
 Rispondi SOLO con JSON valido.`,
@@ -49,7 +48,7 @@ Rispondi SOLO con JSON valido.`,
 
     const raw = completion.choices[0]?.message?.content ?? "{}";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    let analysis = { why_cited: "", authority: "", brand_impact: "" };
+    let analysis = { why_cited: "", authority: "" };
     if (jsonMatch) {
       try { analysis = JSON.parse(jsonMatch[0]); } catch { /* use default */ }
     }

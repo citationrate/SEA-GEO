@@ -22,7 +22,7 @@ interface SourceDomain {
 interface DomainAnalysis {
   why_cited: string;
   authority: string;
-  brand_impact: string;
+  brand_impact?: string;
 }
 
 interface Insight {
@@ -396,7 +396,6 @@ function AnalyzeDrawer({
               <div className="space-y-3">
                 <AnalysisBlock title={t("sources.whyCited")} text={analysis.why_cited} />
                 <AnalysisBlock title={t("sources.sectorAuthority")} text={analysis.authority} />
-                <AnalysisBlock title={t("sources.brandImpact")} text={analysis.brand_impact} />
               </div>
             )}
           </div>
