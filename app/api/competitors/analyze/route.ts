@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     // Verify project ownership
     const { data: project } = await supabase
       .from("projects")
-      .select("id")
+      .select("id, language")
       .eq("id", project_id)
       .eq("user_id", user.id)
       .is("deleted_at", null)
@@ -34,6 +34,9 @@ export async function POST(request: Request) {
     if (!project) {
       return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
     }
+
+    const projectLang = (project as any).language ?? "it";
+    const langLabel = projectLang === "en" ? "English" : projectLang === "fr" ? "French" : projectLang === "de" ? "German" : projectLang === "es" ? "Spanish" : "Italian";
 
     // Get all competitors for this project
     const { data: competitors } = await supabase
@@ -102,7 +105,7 @@ export async function POST(request: Request) {
       const key = comp.name.toLowerCase().trim();
       const texts = compTexts.get(key);
       if (!texts?.length) {
-        results.push({ id: comp.id, name: comp.name, analysis: { macro_themes: [], positioning_summary: "Nessun contesto disponibile per l'analisi." } });
+        results.push({ id: comp.id, name: comp.name, analysis: { macro_themes: [], positioning_summary: projectLang === "en" ? "No context available for analysis." : "Nessun contesto disponibile per l'analisi." } });
         continue;
       }
 
@@ -112,23 +115,26 @@ export async function POST(request: Request) {
         : texts;
 
       // Truncate each response to ~500 chars
-      const truncated = sampledTexts.map((t, i) => `[Risposta ${i + 1}]: ${t.slice(0, 500)}`).join("\n\n");
+      const truncated = sampledTexts.map((t, i) => `[Response ${i + 1}]: ${t.slice(0, 500)}`).join("\n\n");
 
-      const prompt = `Analizza questi testi in cui il brand "${comp.name}" viene menzionato e identifica i macro-temi ricorrenti per cui viene citato. Restituisci SOLO un JSON così:
+      const prompt = `Analyze these texts where the brand "${comp.name}" is mentioned and identify the recurring macro-themes for which it is cited.
+IMPORTANT: All theme names, descriptions, keywords, and the positioning summary MUST be in ${langLabel}.
+
+Return ONLY a JSON like this:
 {
   "macro_themes": [
     {
-      "theme": "nome macro tema (es. Comfort e Vestibilità)",
-      "description": "breve descrizione di come il brand viene associato a questo tema",
-      "keywords": ["parola1", "parola2", "parola3"],
-      "frequency": numero da 1 a 10
+      "theme": "macro theme name (in ${langLabel})",
+      "description": "brief description of how the brand is associated with this theme (in ${langLabel})",
+      "keywords": ["keyword1", "keyword2", "keyword3"],
+      "frequency": number from 1 to 10
     }
   ],
-  "positioning_summary": "una frase che riassume come le AI posizionano questo brand"
+  "positioning_summary": "one sentence summarizing how AIs position this brand (in ${langLabel})"
 }
-Massimo 5 macro temi. Temi concreti e significativi, non generici.
+Maximum 5 macro themes. Concrete and meaningful themes, not generic.
 
-Testi:
+Texts:
 ${truncated}`;
 
       try {

@@ -172,6 +172,7 @@ async function extractCompetitorsTopicsSources(
   knownCompetitors: string[],
   sector?: string,
   brandType?: string,
+  language?: string,
 ): Promise<Pick<ExtractionResult, "topics" | "competitors_found" | "sources">> {
   // Clean control characters that may break Claude parsing
   const cleanResponse = response
@@ -182,42 +183,46 @@ async function extractCompetitorsTopicsSources(
     return { topics: [], competitors_found: [], sources: [] };
   }
 
-  const prompt = `Sei un analista AI. Il brand "${targetBrand}" NON è presente in questa risposta.
-Settore: ${sector ?? "generico"}
-Tipo brand: ${brandType ?? "manufacturer"}
-Competitor conosciuti: ${knownCompetitors.length > 0 ? knownCompetitors.join(", ") : "nessuno specificato"}
+  const lang = language === "en" ? "English" : language === "fr" ? "French" : language === "de" ? "German" : language === "es" ? "Spanish" : "Italian";
+  const langInstr = `IMPORTANT: All extracted topics, labels, and context text MUST be in ${lang} — match the language of the response being analyzed.`;
 
-Estrai comunque:
-- competitors_found: max 3 brand più rilevanti citati, con tipo competitivo
-- topics: max 3 argomenti principali trattati
-- sources: max 3 siti/domini più rilevanti citati
+  const prompt = `You are an AI analyst. The brand "${targetBrand}" is NOT present in this response.
+Sector: ${sector ?? "generic"}
+Brand type: ${brandType ?? "manufacturer"}
+Known competitors: ${knownCompetitors.length > 0 ? knownCompetitors.join(", ") : "none specified"}
 
-Rispondi SOLO con JSON valido. Max 3 competitor, max 3 topic, max 3 fonti. Nessun testo prima o dopo il JSON.
+${langInstr}
 
-Schema JSON richiesto:
+Extract:
+- competitors_found: max 3 most relevant brands mentioned, with competitive type
+- topics: max 3 main topics discussed (in ${lang})
+- sources: max 3 most relevant sites/domains cited
+
+Respond ONLY with valid JSON. Max 3 competitors, max 3 topics, max 3 sources. No text before or after JSON.
+
+Required JSON schema:
 {
   "topics": string[],
   "competitors_found": [{ "name": string, "type": "direct"|"indirect"|"channel"|"aggregator", "rank": number, "sentiment": number, "recommendation": number }],
   "sources": [{ "url": string|null, "domain": string, "label": string|null, "source_type": string, "is_brand_owned": boolean, "context": string }]
 }
 
-TIPI COMPETITOR:
-- direct: stesso prodotto/servizio, stesso mercato
-- indirect: prodotto diverso, soddisfa lo stesso bisogno
-- channel: canali che vendono/distribuiscono al posto del brand
-- aggregator: piattaforme che confrontano alternative
+COMPETITOR TYPES:
+- direct: same product/service, same market
+- indirect: different product, satisfies the same need
+- channel: distribution channels
+- aggregator: comparison/discovery platforms
 
-REGOLE per competitors_found:
-Estrai tutti i brand, aziende, insegne o entità commerciali citate.
-INCLUDI: qualsiasi entità con un nome proprio specifico.
-ESCLUDI: il brand target "${targetBrand}", sub-brand del target, descrizioni generiche senza nome proprio.
-Restituisci SOLO il nome commerciale.
+RULES for competitors_found:
+Extract all brands, companies, or commercial entities mentioned.
+INCLUDE: any entity with a specific proper name.
+EXCLUDE: the target brand "${targetBrand}", sub-brands of the target, generic descriptions.
+Return ONLY the commercial name.
 
-FONTI: Estrai TUTTI i siti web, domini, URL, blog, riviste, piattaforme citati o menzionati nella risposta.
-Se la risposta cita una pagina specifica, estrai l'URL completo con path. Se hai solo il dominio usa domain, se hai il path completo usa url.
+SOURCES: Extract ALL websites, domains, URLs, blogs, magazines, platforms cited in the response.
 source_type: media|review|ecommerce|social|brand_owned|competitor|wikipedia|other
 
-Analizza questa risposta:
+Analyze this response:
 
 ${cleanResponse}`;
 
@@ -282,6 +287,7 @@ export async function extractFromResponse(
   knownCompetitors: string[],
   sector?: string,
   brandType?: string,
+  language?: string,
 ): Promise<ExtractionResult> {
   // Robust brand detection with variants and partial matching
   const detection = detectBrandMention(response, targetBrand);
@@ -291,7 +297,7 @@ export async function extractFromResponse(
   // If brand not present, use a lighter prompt for competitors/topics/sources only
   if (!detection.mentioned) {
     const partialResult = await extractCompetitorsTopicsSources(
-      response, targetBrand, knownCompetitors, sector, brandType
+      response, targetBrand, knownCompetitors, sector, brandType, language
     );
     return {
       brand_mentioned: false,
@@ -308,33 +314,36 @@ export async function extractFromResponse(
     };
   }
 
+  const lang = language === "en" ? "English" : language === "fr" ? "French" : language === "de" ? "German" : language === "es" ? "Spanish" : "Italian";
+
   const sectorContext = sector
-    ? `Settore: ${sector}`
-    : `Settore: non specificato — inferisci dal contesto della risposta`;
+    ? `Sector: ${sector}`
+    : `Sector: not specified — infer from the response context`;
 
   const brandTypeLabels: Record<string, string> = {
-    manufacturer: "Produttore/Brand di prodotto",
-    retailer: "Retailer o catena della grande distribuzione",
-    service: "Servizio in abbonamento o SaaS",
-    financial: "Istituto finanziario, banca o assicurazione",
-    platform: "Piattaforma digitale o marketplace",
-    local: "Business locale o catena territoriale",
-    publisher: "Media, editore o piattaforma di contenuti",
-    pharma: "Azienda farmaceutica o sanitaria",
-    utility: "Utility, energia, telecomunicazioni",
+    manufacturer: "Product manufacturer/brand",
+    retailer: "Retailer or distribution chain",
+    service: "Subscription service or SaaS",
+    financial: "Financial institution, bank, or insurance",
+    platform: "Digital platform or marketplace",
+    local: "Local business or territorial chain",
+    publisher: "Media, publisher, or content platform",
+    pharma: "Pharmaceutical or healthcare company",
+    utility: "Utility, energy, telecom",
   };
-  const brandTypeContext = brandTypeLabels[brandType ?? "manufacturer"] ?? "Brand generico";
+  const brandTypeContext = brandTypeLabels[brandType ?? "manufacturer"] ?? "Generic brand";
 
-  const systemPrompt = `Sei un analista AI. Analizza la risposta di un modello AI ed estrai dati strutturati.
+  const systemPrompt = `You are an AI analyst. Analyze an AI model's response and extract structured data.
+IMPORTANT: All extracted topics, adjectives, labels, and text fields MUST be in ${lang} — match the language of the response being analyzed.
 
-Brand da analizzare: "${targetBrand}"
+Brand to analyze: "${targetBrand}"
 ${sectorContext}
-Tipo brand: ${brandTypeContext}
-Competitor conosciuti: ${knownCompetitors.length > 0 ? knownCompetitors.join(", ") : "nessuno specificato"}
+Brand type: ${brandTypeContext}
+Known competitors: ${knownCompetitors.length > 0 ? knownCompetitors.join(", ") : "none specified"}
 
-Rispondi SOLO con JSON valido, senza markdown o testo aggiuntivo.
+Respond ONLY with valid JSON, no markdown or extra text.
 
-Schema JSON richiesto:
+Required JSON schema:
 {
   "brand_mentioned": boolean,
   "brand_rank": number | null,
@@ -348,71 +357,67 @@ Schema JSON richiesto:
   "sources": [{ "url": string|null, "domain": string, "label": string|null, "source_type": string, "is_brand_owned": boolean, "context": string }]
 }
 
-Regole:
-- brand_mentioned: true se il brand target appare nella risposta
-- brand_rank: posizione in cui il brand appare nella risposta rispetto ad altri brand/alternative.
-  1 = citato per primo o come principale raccomandazione.
-  2 = citato come seconda opzione.
-  3+ = citato dopo altri brand.
-  null = SOLO se brand_mentioned è false.
-  IMPORTANTE: Se brand_mentioned è true, brand_rank NON può essere null. Anche se non c'è una lista esplicita, valuta l'ordine in cui il brand appare rispetto ai concorrenti (1 se è il primo o unico citato).
-- brand_occurrences: numero di volte che il brand appare nel testo
-- competitors_count: quanti competitor totali sono citati nella risposta (NON includere il brand target)
-- tone_score: Analizza il linguaggio specifico usato per descrivere il brand.
-  Identifica prima 2-3 aggettivi o frasi chiave, poi assegna il score.
-  Esempi concreti:
-  - 'iconico, amatissimo, eccellente qualità' → +0.8
-  - 'buono, affidabile, valido' → +0.5
-  - 'conosciuto, disponibile, tra i più venduti' → +0.2
-  - 'nella media, non particolarmente distintivo' → -0.1
-  - 'criticato, controverso, problematico' → -0.6
-  - 'sconsigliato, di bassa qualità' → -0.9
-  IMPORTANTE:
-  - Usa l'intera scala da -1.0 a +1.0 con granularità 0.1
-  - NON usare 0.5 come default — ragiona sul testo
-  - Se il brand non è descritto con aggettivi specifici usa 0.2 (neutro-positivo) o 0.0 (puramente neutro)
-  - 0.5 è riservato a linguaggio genuinamente positivo con aggettivi chiari
-  Se brand_mentioned è false, usa 0.0.
-- brand_adjectives: elenca 2-3 aggettivi/frasi chiave usati per descrivere il brand. Array vuoto se brand_mentioned è false.
-- recommendation_score: L'AI raccomanda esplicitamente il brand?
-  +1.0 = raccomandato esplicitamente come prima/unica scelta
-  +0.5 = citato positivamente, dipende dal caso
-  0.0 = non esprime raccomandazione
-  -0.5 = sconsigliato con riserve
-  -1.0 = sconsigliato esplicitamente
-  Se brand_mentioned è false, usa 0.0.
-- topics: argomenti principali trattati nella risposta (max 5)
-- competitors_found: per ogni competitor trovato estrai:
-  - name: nome del brand
-  - type: tipo di competitor ("direct"|"indirect"|"channel"|"aggregator")
-  - rank: posizione in cui appare nella risposta (1=primo citato)
-  - sentiment: tono con cui l'AI descrive il competitor (-1.0/+1.0)
-  - recommendation: l'AI lo raccomanda? (+1=sì, 0=neutro, -1=sconsigliato)
-  Stesse regole del tone_score per granularità e no-default-0.5.
+Rules:
+- brand_mentioned: true if the target brand appears in the response
+- brand_rank: position where the brand appears relative to other brands.
+  1 = mentioned first or as primary recommendation.
+  2 = mentioned as second option.
+  3+ = mentioned after other brands.
+  null = ONLY if brand_mentioned is false.
+  IMPORTANT: If brand_mentioned is true, brand_rank CANNOT be null.
+- brand_occurrences: number of times the brand appears in the text
+- competitors_count: how many total competitors are cited (DO NOT include the target brand)
+- tone_score: Analyze the specific language used to describe the brand.
+  First identify 2-3 key adjectives/phrases, then assign the score.
+  Examples:
+  - 'iconic, beloved, excellent quality' → +0.8
+  - 'good, reliable, solid' → +0.5
+  - 'known, available, among the best sellers' → +0.2
+  - 'average, not particularly distinctive' → -0.1
+  - 'criticized, controversial, problematic' → -0.6
+  - 'not recommended, low quality' → -0.9
+  IMPORTANT:
+  - Use the full scale from -1.0 to +1.0 with 0.1 granularity
+  - Do NOT default to 0.5 — reason from the text
+  - If the brand has no specific adjectives use 0.2 (neutral-positive) or 0.0 (purely neutral)
+  If brand_mentioned is false, use 0.0.
+- brand_adjectives: list 2-3 key adjectives/phrases used to describe the brand (in ${lang}). Empty array if brand_mentioned is false.
+- recommendation_score: Does the AI explicitly recommend the brand?
+  +1.0 = explicitly recommended as first/only choice
+  +0.5 = mentioned positively, depends on context
+  0.0 = no recommendation expressed
+  -0.5 = discouraged with reservations
+  -1.0 = explicitly discouraged
+  If brand_mentioned is false, use 0.0.
+- topics: main topics discussed in the response (max 5, in ${lang})
+- competitors_found: for each competitor found:
+  - name: brand name
+  - type: competitor type ("direct"|"indirect"|"channel"|"aggregator")
+  - rank: position in which it appears (1=first cited)
+  - sentiment: tone used (-1.0/+1.0)
+  - recommendation: is it recommended? (+1=yes, 0=neutral, -1=discouraged)
 
-REGOLA CRITICA: Se brand_mentioned è true, brand_rank, tone_score e recommendation_score sono OBBLIGATORI e non possono essere null.
+CRITICAL RULE: If brand_mentioned is true, brand_rank, tone_score and recommendation_score are MANDATORY and cannot be null.
 
-TIPI COMPETITOR (multi-dimensionale):
-1. DIRECT — stesso prodotto/servizio, stesso mercato target
-2. INDIRECT — soddisfa lo stesso bisogno con approccio diverso
-3. CHANNEL — canali distributivi che si interpongono tra brand e consumatore o vendono private label
-4. AGGREGATOR — piattaforme di confronto o discovery che intercettano l'intento
+COMPETITOR TYPES:
+1. DIRECT — same product/service, same target market
+2. INDIRECT — satisfies the same need with a different approach
+3. CHANNEL — distribution channels between brand and consumer
+4. AGGREGATOR — comparison/discovery platforms
 
-Usa il settore e tipo brand per inferire il tipo corretto.
-NON escludere entità perché "non sono competitor diretti" — in AI visibility ogni entità citata al posto del brand ha rilevanza strategica.
+Use sector and brand type to infer the correct type.
+Do NOT exclude entities because they are "not direct competitors" — in AI visibility every entity cited instead of the brand has strategic relevance.
 
-FONTI: Estrai TUTTI i siti web, domini, URL, blog, riviste, piattaforme citati o menzionati nella risposta, anche implicitamente.
-Esempi: se dice 'secondo Gambero Rosso' → estrai 'gamberorosso.it', se dice 'disponibile su Amazon' → estrai 'amazon.it', se dice 'recensioni su Trustpilot' → estrai 'trustpilot.com'.
-Se la risposta cita una pagina specifica, estrai l'URL completo con path. Se hai solo il dominio usa domain, se hai il path completo usa url.
+SOURCES: Extract ALL websites, domains, URLs, blogs, magazines, platforms cited or mentioned in the response.
 source_type: media|review|ecommerce|social|brand_owned|competitor|wikipedia|other
 
-REGOLE per competitors_found:
-INCLUDI: qualsiasi entità con un nome proprio specifico.
-ESCLUDI ASSOLUTAMENTE:
-- Sub-brand o varianti del brand target (es. se target è 'Coca-Cola', escludi 'Coca-Cola Zero')
-- Il brand target "${targetBrand}" stesso in qualsiasi forma
-- Descrizioni generiche senza nome proprio
-FORMATO: Restituisci SOLO il nome commerciale.`;
+RULES for competitors_found:
+INCLUDE: any entity with a specific proper name.
+ABSOLUTELY EXCLUDE:
+- Sub-brands or variants of the target brand (e.g. if target is 'Coca-Cola', exclude 'Coca-Cola Zero')
+- The target brand "${targetBrand}" itself in any form
+- Generic descriptions without a proper name
+FORMAT: Return ONLY the commercial name.`;
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const message = await anthropic.messages.create({
@@ -494,7 +499,7 @@ FORMATO: Restituisci SOLO il nome commerciale.`;
 
     // Still attempt partial extraction for competitors/topics
     const partialResult = await extractCompetitorsTopicsSources(
-      response, targetBrand, knownCompetitors, sector, brandType
+      response, targetBrand, knownCompetitors, sector, brandType, language
     );
 
     return {
