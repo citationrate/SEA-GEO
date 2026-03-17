@@ -1,11 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sun, Moon } from "lucide-react";
-import { useTranslation } from "@/lib/i18n/context";
 
 export function ThemeToggle() {
-  const { t } = useTranslation();
   const [light, setLight] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -21,15 +18,24 @@ export function ThemeToggle() {
     try { localStorage.setItem("seageo-theme", next ? "light" : "dark"); } catch {}
   }
 
-  if (!mounted) return <div className="w-8 h-8" />;
+  if (!mounted) return <div className="w-12 h-7" />;
 
   return (
-    <button
-      onClick={toggle}
-      className="w-8 h-8 flex items-center justify-center rounded-[2px] border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
-      title={light ? t("theme.switchDark") : t("theme.switchLight")}
-    >
-      {light ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-    </button>
+    <div className="flex items-center gap-2">
+      <span className="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground select-none">
+        {light ? "LIGHT" : "DARK"}
+      </span>
+      <button
+        onClick={toggle}
+        className="relative w-12 h-7 rounded-full transition-colors duration-200"
+        style={{ backgroundColor: light ? "var(--primary)" : "rgba(255,255,255,0.15)" }}
+        aria-label="Toggle theme"
+      >
+        <div
+          className="absolute top-[3px] w-[22px] h-[22px] rounded-full bg-white shadow-sm transition-transform duration-200"
+          style={{ transform: light ? "translateX(26px)" : "translateX(3px)" }}
+        />
+      </button>
+    </div>
   );
 }
