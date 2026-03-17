@@ -59,10 +59,10 @@ export async function POST(request: Request) {
 
     if (!queries?.length) return NextResponse.json({ error: "Nessuna query configurata" }, { status: 400 });
 
-    // Plan limits check
+    // Plan limits check — cost = number of queries (models × runs are free repetitions)
     const plan = await getUserPlanLimits(user.id);
     const usage = await getCurrentUsage(user.id);
-    const promptCost = queries.length * validModels.length * run_count;
+    const promptCost = queries.length;
 
     if (validModels.length > plan.max_models_per_project) {
       return NextResponse.json({ error: `Il tuo piano supporta max ${plan.max_models_per_project} modelli per progetto.` }, { status: 403 });

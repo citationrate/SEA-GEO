@@ -49,10 +49,8 @@ export function AnalysisLauncher({
     return modelsConfig.length * queryCount * Math.max(segmentCount, 1) * runCount;
   }, [modelsConfig.length, queryCount, segmentCount, runCount]);
 
-  // Query cost = queries × models × runs
-  const queryCost = useMemo(() => {
-    return queryCount * modelsConfig.length * runCount;
-  }, [queryCount, modelsConfig.length, runCount]);
+  // Query cost = number of queries only (models × runs are free repetitions)
+  const queryCost = queryCount;
 
   const remaining = usage.promptsRemaining;
   const wouldExceed = queryCost > remaining;
@@ -199,11 +197,11 @@ export function AnalysisLauncher({
                 {t("analysisLauncher.thisAnalysisWillUse")} <span className="text-foreground font-bold">{queryCost}</span> query sul tuo piano
               </p>
               <p className="text-xs text-muted-foreground">
-                ({queryCount} query &times; {modelsConfig.length} modell{modelsConfig.length === 1 ? "o" : "i"} &times; {runCount} run)
+                {totalPrompts} prompt totali ({queryCount} query &times; {modelsConfig.length} modell{modelsConfig.length === 1 ? "o" : "i"} &times; {runCount} run)
               </p>
               {profileLoaded && (
                 <p className="text-xs text-muted-foreground">
-                  Hai <span className="text-foreground font-medium">{remaining}</span> {t("analysisLauncher.queriesRemaining")} ({usage.promptsUsed}/{usage.promptsLimit} utilizzate)
+                  Hai <span className="text-foreground font-medium">{remaining}</span> query disponibili questo mese ({usage.promptsUsed}/{usage.promptsLimit} utilizzate)
                 </p>
               )}
             </div>
