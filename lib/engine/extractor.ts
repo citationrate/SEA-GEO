@@ -230,6 +230,41 @@ function isGenericBrandName(brand: string): boolean {
   return words.length >= 1 && words.every((w) => GENERIC.has(w) || w.length <= 2);
 }
 
+/** Extract actual URLs and domains literally present in a response text */
+function extractRealUrlsFromText(text: string): Set<string> {
+  const domains = new Set<string>();
+  // Match explicit URLs
+  const urlMatches = text.match(/https?:\/\/(?:www\.)?([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,})/gi) ?? [];
+  for (const url of urlMatches) {
+    try {
+      const hostname = new URL(url).hostname.replace(/^www\./, "");
+      domains.add(hostname.toLowerCase());
+    } catch { /* invalid URL */ }
+  }
+  // Match bare domains (word.tld pattern) — but only common TLDs to avoid false positives
+  const bareDomainMatches = text.match(/\b([a-zA-Z0-9-]+\.(?:com|it|org|net|io|co|eu|uk|de|fr|es|info|biz|app|dev|ai))\b/gi) ?? [];
+  for (const d of bareDomainMatches) {
+    domains.add(d.toLowerCase());
+  }
+  return domains;
+}
+
+/** Filter AI-extracted sources to only keep those whose domain actually appears in the response */
+function validateSources<T extends { domain: string | null }>(
+  sources: T[],
+  response: string,
+): T[] {
+  const realDomains = extractRealUrlsFromText(response);
+  if (realDomains.size === 0) return []; // No real URLs in text → all sources are hallucinations
+
+  return sources.filter((s) => {
+    const domain = (s.domain ?? "").toLowerCase().replace(/^www\./, "");
+    if (!domain) return false;
+    // Check if the domain (or a part of it) is in the real domains set
+    return realDomains.has(domain) || Array.from(realDomains).some((rd) => rd.includes(domain) || domain.includes(rd));
+  });
+}
+
 function positionScore(rank: number | null, nCompetitors: number): number {
   if (!rank || rank === 0) return 0.5; // presente ma non classificabile
   if (nCompetitors === 0) return 0.7;  // unico citato, nessun confronto
@@ -290,8 +325,13 @@ INCLUDE: any entity with a specific proper name.
 EXCLUDE: the target brand "${targetBrand}", sub-brands of the target, generic descriptions.
 Return ONLY the commercial name.
 
-SOURCES: Extract ALL websites, domains, URLs, blogs, magazines, platforms cited in the response.
-source_type: media|review|ecommerce|social|brand_owned|competitor|wikipedia|other
+SOURCES — CRITICAL RULES TO AVOID HALLUCINATIONS:
+- Extract ONLY URLs and domains that are EXPLICITLY written as links or URLs in the response text (e.g. "www.example.com", "https://example.com/page")
+- DO NOT infer or guess domains from brand mentions. If the response says "secondo Gambero Rosso" but does NOT include an actual URL, DO NOT add "gamberorosso.it" — that would be a hallucination
+- DO NOT invent URLs that are not literally present in the text
+- If the response contains zero explicit URLs or domains, return an empty sources array: "sources": []
+- Only include sources you can literally see as a URL/domain string in the text
+source_type: media|review|ecommerce|social|competitor|wikipedia|other
 
 Analyze this response:
 
@@ -335,16 +375,19 @@ ${cleanResponse}`;
               : { name: canonicalizeCompetitorName(raw), type: c.type ?? "direct", rank: c.rank ?? null, sentiment: c.sentiment ?? null, recommendation: c.recommendation ?? null };
           })
         : [],
-      sources: Array.isArray(parsed.sources)
-        ? parsed.sources.map((s: any) => ({
-            url: s.url ?? null,
-            domain: s.domain ?? null,
-            label: s.label ?? null,
-            source_type: VALID_SOURCE_TYPES.includes(s.source_type) ? s.source_type : "other",
-            is_brand_owned: Boolean(s.is_brand_owned),
-            context: s.context ?? null,
-          }))
-        : [],
+      sources: validateSources(
+        Array.isArray(parsed.sources)
+          ? parsed.sources.map((s: any) => ({
+              url: s.url ?? null,
+              domain: s.domain ?? null,
+              label: s.label ?? null,
+              source_type: VALID_SOURCE_TYPES.includes(s.source_type) ? s.source_type : "other",
+              is_brand_owned: Boolean(s.is_brand_owned),
+              context: s.context ?? null,
+            }))
+          : [],
+        response,
+      ),
     };
   } catch (e) {
     console.error("[extractor] partial extraction failed:", e);
@@ -488,8 +531,12 @@ COMPETITOR TYPES:
 Use sector and brand type to infer the correct type.
 Do NOT exclude entities because they are "not direct competitors" — in AI visibility every entity cited instead of the brand has strategic relevance.
 
-SOURCES: Extract ALL websites, domains, URLs, blogs, magazines, platforms cited or mentioned in the response.
-source_type: media|review|ecommerce|social|brand_owned|competitor|wikipedia|other
+SOURCES — CRITICAL RULES TO AVOID HALLUCINATIONS:
+- Extract ONLY URLs and domains that are EXPLICITLY written in the response as actual links or URL strings
+- DO NOT infer domains from brand/company mentions (e.g. if it says "Amazon" do NOT add "amazon.it" unless the URL is literally in the text)
+- DO NOT invent or guess URLs — if no explicit URLs appear in the response, return "sources": []
+- Only include a source if you can point to the exact URL/domain string in the response text
+source_type: media|review|ecommerce|social|competitor|wikipedia|other
 
 RULES for competitors_found:
 INCLUDE: any entity with a specific proper name.
@@ -560,16 +607,19 @@ FORMAT: Return ONLY the commercial name.`;
             : { name: canonicalizeCompetitorName(raw), type: c.type ?? "direct", rank: c.rank ?? null, sentiment: c.sentiment ?? null, recommendation: c.recommendation ?? null };
         });
       })(),
-      sources: Array.isArray(parsed.sources)
-        ? parsed.sources.map((s: any) => ({
-            url: s.url ?? null,
-            domain: s.domain ?? null,
-            label: s.label ?? null,
-            source_type: VALID_SOURCE_TYPES.includes(s.source_type) ? s.source_type : "other",
-            is_brand_owned: Boolean(s.is_brand_owned),
-            context: s.context ?? null,
-          }))
-        : [],
+      sources: validateSources(
+        Array.isArray(parsed.sources)
+          ? parsed.sources.map((s: any) => ({
+              url: s.url ?? null,
+              domain: s.domain ?? null,
+              label: s.label ?? null,
+              source_type: VALID_SOURCE_TYPES.includes(s.source_type) ? s.source_type : "other",
+              is_brand_owned: Boolean(s.is_brand_owned),
+              context: s.context ?? null,
+            }))
+          : [],
+        response,
+      ),
     };
   } catch (parseErr) {
     // CRITICAL: Do not silently discard brand detection when JSON parsing fails.
