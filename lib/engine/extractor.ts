@@ -230,22 +230,45 @@ function isGenericBrandName(brand: string): boolean {
   return words.length >= 1 && words.every((w) => GENERIC.has(w) || w.length <= 2);
 }
 
-/** Extract actual URLs and domains literally present in a response text */
+/** Extract actual URLs and domains literally present in a response text.
+ *  Catches AI citation patterns:
+ *  - Full URLs: https://example.com/path
+ *  - Markdown links: [text](https://example.com)
+ *  - Numbered citations: [1] https://example.com
+ *  - Bare domains: example.com, www.example.com
+ *  - Perplexity-style: source: example.com
+ */
 function extractRealUrlsFromText(text: string): Set<string> {
   const domains = new Set<string>();
-  // Match explicit URLs
-  const urlMatches = text.match(/https?:\/\/(?:www\.)?([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,})/gi) ?? [];
+
+  // 1. Full URLs (http/https)
+  const urlMatches = text.match(/https?:\/\/[^\s)\]>"',]+/gi) ?? [];
   for (const url of urlMatches) {
+    try {
+      const cleaned = url.replace(/[.),:;]+$/, ""); // strip trailing punctuation
+      const hostname = new URL(cleaned).hostname.replace(/^www\./, "");
+      domains.add(hostname.toLowerCase());
+    } catch { /* invalid URL */ }
+  }
+
+  // 2. Markdown links: [text](url)
+  const mdLinks = text.match(/\]\(https?:\/\/[^)]+\)/gi) ?? [];
+  for (const link of mdLinks) {
+    const url = link.slice(2, -1); // remove ]( and )
     try {
       const hostname = new URL(url).hostname.replace(/^www\./, "");
       domains.add(hostname.toLowerCase());
     } catch { /* invalid URL */ }
   }
-  // Match bare domains (word.tld pattern) — but only common TLDs to avoid false positives
-  const bareDomainMatches = text.match(/\b([a-zA-Z0-9-]+\.(?:com|it|org|net|io|co|eu|uk|de|fr|es|info|biz|app|dev|ai))\b/gi) ?? [];
-  for (const d of bareDomainMatches) {
-    domains.add(d.toLowerCase());
+
+  // 3. Bare domains with common TLDs (www.example.com or example.com)
+  const TLDS = "com|it|org|net|io|co|eu|uk|de|fr|es|info|biz|app|dev|ai|tech|online|store|shop";
+  const bareDomainRe = new RegExp(`(?:www\\.)?([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\\.(?:${TLDS}))(?:\\b|[\\s/])`, "gi");
+  let match;
+  while ((match = bareDomainRe.exec(text)) !== null) {
+    domains.add(match[1].toLowerCase());
   }
+
   return domains;
 }
 
@@ -325,12 +348,12 @@ INCLUDE: any entity with a specific proper name.
 EXCLUDE: the target brand "${targetBrand}", sub-brands of the target, generic descriptions.
 Return ONLY the commercial name.
 
-SOURCES — CRITICAL RULES TO AVOID HALLUCINATIONS:
-- Extract ONLY URLs and domains that are EXPLICITLY written as links or URLs in the response text (e.g. "www.example.com", "https://example.com/page")
-- DO NOT infer or guess domains from brand mentions. If the response says "secondo Gambero Rosso" but does NOT include an actual URL, DO NOT add "gamberorosso.it" — that would be a hallucination
-- DO NOT invent URLs that are not literally present in the text
-- If the response contains zero explicit URLs or domains, return an empty sources array: "sources": []
-- Only include sources you can literally see as a URL/domain string in the text
+SOURCES — extract ONLY real citations used to justify the response:
+- Extract URLs/domains that the AI cites AS SOURCES for its answer
+- Valid citation patterns: "[1] https://example.com", "Fonte: www.example.com", inline links "[text](https://url)", "source: domain.com", numbered references with URLs at the end
+- ONLY extract domains/URLs that are LITERALLY written in the response text as strings
+- DO NOT infer domains from brand names (if it says "Amazon" without a URL, do NOT add "amazon.it")
+- DO NOT invent URLs — if no explicit URLs or domains appear in the text, return "sources": []
 source_type: media|review|ecommerce|social|competitor|wikipedia|other
 
 Analyze this response:
