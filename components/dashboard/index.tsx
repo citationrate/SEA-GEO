@@ -26,9 +26,18 @@ export function AVIRing({ score, trend, components, noBrandMentions, hideCompone
   const trendColor = trend == null ? "text-cream-dim"
     : trend > 0 ? "text-success" : "text-destructive";
 
-  // Score-based glow color: red(0) → orange(25) → yellow(50) → lime(75) → green(100)
-  const s = Math.max(0, Math.min(100, score ?? 0));
-  const aviGlowColor = s <= 25 ? "#ef4444" : s <= 50 ? "#f97316" : s <= 75 ? "#eab308" : "#22c55e";
+  // Continuous color interpolation: red(0) → orange(33) → yellow(55) → green(100)
+  function scoreToColor(v: number): string {
+    const t = Math.max(0, Math.min(100, v)) / 100;
+    // HSL hue: 0 (red) → 30 (orange) → 50 (yellow) → 142 (green from design system)
+    const hue = t < 0.5
+      ? t * 2 * 50        // 0→50: red to yellow
+      : 50 + (t - 0.5) * 2 * 92; // 50→142: yellow to green
+    const sat = 65 + t * 10; // slightly more saturated as it gets greener
+    const light = 45 + t * 5;
+    return `hsl(${Math.round(hue)}, ${Math.round(sat)}%, ${Math.round(light)}%)`;
+  }
+  const aviColor = scoreToColor(score ?? 0);
 
   const COMP_COLORS: Record<string, string> = {
     "dashboard.presence":   "#e8956d",
@@ -58,27 +67,18 @@ export function AVIRing({ score, trend, components, noBrandMentions, hideCompone
 
       <div className="relative w-[140px] h-[140px]">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-          <defs>
-            <linearGradient id="avi-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#ef4444" />
-              <stop offset="25%" stopColor="#f97316" />
-              <stop offset="50%" stopColor="#eab308" />
-              <stop offset="75%" stopColor="#84cc16" />
-              <stop offset="100%" stopColor="#22c55e" />
-            </linearGradient>
-          </defs>
           <circle cx="60" cy="60" r={R} fill="none" stroke="var(--line)" strokeWidth="7"/>
           <circle cx="60" cy="60" r={R} fill="none"
-            stroke={noBrandMentions ? "var(--line)" : "url(#avi-gradient)"} strokeWidth="7"
+            stroke={noBrandMentions ? "var(--line)" : aviColor} strokeWidth="7"
             strokeLinecap="round"
             strokeDasharray={C}
             strokeDashoffset={C - dash}
-            style={{ transition: "stroke-dashoffset 1.2s ease-out",
-                     filter: noBrandMentions ? "none" : `drop-shadow(0 0 6px ${aviGlowColor})` }}
+            style={{ transition: "stroke-dashoffset 1.2s ease-out, stroke 0.8s ease-out",
+                     filter: noBrandMentions ? "none" : `drop-shadow(0 0 6px ${aviColor})` }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-display text-[32px] leading-none" style={{ fontWeight: 300, color: noBrandMentions ? undefined : aviGlowColor }}>
+          <span className={`font-display text-[32px] leading-none ${noBrandMentions ? "text-muted-foreground" : "text-foreground"}`} style={{ fontWeight: 300 }}>
             {score != null ? Math.round(score) : "--"}
           </span>
           {score != null && <span className="font-mono text-[12px] text-cream-dim">/100</span>}
