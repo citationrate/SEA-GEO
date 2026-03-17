@@ -8,7 +8,8 @@ import { createPortal } from "react-dom";
  * Lightweight info tooltip. Shows on hover/focus.
  * Uses a portal so the popup is never clipped by parent overflow.
  */
-export function InfoTooltip({ text }: { text: string }) {
+export function InfoTooltip({ text }: { text: string | undefined }) {
+  if (!text) return null;
   const [show, setShow] = useState(false);
   const ref = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);

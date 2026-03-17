@@ -152,7 +152,7 @@ export default function EditProjectPage() {
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
             {t("projects.targetBrand")} *
-            <InfoTooltip text="Il brand che verrà cercato nelle risposte AI" />
+            <InfoTooltip text={t("projects.targetBrandTooltip")} />
           </label>
           <input
             type="text"
@@ -168,7 +168,7 @@ export default function EditProjectPage() {
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
             {t("projects.website")} *
-            <InfoTooltip text="Usato per rilevare le fonti owned nei risultati" />
+            <InfoTooltip text={t("projects.websiteTooltip")} />
           </label>
           <input
             type="text"
@@ -185,7 +185,7 @@ export default function EditProjectPage() {
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
               {t("projects.sector")}
-              <InfoTooltip text="Usato per suggerire query rilevanti per il tuo mercato" />
+              <InfoTooltip text={t("projects.sectorTooltip")} />
             </label>
             <select
               value={sector}
@@ -201,7 +201,7 @@ export default function EditProjectPage() {
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
               {t("projects.brandType")}
-              <InfoTooltip text="Aiuta l'AI a classificare correttamente i competitor" />
+              <InfoTooltip text={t("projects.brandTypeTooltip")} />
             </label>
             <select
               value={brandType}

@@ -12,7 +12,7 @@ import { useTranslation } from "@/lib/i18n/context";
 interface AVIRingProps {
   score: number | null;
   trend: number | null;
-  components?: { label: string; v: number | null }[];
+  components?: { label: string; labelKey?: string; v: number | null }[];
   noBrandMentions?: boolean;
   hideComponents?: boolean;
 }
@@ -27,31 +27,24 @@ export function AVIRing({ score, trend, components, noBrandMentions, hideCompone
     : trend > 0 ? "text-success" : "text-destructive";
 
   const COMP_COLORS: Record<string, string> = {
-    Presenza:   "#e8956d",
-    Posizione:  "#7eb3d4",
-    Sentiment:  "#7eb89a",
-  };
-
-  const labelMap: Record<string, string> = {
-    Presenza:     t("dashboard.presence"),
-    Posizione:    t("dashboard.position"),
-    Sentiment:    t("dashboard.sentiment"),
-    "Affidabilità": t("dashboard.reliability"),
+    "dashboard.presence":   "#e8956d",
+    "dashboard.position":   "#7eb3d4",
+    "dashboard.sentiment":  "#7eb89a",
   };
 
   const tooltipMap: Record<string, string> = {
-    Presenza:   t("dashboard.presenceTooltip"),
-    Posizione:  t("dashboard.positionTooltip"),
-    Sentiment:  t("dashboard.sentimentTooltip"),
+    "dashboard.presence":   t("dashboard.presenceTooltip"),
+    "dashboard.position":   t("dashboard.positionTooltip"),
+    "dashboard.sentiment":  t("dashboard.sentimentTooltip"),
   };
 
   const allComps = components ?? [
-    { label: "Presenza",  v: null },
-    { label: "Posizione", v: null },
-    { label: "Sentiment", v: null },
+    { label: t("dashboard.presence"), labelKey: "dashboard.presence", v: null },
+    { label: t("dashboard.position"), labelKey: "dashboard.position", v: null },
+    { label: t("dashboard.sentiment"), labelKey: "dashboard.sentiment", v: null },
   ];
-  const consistencyComp = allComps.find(c => c.label === "Affidabilità");
-  const comps = allComps.filter(c => c.label !== "Affidabilità");
+  const consistencyComp = allComps.find(c => c.labelKey === "dashboard.reliability");
+  const comps = allComps.filter(c => c.labelKey !== "dashboard.reliability");
 
   return (
     <div data-tour="avi-ring" className="card p-5 h-full flex flex-col items-center gap-3">
@@ -94,21 +87,24 @@ export function AVIRing({ score, trend, components, noBrandMentions, hideCompone
 
       {score != null && !hideComponents && (
         <div className="w-full space-y-2.5 pt-2 border-t border-border">
-          {comps.map(c => (
-            <div key={c.label}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-mono text-[12px] text-cream-dim flex items-center gap-1">
-                  {labelMap[c.label] ?? c.label}
-                  {tooltipMap[c.label] && <InfoTooltip text={tooltipMap[c.label]} />}
-                </span>
-                <span className="font-mono text-[12px] text-cream-dim">{c.v != null ? Math.round(c.v) : "--"}</span>
+          {comps.map(c => {
+            const key = c.labelKey ?? "";
+            return (
+              <div key={key || c.label}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-mono text-[12px] text-cream-dim flex items-center gap-1">
+                    {c.label}
+                    {tooltipMap[key] && <InfoTooltip text={tooltipMap[key]} />}
+                  </span>
+                  <span className="font-mono text-[12px] text-cream-dim">{c.v != null ? Math.round(c.v) : "--"}</span>
+                </div>
+                <div className="w-full h-1 bg-ink-3 rounded-sm overflow-hidden">
+                  <div className="h-full rounded-sm transition-all duration-700"
+                    style={{ width: c.v != null ? `${c.v}%` : "0%", backgroundColor: COMP_COLORS[key] ?? "var(--sage)" }} />
+                </div>
               </div>
-              <div className="w-full h-1 bg-ink-3 rounded-sm overflow-hidden">
-                <div className="h-full rounded-sm transition-all duration-700"
-                  style={{ width: c.v != null ? `${c.v}%` : "0%", backgroundColor: COMP_COLORS[c.label] ?? "var(--sage)" }} />
-              </div>
-            </div>
-          ))}
+            );
+          })}
           {consistencyComp && consistencyComp.v != null && (
             <div className="pt-2 border-t border-border mt-2">
               <div className="flex items-center gap-1.5">

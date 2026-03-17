@@ -41,7 +41,7 @@ export function DashboardClient({
   const { t } = useTranslation();
 
   const translatedStats = stats.map(s => ({ label: t(s.labelKey), value: s.value, sub: t(s.subKey) }));
-  const translatedComponents = aviComponents?.map(c => ({ label: t(c.labelKey), v: c.v }));
+  const translatedComponents = aviComponents?.map(c => ({ label: t(c.labelKey), labelKey: c.labelKey, v: c.v }));
 
   return (
     <div className="space-y-6 animate-fade-in max-w-[1400px]">
