@@ -283,17 +283,31 @@ Contesto brand:
 - Contesto aggiuntivo: ${project.market_context ?? "nessuno"}
 ${websiteBlock}${existingBlock}
 Genera esattamente ${count} query uniche e realistiche in ${lang}.
-${nTofu} TOFU — domande generiche di scoperta SENZA citare "${project.target_brand}"
-${nMofu} MOFU — domande comparative che INCLUDONO "${project.target_brand}" vs almeno un competitor
 
-Regole:
+DUE TIPOLOGIE DI QUERY:
+
+${nTofu} TOFU — Domande di scoperta generiche sul settore.
+L'utente sta esplorando il settore, non conosce ancora i brand.
+NON menzionare "${project.target_brand}" né alcun competitor.
+Esempi di angolazione: panoramica di mercato, tendenze, criteri di scelta, problemi comuni del settore, cosa cercare in un fornitore/prodotto.
+
+${nMofu} MOFU — Domande su bisogni specifici che il brand risolve, MA senza mai nominare "${project.target_brand}" né alcun competitor.
+L'utente descrive un problema, un'esigenza o una situazione concreta che "${project.target_brand}" potrebbe risolvere.
+Lo scopo è intercettare i BISOGNI LATENTI: l'utente chiede aiuto all'AI descrivendo cosa gli serve, e noi misuriamo se l'AI risponde suggerendo "${project.target_brand}".
+Queste query devono:
+- Descrivere un bisogno specifico legato ai prodotti/servizi reali del brand (usa il contenuto del sito web)
+- Usare il linguaggio che un potenziale cliente userebbe
+- NON contenere MAI il nome del brand né dei competitor — sono completamente unbranded
+- Essere abbastanza specifiche da "puntare" implicitamente verso il brand senza nominarlo
+Esempi di struttura: "Cerco un [tipo servizio] che [caratteristica specifica del brand]", "Ho bisogno di [soluzione a problema che il brand risolve]", "Quale [categoria] è migliore per chi ha [esigenza specifica]?"
+
+Regole generali:
 - Ogni query deve essere semanticamente distinta dalle altre
 - Usa il linguaggio naturale che un utente reale userebbe su ChatGPT o Gemini
 - Adatta tono e vocabolario al settore e tipo di brand
-- TOFU: non menzionare mai "${project.target_brand}" esplicitamente
-- MOFU: includi "${project.target_brand}" e almeno un competitor noto
-- NON usare template ripetitivi come "Quali sono i migliori..." — varia la struttura
-- Usa i temi, prodotti e servizi reali del brand emersi dal sito web per rendere le query specifiche e contestualizzate
+- NESSUNA query deve contenere il nome "${project.target_brand}" — né TOFU né MOFU
+- NON usare template ripetitivi — varia struttura, angolazione e formulazione
+- Usa i temi, prodotti e servizi reali del brand emersi dal sito web per rendere le query MOFU specifiche e contestualizzate ai bisogni reali dei clienti
 - Rispondi SOLO con un JSON array, nessun altro testo
 
 Formato risposta:
@@ -309,16 +323,16 @@ function buildFollowUpPrompt(
 ): string {
   const lang = project.language === "it" ? "italiano" : "English";
 
-  return `Sei un esperto di AI Search Optimization. Devi generare ${missing} query aggiuntive per il brand "${project.target_brand}" (settore: ${project.sector ?? "non specificato"}).
+  return `Sei un esperto di AI Search Optimization. Devi generare ${missing} query aggiuntive per il settore di "${project.target_brand}" (settore: ${project.sector ?? "non specificato"}).
 
 Query già generate (NON duplicarle):
 ${allExisting.map((t) => `- ${t}`).join("\n")}
 
 Genera esattamente ${missing} query nuove in ${lang}:
-${nTofuMissing > 0 ? `${nTofuMissing} TOFU — domande generiche SENZA citare "${project.target_brand}"` : ""}
-${nMofuMissing > 0 ? `${nMofuMissing} MOFU — domande comparative CON "${project.target_brand}"` : ""}
+${nTofuMissing > 0 ? `${nTofuMissing} TOFU — domande generiche di scoperta sul settore, SENZA citare alcun brand` : ""}
+${nMofuMissing > 0 ? `${nMofuMissing} MOFU — domande su bisogni specifici che "${project.target_brand}" risolve, MA completamente unbranded (nessun nome brand). L'utente descrive un bisogno/problema, noi misuriamo se l'AI consiglia il brand.` : ""}
 
-Competitor noti: ${(project.known_competitors ?? []).join(", ") || "non specificati"}
+NESSUNA query deve contenere il nome "${project.target_brand}" né dei competitor.
 
 Rispondi SOLO con un JSON array:
 [{"text": "...", "funnel_stage": "TOFU"|"MOFU"}]`;
