@@ -119,58 +119,136 @@ async function callGeneration(anthropic: Anthropic, prompt: string, expectedCoun
   }
 }
 
-async function fetchWebsiteContext(url: string): Promise<string> {
-  // Normalize URL
-  let finalUrl = url.trim();
-  if (!finalUrl.startsWith("http")) finalUrl = `https://${finalUrl}`;
-
+/** Fetch a single page and extract structured content */
+async function fetchPage(pageUrl: string): Promise<{ url: string; title: string; description: string; headings: string[]; text: string } | null> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-
+  const timeout = setTimeout(() => controller.abort(), 6000);
   try {
-    const res = await fetch(finalUrl, {
+    const res = await fetch(pageUrl, {
       signal: controller.signal,
       headers: { "User-Agent": "SeaGeo-Bot/1.0 (AI Visibility Analysis)" },
+      redirect: "follow",
     });
     clearTimeout(timeout);
-
-    if (!res.ok) return "";
+    if (!res.ok) return null;
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("text/html")) return null;
 
     const html = await res.text();
-
-    // Extract useful content from HTML
     const title = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim() ?? "";
-    const metaDesc = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["']/i)?.[1]?.trim() ?? "";
-    const h1s = Array.from(html.matchAll(/<h1[^>]*>([^<]*)<\/h1>/gi)).map((m) => m[1].trim()).filter(Boolean).slice(0, 3);
-    const h2s = Array.from(html.matchAll(/<h2[^>]*>([^<]*)<\/h2>/gi)).map((m) => m[1].trim()).filter(Boolean).slice(0, 5);
+    const description = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["']/i)?.[1]?.trim() ?? "";
+    const headings = [
+      ...Array.from(html.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)).map((m) => m[1].replace(/<[^>]+>/g, "").trim()),
+      ...Array.from(html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)).map((m) => m[1].replace(/<[^>]+>/g, "").trim()),
+    ].filter((h) => h.length > 2 && h.length < 200).slice(0, 10);
 
-    // Extract visible text from body (strip tags, scripts, styles)
     const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-    let bodyText = "";
+    let text = "";
     if (bodyMatch) {
-      bodyText = bodyMatch[1]
-        .replace(/<script[\s\S]*?<\/script>/gi, "")
-        .replace(/<style[\s\S]*?<\/style>/gi, "")
-        .replace(/<nav[\s\S]*?<\/nav>/gi, "")
-        .replace(/<footer[\s\S]*?<\/footer>/gi, "")
+      text = bodyMatch[1]
+        .replace(/<script[\s\S]*?<\/script>/gi, " ")
+        .replace(/<style[\s\S]*?<\/style>/gi, " ")
+        .replace(/<nav[\s\S]*?<\/nav>/gi, " ")
+        .replace(/<footer[\s\S]*?<\/footer>/gi, " ")
+        .replace(/<header[\s\S]*?<\/header>/gi, " ")
         .replace(/<[^>]+>/g, " ")
         .replace(/\s+/g, " ")
         .trim()
-        .slice(0, 2000);
+        .slice(0, 1500);
     }
-
-    const parts: string[] = [];
-    if (title) parts.push(`Titolo: ${title}`);
-    if (metaDesc) parts.push(`Descrizione: ${metaDesc}`);
-    if (h1s.length) parts.push(`H1: ${h1s.join(" | ")}`);
-    if (h2s.length) parts.push(`H2: ${h2s.join(" | ")}`);
-    if (bodyText) parts.push(`Contenuto principale: ${bodyText.slice(0, 1500)}`);
-
-    return parts.join("\n");
+    return { url: pageUrl, title, description, headings, text };
   } catch {
     clearTimeout(timeout);
-    return "";
+    return null;
   }
+}
+
+/** Extract internal links from HTML that are likely content pages */
+function extractInternalLinks(html: string, baseUrl: string): string[] {
+  const base = new URL(baseUrl);
+  const links = new Set<string>();
+
+  // Priority paths to look for
+  const priorityPaths = [
+    "/about", "/chi-siamo", "/chi_siamo", "/azienda", "/company",
+    "/servizi", "/services", "/prodotti", "/products",
+    "/soluzioni", "/solutions", "/cosa-facciamo", "/what-we-do",
+    "/team", "/il-team", "/contatti", "/contact",
+    "/prezzi", "/pricing", "/piani", "/plans",
+    "/blog", "/news", "/risorse", "/resources",
+    "/casi-studio", "/case-studies", "/portfolio", "/clienti", "/clients",
+    "/vantaggi", "/benefits", "/features", "/funzionalita",
+  ];
+
+  // Find all <a href="..."> in the HTML
+  const hrefMatches = Array.from(html.matchAll(/href=["']([^"'#]+)["']/gi));
+  for (const match of hrefMatches) {
+    let href = match[1].trim();
+    if (!href || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("javascript:")) continue;
+
+    try {
+      const resolved = new URL(href, baseUrl);
+      // Same domain only
+      if (resolved.hostname !== base.hostname) continue;
+      // Skip assets
+      if (/\.(css|js|png|jpg|jpeg|gif|svg|ico|pdf|zip|mp4|webp|woff|ttf)$/i.test(resolved.pathname)) continue;
+      links.add(resolved.origin + resolved.pathname);
+    } catch { /* invalid URL */ }
+  }
+
+  // Sort: priority paths first, then by path length (shorter = more important)
+  const sorted = Array.from(links).sort((a, b) => {
+    const pathA = new URL(a).pathname.toLowerCase();
+    const pathB = new URL(b).pathname.toLowerCase();
+    const prioA = priorityPaths.some((p) => pathA.includes(p)) ? 0 : 1;
+    const prioB = priorityPaths.some((p) => pathB.includes(p)) ? 0 : 1;
+    if (prioA !== prioB) return prioA - prioB;
+    return pathA.length - pathB.length;
+  });
+
+  // Remove homepage (already fetched) and limit
+  return sorted.filter((u) => new URL(u).pathname !== "/" && new URL(u).pathname !== base.pathname).slice(0, 7);
+}
+
+/** Crawl website: homepage + up to 7 internal pages */
+async function fetchWebsiteContext(url: string): Promise<string> {
+  let baseUrl = url.trim();
+  if (!baseUrl.startsWith("http")) baseUrl = `https://${baseUrl}`;
+
+  // 1. Fetch homepage
+  const homepage = await fetchPage(baseUrl);
+  if (!homepage) return "";
+
+  // 2. Find internal links from homepage HTML
+  const homepageHtmlRes = await fetch(baseUrl, {
+    headers: { "User-Agent": "SeaGeo-Bot/1.0" },
+    signal: AbortSignal.timeout(6000),
+  }).catch(() => null);
+  const homepageHtml = homepageHtmlRes ? await homepageHtmlRes.text() : "";
+  const internalLinks = extractInternalLinks(homepageHtml, baseUrl);
+
+  // 3. Fetch internal pages in parallel (max 7)
+  const internalPages = await Promise.all(
+    internalLinks.map((link) => fetchPage(link))
+  );
+
+  // 4. Build structured context
+  const allPages = [homepage, ...internalPages.filter(Boolean)] as NonNullable<Awaited<ReturnType<typeof fetchPage>>>[];
+  const sections: string[] = [];
+
+  for (const page of allPages) {
+    const pagePath = new URL(page.url).pathname;
+    const label = pagePath === "/" ? "Homepage" : pagePath;
+    const parts: string[] = [`[${label}]`];
+    if (page.title) parts.push(`Titolo: ${page.title}`);
+    if (page.description) parts.push(`Descrizione: ${page.description}`);
+    if (page.headings.length) parts.push(`Titoli: ${page.headings.join(" | ")}`);
+    if (page.text) parts.push(page.text.slice(0, 800));
+    sections.push(parts.join("\n"));
+  }
+
+  console.log(`[ai-generate] crawled ${allPages.length} pages from ${baseUrl}`);
+  return sections.join("\n\n");
 }
 
 function buildSystemPrompt(
