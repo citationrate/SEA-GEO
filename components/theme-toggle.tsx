@@ -32,8 +32,8 @@ export function ThemeToggle() {
         aria-label="Toggle theme"
       >
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200"
-          style={{ transform: light ? "translateX(22px)" : "translateX(2px)" }}
+          className="absolute w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200"
+          style={{ top: "50%", transform: light ? "translate(22px, -50%)" : "translate(2px, -50%)" }}
         />
       </button>
     </div>
