@@ -127,16 +127,34 @@ interface BrandDetection {
   matchedVariant: string | null;
 }
 
-/** Strip markdown formatting: **bold**, *italic*, _underline_, `code`, [links](url) */
+/** Strip markdown and HTML formatting to get plain text for brand matching */
 function stripMarkdown(s: string): string {
   return s
-    .replace(/\*\*(.+?)\*\*/g, "$1")     // **bold**
+    // Code blocks (multi-line and inline)
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    // Bold/italic combinations (must go before single)
+    .replace(/\*\*\*(.+?)\*\*\*/g, "$1")  // ***bold italic***
+    .replace(/\*\*(.+?)\*\*/g, "$1")      // **bold**
     .replace(/\*(.+?)\*/g, "$1")          // *italic*
+    .replace(/___(.+?)___/g, "$1")        // ___bold italic___
     .replace(/__(.+?)__/g, "$1")          // __underline__
     .replace(/_(.+?)_/g, "$1")            // _italic_
-    .replace(/`(.+?)`/g, "$1")            // `code`
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // [text](url)
-    .replace(/#{1,6}\s/g, "");            // # headings
+    .replace(/~~(.+?)~~/g, "$1")          // ~~strikethrough~~
+    // Links and images
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")  // ![alt](url)
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")   // [text](url)
+    // HTML tags
+    .replace(/<[^>]+>/g, " ")
+    // Headings
+    .replace(/#{1,6}\s/g, "")
+    // List markers
+    .replace(/^[\s]*[-*+]\s/gm, "")
+    .replace(/^[\s]*\d+\.\s/gm, "")
+    // URLs (extract domain name — helps match brands in URLs like prisma.it)
+    .replace(/https?:\/\/(?:www\.)?([a-zA-Z0-9-]+)\.[a-z]{2,}[^\s)"]*/gi, " $1 ")
+    // Clean up extra whitespace
+    .replace(/\s+/g, " ");
 }
 
 /**
@@ -163,11 +181,24 @@ function detectBrandMention(response: string, targetBrand: string): BrandDetecti
   // Sort: longer variants first (full name before first-word)
   const sorted = effectiveVariants.sort((a, b) => b.length - a.length);
 
+  // Strategy 1: Word-boundary regex on cleaned text
   for (const variant of sorted) {
     const variantNorm = stripAccents(variant);
-    // Use word-boundary matching to avoid false positives
     const pattern = new RegExp(`\\b${escapeRegex(variantNorm)}\\b`, "gi");
     const matches = responseNorm.match(pattern);
+    if (matches && matches.length > 0) {
+      return { mentioned: true, occurrences: matches.length, matchedVariant: variant };
+    }
+  }
+
+  // Strategy 2: Try on raw response (before markdown stripping) — catches brands
+  // inside markdown formatting that stripMarkdown might mangle
+  const rawLower = stripAccents(response.toLowerCase());
+  for (const variant of sorted) {
+    const variantNorm = stripAccents(variant);
+    // More permissive: allow brand surrounded by any non-alphanumeric char
+    const pattern = new RegExp(`(?:^|[^a-z0-9])${escapeRegex(variantNorm)}(?:[^a-z0-9]|$)`, "gi");
+    const matches = rawLower.match(pattern);
     if (matches && matches.length > 0) {
       return { mentioned: true, occurrences: matches.length, matchedVariant: variant };
     }
@@ -333,7 +364,7 @@ export async function extractFromResponse(
   // Robust brand detection with variants and partial matching
   const detection = detectBrandMention(response, targetBrand);
 
-  console.log(`[extractor] brand="${targetBrand}" detected=${detection.mentioned} occurrences=${detection.occurrences} variant="${detection.matchedVariant}" responseLen=${response.length}`);
+  console.log(`[extractor] brand="${targetBrand}" detected=${detection.mentioned} occurrences=${detection.occurrences} variant="${detection.matchedVariant}" responseLen=${response.length} preview="${response.substring(0, 150).replace(/\n/g, " ")}"`);
 
   // If brand not present, use a lighter prompt for competitors/topics/sources only
   if (!detection.mentioned) {
