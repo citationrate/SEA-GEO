@@ -19,7 +19,7 @@ export default async function DashboardPage({
   // Get all projects for this user
   const { data: projects } = await supabase
     .from("projects")
-    .select("id, name, target_brand")
+    .select("id, name, target_brand, models_config")
     .eq("user_id", user.id)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
