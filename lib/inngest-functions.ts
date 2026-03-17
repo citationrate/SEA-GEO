@@ -295,7 +295,7 @@ async function executePrompt(
 
   if (!rawText) return;
 
-  const extraction = await extractFromResponse(rawText, task.targetBrand, task.knownCompetitors, task.sector ?? undefined, task.brandType ?? undefined, task.language ?? undefined);
+  const extraction = await extractFromResponse(rawText, task.targetBrand, task.knownCompetitors, task.sector ?? undefined, task.brandType ?? undefined, task.language ?? undefined, task.brandDomain);
 
   // Validation: warn if long response but no brand/competitors detected
   if (rawText.length > 100 && !extraction.brand_mentioned && extraction.competitors_found.length === 0) {

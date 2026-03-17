@@ -79,12 +79,24 @@ function buildBrandVariants(brand: string): string[] {
   }
 
   // First distinctive word for multi-word brands
-  // Skip generic prefixes that shouldn't match alone
+  // Skip generic words that would produce too many false positives when matched alone
   const GENERIC_WORDS = new Set([
+    // Articles & prepositions
     "il", "la", "le", "lo", "i", "gli", "un", "una", "the", "a", "an",
     "di", "del", "della", "dei", "delle", "of", "de",
-    "san", "saint", "new", "old", "gran", "grande", "big",
+    // Common prefixes
+    "san", "saint", "new", "old", "gran", "grande", "big", "prima", "primo",
     "gruppo", "group", "società", "company", "brand",
+    // Generic business words (IT)
+    "soluzione", "soluzioni", "studio", "studi", "centro", "servizio", "servizi",
+    "agenzia", "consulenza", "sistema", "sistemi", "rete", "punto", "casa",
+    "mondo", "terra", "verde", "blu", "rosso", "oro", "luce", "sole",
+    "facile", "veloce", "smart", "top", "best", "pro", "plus", "extra",
+    "digital", "tech", "web", "net", "online", "global", "express",
+    // Generic business words (EN)
+    "solution", "solutions", "service", "services", "agency", "consulting",
+    "center", "system", "systems", "network", "point", "home", "world",
+    "easy", "fast", "quick", "direct", "blue", "green", "red", "gold",
   ]);
 
   const words = clean.split(/\s+/);
@@ -141,15 +153,19 @@ function detectBrandMention(response: string, targetBrand: string): BrandDetecti
   const responseLower = cleaned.toLowerCase();
   const responseNorm = stripAccents(responseLower);
   const variants = buildBrandVariants(targetBrand);
+  const generic = isGenericBrandName(targetBrand);
 
-  // Try full-name variants first (higher confidence), then partial
+  // For generic brand names, only try full-name match (skip single-word partials)
+  const effectiveVariants = generic
+    ? variants.filter((v) => v.includes(" ") || v === targetBrand.toLowerCase().trim())
+    : variants;
+
   // Sort: longer variants first (full name before first-word)
-  const sorted = variants.sort((a, b) => b.length - a.length);
+  const sorted = effectiveVariants.sort((a, b) => b.length - a.length);
 
   for (const variant of sorted) {
     const variantNorm = stripAccents(variant);
     // Use word-boundary matching to avoid false positives
-    // e.g. "Costa" should match "Costa" but not "Costabile"
     const pattern = new RegExp(`\\b${escapeRegex(variantNorm)}\\b`, "gi");
     const matches = responseNorm.match(pattern);
     if (matches && matches.length > 0) {
@@ -158,6 +174,29 @@ function detectBrandMention(response: string, targetBrand: string): BrandDetecti
   }
 
   return { mentioned: false, occurrences: 0, matchedVariant: null };
+}
+
+/** Check if a brand name is composed of generic/common words that could cause false positives */
+function isGenericBrandName(brand: string): boolean {
+  const GENERIC = new Set([
+    "soluzione", "soluzioni", "solution", "solutions",
+    "studio", "studi", "centro", "center",
+    "servizio", "servizi", "service", "services",
+    "agenzia", "agency", "consulenza", "consulting",
+    "sistema", "sistemi", "system", "systems",
+    "rete", "network", "punto", "point",
+    "casa", "home", "mondo", "world",
+    "gruppo", "group", "digital", "tech", "web", "online",
+    "tasse", "tax", "taxes", "legale", "legal",
+    "salute", "health", "verde", "green", "blu", "blue",
+    "facile", "easy", "veloce", "fast", "smart", "express",
+    "prima", "first", "top", "best", "pro", "plus",
+    "energia", "energy", "luce", "light",
+    "sport", "food", "design", "lab", "arte", "art",
+  ]);
+  const words = brand.toLowerCase().trim().split(/\s+/);
+  // If ALL words in the brand name are generic, it's a generic name
+  return words.length >= 1 && words.every((w) => GENERIC.has(w) || w.length <= 2);
 }
 
 function positionScore(rank: number | null, nCompetitors: number): number {
@@ -173,6 +212,7 @@ async function extractCompetitorsTopicsSources(
   sector?: string,
   brandType?: string,
   language?: string,
+  brandDomain?: string | null,
 ): Promise<Pick<ExtractionResult, "topics" | "competitors_found" | "sources">> {
   // Clean control characters that may break Claude parsing
   const cleanResponse = response
@@ -288,6 +328,7 @@ export async function extractFromResponse(
   sector?: string,
   brandType?: string,
   language?: string,
+  brandDomain?: string | null,
 ): Promise<ExtractionResult> {
   // Robust brand detection with variants and partial matching
   const detection = detectBrandMention(response, targetBrand);
@@ -297,7 +338,7 @@ export async function extractFromResponse(
   // If brand not present, use a lighter prompt for competitors/topics/sources only
   if (!detection.mentioned) {
     const partialResult = await extractCompetitorsTopicsSources(
-      response, targetBrand, knownCompetitors, sector, brandType, language
+      response, targetBrand, knownCompetitors, sector, brandType, language, brandDomain
     );
     return {
       brand_mentioned: false,
@@ -333,13 +374,21 @@ export async function extractFromResponse(
   };
   const brandTypeContext = brandTypeLabels[brandType ?? "manufacturer"] ?? "Generic brand";
 
+  const domainContext = brandDomain ? `\nBrand website: ${brandDomain}` : "";
+  const genericNameWarning = isGenericBrandName(targetBrand)
+    ? `\n\nCRITICAL — GENERIC BRAND NAME WARNING: The brand "${targetBrand}" contains common/generic words. You MUST distinguish between:
+- The SPECIFIC COMPANY/BRAND "${targetBrand}"${brandDomain ? ` (website: ${brandDomain})` : ""} being mentioned as an entity
+- Generic use of the same words in normal language (e.g. "soluzione" meaning "solution", "tasse" meaning "taxes")
+Only set brand_mentioned=true if the response refers to "${targetBrand}" as a SPECIFIC company/brand/entity, NOT when the words appear in their generic meaning.`
+    : "";
+
   const systemPrompt = `You are an AI analyst. Analyze an AI model's response and extract structured data.
 IMPORTANT: All extracted topics, adjectives, labels, and text fields MUST be in ${lang} — match the language of the response being analyzed.
 
-Brand to analyze: "${targetBrand}"
+Brand to analyze: "${targetBrand}"${domainContext}
 ${sectorContext}
 Brand type: ${brandTypeContext}
-Known competitors: ${knownCompetitors.length > 0 ? knownCompetitors.join(", ") : "none specified"}
+Known competitors: ${knownCompetitors.length > 0 ? knownCompetitors.join(", ") : "none specified"}${genericNameWarning}
 
 Respond ONLY with valid JSON, no markdown or extra text.
 
@@ -499,7 +548,7 @@ FORMAT: Return ONLY the commercial name.`;
 
     // Still attempt partial extraction for competitors/topics
     const partialResult = await extractCompetitorsTopicsSources(
-      response, targetBrand, knownCompetitors, sector, brandType, language
+      response, targetBrand, knownCompetitors, sector, brandType, language, brandDomain
     );
 
     return {
