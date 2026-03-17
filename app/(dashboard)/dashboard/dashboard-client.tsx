@@ -2,6 +2,7 @@
 
 import { AVIRing, StatsRow, AVITrend, CompetitorBar, RecentRuns } from "@/components/dashboard/index";
 import { ProjectSelector } from "@/components/project-selector";
+import { AnalysisLauncher } from "@/app/(dashboard)/projects/[id]/analysis-launcher";
 import { useTranslation } from "@/lib/i18n/context";
 
 interface DashboardClientProps {
@@ -15,6 +16,10 @@ interface DashboardClientProps {
   competitorBarData: { name: string; avi: number }[];
   projects?: { id: string; name: string }[];
   models?: string[];
+  activeProjectId?: string | null;
+  projectQueryCount?: number;
+  projectSegmentCount?: number;
+  projectModelsConfig?: string[];
 }
 
 export function DashboardClient({
@@ -28,6 +33,10 @@ export function DashboardClient({
   competitorBarData,
   projects,
   models,
+  activeProjectId,
+  projectQueryCount,
+  projectSegmentCount,
+  projectModelsConfig,
 }: DashboardClientProps) {
   const { t } = useTranslation();
 
@@ -43,6 +52,15 @@ export function DashboardClient({
         </div>
         <div className="flex items-center gap-3">
           {projects && <ProjectSelector projects={projects} />}
+          {activeProjectId && (
+            <AnalysisLauncher
+              projectId={activeProjectId}
+              hasQueries={(projectQueryCount ?? 0) > 0}
+              queryCount={projectQueryCount ?? 0}
+              segmentCount={projectSegmentCount ?? 0}
+              modelsConfig={projectModelsConfig ?? ["gpt-4o-mini"]}
+            />
+          )}
         </div>
       </div>
 

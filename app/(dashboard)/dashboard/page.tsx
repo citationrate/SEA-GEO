@@ -186,6 +186,30 @@ export default async function DashboardPage({
     }));
   }
 
+  // Get query count + models for the selected project (for analysis launcher)
+  const activeProjectId = selectedId ?? projectIds[0] ?? null;
+  let projectQueryCount = 0;
+  let projectSegmentCount = 0;
+  let projectModelsConfig: string[] = [];
+
+  if (activeProjectId) {
+    const { count: qCount } = await supabase
+      .from("queries")
+      .select("*", { count: "exact", head: true })
+      .eq("project_id", activeProjectId);
+    projectQueryCount = qCount ?? 0;
+
+    const { count: sCount } = await supabase
+      .from("audience_segments")
+      .select("*", { count: "exact", head: true })
+      .eq("project_id", activeProjectId)
+      .eq("is_active", true);
+    projectSegmentCount = sCount ?? 0;
+
+    const proj = projectMap.get(activeProjectId);
+    projectModelsConfig = (proj?.models_config as string[]) ?? ["gpt-4o-mini"];
+  }
+
   return (
     <DashboardClient
       aviScore={aviScore}
@@ -198,6 +222,10 @@ export default async function DashboardPage({
       competitorBarData={competitorBarData}
       projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))}
       models={allModelsList}
+      activeProjectId={activeProjectId}
+      projectQueryCount={projectQueryCount}
+      projectSegmentCount={projectSegmentCount}
+      projectModelsConfig={projectModelsConfig}
     />
   );
 }
