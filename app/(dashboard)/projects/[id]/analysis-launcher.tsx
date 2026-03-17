@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Play, X, Loader2, Cpu, Globe, AlertTriangle } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
+import { useUsage } from "@/lib/hooks/useUsage";
 
 const RUN_OPTIONS = [
   { value: 1, label: "1 run", desc: "Veloce" },
@@ -40,23 +41,9 @@ export function AnalysisLauncher({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Profile data for quota check
-  const [isPro, setIsPro] = useState(false);
-  const [queriesUsed, setQueriesUsed] = useState(0);
-  const [profileLoaded, setProfileLoaded] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/profile")
-      .then((r) => r.json())
-      .then((p) => {
-        setIsPro(p?.plan === "pro" || p?.plan === "agency");
-        setQueriesUsed(p?.queries_used_this_month ?? 0);
-      })
-      .catch(() => {})
-      .finally(() => setProfileLoaded(true));
-  }, []);
-
-  const monthlyLimit = isPro ? 500 : 100;
+  // Usage & plan limits
+  const usage = useUsage();
+  const profileLoaded = !usage.loading;
 
   const totalPrompts = useMemo(() => {
     return modelsConfig.length * queryCount * Math.max(segmentCount, 1) * runCount;
@@ -67,8 +54,9 @@ export function AnalysisLauncher({
     return queryCount * modelsConfig.length * runCount;
   }, [queryCount, modelsConfig.length, runCount]);
 
-  const remaining = monthlyLimit - queriesUsed;
+  const remaining = usage.promptsRemaining;
   const wouldExceed = queryCost > remaining;
+  const modelsExceed = modelsConfig.length > usage.maxModelsPerProject;
 
   async function startAnalysis() {
     setLoading(true);
@@ -215,17 +203,25 @@ export function AnalysisLauncher({
               </p>
               {profileLoaded && (
                 <p className="text-xs text-muted-foreground">
-                  Hai <span className="text-foreground font-medium">{remaining}</span> {t("analysisLauncher.queriesRemaining")} ({queriesUsed}/{monthlyLimit} utilizzate)
+                  Hai <span className="text-foreground font-medium">{remaining}</span> {t("analysisLauncher.queriesRemaining")} ({usage.promptsUsed}/{usage.promptsLimit} utilizzate)
                 </p>
               )}
             </div>
 
-            {/* Exceed warning */}
+            {/* Exceed warnings */}
             {profileLoaded && wouldExceed && (
               <div className="flex items-start gap-2.5 rounded-[2px] border border-destructive/30 bg-destructive/10 px-4 py-3">
                 <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
                 <p className="text-xs text-destructive">
                   {t("analysisLauncher.notEnoughQueries")}
+                </p>
+              </div>
+            )}
+            {profileLoaded && modelsExceed && (
+              <div className="flex items-start gap-2.5 rounded-[2px] border border-destructive/30 bg-destructive/10 px-4 py-3">
+                <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                <p className="text-xs text-destructive">
+                  Il tuo piano supporta max {usage.maxModelsPerProject} modelli per progetto.
                 </p>
               </div>
             )}
@@ -249,7 +245,7 @@ export function AnalysisLauncher({
               </button>
               <button
                 onClick={startAnalysis}
-                disabled={loading || (profileLoaded && wouldExceed)}
+                disabled={loading || (profileLoaded && (wouldExceed || modelsExceed))}
                 className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-sm hover:bg-primary/85 transition-colors disabled:opacity-50"
               >
                 {loading ? (

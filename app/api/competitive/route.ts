@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { inngest } from "@/lib/inngest";
+import { getUserPlanLimits, getCurrentUsage, incrementComparisonsUsed } from "@/lib/usage";
 
 const startSchema = z.object({
   project_id: z.string().uuid(),
@@ -22,6 +23,16 @@ export async function POST(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
     const { project_id, brand_b, driver, models } = parsed.data;
+
+    // Plan limits check
+    const plan = await getUserPlanLimits(user.id);
+    if (!plan.can_access_comparisons) {
+      return NextResponse.json({ error: "I confronti AI sono disponibili dal piano Pro." }, { status: 403 });
+    }
+    const usage = await getCurrentUsage(user.id);
+    if (usage.comparisonsUsed >= plan.max_comparisons) {
+      return NextResponse.json({ error: `Hai raggiunto il limite di ${plan.max_comparisons} confronti mensili.` }, { status: 403 });
+    }
 
     // Get project brand
     const { data: project } = await supabase
@@ -62,6 +73,11 @@ export async function POST(request: Request) {
         models,
       },
     });
+
+    // Increment usage
+    await incrementComparisonsUsed(user.id).catch((err) =>
+      console.error("[competitive] usage increment error:", err)
+    );
 
     return NextResponse.json({ id: analysis.id }, { status: 201 });
   } catch (err) {

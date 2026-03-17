@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { ALL_MODEL_IDS } from "@/lib/engine/models";
 import { inngest } from "@/lib/inngest";
+import { getUserPlanLimits, getCurrentUsage, incrementPromptsUsed } from "@/lib/usage";
 
 const startSchema = z.object({
   project_id: z.string().uuid(),
@@ -58,6 +59,19 @@ export async function POST(request: Request) {
 
     if (!queries?.length) return NextResponse.json({ error: "Nessuna query configurata" }, { status: 400 });
 
+    // Plan limits check
+    const plan = await getUserPlanLimits(user.id);
+    const usage = await getCurrentUsage(user.id);
+    const promptCost = queries.length * validModels.length * run_count;
+
+    if (validModels.length > plan.max_models_per_project) {
+      return NextResponse.json({ error: `Il tuo piano supporta max ${plan.max_models_per_project} modelli per progetto.` }, { status: 403 });
+    }
+
+    if (usage.promptsUsed + promptCost > plan.monthly_prompts) {
+      return NextResponse.json({ error: "Hai esaurito i prompt mensili del tuo piano. Passa al piano Pro per continuare." }, { status: 403 });
+    }
+
     // Count existing runs for version number
     const { count: existingRuns } = await supabase
       .from("analysis_runs")
@@ -96,6 +110,11 @@ export async function POST(request: Request) {
         browsing,
       },
     });
+
+    // Increment usage
+    await incrementPromptsUsed(user.id, promptCost).catch((err) =>
+      console.error("[analysis/start] usage increment error:", err)
+    );
 
     return NextResponse.json({
       run_id: run.id,
