@@ -26,16 +26,14 @@ export function AVIRing({ score, trend, components, noBrandMentions, hideCompone
   const trendColor = trend == null ? "text-cream-dim"
     : trend > 0 ? "text-success" : "text-destructive";
 
-  // Continuous color interpolation: red(0) → orange(33) → yellow(55) → green(100)
+  // Pastel color interpolation matching design system palette
+  // 0: muted coral (#c06a4a) → 50: muted amber (#c4a882) → 100: sage green (#7eb89a)
   function scoreToColor(v: number): string {
     const t = Math.max(0, Math.min(100, v)) / 100;
-    // HSL hue: 0 (red) → 30 (orange) → 50 (yellow) → 142 (green from design system)
     const hue = t < 0.5
-      ? t * 2 * 50        // 0→50: red to yellow
-      : 50 + (t - 0.5) * 2 * 92; // 50→142: yellow to green
-    const sat = 65 + t * 10; // slightly more saturated as it gets greener
-    const light = 45 + t * 5;
-    return `hsl(${Math.round(hue)}, ${Math.round(sat)}%, ${Math.round(light)}%)`;
+      ? 15 + t * 2 * 25     // 15→40: coral to amber
+      : 40 + (t - 0.5) * 2 * 110; // 40→150: amber to sage green
+    return `hsl(${Math.round(hue)}, 40%, 55%)`;
   }
   const aviColor = scoreToColor(score ?? 0);
 
