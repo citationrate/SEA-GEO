@@ -115,13 +115,12 @@ User triggers analysis → Inngest function starts
 ```
 
 ## Web Search Tool (Anthropic)
-- Version: `web_search_20260209` (dynamic filtering)
-- Replaces: `web_search_20250305`
-- Dynamic filtering: enabled by default on Haiku 4.5, Sonnet 4.5, Opus 4.5
+- Version: `web_search_20250305` (stable)
+- NOTE: `web_search_20260209` was rolled back — dynamic filtering consumed too many
+  tokens internally, causing response truncation even at max_tokens=4096
 - `max_uses`: 2 (Haiku) / 3 (Sonnet) / 5 (Opus) by model tier
+- `max_tokens`: 16384 for web search path (tool_use blocks share the budget)
 - `user_location`: IT / Europe/Rome
-- `blocked_domains`: facebook.com, instagram.com, twitter.com, tiktok.com
-- NOT ZDR-eligible (use `allowed_callers: ["direct"]` for ZDR)
 - Only applies to Anthropic model calls when `browsing=true`, not Gemini/Perplexity/OpenAI
 
 ## Environment Variables

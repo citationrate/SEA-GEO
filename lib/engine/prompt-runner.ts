@@ -69,15 +69,15 @@ export async function callAIModel(
         // Try web search when browsing=true, with graceful fallback
         if (browsing) {
           try {
-            // max_tokens: 4096 for web search — tool_use blocks consume tokens from
-            // the same budget, leaving less for the actual text response.
-            // With 1500 + 2-3 searches, text was getting truncated.
+            // Using web_search_20250305 (stable) — web_search_20260209 dynamic filtering
+            // consumed too many tokens internally, causing response truncation even at 4096.
+            // max_tokens: 16384 to ensure full response even with tool_use overhead.
             const msg = await anthropic.messages.create({
               model: apiModel,
-              max_tokens: 4096,
+              max_tokens: 16384,
               messages: [{ role: "user", content: prompt }],
               tools: [{
-                type: "web_search_20260209",
+                type: "web_search_20250305",
                 name: "web_search",
                 max_uses: ANTHROPIC_SEARCH_MAX_USES[model] ?? 3,
                 user_location: {
@@ -85,12 +85,6 @@ export async function callAIModel(
                   country: "IT",
                   timezone: "Europe/Rome",
                 },
-                blocked_domains: [
-                  "facebook.com",
-                  "instagram.com",
-                  "twitter.com",
-                  "tiktok.com",
-                ],
               }],
             } as any);
 
