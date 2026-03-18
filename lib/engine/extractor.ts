@@ -330,11 +330,11 @@ Known competitors: ${knownCompetitors.length > 0 ? knownCompetitors.join(", ") :
 ${langInstr}
 
 Extract:
-- competitors_found: max 3 most relevant brands mentioned, with competitive type
-- topics: max 3 main topics discussed (in ${lang})
-- sources: max 3 most relevant sites/domains cited
+- competitors_found: ALL brands/companies/services mentioned that compete with the target brand
+- topics: main topics discussed (in ${lang})
+- sources: most relevant sites/domains cited
 
-Respond ONLY with valid JSON. Max 3 competitors, max 3 topics, max 3 sources. No text before or after JSON.
+Respond ONLY with valid JSON. No text before or after JSON.
 
 Required JSON schema:
 {
@@ -542,7 +542,7 @@ Rules:
   -0.5 = discouraged with reservations
   -1.0 = explicitly discouraged
   If brand_mentioned is false, use 0.0.
-- topics: main topics discussed in the response (max 5, in ${lang})
+- topics: main topics discussed in the response (in ${lang})
 - competitors_found: for each competitor found:
   - name: brand name
   - type: competitor type ("direct"|"indirect"|"channel"|"aggregator")
