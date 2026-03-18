@@ -491,7 +491,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                   const size = count >= 5 ? "text-sm" : count >= 3 ? "text-xs" : "text-[12px]";
                   const opacity = count >= 5 ? "opacity-100" : count >= 3 ? "opacity-80" : "opacity-60";
                   return (
-                    <span key={name} className={`badge badge-muted ${size} ${opacity}`}>
+                    <span key={name} className={`badge badge-muted ${size} ${opacity} whitespace-normal break-words max-w-full`} title={name}>
                       {name}
                     </span>
                   );
