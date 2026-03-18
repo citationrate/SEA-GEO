@@ -238,16 +238,16 @@ export function NewCompetitiveForm({
                 </div>
                 {generatedQueries.map((q, i) => (
                   <div key={i} className="flex items-start gap-2">
-                    <span className="badge badge-primary text-[12px] mt-2 shrink-0">{q.pattern}</span>
-                    <input
-                      type="text"
+                    <span className="badge badge-primary text-[12px] mt-1.5 shrink-0">{q.pattern}</span>
+                    <textarea
                       value={q.text}
                       onChange={(e) => {
                         const updated = [...generatedQueries];
                         updated[i] = { ...updated[i], text: e.target.value };
                         setGeneratedQueries(updated);
                       }}
-                      className="input-base flex-1 text-xs"
+                      rows={2}
+                      className="input-base flex-1 text-xs leading-relaxed resize-none"
                     />
                   </div>
                 ))}
