@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, ArrowRight, Sparkles, Loader2, Plus, X, Users,
-  ChevronLeft, MessageCircleQuestion, Check, Crown, Eye,
+  ChevronLeft, MessageCircleQuestion, Check, Eye,
   ToggleLeft, ToggleRight, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -324,11 +324,6 @@ export default function GenerateQueriesPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-display font-bold text-2xl text-foreground">{t("settings.generatePromptAI")}</h1>
-              {isPro && (
-                <span className="inline-flex items-center gap-1 font-mono text-[0.75rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px]">
-                  <Crown className="w-3 h-3" /> PRO
-                </span>
-              )}
             </div>
             <p className="text-sm text-muted-foreground mt-0.5">
               {t("generateQueries.subtitle")}
@@ -337,28 +332,8 @@ export default function GenerateQueriesPage() {
         </div>
       </div>
 
-      {/* Pro gate for non-Pro users */}
-      {profileLoaded && !isPro && (
-        <div className="card border-[#c4a882]/20 bg-[#c4a882]/5 p-6 space-y-3">
-          <div className="flex items-center gap-2">
-            <Crown className="w-5 h-5 text-[#c4a882]" />
-            <h2 className="font-display font-semibold text-foreground">{t("generateQueries.proFeature")}</h2>
-          </div>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {t("generateQueries.proDesc")}
-          </p>
-          <a
-            href="/settings"
-            className="inline-flex items-center gap-2 bg-[#c4a882] text-black text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-[#c4a882]/80 transition-colors"
-          >
-            <Crown className="w-4 h-4" />
-            {t("generateQueries.upgradePro")}
-          </a>
-        </div>
-      )}
-
-      {/* Wizard content — disabled for non-Pro */}
-      <div className={profileLoaded && !isPro ? "opacity-40 pointer-events-none select-none space-y-6" : "space-y-6"}>
+      {/* Wizard content */}
+      <div className="space-y-6">
 
       {/* Step indicator */}
       <div className="flex items-center gap-2">
