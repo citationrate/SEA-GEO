@@ -263,7 +263,7 @@ interface PromptTask {
   runNumber: number;
   targetBrand: string;
   brandDomain: string | null;
-  knownCompetitors: string[];
+
   language: string;
   browsing: boolean;
   sector: string | null;
@@ -321,7 +321,7 @@ async function executePrompt(
 
   if (!rawText) return;
 
-  const extraction = await extractFromResponse(rawText, task.targetBrand, task.knownCompetitors, task.sector ?? undefined, task.brandType ?? undefined, task.language ?? undefined, task.brandDomain);
+  const extraction = await extractFromResponse(rawText, task.targetBrand, task.sector ?? undefined, task.brandType ?? undefined, task.language ?? undefined, task.brandDomain);
 
   // Detailed extraction logging
   console.log(`[executePrompt] model=${task.model} brand="${task.targetBrand}" brand_mentioned=${extraction.brand_mentioned} competitors_raw=${extraction.competitors_found.length} topics=${extraction.topics.length} responseLen=${rawText.length}`);
@@ -561,7 +561,7 @@ export const runAnalysis = inngest.createFunction(
 
     const targetBrand = project.target_brand;
     const brandDomain = project.website_url ?? null;
-    const knownCompetitors = project.known_competitors ?? [];
+
     const language = project.language;
     const sector = project.sector ?? null;
     const brandTypeVal = project.brand_type ?? null;
@@ -591,7 +591,7 @@ export const runAnalysis = inngest.createFunction(
               runNumber: runNum,
               targetBrand,
               brandDomain,
-              knownCompetitors,
+
               language,
               browsing,
               sector,

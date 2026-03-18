@@ -368,7 +368,6 @@ function positionScore(rank: number | null, nCompetitors: number): number {
 async function extractCompetitorsTopicsSources(
   response: string,
   targetBrand: string,
-  knownCompetitors: string[],
   sector?: string,
   brandType?: string,
   language?: string,
@@ -494,7 +493,6 @@ ${cleanResponse}`;
 export async function extractFromResponse(
   response: string,
   targetBrand: string,
-  knownCompetitors: string[],
   sector?: string,
   brandType?: string,
   language?: string,
@@ -508,7 +506,7 @@ export async function extractFromResponse(
   // If brand not present, use a lighter prompt for competitors/topics/sources only
   if (!detection.mentioned) {
     const partialResult = await extractCompetitorsTopicsSources(
-      response, targetBrand, knownCompetitors, sector, brandType, language, brandDomain
+      response, targetBrand, sector, brandType, language, brandDomain
     );
     return {
       brand_mentioned: false,
@@ -733,7 +731,7 @@ FORMAT: Return ONLY the commercial name.`;
 
     // Still attempt partial extraction for competitors/topics
     const partialResult = await extractCompetitorsTopicsSources(
-      response, targetBrand, knownCompetitors, sector, brandType, language, brandDomain
+      response, targetBrand, sector, brandType, language, brandDomain
     );
 
     return {
