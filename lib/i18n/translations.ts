@@ -389,6 +389,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       quotaExhausted: "Quota esaurita",
       apiError: "Errore API",
       responseDetail: "Dettaglio Risposta",
+      aiResponse: "Risposta AI",
       other: "Altro",
     },
     editProject: {

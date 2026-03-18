@@ -276,6 +276,31 @@
     border: 1px solid rgba(91,169,123,0.2);
   }
 
+  /* AI Response prose */
+  .ai-response-prose p { margin-bottom: 0.5em; }
+  .ai-response-prose p:last-child { margin-bottom: 0; }
+  .ai-h3 { font-size: 0.95rem; font-weight: 600; color: var(--foreground); margin: 0.75em 0 0.25em; }
+  .ai-h4 { font-size: 0.85rem; font-weight: 600; color: var(--foreground); margin: 0.5em 0 0.25em; }
+  .ai-ul, .ai-ol { padding-left: 1.25em; margin: 0.25em 0; }
+  .ai-ul { list-style: disc; }
+  .ai-ol { list-style: decimal; }
+  .ai-ul li, .ai-ol li { margin-bottom: 0.15em; }
+  .ai-link { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
+  .ai-link:hover { opacity: 0.7; }
+  .ai-code { font-family: var(--font-mono); font-size: 0.8em; background: var(--surface-2); padding: 0.1em 0.3em; border-radius: 2px; }
+  .ai-citation-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 1.1em; height: 1.1em; padding: 0 0.2em;
+    font-size: 0.65em; font-weight: 700; line-height: 1;
+    color: var(--primary); background: var(--primary-glow);
+    border: 1px solid var(--primary-hover); border-radius: 9999px;
+    vertical-align: super; margin: 0 0.05em;
+  }
+  .ai-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 0.5em 0; }
+  .ai-table th { text-align: left; font-weight: 600; padding: 0.35em 0.5em; border-bottom: 1px solid var(--border); color: var(--foreground); }
+  .ai-table td { padding: 0.35em 0.5em; border-bottom: 1px solid var(--border); color: var(--muted-foreground); }
+  .ai-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
   /* Light mode card shadows */
   html.light .card,
   html.light [class*="card"] {

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, Fragment } from "react";
 import { Globe, Tag, Users, ExternalLink, Eye, Hash, TrendingUp, TrendingDown, AlertTriangle, X, ChevronDown, ChevronRight } from "lucide-react";
+import { MarkdownResponse } from "@/components/ui/markdown-response";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -707,12 +708,15 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
               )}
             </div>
 
-            {/* Response note */}
-            <div className="flex items-center gap-2 px-3 py-2 rounded-[2px] border border-border bg-muted/10">
-              <p className="text-xs text-muted-foreground">
-                La risposta completa è consultabile nella sezione <a href="/datasets" className="text-primary hover:text-primary/70 transition-colors font-medium">Dataset</a>.
-              </p>
-            </div>
+            {/* AI Response */}
+            {modalPrompt.prompt.raw_response && (
+              <div className="space-y-1">
+                <p className="font-mono text-[0.75rem] uppercase tracking-wide text-muted-foreground">{t("runMetrics.aiResponse")}</p>
+                <div className="bg-muted/10 rounded-[2px] px-4 py-3 border border-border max-h-[40vh] overflow-y-auto">
+                  <MarkdownResponse text={modalPrompt.prompt.raw_response} />
+                </div>
+              </div>
+            )}
 
             {/* Sources found */}
             {(() => {
