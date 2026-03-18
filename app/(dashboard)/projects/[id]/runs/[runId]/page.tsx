@@ -206,11 +206,11 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
       {/* Header */}
       <div>
         <a
-          href={`/projects/${params.id}`}
+          href="/results"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          <TranslatedLabel tkey="nav.backToProject" />
+          <TranslatedLabel tkey="nav.backToResults" />
         </a>
         <div className="flex items-start justify-between">
           <div>

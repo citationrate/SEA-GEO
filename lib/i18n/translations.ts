@@ -330,7 +330,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       sectors: { tourism: "Turismo", food: "Alimentare", beverages: "Bevande", tech: "Tech", fashion: "Moda", finance: "Finance", automotive: "Automotive", pharma: "Pharma", energy: "Energia", other: "Altro" },
     },
     nav: {
-      backToProject: "Torna al progetto",
+      backToProject: "Torna al progetto", backToResults: "Torna ai risultati",
       backToQueries: "Torna alle query",
       backToComparison: "Torna al confronto",
     },
@@ -925,7 +925,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       sectors: { tourism: "Tourism", food: "Food", beverages: "Beverages", tech: "Tech", fashion: "Fashion", finance: "Finance", automotive: "Automotive", pharma: "Pharma", energy: "Energy", other: "Other" },
     },
     nav: {
-      backToProject: "Back to project",
+      backToProject: "Back to project", backToResults: "Back to results",
       backToQueries: "Back to queries",
       backToComparison: "Back to comparison",
     },
@@ -1520,7 +1520,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       sectors: { tourism: "Tourisme", food: "Alimentaire", beverages: "Boissons", tech: "Tech", fashion: "Mode", finance: "Finance", automotive: "Automobile", pharma: "Pharma", energy: "Énergie", other: "Autre" },
     },
     nav: {
-      backToProject: "Retour au projet",
+      backToProject: "Retour au projet", backToResults: "Retour aux résultats",
       backToQueries: "Retour aux requêtes",
       backToComparison: "Retour à la comparaison",
     },
@@ -2022,7 +2022,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       sectors: { tourism: "Tourismus", food: "Lebensmittel", beverages: "Getränke", tech: "Tech", fashion: "Mode", finance: "Finanzen", automotive: "Automobil", pharma: "Pharma", energy: "Energie", other: "Sonstiges" },
     },
     nav: {
-      backToProject: "Zurück zum Projekt",
+      backToProject: "Zurück zum Projekt", backToResults: "Zurück zu Ergebnissen",
       backToQueries: "Zurück zu Abfragen",
       backToComparison: "Zurück zum Vergleich",
     },
@@ -2519,7 +2519,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       sectors: { tourism: "Turismo", food: "Alimentación", beverages: "Bebidas", tech: "Tech", fashion: "Moda", finance: "Finanzas", automotive: "Automoción", pharma: "Pharma", energy: "Energía", other: "Otro" },
     },
     nav: {
-      backToProject: "Volver al proyecto",
+      backToProject: "Volver al proyecto", backToResults: "Volver a resultados",
       backToQueries: "Volver a las consultas",
       backToComparison: "Volver a la comparación",
     },
