@@ -10,6 +10,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       search: "Cerca", logout: "Logout", loggingOut: "Uscita...",
       noResults: "Nessun risultato", saving: "Salvataggio...",
       goToProjects: "Vai ai progetti",
+      showAll: "Mostra tutto", showLess: "Mostra meno",
     },
     auth: {
       continueGoogle: "Continua con Google",
@@ -605,6 +606,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       search: "Search", logout: "Logout", loggingOut: "Logging out...",
       noResults: "No results", saving: "Saving...",
       goToProjects: "Go to projects",
+      showAll: "Show all", showLess: "Show less",
     },
     auth: {
       continueGoogle: "Continue with Google",
@@ -1198,6 +1200,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       search: "Rechercher", logout: "Déconnexion", loggingOut: "Déconnexion...",
       noResults: "Aucun résultat", saving: "Enregistrement...",
       goToProjects: "Aller aux projets",
+      showAll: "Tout afficher", showLess: "Afficher moins",
     },
     auth: {
       continueGoogle: "Continuer avec Google",
@@ -1698,6 +1701,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       search: "Suchen", logout: "Abmelden", loggingOut: "Abmeldung...",
       noResults: "Keine Ergebnisse", saving: "Speichern...",
       goToProjects: "Zu den Projekten",
+      showAll: "Alle anzeigen", showLess: "Weniger anzeigen",
     },
     auth: {
       continueGoogle: "Weiter mit Google",
@@ -2193,6 +2197,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       search: "Buscar", logout: "Cerrar sesión", loggingOut: "Cerrando sesión...",
       noResults: "Sin resultados", saving: "Guardando...",
       goToProjects: "Ir a proyectos",
+      showAll: "Mostrar todo", showLess: "Mostrar menos",
     },
     auth: {
       continueGoogle: "Continuar con Google",

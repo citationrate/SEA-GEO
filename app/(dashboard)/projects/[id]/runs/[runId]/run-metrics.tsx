@@ -88,6 +88,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
 
   const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null);
   const [modalPrompt, setModalPrompt] = useState<any | null>(null);
+  const [topicsExpanded, setTopicsExpanded] = useState(false);
 
   // Build query map for funnel stage lookup
   const queryMap = useMemo(() => {
@@ -484,17 +485,28 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           {topicList.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">{t("runMetrics.noTopic")}</p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {topicList.map(([name, count]) => {
-                const size = count >= 5 ? "text-sm" : count >= 3 ? "text-xs" : "text-[12px]";
-                const opacity = count >= 5 ? "opacity-100" : count >= 3 ? "opacity-80" : "opacity-60";
-                return (
-                  <span key={name} className={`badge badge-muted ${size} ${opacity}`}>
-                    {name}
-                  </span>
-                );
-              })}
-            </div>
+            <>
+              <div className="flex flex-wrap gap-2">
+                {(topicsExpanded ? topicList : topicList.slice(0, 8)).map(([name, count]) => {
+                  const size = count >= 5 ? "text-sm" : count >= 3 ? "text-xs" : "text-[12px]";
+                  const opacity = count >= 5 ? "opacity-100" : count >= 3 ? "opacity-80" : "opacity-60";
+                  return (
+                    <span key={name} className={`badge badge-muted ${size} ${opacity}`}>
+                      {name}
+                    </span>
+                  );
+                })}
+              </div>
+              {topicList.length > 8 && (
+                <button
+                  onClick={() => setTopicsExpanded(!topicsExpanded)}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {topicsExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                  {topicsExpanded ? t("common.showLess") : `${t("common.showAll")} (${topicList.length})`}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
