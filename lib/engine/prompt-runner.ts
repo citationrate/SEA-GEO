@@ -126,7 +126,7 @@ export async function callAIModel(
         // Standard call (no web search) — also used as fallback when browsing fails
         const msg = await anthropic.messages.create({
           model: apiModel,
-          max_tokens: 3000,
+          max_tokens: 4096,
           messages: [{ role: "user", content: prompt }],
         });
         console.log(`[Anthropic] model=${model} browsing=false stop_reason=${msg.stop_reason} usage_out=${msg.usage?.output_tokens}`);
@@ -188,6 +188,7 @@ export async function callAIModel(
             const geminiModel = genai.getGenerativeModel({
               model: apiModel,
               tools: [{ googleSearch: {} } as any],
+              generationConfig: { maxOutputTokens: 4096 },
             });
             const result = await geminiModel.generateContent(prompt);
             const text = extractGeminiText(result);
@@ -200,7 +201,10 @@ export async function callAIModel(
             console.error("[Gemini grounding] failed:", e?.message);
           }
         }
-        const geminiModel = genai.getGenerativeModel({ model: apiModel });
+        const geminiModel = genai.getGenerativeModel({
+          model: apiModel,
+          generationConfig: { maxOutputTokens: 4096 },
+        });
         const result = await geminiModel.generateContent(prompt);
         const text = extractGeminiText(result);
         if (text) return { text, sources: extractFromText(text, brandDomain ?? undefined) };
@@ -222,7 +226,7 @@ export async function callAIModel(
           body: JSON.stringify({
             model: apiModel,
             messages: [{ role: "user", content: prompt }],
-            max_tokens: 3000,
+            max_tokens: 4096,
             temperature: 0.7,
           }),
         });
@@ -279,7 +283,7 @@ export async function callAIModel(
             },
             body: JSON.stringify({
               messages: [{ role: "user", content: prompt }],
-              max_tokens: 3000,
+              max_tokens: 4096,
               temperature: 0.7,
             }),
           },
@@ -305,7 +309,7 @@ export async function callAIModel(
         });
         const completion = await client.chat.completions.create({
           model: apiModel,
-          max_tokens: 3000,
+          max_tokens: 4096,
           messages: [{ role: "user", content: prompt }],
         });
         const text = completion.choices[0]?.message?.content ?? "";
@@ -338,7 +342,7 @@ export async function callAIModel(
     if (model.startsWith("o1") || model.startsWith("o3")) {
       const completion = await openai.chat.completions.create({
         model: apiModel,
-        max_completion_tokens: 3000,
+        max_completion_tokens: 4096,
         messages: [{ role: "user", content: prompt }],
       } as any);
       const text = completion.choices[0]?.message?.content ?? "";
@@ -348,7 +352,7 @@ export async function callAIModel(
     const completion = await openai.chat.completions.create({
       model: apiModel,
       temperature: 0.7,
-      max_tokens: 3000,
+      max_tokens: 4096,
       messages: [{ role: "user", content: prompt }],
     });
     const text = completion.choices[0]?.message?.content ?? "";
