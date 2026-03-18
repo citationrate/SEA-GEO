@@ -6,12 +6,21 @@ import { User, CreditCard, Ticket, Bell, PlayCircle, LogOut, AlertTriangle, Chec
 import { useTranslation } from "@/lib/i18n/context";
 import { RestartTourButton } from "./restart-tour-button";
 
+interface UsageData {
+  promptsUsed: number;
+  promptsLimit: number;
+  comparisonsUsed: number;
+  comparisonsLimit: number;
+  maxModels: number;
+}
+
 interface SettingsClientProps {
   userId: string;
   email: string;
   fullName: string;
   plan: string;
   notifyAnalysisComplete: boolean;
+  usage: UsageData;
 }
 
 async function patchProfile(data: Record<string, unknown>) {
@@ -29,6 +38,7 @@ export function SettingsClient({
   fullName: initialName,
   plan,
   notifyAnalysisComplete: initialNotifyAnalysis,
+  usage,
 }: SettingsClientProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -189,6 +199,66 @@ export function SettingsClient({
             {t("settings.upgradeProSoon")}
           </button>
         )}
+      </div>
+
+      {/* 2b. Utilizzo mensile */}
+      <div className="card p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <CreditCard className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-semibold text-foreground">{t("settings.monthlyUsage")}</h2>
+        </div>
+
+        {/* Query usage */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">{t("settings.queriesMonth")}</span>
+            <span className="text-foreground font-medium">{usage.promptsUsed} / {usage.promptsLimit}</span>
+          </div>
+          <div className="h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min(100, (usage.promptsUsed / usage.promptsLimit) * 100)}%`,
+                background: usage.promptsUsed >= usage.promptsLimit ? "var(--destructive)" : "var(--primary)",
+              }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {usage.promptsLimit - usage.promptsUsed > 0
+              ? `${usage.promptsLimit - usage.promptsUsed} query disponibili`
+              : "Limite raggiunto"}
+          </p>
+        </div>
+
+        {/* Comparisons usage (only for Pro) */}
+        {isPro && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{t("settings.compareDetections")}</span>
+              <span className="text-foreground font-medium">{usage.comparisonsUsed} / {usage.comparisonsLimit}</span>
+            </div>
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${usage.comparisonsLimit > 0 ? Math.min(100, (usage.comparisonsUsed / usage.comparisonsLimit) * 100) : 0}%`,
+                  background: usage.comparisonsUsed >= usage.comparisonsLimit ? "var(--destructive)" : "var(--primary)",
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Models per project */}
+        <div className="flex items-center justify-between text-sm pt-2 border-t border-border">
+          <span className="text-muted-foreground">{t("settings.maxModels").replace("{n}", String(usage.maxModels))}</span>
+          <span className="text-foreground font-medium">{usage.maxModels === 999 ? "Illimitati" : `Max ${usage.maxModels}`}</span>
+        </div>
+
+        {/* Reset date */}
+        <p className="text-xs text-muted-foreground">
+          Si rinnova il 1 {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString("it-IT", { month: "long" })}
+        </p>
       </div>
 
       {/* 3. Voucher */}
