@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Swords, Trophy, Eye, BarChart3, Loader2, MessageSquare, TrendingUp } from "lucide-react";
+import { ArrowLeft, Swords, Trophy, Eye, BarChart3, Loader2, MessageSquare, TrendingUp, X } from "lucide-react";
+import { MarkdownResponse } from "@/components/ui/markdown-response";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
 import {
@@ -147,6 +148,7 @@ export function CompetitiveResults({
 
   // Model filter state
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [expandedPrompt, setExpandedPrompt] = useState<Prompt | null>(null);
 
   const models = useMemo(() => {
     const unique = Array.from(new Set(prompts.map((p) => p.model)));
@@ -382,7 +384,11 @@ export function CompetitiveResults({
                   {filteredPrompts.map((p) => {
                     const rec = recLabel(p.recommendation, a.brand_a, a.brand_b);
                     return (
-                      <tr key={p.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                      <tr
+                        key={p.id}
+                        className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
+                        onClick={() => p.response_text && setExpandedPrompt(p)}
+                      >
                         <td className="px-4 py-2.5">
                           <span className="badge badge-primary text-[12px]">{p.pattern_type}</span>
                         </td>
@@ -499,6 +505,50 @@ export function CompetitiveResults({
             </>
           )}
         </>
+      )}
+
+      {/* Response detail modal */}
+      {expandedPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setExpandedPrompt(null)}>
+          <div className="absolute inset-0 bg-black/60" />
+          <div
+            className="relative w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-lg shadow-2xl p-6 space-y-4"
+            style={{ background: "#111416", border: "1px solid rgba(126,184,154,0.2)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-display font-bold text-lg text-foreground">{t("compare.responseDetail")}</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">{expandedPrompt.query_text}</p>
+              </div>
+              <button onClick={() => setExpandedPrompt(null)} className="text-muted-foreground hover:text-foreground transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-3 text-xs">
+              <span className="badge badge-primary">{expandedPrompt.pattern_type}</span>
+              <span className="badge badge-muted">{getModelDisplayName(expandedPrompt.model)}</span>
+              <span className="badge badge-muted">Run #{expandedPrompt.run_number}</span>
+              {expandedPrompt.recommendation != null && (() => {
+                const rec = recLabel(expandedPrompt.recommendation, a.brand_a, a.brand_b);
+                return <span className={`badge badge-muted ${rec.cls}`}>{rec.isKey ? t(rec.text) : rec.text}</span>;
+              })()}
+            </div>
+
+            {expandedPrompt.key_arguments && expandedPrompt.key_arguments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {expandedPrompt.key_arguments.map((arg, i) => (
+                  <span key={i} className="text-xs bg-muted border border-border rounded-[2px] px-2 py-0.5 text-foreground">{arg}</span>
+                ))}
+              </div>
+            )}
+
+            <div className="bg-muted/10 rounded-[2px] px-4 py-3 border border-border max-h-[50vh] overflow-y-auto">
+              <MarkdownResponse text={expandedPrompt.response_text || ""} />
+            </div>
+          </div>
+        </div>
       )}
 
       {a.status === "failed" && (
