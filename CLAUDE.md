@@ -1,4 +1,4 @@
-# SeaGeo - AI Visibility Intelligence Platform
+# SeaGeo — AI Visibility Intelligence Platform
 
 ## Project Overview
 SeaGeo is a Next.js 14 platform that measures brand visibility across AI models (OpenAI, Claude, Gemini, Perplexity, Grok). It calculates an AVI (AI Visibility Index) score and provides competitor discovery, topic analysis, and source extraction.
