@@ -303,9 +303,12 @@ async function extractCompetitorsTopicsSources(
   language?: string,
   brandDomain?: string | null,
 ): Promise<Pick<ExtractionResult, "topics" | "competitors_found" | "sources">> {
-  // Clean control characters that may break Claude parsing
+  // Clean control characters and Perplexity-style citation markers [1], [2], etc.
+  // that can confuse Haiku into including them in competitor names
   const cleanResponse = response
     .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+    .replace(/\[(\d{1,2})\]/g, "")
+    .replace(/\s{2,}/g, " ")
     .trim();
 
   if (!cleanResponse || cleanResponse.length < 50) {
@@ -572,11 +575,12 @@ FORMAT: Return ONLY the commercial name.`;
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const message = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1000,
+    max_tokens: 2000,
     messages: [
       {
         role: "user",
-        content: `${systemPrompt}\n\nAnalizza questa risposta:\n\n${response}`,
+        // Strip Perplexity-style citation markers [1], [2] that can pollute extracted names
+        content: `${systemPrompt}\n\nAnalizza questa risposta:\n\n${response.replace(/\[(\d{1,2})\]/g, "").replace(/\s{2,}/g, " ")}`,
       },
     ],
   });
@@ -585,7 +589,8 @@ FORMAT: Return ONLY the commercial name.`;
     ? message.content[0].text
     : "{}";
 
-  console.log(`[extractor] Haiku raw output (first 400): ${raw.slice(0, 400)}`);
+  console.log(`[extractor] Haiku raw output (first 500): ${raw.slice(0, 500)}`);
+  console.log(`[extractor] Haiku stop_reason: ${message.stop_reason}, usage: input=${message.usage?.input_tokens} output=${message.usage?.output_tokens}`);
 
   try {
     // Strip markdown code fences if present

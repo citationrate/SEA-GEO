@@ -17,7 +17,14 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 function buildPrompt(query: string, segmentContext: string, language: string): string {
-  const lang = language === "it" ? "Rispondi in italiano." : "Answer in English.";
+  const langMap: Record<string, string> = {
+    it: "Rispondi in italiano.",
+    en: "Answer in English.",
+    fr: "Réponds en français.",
+    de: "Antworte auf Deutsch.",
+    es: "Responde en español.",
+  };
+  const lang = langMap[language] ?? langMap.en;
   return `${lang}\n\nContesto utente: ${segmentContext}\n\nDomanda: ${query}`;
 }
 
@@ -40,8 +47,23 @@ function normalizeCompetitorName(
   }
 
   // Reject generic descriptions that aren't brand names
-  const genericPatterns = /^(brand|competitor|aziend|prodott|servizi|scarpe|telefon|auto |il |la |un |una |i |le |gli )/i;
+  // NOTE: Do NOT filter Italian articles (il/la/un/una/i/le/gli) — many real Italian
+  // brands start with articles: "Il Mulino Bianco", "La Molisana", "Le Conserve", etc.
+  const genericPatterns = /^(brand[s]?\b|competitor[s]?\b|aziend[ae]\b|prodott[oi]\b|servizi[o]?\b)/i;
   if (genericPatterns.test(trimmed)) {
+    console.log(`[normalizeCompetitor] FILTERED generic pattern: "${trimmed}"`);
+    normCache.set(cacheKey, null);
+    return null;
+  }
+
+  // Reject if the entire name is a single generic Italian/English word (no proper noun)
+  const SINGLE_WORD_GENERICS = new Set([
+    "brand", "brands", "competitor", "competitors", "azienda", "aziende",
+    "prodotto", "prodotti", "servizio", "servizi", "scarpe", "telefono",
+    "auto", "il", "la", "un", "una", "i", "le", "gli",
+  ]);
+  if (SINGLE_WORD_GENERICS.has(cacheKey)) {
+    console.log(`[normalizeCompetitor] FILTERED single generic word: "${trimmed}"`);
     normCache.set(cacheKey, null);
     return null;
   }
@@ -297,12 +319,31 @@ async function executePrompt(
 
   const extraction = await extractFromResponse(rawText, task.targetBrand, task.knownCompetitors, task.sector ?? undefined, task.brandType ?? undefined, task.language ?? undefined, task.brandDomain);
 
+  // Detailed extraction logging
+  console.log(`[executePrompt] model=${task.model} brand="${task.targetBrand}" brand_mentioned=${extraction.brand_mentioned} competitors_raw=${extraction.competitors_found.length} topics=${extraction.topics.length} responseLen=${rawText.length}`);
+  if (extraction.competitors_found.length > 0) {
+    console.log(`[executePrompt] competitors extracted: ${extraction.competitors_found.map(c => `"${c.name}" (${c.type})`).join(", ")}`);
+  }
+
   // Validation: warn if long response but no brand/competitors detected
   if (rawText.length > 100 && !extraction.brand_mentioned && extraction.competitors_found.length === 0) {
     console.warn(`[executePrompt] EXTRACTION WARNING: model=${task.model} brand="${task.targetBrand}" text=${rawText.length}chars but brand_mentioned=false, competitors=0. First 300 chars: ${rawText.slice(0, 300)}`);
   }
 
-  // Save response_analysis
+  // Save response_analysis (normalize competitor names consistently)
+  const normalizedCompNames = extraction.competitors_found
+    .map(c => {
+      const n = normalizeCompetitorName(c.name, task.targetBrand, normCache);
+      if (!n) {
+        console.log(`[executePrompt] competitor FILTERED by normalization: "${c.name}"`);
+      }
+      return n ? canonicalizeCompetitorName(n) : null;
+    })
+    .filter((n): n is string => n != null && n !== task.targetBrand);
+  if (normalizedCompNames.length < extraction.competitors_found.length) {
+    console.log(`[executePrompt] competitors after normalization: ${normalizedCompNames.length}/${extraction.competitors_found.length} kept: [${normalizedCompNames.join(", ")}]`);
+  }
+
   await (supabase.from("response_analysis") as any)
     .insert({
       prompt_executed_id: promptRecord.id,
@@ -314,26 +355,36 @@ async function executePrompt(
       position_score: extraction.position_score,
       recommendation_score: extraction.recommendation_score,
       topics: extraction.topics,
-      competitors_found: extraction.competitors_found.map(c => canonicalizeCompetitorName(c.name)),
+      competitors_found: normalizedCompNames,
       avi_score: null,
       avi_components: null,
     });
 
-  // Save competitor_mentions
+  // Save competitor_mentions (with same normalization as competitors table)
   if (extraction.competitors_found.length > 0) {
-    const mentions = extraction.competitors_found.map((c) => ({
-      run_id: task.runId,
-      project_id: task.projectId,
-      competitor_name: canonicalizeCompetitorName(c.name),
-      prompt_executed_id: promptRecord.id,
-      rank: c.rank ?? null,
-      sentiment: c.sentiment ?? null,
-      recommendation: c.recommendation ?? null,
-      competitor_type: c.type ?? "direct",
-    }));
-    const { error: mentionErr } = await (supabase.from("competitor_mentions") as any)
-      .insert(mentions);
-    if (mentionErr) console.error("[inngest] competitor_mentions insert error:", mentionErr.message);
+    const mentions = extraction.competitors_found
+      .map((c) => {
+        const normalized = normalizeCompetitorName(c.name, task.targetBrand, normCache);
+        if (!normalized) return null;
+        const canonical = canonicalizeCompetitorName(normalized);
+        if (canonical === task.targetBrand) return null;
+        return {
+          run_id: task.runId,
+          project_id: task.projectId,
+          competitor_name: canonical,
+          prompt_executed_id: promptRecord.id,
+          rank: c.rank ?? null,
+          sentiment: c.sentiment ?? null,
+          recommendation: c.recommendation ?? null,
+          competitor_type: c.type ?? "direct",
+        };
+      })
+      .filter(Boolean);
+    if (mentions.length > 0) {
+      const { error: mentionErr } = await (supabase.from("competitor_mentions") as any)
+        .insert(mentions);
+      if (mentionErr) console.error("[inngest] competitor_mentions insert error:", mentionErr.message);
+    }
   }
 
   // Merge sources: API sources (highest priority) + extractor sources (no duplicate extractFromText)

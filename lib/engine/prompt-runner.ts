@@ -66,52 +66,64 @@ export async function callAIModel(
       return await retryCall(2, async () => {
         const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-        const tools: any[] | undefined = browsing
-          ? [{
-              type: "web_search_20260209",
-              name: "web_search",
-              max_uses: ANTHROPIC_SEARCH_MAX_USES[model] ?? 3,
-              user_location: {
-                type: "approximate",
-                country: "IT",
-                timezone: "Europe/Rome",
-              },
-              blocked_domains: [
-                "facebook.com",
-                "instagram.com",
-                "twitter.com",
-                "tiktok.com",
-              ],
-            }]
-          : undefined;
+        // Try web search when browsing=true, with graceful fallback
+        if (browsing) {
+          try {
+            const msg = await anthropic.messages.create({
+              model: apiModel,
+              max_tokens: 1500,
+              messages: [{ role: "user", content: prompt }],
+              tools: [{
+                type: "web_search_20260209",
+                name: "web_search",
+                max_uses: ANTHROPIC_SEARCH_MAX_USES[model] ?? 3,
+                user_location: {
+                  type: "approximate",
+                  country: "IT",
+                  timezone: "Europe/Rome",
+                },
+                blocked_domains: [
+                  "facebook.com",
+                  "instagram.com",
+                  "twitter.com",
+                  "tiktok.com",
+                ],
+              }],
+            } as any);
 
+            // Extract text from the last text block (web search responses have multiple content blocks)
+            const textBlocks = msg.content.filter((b: any) => b.type === "text");
+            const text = textBlocks[textBlocks.length - 1]?.type === "text"
+              ? (textBlocks[textBlocks.length - 1] as any).text
+              : "";
+
+            // Log web search activity
+            for (const block of msg.content) {
+              if (block.type === "tool_use" && (block as any).name === "web_search") {
+                console.log(`[Anthropic WEB SEARCH] Query: ${(block as any).input?.query}`);
+              }
+            }
+
+            if (text) {
+              const searchSources = extractFromAnthropicSearch(msg.content as any[], brandDomain ?? undefined);
+              const textSources = extractFromText(text, brandDomain ?? undefined);
+              return { text, sources: mergeSources(searchSources, textSources) };
+            }
+          } catch (browsingErr) {
+            console.error("[callAIModel] Anthropic web search failed, falling back to standard:", browsingErr instanceof Error ? browsingErr.message : browsingErr);
+          }
+        }
+
+        // Standard call (no web search) — also used as fallback when browsing fails
         const msg = await anthropic.messages.create({
           model: apiModel,
           max_tokens: 1500,
           messages: [{ role: "user", content: prompt }],
-          ...(tools ? { tools } : {}),
-        } as any);
-
-        // Extract text from the last text block (web search responses have multiple content blocks)
-        const textBlocks = msg.content.filter((b: any) => b.type === "text");
-        const text = textBlocks[textBlocks.length - 1]?.type === "text"
-          ? (textBlocks[textBlocks.length - 1] as any).text
-          : "";
+        });
+        const block = msg.content[0];
+        const text = block.type === "text" ? block.text : "";
         if (!text) throw new Error("Anthropic returned empty response");
-
-        // Log web search activity
-        for (const block of msg.content) {
-          if (block.type === "tool_use" && (block as any).name === "web_search") {
-            console.log(`[Anthropic WEB SEARCH] Query: ${(block as any).input?.query}`);
-          }
-        }
-
-        // Extract sources from web search results + text
-        const searchSources = browsing
-          ? extractFromAnthropicSearch(msg.content as any[], brandDomain ?? undefined)
-          : [];
-        const textSources = extractFromText(text, brandDomain ?? undefined);
-        return { text, sources: mergeSources(searchSources, textSources) };
+        return { text, sources: extractFromText(text, brandDomain ?? undefined) };
       }, "Anthropic");
     }
 
