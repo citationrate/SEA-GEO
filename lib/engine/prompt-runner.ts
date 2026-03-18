@@ -311,12 +311,14 @@ export async function callAIModel(
 
     if (browsing) {
       try {
+        console.log(`[OpenAI] model=${model} apiModel=${apiModel} attempting responses.create with web_search_preview`);
         const response = await openai.responses.create({
           model: apiModel,
           tools: [{ type: "web_search_preview" }],
           input: prompt,
         });
         const text = response.output_text || "";
+        console.log(`[OpenAI] model=${model} browsing=true text_len=${text.length}`);
         const annotationSources = extractFromAnnotations(response.output || [], brandDomain ?? undefined);
         const textSources = extractFromText(text, brandDomain ?? undefined);
         return { text, sources: mergeSources(annotationSources, textSources) };
@@ -325,24 +327,32 @@ export async function callAIModel(
       }
     }
 
-    if (model.startsWith("o1") || model.startsWith("o3")) {
+    try {
+      if (model.startsWith("o1") || model.startsWith("o3")) {
+        const completion = await openai.chat.completions.create({
+          model: apiModel,
+          max_completion_tokens: 4096,
+          messages: [{ role: "user", content: prompt }],
+        } as any);
+        const text = completion.choices[0]?.message?.content ?? "";
+        return { text, sources: extractFromText(text, brandDomain ?? undefined) };
+      }
+
+      console.log(`[OpenAI] model=${model} apiModel=${apiModel} attempting chat.completions.create`);
       const completion = await openai.chat.completions.create({
         model: apiModel,
-        max_completion_tokens: 4096,
+        temperature: 0.7,
+        max_tokens: 4096,
         messages: [{ role: "user", content: prompt }],
-      } as any);
+      });
       const text = completion.choices[0]?.message?.content ?? "";
+      console.log(`[OpenAI] model=${model} browsing=false text_len=${text.length} finish_reason=${completion.choices[0]?.finish_reason}`);
       return { text, sources: extractFromText(text, brandDomain ?? undefined) };
+    } catch (openaiErr) {
+      const errMsg = openaiErr instanceof Error ? openaiErr.message : String(openaiErr);
+      console.error(`[OpenAI] model=${model} apiModel=${apiModel} FAILED:`, errMsg);
+      return { text: "", sources: [], error: `[${model}] ${errMsg}` };
     }
-
-    const completion = await openai.chat.completions.create({
-      model: apiModel,
-      temperature: 0.7,
-      max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const text = completion.choices[0]?.message?.content ?? "";
-    return { text, sources: extractFromText(text, brandDomain ?? undefined) };
   } catch (err: any) {
     const statusCode = err?.status ?? err?.statusCode ?? err?.response?.status ?? "";
     const errMsg = err instanceof Error ? err.message : String(err);
