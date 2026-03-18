@@ -329,13 +329,11 @@ export function CompetitiveResults({
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-primary" />
                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">CompScore</h3>
-                <InfoTooltip text={t("compare.compScoreTooltip")} />
+                <InfoTooltip text="CompScore = 60% Win Rate + 40% First Mention Rate. Misura la forza competitiva del brand nelle risposte AI. Scala 0-100." />
               </div>
-              <div className="text-center pt-1">
-                <p className={`font-display font-bold text-4xl ${label.cls}`}>
-                  {Math.round(kpis.compScoreA)}
-                </p>
-                <p className={`text-sm font-medium mt-1 ${label.cls}`}>{label.text === "\u2014" ? label.text : t(label.text)}</p>
+              <div className="flex flex-col items-center pt-1">
+                <CompScoreRing score={kpis.compScoreA} />
+                <p className={`text-sm font-medium mt-2 ${label.cls}`}>{label.text === "\u2014" ? label.text : t(label.text)}</p>
               </div>
             </div>
           </div>
@@ -557,6 +555,43 @@ export function CompetitiveResults({
           <p className="text-sm text-muted-foreground">{t("compare.errorOccurred")}</p>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Small score ring matching AVIRing design system */
+function CompScoreRing({ score }: { score: number }) {
+  const R = 40, C = 2 * Math.PI * R;
+  const v = Math.max(0, Math.min(100, score));
+  const dash = (v / 100) * C;
+
+  // Color: green (>60), amber (40-60), coral (<40) — matches AVIRing palette
+  function scoreColor(s: number): string {
+    if (s >= 60) return "hsl(150, 40%, 55%)"; // sage green
+    if (s >= 40) return "hsl(35, 40%, 55%)";  // amber
+    return "hsl(15, 40%, 55%)";               // coral
+  }
+  const color = scoreColor(v);
+
+  return (
+    <div className="relative w-[100px] h-[100px]">
+      <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
+        <circle cx="48" cy="48" r={R} fill="none" stroke="var(--line)" strokeWidth="6" />
+        <circle cx="48" cy="48" r={R} fill="none"
+          stroke={color} strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={C}
+          strokeDashoffset={C - dash}
+          style={{ transition: "stroke-dashoffset 1.2s ease-out, stroke 0.8s ease-out",
+                   filter: `drop-shadow(0 0 4px ${color})` }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-display text-[26px] leading-none text-foreground" style={{ fontWeight: 300 }}>
+          {Math.round(v)}
+        </span>
+        <span className="font-mono text-[10px] text-muted-foreground">/100</span>
+      </div>
     </div>
   );
 }
