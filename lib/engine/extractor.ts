@@ -290,7 +290,11 @@ function validateSources<T extends { domain: string | null }>(
 
 function positionScore(rank: number | null, nCompetitors: number): number {
   if (!rank || rank === 0) return 0.5; // presente ma non classificabile
-  if (nCompetitors === 0) return 0.7;  // unico citato, nessun confronto
+  if (nCompetitors === 0) {
+    // No competitor count available — derive score from rank alone
+    // rank 1 → 1.0, rank 2 → 0.8, rank 3 → 0.6, etc.
+    return Math.max(0, 1 - (rank - 1) * 0.2);
+  }
   return Math.max(0, 1 - ((rank - 1) / nCompetitors));
 }
 
@@ -608,13 +612,14 @@ FORMAT: Return ONLY the commercial name.`;
       brandRank = 1;
     }
 
-    // Multidimensional sentiment
+    // Multidimensional sentiment — position tracked SEPARATELY via brand_rank/rank_score
+    // to avoid double-counting in AVI (which already weights rank_score at 35%)
     const toneScore = parsed.tone_score ?? 0;
     const posScore = positionScore(brandRank, parsed.competitors_count ?? 0);
     const recScore = parsed.recommendation_score ?? 0;
 
-    // Formula pesata con recommendation come componente additiva
-    const base = (toneScore * 0.3) + (posScore * 0.5) + (recScore * 0.2);
+    // Sentiment = tone + recommendation only (NO position — position goes to AVI's rank_score)
+    const base = (toneScore * 0.6) + (recScore * 0.4);
     const sentimentFinal = Math.max(-1, Math.min(1, base)); // clamp -1/+1
 
     return {
