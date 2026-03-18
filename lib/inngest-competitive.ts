@@ -187,13 +187,13 @@ export const runCompetitiveAnalysis = inngest.createFunction(
           }
 
           try {
-            let result = await callAIModel(prompt.query_text, prompt.model);
+            let result = await callAIModel(prompt.query_text, prompt.model, true);
 
             // If first attempt returned an error (e.g. rate limit), retry once with backoff
             if (!result.text && result.error) {
               console.warn(`[competitive] ${prompt.model} failed for ${promptId}: ${result.error} — retrying in 5s`);
               await new Promise((r) => setTimeout(r, 5000));
-              result = await callAIModel(prompt.query_text, prompt.model);
+              result = await callAIModel(prompt.query_text, prompt.model, true);
             }
 
             if (!result.text && result.error) {
