@@ -23,13 +23,36 @@ const CANONICAL_MAP: Record<string, string> = {
   "pastadigragnano": "Pasta di Gragnano",
 };
 
+/**
+ * Runtime dedup cache: maps normalized keys to the first canonical form seen.
+ * This ensures "Studio 3A" and "Studio3A" resolve to the same display name
+ * even without a CANONICAL_MAP entry.
+ */
+const RUNTIME_CANON = new Map<string, string>();
+
 export function canonicalizeCompetitorName(name: string): string {
-  const normalized = name.trim();
+  const normalized = name.trim().replace(/\s{2,}/g, " ");
 
   const key = normalized
     .toLowerCase()
     .replace(/['']/g, "")
     .replace(/\s+/g, "");
 
-  return CANONICAL_MAP[key] ?? normalized;
+  // 1. Explicit canonical map has highest priority
+  if (CANONICAL_MAP[key]) return CANONICAL_MAP[key];
+
+  // 2. Runtime dedup: if we've seen this key before, reuse the canonical form
+  const existing = RUNTIME_CANON.get(key);
+  if (existing) {
+    // Keep the longer/more readable version (usually the one with spaces)
+    if (normalized.length > existing.length) {
+      RUNTIME_CANON.set(key, normalized);
+      return normalized;
+    }
+    return existing;
+  }
+
+  // 3. First time seeing this key — register it
+  RUNTIME_CANON.set(key, normalized);
+  return normalized;
 }
