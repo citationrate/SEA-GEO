@@ -415,9 +415,17 @@ COMPETITOR TYPES:
 - aggregator: comparison/discovery platforms
 
 RULES for competitors_found:
-Extract all brands, companies, or commercial entities mentioned.
-INCLUDE: any entity with a specific proper name.
-EXCLUDE: the target brand "${targetBrand}", sub-brands of the target, generic descriptions.
+Extract ONLY commercial competitors — companies or services that a user could choose as an alternative to "${targetBrand}" for the same service.
+INCLUDE: companies, brands, or services that actively sell or provide the same service and compete for the same customer.
+ABSOLUTELY EXCLUDE:
+- The target brand "${targetBrand}" itself
+- Sub-brands or variants of the target brand
+- Generic descriptions without a proper name
+- Government bodies or public institutions (INAIL, INPS, IVASS, MISE, Ministero, Regione, Comune, ASL)
+- Regulatory or supervisory authorities (Autorità, Garante, CONSOB, AGCM)
+- Courts, tribunals, or legal institutions (Tribunale, Corte di Cassazione, Corte d'Appello)
+- Industry associations or trade bodies (Confindustria, ANIA, ABI, Ordine)
+- Informational or government portals (Portale dell'Automobilista, SUAP)
 Return ONLY the commercial name.
 
 SOURCES — extract ONLY real citations used to justify the response:
@@ -637,11 +645,17 @@ SOURCES — CRITICAL RULES TO AVOID HALLUCINATIONS:
 source_type: media|review|ecommerce|social|competitor|wikipedia|other
 
 RULES for competitors_found:
-INCLUDE: any entity with a specific proper name.
+Extract ONLY commercial competitors — companies or services that a user could choose as an alternative to "${targetBrand}" for the same service.
+INCLUDE: companies, brands, or services that actively sell or provide the same service and compete for the same customer.
 ABSOLUTELY EXCLUDE:
 - Sub-brands or variants of the target brand (e.g. if target is 'Coca-Cola', exclude 'Coca-Cola Zero')
 - The target brand "${targetBrand}" itself in any form
 - Generic descriptions without a proper name
+- Government bodies or public institutions (INAIL, INPS, IVASS, MISE, Ministero, Regione, Comune, ASL)
+- Regulatory or supervisory authorities (Autorità, Garante, CONSOB, AGCM)
+- Courts, tribunals, or legal institutions (Tribunale, Corte di Cassazione)
+- Industry associations or trade bodies (Confindustria, ANIA, ABI, Ordine)
+- Informational or government portals
 FORMAT: Return ONLY the commercial name.`;
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });

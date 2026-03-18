@@ -68,6 +68,26 @@ function normalizeCompetitorName(
     return null;
   }
 
+  // Reject government bodies, institutions, regulatory agencies — not commercial competitors
+  const INSTITUTIONAL_KEYWORDS = [
+    "inail", "inps", "ivass", "mise", "ministero", "ministro",
+    "autorità", "autorita", "garante", "consob", "agcm", "anac",
+    "tribunale", "corte", "cassazione", "appello", "giudice",
+    "comune", "regione", "provincia", "prefettura", "questura",
+    "camera", "senato", "parlamento", "governo",
+    "portale", "sportello", "ufficio pubblico",
+    "confindustria", "confcommercio", "confesercenti",
+    "ania", "abi", "ordine degli", "ordine dei",
+    "asl", "inpdap", "agenzia delle entrate", "agenzia entrate",
+    "guardia di finanza", "carabinieri", "polizia",
+    "suap", "consiglio di stato", "tar ",
+  ];
+  if (INSTITUTIONAL_KEYWORDS.some(kw => cacheKey.includes(kw))) {
+    console.log(`[normalizeCompetitor] FILTERED institutional: "${trimmed}"`);
+    normCache.set(cacheKey, null);
+    return null;
+  }
+
   // Strip AI noise: "Esselunga È Un Brand/azienda" → "Esselunga"
   let cleaned = trimmed
     .replace(/\s+(è un|è una|è il|is a|is an|brand padre|il brand|\/azienda|azienda|\(.*?\)).*$/i, "")
