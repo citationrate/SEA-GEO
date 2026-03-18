@@ -114,13 +114,15 @@ User triggers analysis → Inngest function starts
   → computeCompetitorAVI() — calculates per-competitor AVI scores
 ```
 
-## Web Browsing (REMOVED)
-- Web browsing/search was removed from all providers due to cost and reliability issues
-- Both `web_search_20260209` and `web_search_20250305` caused token budget problems,
-  response truncation, and excessive API credit consumption
-- Gemini grounding and OpenAI web_search_preview also removed
-- The `browsing` parameter still exists in types for backward compatibility but defaults to false
-- All AI models now respond from their training data only
+## Web Search / Browsing
+- Anthropic: `web_search_20250305` (stable) — `web_search_20260209` was reverted
+- OpenAI: `web_search_preview` via Responses API
+- Gemini: `googleSearch` grounding tool
+- Perplexity: native search (always on)
+- `max_uses`: 3, `user_location`: IT / Europe/Rome
+- `blocked_domains`: facebook.com, instagram.com, twitter.com, tiktok.com (Anthropic only)
+- All providers fall back to standard mode if browsing fails
+- `browsing` defaults to `true` in UI and API
 
 ## Environment Variables
 Required in `.env.local`:

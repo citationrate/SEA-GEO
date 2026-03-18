@@ -8,7 +8,7 @@ import { getUserPlanLimits, getCurrentUsage, incrementPromptsUsed } from "@/lib/
 const startSchema = z.object({
   project_id: z.string().uuid(),
   run_count: z.number().int().min(1).max(3).default(1),
-  browsing: z.boolean().default(false), // web browsing removed — always false
+  browsing: z.boolean().default(true),
 });
 
 export async function POST(request: Request) {
