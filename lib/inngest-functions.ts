@@ -117,12 +117,13 @@ async function computeAndSaveAVI(
   const rows = (analyses ?? []) as any[];
   if (rows.length === 0) return;
 
+  // IMPORTANT: Supabase returns NUMERIC columns as strings — always coerce with Number()
   const analysisRows = rows.map((r: any) => {
     const pe = promptMap.get(r.prompt_executed_id);
     return {
-      brand_mentioned: r.brand_mentioned,
-      brand_rank: r.brand_rank,
-      sentiment_score: r.sentiment_score,
+      brand_mentioned: Boolean(r.brand_mentioned),
+      brand_rank: r.brand_rank != null ? Number(r.brand_rank) : null,
+      sentiment_score: r.sentiment_score != null ? Number(r.sentiment_score) : null,
       run_number: pe?.run_number ?? 1,
       query_id: pe?.query_id ?? "",
       segment_id: pe?.segment_id ?? "",
@@ -192,9 +193,11 @@ async function computeCompetitorAVI(
     const prominence = Math.min(100, (count / totalPrompts) * 100);
 
     // Rank score: SUM(rank > 0 ? MAX(0, 100-(rank-1)*20) : 0) / total_prompts
+    // IMPORTANT: Number() coercion for Supabase NUMERIC columns returned as strings
     const rankSum = mentionRows.reduce((s: number, m: any) => {
-      if (m.rank != null && m.rank > 0) {
-        return s + Math.max(0, 100 - (m.rank - 1) * 20);
+      const rank = m.rank != null ? Number(m.rank) : 0;
+      if (rank > 0) {
+        return s + Math.max(0, 100 - (rank - 1) * 20);
       }
       return s;
     }, 0);
@@ -203,7 +206,8 @@ async function computeCompetitorAVI(
     // Sentiment score: SUM((sentiment+1)*50) / total_prompts
     const sentimentSum = mentionRows.reduce((s: number, m: any) => {
       if (m.sentiment != null) {
-        return s + (m.sentiment + 1) * 50;
+        const sentiment = Number(m.sentiment);
+        return s + (sentiment + 1) * 50;
       }
       return s;
     }, 0);

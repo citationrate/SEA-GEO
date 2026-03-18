@@ -593,9 +593,10 @@ FORMAT: Return ONLY the commercial name.`;
   console.log(`[extractor] Haiku stop_reason: ${message.stop_reason}, usage: input=${message.usage?.input_tokens} output=${message.usage?.output_tokens}`);
 
   try {
-    // Strip markdown code fences if present
+    // Strip markdown code fences if present, then extract JSON object
     const cleaned = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
-    const parsed = JSON.parse(cleaned);
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch?.[0] ?? cleaned);
 
     // Use robust detection result for brand_mentioned
     const brandMentioned = detection.mentioned;
