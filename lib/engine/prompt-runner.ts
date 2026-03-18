@@ -69,9 +69,12 @@ export async function callAIModel(
         // Try web search when browsing=true, with graceful fallback
         if (browsing) {
           try {
+            // max_tokens: 4096 for web search — tool_use blocks consume tokens from
+            // the same budget, leaving less for the actual text response.
+            // With 1500 + 2-3 searches, text was getting truncated.
             const msg = await anthropic.messages.create({
               model: apiModel,
-              max_tokens: 1500,
+              max_tokens: 4096,
               messages: [{ role: "user", content: prompt }],
               tools: [{
                 type: "web_search_20260209",
@@ -90,6 +93,12 @@ export async function callAIModel(
                 ],
               }],
             } as any);
+
+            // Log stop reason and web search activity
+            console.log(`[Anthropic] model=${model} browsing=true stop_reason=${msg.stop_reason} blocks=${msg.content.length} usage_out=${msg.usage?.output_tokens}`);
+            if (msg.stop_reason === "max_tokens") {
+              console.warn(`[Anthropic] TRUNCATED: model=${model} hit max_tokens with web search`);
+            }
 
             // Extract text from the last text block (web search responses have multiple content blocks)
             const textBlocks = msg.content.filter((b: any) => b.type === "text");
@@ -117,9 +126,13 @@ export async function callAIModel(
         // Standard call (no web search) — also used as fallback when browsing fails
         const msg = await anthropic.messages.create({
           model: apiModel,
-          max_tokens: 1500,
+          max_tokens: 3000,
           messages: [{ role: "user", content: prompt }],
         });
+        console.log(`[Anthropic] model=${model} browsing=false stop_reason=${msg.stop_reason} usage_out=${msg.usage?.output_tokens}`);
+        if (msg.stop_reason === "max_tokens") {
+          console.warn(`[Anthropic] TRUNCATED: model=${model} hit max_tokens`);
+        }
         const block = msg.content[0];
         const text = block.type === "text" ? block.text : "";
         if (!text) throw new Error("Anthropic returned empty response");
@@ -209,7 +222,7 @@ export async function callAIModel(
           body: JSON.stringify({
             model: apiModel,
             messages: [{ role: "user", content: prompt }],
-            max_tokens: 1500,
+            max_tokens: 3000,
             temperature: 0.7,
           }),
         });
@@ -266,7 +279,7 @@ export async function callAIModel(
             },
             body: JSON.stringify({
               messages: [{ role: "user", content: prompt }],
-              max_tokens: 1500,
+              max_tokens: 3000,
               temperature: 0.7,
             }),
           },
@@ -292,7 +305,7 @@ export async function callAIModel(
         });
         const completion = await client.chat.completions.create({
           model: apiModel,
-          max_tokens: 1500,
+          max_tokens: 3000,
           messages: [{ role: "user", content: prompt }],
         });
         const text = completion.choices[0]?.message?.content ?? "";
@@ -325,7 +338,7 @@ export async function callAIModel(
     if (model.startsWith("o1") || model.startsWith("o3")) {
       const completion = await openai.chat.completions.create({
         model: apiModel,
-        max_completion_tokens: 1500,
+        max_completion_tokens: 3000,
         messages: [{ role: "user", content: prompt }],
       } as any);
       const text = completion.choices[0]?.message?.content ?? "";
@@ -335,7 +348,7 @@ export async function callAIModel(
     const completion = await openai.chat.completions.create({
       model: apiModel,
       temperature: 0.7,
-      max_tokens: 1500,
+      max_tokens: 3000,
       messages: [{ role: "user", content: prompt }],
     });
     const text = completion.choices[0]?.message?.content ?? "";
