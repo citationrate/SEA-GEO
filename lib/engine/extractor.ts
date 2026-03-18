@@ -325,7 +325,6 @@ async function extractCompetitorsTopicsSources(
   const prompt = `You are an AI analyst. The brand "${targetBrand}" is NOT present in this response.
 Sector: ${sector ?? "generic"}
 Brand type: ${brandType ?? "manufacturer"}
-Known competitors: ${knownCompetitors.length > 0 ? knownCompetitors.join(", ") : "none specified"}
 
 ${langInstr}
 
@@ -492,7 +491,7 @@ IMPORTANT: All extracted topics, adjectives, labels, and text fields MUST be in 
 Brand to analyze: "${targetBrand}"${domainContext}
 ${sectorContext}
 Brand type: ${brandTypeContext}
-Known competitors: ${knownCompetitors.length > 0 ? knownCompetitors.join(", ") : "none specified"}${genericNameWarning}
+${genericNameWarning}
 
 Respond ONLY with valid JSON, no markdown or extra text.
 
