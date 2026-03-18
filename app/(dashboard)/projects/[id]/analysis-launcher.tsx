@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Play, X, Loader2, Cpu, Globe, AlertTriangle } from "lucide-react";
+import { Play, X, Loader2, Cpu, AlertTriangle } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
@@ -37,7 +37,6 @@ export function AnalysisLauncher({
     return () => window.removeEventListener("open-analysis-modal", handler);
   }, []);
   const [runCount, setRunCount] = useState(1);
-  const [browsing, setBrowsing] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -64,7 +63,7 @@ export function AnalysisLauncher({
       const res = await fetch("/api/analysis/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, run_count: runCount, browsing }),
+        body: JSON.stringify({ project_id: projectId, run_count: runCount }),
       });
 
       if (!res.ok) {
@@ -159,36 +158,6 @@ export function AnalysisLauncher({
                   </button>
                 ))}
               </div>
-            </div>
-
-            {/* Browsing toggle */}
-            <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                {t("analysisLauncher.webBrowsing")}
-                <InfoTooltip text="Abilita la navigazione web per i modelli AI. Produce risposte più aggiornate e più fonti, ma è più lento." />
-              </p>
-              <button
-                onClick={() => setBrowsing(!browsing)}
-                disabled={loading}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm border transition-all text-left ${
-                  browsing
-                    ? "border-primary/50 bg-primary/5"
-                    : "border-border hover:border-border/80"
-                }`}
-              >
-                <div className={`relative w-11 h-6 rounded-full transition-colors ${browsing ? "bg-primary" : "bg-muted-foreground/30"}`}>
-                  <div className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${browsing ? "translate-x-[22px]" : "translate-x-[2px]"}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <Globe className="w-3.5 h-3.5 text-primary" />
-                    <p className="text-sm font-medium text-foreground">{t("analysisLauncher.browsingActive")}</p>
-                  </div>
-                  <p className="text-[13px] text-muted-foreground mt-0.5">
-                    I modelli cercano informazioni aggiornate sul web (piu lento, piu fonti)
-                  </p>
-                </div>
-              </button>
             </div>
 
             {/* Query cost breakdown */}

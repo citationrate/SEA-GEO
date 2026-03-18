@@ -114,14 +114,13 @@ User triggers analysis → Inngest function starts
   → computeCompetitorAVI() — calculates per-competitor AVI scores
 ```
 
-## Web Search Tool (Anthropic)
-- Version: `web_search_20250305` (stable)
-- NOTE: `web_search_20260209` was rolled back — dynamic filtering consumed too many
-  tokens internally, causing response truncation even at max_tokens=4096
-- `max_uses`: 2 (Haiku) / 3 (Sonnet) / 5 (Opus) by model tier
-- `max_tokens`: 16384 for web search path (tool_use blocks share the budget)
-- `user_location`: IT / Europe/Rome
-- Only applies to Anthropic model calls when `browsing=true`, not Gemini/Perplexity/OpenAI
+## Web Browsing (REMOVED)
+- Web browsing/search was removed from all providers due to cost and reliability issues
+- Both `web_search_20260209` and `web_search_20250305` caused token budget problems,
+  response truncation, and excessive API credit consumption
+- Gemini grounding and OpenAI web_search_preview also removed
+- The `browsing` parameter still exists in types for backward compatibility but defaults to false
+- All AI models now respond from their training data only
 
 ## Environment Variables
 Required in `.env.local`:

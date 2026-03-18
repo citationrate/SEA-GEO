@@ -500,7 +500,7 @@ export const runAnalysis = inngest.createFunction(
   },
   { event: "analysis/start" },
   async ({ event, step }) => {
-    const { runId, projectId, modelsUsed: rawModels, runCount, browsing = true } = event.data as {
+    const { runId, projectId, modelsUsed: rawModels, runCount, browsing = false } = event.data as {
       runId: string;
       projectId: string;
       modelsUsed: string[];
@@ -603,7 +603,7 @@ export const runAnalysis = inngest.createFunction(
     }
 
     // Step 2: execute prompts in batches
-    const batchSize = browsing ? 3 : 15;
+    const batchSize = 15;
     const batches = chunk(allTasks, batchSize);
     const normCache = new Map<string, string | null>();
 

@@ -4,9 +4,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { MODEL_MAP } from "./models";
 import {
   type ExtractedSource,
-  extractFromAnnotations,
-  extractFromAnthropicSearch,
-  extractFromGrounding,
   extractFromText,
   mergeSources,
   classifyDomainForPerplexity,
@@ -36,7 +33,7 @@ export const API_MODEL_ID: Record<string, string> = {
 export async function callAIModel(
   prompt: string,
   model: string,
-  browsing = false,
+  _browsing = false, // web browsing removed — kept param for backward compat
   brandDomain?: string | null,
 ): Promise<AIModelResult> {
   const empty: AIModelResult = { text: "", sources: [] };
@@ -56,81 +53,13 @@ export async function callAIModel(
         return { text: "", sources: [], error: `[${model}] SKIPPED: ANTHROPIC_API_KEY non configurata` };
       }
 
-      // web_search_20260209 max_uses budget by model tier
-      const ANTHROPIC_SEARCH_MAX_USES: Record<string, number> = {
-        "claude-haiku": 2,
-        "claude-sonnet": 3,
-        "claude-opus": 5,
-      };
-
       return await retryCall(2, async () => {
         const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-        // Try web search when browsing=true, with graceful fallback
-        if (browsing) {
-          try {
-            // web_search_20250305 (stable) — 20260209 rolled back due to token consumption
-            const msg = await anthropic.messages.create({
-              model: apiModel,
-              max_tokens: 4096,
-              messages: [{ role: "user", content: prompt }],
-              tools: [{
-                type: "web_search_20250305",
-                name: "web_search",
-                max_uses: ANTHROPIC_SEARCH_MAX_USES[model] ?? 3,
-                user_location: {
-                  type: "approximate",
-                  country: "IT",
-                  timezone: "Europe/Rome",
-                },
-                blocked_domains: [
-                  "facebook.com",
-                  "instagram.com",
-                  "twitter.com",
-                  "tiktok.com",
-                ],
-              }],
-            } as any);
-
-            // Log stop reason and web search activity
-            console.log(`[Anthropic] model=${model} browsing=true stop_reason=${msg.stop_reason} blocks=${msg.content.length} usage_out=${msg.usage?.output_tokens}`);
-            if (msg.stop_reason === "max_tokens") {
-              console.warn(`[Anthropic] TRUNCATED: model=${model} hit max_tokens with web search`);
-            }
-
-            // Extract text from the last text block (web search responses have multiple content blocks)
-            const textBlocks = msg.content.filter((b: any) => b.type === "text");
-            const text = textBlocks[textBlocks.length - 1]?.type === "text"
-              ? (textBlocks[textBlocks.length - 1] as any).text
-              : "";
-
-            // Log web search activity
-            for (const block of msg.content) {
-              if (block.type === "tool_use" && (block as any).name === "web_search") {
-                console.log(`[Anthropic WEB SEARCH] Query: ${(block as any).input?.query}`);
-              }
-            }
-
-            if (text) {
-              const searchSources = extractFromAnthropicSearch(msg.content as any[], brandDomain ?? undefined);
-              const textSources = extractFromText(text, brandDomain ?? undefined);
-              return { text, sources: mergeSources(searchSources, textSources) };
-            }
-          } catch (browsingErr) {
-            console.error("[callAIModel] Anthropic web search failed, falling back to standard:", browsingErr instanceof Error ? browsingErr.message : browsingErr);
-          }
-        }
-
-        // Standard call (no web search) — also used as fallback when browsing fails
         const msg = await anthropic.messages.create({
           model: apiModel,
           max_tokens: 4096,
           messages: [{ role: "user", content: prompt }],
         });
-        console.log(`[Anthropic] model=${model} browsing=false stop_reason=${msg.stop_reason} usage_out=${msg.usage?.output_tokens}`);
-        if (msg.stop_reason === "max_tokens") {
-          console.warn(`[Anthropic] TRUNCATED: model=${model} hit max_tokens`);
-        }
         const block = msg.content[0];
         const text = block.type === "text" ? block.text : "";
         if (!text) throw new Error("Anthropic returned empty response");
@@ -181,24 +110,6 @@ export async function callAIModel(
       };
 
       return await retryCall(2, async () => {
-        if (browsing) {
-          try {
-            const geminiModel = genai.getGenerativeModel({
-              model: apiModel,
-              tools: [{ googleSearch: {} } as any],
-              generationConfig: { maxOutputTokens: 4096 },
-            });
-            const result = await geminiModel.generateContent(prompt);
-            const text = extractGeminiText(result);
-            if (text) {
-              const groundingSources = extractFromGrounding((result.response as any).candidates || [], brandDomain ?? undefined);
-              const textSources = extractFromText(text, brandDomain ?? undefined);
-              return { text, sources: mergeSources(groundingSources, textSources) };
-            }
-          } catch (e: any) {
-            console.error("[Gemini grounding] failed:", e?.message);
-          }
-        }
         const geminiModel = genai.getGenerativeModel({
           model: apiModel,
           generationConfig: { maxOutputTokens: 4096 },
@@ -320,22 +231,6 @@ export async function callAIModel(
       return { text: "", sources: [], error: `[${model}] SKIPPED: OPENAI_API_KEY non configurata` };
     }
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-    if (browsing) {
-      try {
-        const response = await openai.responses.create({
-          model: apiModel,
-          tools: [{ type: "web_search_preview" }],
-          input: prompt,
-        });
-        const text = response.output_text || "";
-        const annotationSources = extractFromAnnotations(response.output || [], brandDomain ?? undefined);
-        const textSources = extractFromText(text, brandDomain ?? undefined);
-        return { text, sources: mergeSources(annotationSources, textSources) };
-      } catch (browsingErr) {
-        console.error("[callAIModel] OpenAI browsing failed, falling back:", browsingErr instanceof Error ? browsingErr.message : browsingErr);
-      }
-    }
 
     if (model.startsWith("o1") || model.startsWith("o3")) {
       const completion = await openai.chat.completions.create({
