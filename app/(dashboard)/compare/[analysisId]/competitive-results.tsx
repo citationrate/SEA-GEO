@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Swords, Trophy, Eye, BarChart3, Loader2, MessageSquare, TrendingUp, X } from "lucide-react";
+import { ArrowLeft, Swords, Trophy, Eye, BarChart3, Loader2, MessageSquare, TrendingUp, X, Globe, WifiOff } from "lucide-react";
 import { MarkdownResponse } from "@/components/ui/markdown-response";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
@@ -36,6 +36,43 @@ const MODEL_LABELS: Record<string, string> = {
 function getModelDisplayName(model: string): string {
   return MODEL_LABELS[model] ?? model;
 }
+
+/** Which models have web browsing active in comparison mode */
+const BROWSING_MODELS: Record<string, boolean> = {
+  "gpt-4o-mini": true,
+  "gpt-4o": true,
+  "gpt-5.4": true,
+  "claude-haiku": true,
+  "claude-sonnet": true,
+  "claude-opus": true,
+  "claude-haiku-4-5-20251001": true,
+  "claude-sonnet-4-5": true,
+  "claude-opus-4-5": true,
+  "gemini-2.5-flash": true,
+  "gemini-2.5-pro": true,
+  "perplexity-sonar": true,
+  "perplexity-sonar-pro": true,
+  "grok-3": false,
+  "grok-3-mini": false,
+};
+
+const PROVIDER_FOR_MODEL: Record<string, string> = {
+  "gpt-4o-mini": "OpenAI",
+  "gpt-4o": "OpenAI",
+  "gpt-5.4": "OpenAI",
+  "claude-haiku": "Anthropic",
+  "claude-sonnet": "Anthropic",
+  "claude-opus": "Anthropic",
+  "claude-haiku-4-5-20251001": "Anthropic",
+  "claude-sonnet-4-5": "Anthropic",
+  "claude-opus-4-5": "Anthropic",
+  "gemini-2.5-flash": "Google",
+  "gemini-2.5-pro": "Google",
+  "perplexity-sonar": "Perplexity",
+  "perplexity-sonar-pro": "Perplexity",
+  "grok-3": "xAI",
+  "grok-3-mini": "xAI",
+};
 
 interface Analysis {
   id: string;
@@ -235,35 +272,90 @@ export function CompetitiveResults({
       {a.status === "completed" && (
         <>
           {/* Model filter chips */}
-          {models.length > 1 && (
-            <div className="flex flex-wrap gap-2 items-center">
-              <button
-                onClick={() => setSelectedModel(null)}
-                className="font-mono text-[0.75rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
-                style={
-                  selectedModel === null
-                    ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
-                    : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
-                }
-              >
-                {t("common.all")}
-              </button>
-              {models.map((model) => (
-                <button
-                  key={model}
-                  onClick={() => setSelectedModel(model)}
-                  className="font-mono text-[0.75rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
-                  style={
-                    selectedModel === model
-                      ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
-                      : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
-                  }
-                >
-                  {getModelDisplayName(model)}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Model filter + browsing status */}
+          {models.length > 0 && (() => {
+            // Group models by provider
+            const byProvider = new Map<string, string[]>();
+            for (const m of models) {
+              const provider = PROVIDER_FOR_MODEL[m] ?? "Altro";
+              if (!byProvider.has(provider)) byProvider.set(provider, []);
+              byProvider.get(provider)!.push(m);
+            }
+            const browsActive = models.filter(m => BROWSING_MODELS[m]);
+            const browsInactive = models.filter(m => !BROWSING_MODELS[m]);
+
+            return (
+              <div className="space-y-3">
+                {/* Filter chips */}
+                {models.length > 1 && (
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <button
+                      onClick={() => setSelectedModel(null)}
+                      className="font-mono text-[0.75rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
+                      style={
+                        selectedModel === null
+                          ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
+                          : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
+                      }
+                    >
+                      {t("common.all")}
+                    </button>
+                    {models.map((model) => (
+                      <button
+                        key={model}
+                        onClick={() => setSelectedModel(model)}
+                        className="font-mono text-[0.75rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
+                        style={
+                          selectedModel === model
+                            ? { borderColor: "#7eb89a", backgroundColor: "rgba(126,184,154,0.1)", color: "#7eb89a" }
+                            : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
+                        }
+                      >
+                        {getModelDisplayName(model)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Browsing status by provider */}
+                <div className="card p-4 space-y-3">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Web Browsing</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {browsActive.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <Globe className="w-3.5 h-3.5 text-primary" />
+                          <span className="text-xs font-medium text-primary">Browsing attivo</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {browsActive.map(m => (
+                            <span key={m} className="text-[11px] font-mono px-2 py-0.5 rounded-[2px] border border-primary/30 bg-primary/5 text-primary">
+                              {getModelDisplayName(m)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {browsInactive.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <WifiOff className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-xs font-medium text-muted-foreground">Solo training data</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {browsInactive.map(m => (
+                            <span key={m} className="text-[11px] font-mono px-2 py-0.5 rounded-[2px] border border-border text-muted-foreground">
+                              {getModelDisplayName(m)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="grid grid-cols-3 gap-4">
             {/* Win Rate */}
@@ -390,7 +482,10 @@ export function CompetitiveResults({
                         <td className="px-4 py-2.5">
                           <span className="badge badge-primary text-[12px]">{p.pattern_type}</span>
                         </td>
-                        <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{getModelDisplayName(p.model)}</td>
+                        <td className="px-4 py-2.5">
+                          <span className="font-mono text-xs text-muted-foreground">{getModelDisplayName(p.model)}</span>
+                          {BROWSING_MODELS[p.model] && <Globe className="w-3 h-3 text-primary/50 inline ml-1" />}
+                        </td>
                         <td className="px-4 py-2.5 text-muted-foreground">#{p.run_number}</td>
                         <td className="px-4 py-2.5 max-w-[300px]">
                           <p className="text-foreground truncate text-xs">
