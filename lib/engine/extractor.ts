@@ -97,6 +97,15 @@ function buildBrandVariants(brand: string): string[] {
     "solution", "solutions", "service", "services", "agency", "consulting",
     "center", "system", "systems", "network", "point", "home", "world",
     "easy", "fast", "quick", "direct", "blue", "green", "red", "gold",
+    // Legal / insurance / finance category words (IT + EN)
+    "risarcimento", "danni", "danno", "sinistri", "sinistro", "gestione",
+    "assicurazione", "assicurazioni", "polizza", "polizze", "perizia", "perizie",
+    "fiscale", "fiscali", "tasse", "tributario", "contabile", "contabilità",
+    "legale", "legali", "avvocato", "avvocati", "notaio", "notarile",
+    "immobiliare", "immobiliari", "edilizia", "costruzioni",
+    "medico", "medica", "clinica", "dentale", "odontoiatrico",
+    "insurance", "claims", "damage", "damages", "legal", "tax", "taxes",
+    "accounting", "dental", "medical", "clinic", "real estate",
   ]);
 
   const words = clean.split(/\s+/);
@@ -116,6 +125,15 @@ function buildBrandVariants(brand: string): string[] {
   }
   if (/\band\b/i.test(clean)) {
     variants.add(clean.replace(/\band\b/gi, "&").toLowerCase());
+  }
+
+  // For brands with generic category suffixes (e.g. "Giesse Risarcimento Danni"),
+  // add the distinctive prefix as a variant and ensure the generic suffix alone
+  // is NOT a variant that could cause false positives.
+  const distinctivePrefix = extractDistinctivePrefix(clean);
+  if (distinctivePrefix) {
+    variants.add(distinctivePrefix.toLowerCase());
+    variants.add(stripAccents(distinctivePrefix).toLowerCase());
   }
 
   return Array.from(variants);
@@ -224,10 +242,59 @@ function isGenericBrandName(brand: string): boolean {
     "prima", "first", "top", "best", "pro", "plus",
     "energia", "energy", "luce", "light",
     "sport", "food", "design", "lab", "arte", "art",
+    // Legal / insurance / finance
+    "risarcimento", "danni", "danno", "sinistri", "sinistro", "gestione",
+    "assicurazione", "assicurazioni", "polizza", "perizia",
+    "fiscale", "fiscali", "tributario", "contabile",
+    "immobiliare", "immobiliari", "edilizia",
+    "medico", "medica", "clinica", "dentale",
+    "insurance", "claims", "damage", "damages", "accounting",
+    "dental", "medical", "clinic",
   ]);
   const words = brand.toLowerCase().trim().split(/\s+/);
   // If ALL words in the brand name are generic, it's a generic name
   return words.length >= 1 && words.every((w) => GENERIC.has(w) || w.length <= 2);
+}
+
+/**
+ * Check if a brand has a generic category suffix (e.g. "Giesse Risarcimento Danni").
+ * Returns the distinctive prefix if found, or null.
+ * Used to prevent false positives when only the generic suffix appears in text.
+ */
+function extractDistinctivePrefix(brand: string): string | null {
+  const CATEGORY_WORDS = new Set([
+    // Italian category/sector terms
+    "risarcimento", "danni", "danno", "sinistri", "sinistro", "gestione",
+    "assicurazione", "assicurazioni", "consulenza", "fiscale", "fiscali",
+    "legale", "legali", "immobiliare", "immobiliari", "edilizia",
+    "medico", "medica", "clinica", "dentale", "odontoiatrico",
+    "servizio", "servizi", "soluzione", "soluzioni", "studio", "studi",
+    "centro", "agenzia", "sistema", "sistemi", "gruppo",
+    "tasse", "tributario", "contabile", "contabilità",
+    // English equivalents
+    "insurance", "claims", "damage", "damages", "consulting", "legal",
+    "tax", "taxes", "accounting", "dental", "medical", "clinic",
+    "service", "services", "solution", "solutions", "agency", "center",
+  ]);
+
+  const words = brand.trim().split(/\s+/);
+  if (words.length < 2) return null;
+
+  // Find where the generic suffix starts
+  let distinctiveEnd = words.length;
+  for (let i = words.length - 1; i >= 1; i--) {
+    if (CATEGORY_WORDS.has(words[i].toLowerCase())) {
+      distinctiveEnd = i;
+    } else {
+      break;
+    }
+  }
+
+  // If we found a generic suffix, return the distinctive prefix
+  if (distinctiveEnd < words.length && distinctiveEnd >= 1) {
+    return words.slice(0, distinctiveEnd).join(" ");
+  }
+  return null;
 }
 
 /** Extract actual URLs and domains literally present in a response text.
@@ -478,11 +545,15 @@ export async function extractFromResponse(
   const brandTypeContext = brandTypeLabels[brandType ?? "manufacturer"] ?? "Generic brand";
 
   const domainContext = brandDomain ? `\nBrand website: ${brandDomain}` : "";
-  const genericNameWarning = isGenericBrandName(targetBrand)
-    ? `\n\nCRITICAL — GENERIC BRAND NAME WARNING: The brand "${targetBrand}" contains common/generic words. You MUST distinguish between:
-- The SPECIFIC COMPANY/BRAND "${targetBrand}"${brandDomain ? ` (website: ${brandDomain})` : ""} being mentioned as an entity
-- Generic use of the same words in normal language (e.g. "soluzione" meaning "solution", "tasse" meaning "taxes")
-Only set brand_mentioned=true if the response refers to "${targetBrand}" as a SPECIFIC company/brand/entity, NOT when the words appear in their generic meaning.`
+  const distinctivePrefix = extractDistinctivePrefix(targetBrand);
+  const hasGenericWords = isGenericBrandName(targetBrand) || distinctivePrefix != null;
+  const genericNameWarning = hasGenericWords
+    ? `\n\nCRITICAL — GENERIC CATEGORY WORDS IN BRAND NAME:
+The brand "${targetBrand}" contains generic category words${distinctivePrefix ? ` (distinctive identifier: "${distinctivePrefix}")` : ""}.
+You MUST distinguish between:
+- BRAND MENTION: "${targetBrand}" or "${distinctivePrefix ?? targetBrand}" referenced as a specific company/entity → brand_mentioned=true
+- GENERIC USE: category words like "${targetBrand.split(/\s+/).slice(distinctivePrefix ? distinctivePrefix.split(/\s+/).length : 0).join(" ")}" used in their normal meaning (e.g. "il risarcimento danni è un diritto", "consulenza fiscale gratuita") → brand_mentioned=false
+Only set brand_mentioned=true if the response refers to the SPECIFIC COMPANY "${targetBrand}"${brandDomain ? ` (website: ${brandDomain})` : ""}, NOT when category words appear generically.`
     : "";
 
   const systemPrompt = `You are an AI analyst. Analyze an AI model's response and extract structured data.
