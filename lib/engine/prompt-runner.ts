@@ -83,10 +83,16 @@ export async function callAIModel(
               }],
             } as any);
 
-            const textBlocks = msg.content.filter((b: any) => b.type === "text");
-            const text = textBlocks[textBlocks.length - 1]?.type === "text"
-              ? (textBlocks[textBlocks.length - 1] as any).text
-              : "";
+            // Concatenate ALL text blocks — web search splits response across multiple blocks
+            const text = msg.content
+              .filter((b: any) => b.type === "text")
+              .map((b: any) => b.text)
+              .join("\n");
+
+            console.log(`[CLAUDE DEBUG] model=${model} browsing=true max_tokens=4096 stop_reason=${msg.stop_reason} text_len=${text.length} blocks=${msg.content.length} input_tokens=${msg.usage?.input_tokens} output_tokens=${msg.usage?.output_tokens}`);
+            if (msg.stop_reason === "max_tokens") {
+              console.warn(`[CLAUDE DEBUG] TRUNCATED: ${model} hit max_tokens with web search`);
+            }
 
             if (text) {
               const searchSources = extractFromAnthropicSearch(msg.content as any[], brandDomain ?? undefined);
@@ -103,8 +109,18 @@ export async function callAIModel(
           max_tokens: 4096,
           messages: [{ role: "user", content: prompt }],
         });
-        const block = msg.content[0];
-        const text = block.type === "text" ? block.text : "";
+
+        // Concatenate ALL text blocks (standard calls usually have one, but be safe)
+        const text = msg.content
+          .filter((b: any) => b.type === "text")
+          .map((b: any) => b.text)
+          .join("\n");
+
+        console.log(`[CLAUDE DEBUG] model=${model} browsing=false max_tokens=4096 stop_reason=${msg.stop_reason} text_len=${text.length} blocks=${msg.content.length} input_tokens=${msg.usage?.input_tokens} output_tokens=${msg.usage?.output_tokens}`);
+        if (msg.stop_reason === "max_tokens") {
+          console.warn(`[CLAUDE DEBUG] TRUNCATED: ${model} hit max_tokens`);
+        }
+
         if (!text) throw new Error("Anthropic returned empty response");
         return { text, sources: extractFromText(text, brandDomain ?? undefined) };
       }, "Anthropic");
