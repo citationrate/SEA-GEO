@@ -194,14 +194,14 @@ export function AnalysisLauncher({
             {/* Query cost breakdown */}
             <div className="space-y-2 rounded-[2px] border border-border bg-muted/20 px-4 py-3">
               <p className="text-sm text-muted-foreground">
-                {t("analysisLauncher.thisAnalysisWillUse")} <span className="text-foreground font-bold">{queryCost}</span> query sul tuo piano
+                {t("analysisLauncher.thisAnalysisWillUse")} <span className="text-foreground font-bold">{totalPrompts}</span> prompt sul tuo piano
               </p>
               <p className="text-xs text-muted-foreground">
-                {totalPrompts} prompt totali ({queryCount} query &times; {modelsConfig.length} modell{modelsConfig.length === 1 ? "o" : "i"} &times; {runCount} run)
+                {queryCount} query &times; {modelsConfig.length} modell{modelsConfig.length === 1 ? "o" : "i"} &times; {Math.max(segmentCount, 1)} segment{segmentCount === 1 ? "o" : "i"} &times; {runCount} run = {totalPrompts} prompt
               </p>
               {profileLoaded && (
                 <p className="text-xs text-muted-foreground">
-                  Hai <span className="text-foreground font-medium">{remaining}</span> query disponibili questo mese ({usage.promptsUsed}/{usage.promptsLimit} utilizzate)
+                  Hai <span className="text-foreground font-medium">{remaining}</span> prompt disponibili questo mese ({usage.promptsUsed}/{usage.promptsLimit} utilizzati)
                 </p>
               )}
             </div>
