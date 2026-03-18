@@ -24,10 +24,14 @@ export const API_MODEL_ID: Record<string, string> = {
   "claude-sonnet": "claude-sonnet-4-5",
   "claude-opus": "claude-opus-4-5",
   "gemini-2.5-pro": "gemini-2.5-pro-preview-03-25",
+  "gpt-5.4": "gpt-5.4-2026-03-05",
   "perplexity-sonar": "sonar",
   "perplexity-sonar-pro": "sonar-pro",
   "copilot-gpt4": "gpt-4o",
 };
+
+/** Models that require the Responses API instead of Chat Completions */
+const RESPONSES_API_MODELS = new Set(["gpt-5.4"]);
 
 /**
  * Call an AI model with retry logic and source extraction.
@@ -309,21 +313,31 @@ export async function callAIModel(
     }
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    if (browsing) {
+    // GPT-5.4 and similar models require the Responses API (not Chat Completions)
+    const useResponsesApi = RESPONSES_API_MODELS.has(model);
+
+    if (browsing || useResponsesApi) {
       try {
-        console.log(`[OpenAI] model=${model} apiModel=${apiModel} attempting responses.create with web_search_preview`);
+        const tools = browsing ? [{ type: "web_search_preview" as const }] : undefined;
+        console.log(`[OpenAI] model=${model} apiModel=${apiModel} responses.create browsing=${browsing} tools=${tools ? "web_search" : "none"}`);
         const response = await openai.responses.create({
           model: apiModel,
-          tools: [{ type: "web_search_preview" }],
+          ...(tools ? { tools } : {}),
           input: prompt,
         });
         const text = response.output_text || "";
-        console.log(`[OpenAI] model=${model} browsing=true text_len=${text.length}`);
-        const annotationSources = extractFromAnnotations(response.output || [], brandDomain ?? undefined);
-        const textSources = extractFromText(text, brandDomain ?? undefined);
-        return { text, sources: mergeSources(annotationSources, textSources) };
-      } catch (browsingErr) {
-        console.error("[callAIModel] OpenAI browsing failed, falling back:", browsingErr instanceof Error ? browsingErr.message : browsingErr);
+        console.log(`[OpenAI] model=${model} responses.create text_len=${text.length}`);
+        if (text) {
+          const annotationSources = browsing ? extractFromAnnotations(response.output || [], brandDomain ?? undefined) : [];
+          const textSources = extractFromText(text, brandDomain ?? undefined);
+          return { text, sources: mergeSources(annotationSources, textSources) };
+        }
+      } catch (responsesErr) {
+        console.error(`[OpenAI] model=${model} responses.create failed:`, responsesErr instanceof Error ? responsesErr.message : responsesErr);
+        // For Responses-only models, don't fall through to chat.completions
+        if (useResponsesApi && !browsing) {
+          return { text: "", sources: [], error: `[${model}] ${responsesErr instanceof Error ? responsesErr.message : String(responsesErr)}` };
+        }
       }
     }
 
@@ -338,7 +352,7 @@ export async function callAIModel(
         return { text, sources: extractFromText(text, brandDomain ?? undefined) };
       }
 
-      console.log(`[OpenAI] model=${model} apiModel=${apiModel} attempting chat.completions.create`);
+      console.log(`[OpenAI] model=${model} apiModel=${apiModel} chat.completions.create`);
       const completion = await openai.chat.completions.create({
         model: apiModel,
         temperature: 0.7,
@@ -346,7 +360,7 @@ export async function callAIModel(
         messages: [{ role: "user", content: prompt }],
       });
       const text = completion.choices[0]?.message?.content ?? "";
-      console.log(`[OpenAI] model=${model} browsing=false text_len=${text.length} finish_reason=${completion.choices[0]?.finish_reason}`);
+      console.log(`[OpenAI] model=${model} text_len=${text.length} finish_reason=${completion.choices[0]?.finish_reason}`);
       return { text, sources: extractFromText(text, brandDomain ?? undefined) };
     } catch (openaiErr) {
       const errMsg = openaiErr instanceof Error ? openaiErr.message : String(openaiErr);
