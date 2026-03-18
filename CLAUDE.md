@@ -114,6 +114,16 @@ User triggers analysis → Inngest function starts
   → computeCompetitorAVI() — calculates per-competitor AVI scores
 ```
 
+## Web Search Tool (Anthropic)
+- Version: `web_search_20260209` (dynamic filtering)
+- Replaces: `web_search_20250305`
+- Dynamic filtering: enabled by default on Haiku 4.5, Sonnet 4.5, Opus 4.5
+- `max_uses`: 2 (Haiku) / 3 (Sonnet) / 5 (Opus) by model tier
+- `user_location`: IT / Europe/Rome
+- `blocked_domains`: facebook.com, instagram.com, twitter.com, tiktok.com
+- NOT ZDR-eligible (use `allowed_callers: ["direct"]` for ZDR)
+- Only applies to Anthropic model calls when `browsing=true`, not Gemini/Perplexity/OpenAI
+
 ## Environment Variables
 Required in `.env.local`:
 - `NEXT_PUBLIC_SUPABASE_URL`

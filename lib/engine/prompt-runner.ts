@@ -5,9 +5,11 @@ import { MODEL_MAP } from "./models";
 import {
   type ExtractedSource,
   extractFromAnnotations,
+  extractFromAnthropicSearch,
   extractFromGrounding,
   extractFromText,
   mergeSources,
+  classifyDomainForPerplexity,
 } from "./sources-extractor";
 
 export interface AIModelResult {
@@ -53,15 +55,64 @@ export async function callAIModel(
       if (!process.env.ANTHROPIC_API_KEY) {
         return { text: "", sources: [], error: `[${model}] SKIPPED: ANTHROPIC_API_KEY non configurata` };
       }
-      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-      const msg = await anthropic.messages.create({
-        model: apiModel,
-        max_tokens: 1500,
-        messages: [{ role: "user", content: prompt }],
-      });
-      const block = msg.content[0];
-      const text = block.type === "text" ? block.text : "";
-      return { text, sources: extractFromText(text, brandDomain ?? undefined) };
+
+      // web_search_20260209 max_uses budget by model tier
+      const ANTHROPIC_SEARCH_MAX_USES: Record<string, number> = {
+        "claude-haiku": 2,
+        "claude-sonnet": 3,
+        "claude-opus": 5,
+      };
+
+      return await retryCall(2, async () => {
+        const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+        const tools: any[] | undefined = browsing
+          ? [{
+              type: "web_search_20260209",
+              name: "web_search",
+              max_uses: ANTHROPIC_SEARCH_MAX_USES[model] ?? 3,
+              user_location: {
+                type: "approximate",
+                country: "IT",
+                timezone: "Europe/Rome",
+              },
+              blocked_domains: [
+                "facebook.com",
+                "instagram.com",
+                "twitter.com",
+                "tiktok.com",
+              ],
+            }]
+          : undefined;
+
+        const msg = await anthropic.messages.create({
+          model: apiModel,
+          max_tokens: 1500,
+          messages: [{ role: "user", content: prompt }],
+          ...(tools ? { tools } : {}),
+        } as any);
+
+        // Extract text from the last text block (web search responses have multiple content blocks)
+        const textBlocks = msg.content.filter((b: any) => b.type === "text");
+        const text = textBlocks[textBlocks.length - 1]?.type === "text"
+          ? (textBlocks[textBlocks.length - 1] as any).text
+          : "";
+        if (!text) throw new Error("Anthropic returned empty response");
+
+        // Log web search activity
+        for (const block of msg.content) {
+          if (block.type === "tool_use" && (block as any).name === "web_search") {
+            console.log(`[Anthropic WEB SEARCH] Query: ${(block as any).input?.query}`);
+          }
+        }
+
+        // Extract sources from web search results + text
+        const searchSources = browsing
+          ? extractFromAnthropicSearch(msg.content as any[], brandDomain ?? undefined)
+          : [];
+        const textSources = extractFromText(text, brandDomain ?? undefined);
+        return { text, sources: mergeSources(searchSources, textSources) };
+      }, "Anthropic");
     }
 
     if (provider === "google") {
@@ -159,7 +210,29 @@ export async function callAIModel(
         if (!text) {
           console.warn(`[Perplexity] empty text from response. Keys: ${Object.keys(data).join(",")}, choices: ${JSON.stringify(data.choices?.[0]).slice(0, 200)}`);
         }
-        return { text, sources: extractFromText(text, brandDomain ?? undefined) };
+
+        // Extract structured citations from Perplexity API response
+        const citationSources: ExtractedSource[] = [];
+        const citations: string[] = data.citations ?? [];
+        const seenDomains = new Set<string>();
+        for (const url of citations) {
+          try {
+            const domain = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+            if (domain && !seenDomains.has(domain)) {
+              seenDomains.add(domain);
+              citationSources.push({
+                url,
+                domain,
+                title: undefined,
+                source_type: classifyDomainForPerplexity(domain, brandDomain ?? undefined),
+                context: "Perplexity citation",
+              });
+            }
+          } catch { /* invalid URL */ }
+        }
+
+        const textSources = extractFromText(text, brandDomain ?? undefined);
+        return { text, sources: mergeSources(citationSources, textSources) };
       }, "Perplexity");
     }
 

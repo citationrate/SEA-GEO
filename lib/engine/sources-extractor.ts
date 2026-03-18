@@ -38,6 +38,36 @@ export function extractFromAnnotations(output: any[], brandDomain?: string): Ext
   return results;
 }
 
+/** Estrae fonti da Anthropic web_search_tool_result blocks */
+export function extractFromAnthropicSearch(contentBlocks: any[], brandDomain?: string): ExtractedSource[] {
+  const results: ExtractedSource[] = [];
+  const seen = new Set<string>();
+  try {
+    for (const block of contentBlocks || []) {
+      if (block.type === "web_search_tool_result") {
+        for (const result of block.content || []) {
+          if (result.type === "web_search_result" && result.url) {
+            const domain = safeDomain(result.url);
+            if (domain && !seen.has(domain)) {
+              seen.add(domain);
+              results.push({
+                url: result.url,
+                domain,
+                title: result.title,
+                source_type: classifyDomain(domain, brandDomain),
+                context: "Anthropic web search",
+              });
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("extractFromAnthropicSearch error:", e);
+  }
+  return results;
+}
+
 /** Estrae fonti da Gemini grounding metadata */
 export function extractFromGrounding(candidates: any[], brandDomain?: string): ExtractedSource[] {
   const results: ExtractedSource[] = [];
@@ -172,6 +202,11 @@ function domainToTitle(domain: string): string {
   // "gqitalia.it" → "GQ Italia", "trustpilot.com" → "Trustpilot"
   const name = domain.split(".")[0];
   return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/** Classify domain source type — exported for use in provider-specific extractors */
+export function classifyDomainForPerplexity(domain: string, brandDomain?: string): ExtractedSource["source_type"] {
+  return classifyDomain(domain, brandDomain);
 }
 
 function classifyDomain(domain: string, brandDomain?: string): ExtractedSource["source_type"] {
