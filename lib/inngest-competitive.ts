@@ -13,6 +13,77 @@ function titleCase(s: string): string {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** Driver-specific query templates that force AI to search for real, current data */
+const DRIVER_TEMPLATES: Record<string, [string, string, string]> = {
+  "reputazione": [
+    "Recensioni clienti {A} vs {B}: quale ha più valutazioni positive su Google e Trustpilot ad oggi?",
+    "Tra {A} e {B}, quale ha più clienti soddisfatti secondo le recensioni recenti online?",
+    "{A} o {B}: qual è la reputazione online ad oggi secondo chi li ha usati?",
+  ],
+  "trust": [
+    "Recensioni clienti {A} vs {B}: quale ha più valutazioni positive su Google e Trustpilot ad oggi?",
+    "Tra {A} e {B}, quale ha più clienti soddisfatti secondo le recensioni recenti online?",
+    "{A} o {B}: qual è la reputazione online ad oggi secondo chi li ha usati?",
+  ],
+  "prezzo": [
+    "Quanto costa il servizio di {A} rispetto a {B}? Confronto prezzi reale ad oggi",
+    "Per risparmiare, conviene {A} o {B} in base ai prezzi attuali?",
+    "{A} vs {B}: chi offre il miglior rapporto qualità-prezzo secondo i clienti ad oggi?",
+  ],
+  "convenienza": [
+    "Quanto costa il servizio di {A} rispetto a {B}? Confronto prezzi reale ad oggi",
+    "Per risparmiare, conviene {A} o {B} in base ai prezzi attuali?",
+    "{A} vs {B}: chi offre il miglior rapporto qualità-prezzo secondo i clienti ad oggi?",
+  ],
+  "velocità": [
+    "Tempi medi di risposta e gestione pratica: {A} vs {B}, chi è più veloce ad oggi?",
+    "Per una gestione rapida, meglio {A} o {B} secondo le esperienze reali dei clienti?",
+    "{A} o {B}: chi risolve i casi più velocemente in base alle recensioni recenti?",
+  ],
+  "tempi": [
+    "Tempi medi di risposta e gestione pratica: {A} vs {B}, chi è più veloce ad oggi?",
+    "Per una gestione rapida, meglio {A} o {B} secondo le esperienze reali dei clienti?",
+    "{A} o {B}: chi risolve i casi più velocemente in base alle recensioni recenti?",
+  ],
+  "servizio clienti": [
+    "Assistenza clienti {A} vs {B}: chi risponde meglio secondo le recensioni online ad oggi?",
+    "Tra {A} e {B}, quale ha un servizio clienti più affidabile e reattivo ad oggi?",
+    "{A} o {B}: confronto supporto clienti basato su esperienze reali dei clienti",
+  ],
+  "assistenza": [
+    "Assistenza clienti {A} vs {B}: chi risponde meglio secondo le recensioni online ad oggi?",
+    "Tra {A} e {B}, quale ha un servizio clienti più affidabile e reattivo ad oggi?",
+    "{A} o {B}: confronto supporto clienti basato su esperienze reali dei clienti",
+  ],
+  "esperienza digitale": [
+    "App e sito web di {A} vs {B}: quale piattaforma digitale è più facile da usare ad oggi?",
+    "Per gestire tutto online, meglio {A} o {B}? Confronto app e sito ad oggi",
+    "{A} vs {B}: quale offre la migliore esperienza digitale secondo gli utenti?",
+  ],
+  "digitale": [
+    "App e sito web di {A} vs {B}: quale piattaforma digitale è più facile da usare ad oggi?",
+    "Per gestire tutto online, meglio {A} o {B}? Confronto app e sito ad oggi",
+    "{A} vs {B}: quale offre la migliore esperienza digitale secondo gli utenti?",
+  ],
+  "sicurezza": [
+    "{A} o {B}: quale è più affidabile e sicuro secondo dati e recensioni recenti?",
+    "Affidabilità e solidità di {A} vs {B}: confronto basato su dati reali ad oggi",
+    "Tra {A} e {B}, quale dà più garanzie ai clienti secondo le esperienze online?",
+  ],
+  "affidabilità": [
+    "{A} o {B}: quale è più affidabile e sicuro secondo dati e recensioni recenti?",
+    "Affidabilità e solidità di {A} vs {B}: confronto basato su dati reali ad oggi",
+    "Tra {A} e {B}, quale dà più garanzie ai clienti secondo le esperienze online?",
+  ],
+};
+
+/** Fallback template for unknown drivers */
+const FALLBACK_TEMPLATES: [string, string, string] = [
+  "{A} vs {B}: quale è migliore per {driver} secondo le recensioni e i dati reali ad oggi?",
+  "Tra {A} e {B}, chi offre {driver} migliore in base alle esperienze dei clienti ad oggi?",
+  "{A} o {B}: confronto {driver} basato su dati e recensioni recenti",
+];
+
 function generateQueries(
   brandA: string,
   brandB: string,
@@ -20,11 +91,17 @@ function generateQueries(
 ): { pattern: string; text: string }[] {
   const a = titleCase(brandA);
   const b = titleCase(brandB);
-  return [
-    { pattern: "A", text: `Tra ${a} e ${b}, chi offre ${driver} migliore?` },
-    { pattern: "B", text: `È meglio scegliere ${a} o ${b} se mi interessa soprattutto ${driver}?` },
-    { pattern: "C", text: `${a} o ${b}: quale consigli considerando ${driver}?` },
-  ];
+  const driverKey = driver.toLowerCase().trim();
+
+  const templates = DRIVER_TEMPLATES[driverKey] ?? FALLBACK_TEMPLATES;
+
+  return templates.map((tpl, i) => ({
+    pattern: String.fromCharCode(65 + i), // A, B, C
+    text: tpl
+      .replace(/\{A\}/g, a)
+      .replace(/\{B\}/g, b)
+      .replace(/\{driver\}/g, driver),
+  }));
 }
 
 const VALID_RECOMMENDATIONS = new Set([1, 2, 0.5]);
