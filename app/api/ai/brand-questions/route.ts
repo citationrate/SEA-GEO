@@ -8,9 +8,11 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
+  console.log("[BRAND-QUESTIONS] Request received:", JSON.stringify(body).slice(0, 300));
   const { categoria, mercato, punti_di_forza, competitor, obiezioni } = body;
 
   if (!categoria) {
+    console.log("[BRAND-QUESTIONS] Missing categoria");
     return NextResponse.json({ error: "Categoria richiesta" }, { status: 400 });
   }
 
@@ -22,8 +24,10 @@ export async function POST(request: Request) {
     obiezioni?.length ? `Obiezioni comuni: ${obiezioni.join(", ")}` : null,
   ].filter(Boolean).join("\n");
 
+  console.log("[BRAND-QUESTIONS] ANTHROPIC_API_KEY set:", !!process.env.ANTHROPIC_API_KEY);
   try {
-    const anthropic = new Anthropic();
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    console.log("[BRAND-QUESTIONS] Calling Haiku with context:", context);
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 300,
@@ -39,8 +43,8 @@ export async function POST(request: Request) {
 
     const questions = JSON.parse(match[0]);
     return NextResponse.json({ questions: Array.isArray(questions) ? questions.slice(0, 3) : [] });
-  } catch (err) {
-    console.error("AI brand questions error:", err);
+  } catch (err: any) {
+    console.error("[BRAND-QUESTIONS] ERROR:", err?.message ?? err, err?.status, err?.stack?.slice(0, 300));
     return NextResponse.json({ error: "Errore generazione domande" }, { status: 500 });
   }
 }

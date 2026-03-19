@@ -23,8 +23,13 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
 
     const body = await request.json();
+    console.log("[QUERY-GEN] Request received:", JSON.stringify(body).slice(0, 500));
+    console.log("[QUERY-GEN] ANTHROPIC_API_KEY set:", !!process.env.ANTHROPIC_API_KEY);
     const parsed = schema.safeParse(body);
-    if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
+    if (!parsed.success) {
+      console.log("[QUERY-GEN] Validation failed:", parsed.error.message);
+      return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
+    }
 
     const { project_id, count, tofu_pct, categoria, mercato, luogo, punti_di_forza, competitor, obiezioni, personas } = parsed.data;
 
@@ -89,8 +94,8 @@ export async function POST(request: Request) {
     queries = queries.slice(0, count);
 
     return NextResponse.json({ queries }, { status: 200 });
-  } catch (err) {
-    console.error("[ai-generate] error:", err);
+  } catch (err: any) {
+    console.error("[QUERY-GEN] ERROR:", err?.message ?? err, err?.status, err?.stack?.slice(0, 300));
     return NextResponse.json({ error: "Errore nella generazione" }, { status: 500 });
   }
 }
