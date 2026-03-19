@@ -309,16 +309,19 @@ export async function callAIModel(
     const useResponsesApi = RESPONSES_API_MODELS.has(model);
 
     if (useResponsesApi) {
+      const isGpt54 = model === "gpt-5.4";
+      if (isGpt54) console.log(`[GPT-5.4 CALLAI] Entered Responses API path. browsing=${browsing}, apiModel=${apiModel}`);
       try {
         const useSearch = browsing;
         const tools = useSearch ? [{ type: "web_search_preview" as const }] : undefined;
-        console.log(`[OpenAI] model=${model} apiModel=${apiModel} responses.create${useSearch ? " +search" : ""}`);
+        if (isGpt54) console.log(`[GPT-5.4 CALLAI] Calling openai.responses.create with${useSearch ? "" : "out"} tools`);
         const response = await openai.responses.create({
           model: apiModel,
           input: prompt,
           ...(tools ? { tools } : {}),
         });
         const text = response.output_text || "";
+        if (isGpt54) console.log(`[GPT-5.4 CALLAI] Response received: text_len=${text.length}, output_items=${response.output?.length ?? 0}, raw=${JSON.stringify(response).slice(0, 300)}`);
         if (text) {
           const sources = useSearch
             ? mergeSources(extractFromAnnotations(response.output || [], brandDomain ?? undefined), extractFromText(text, brandDomain ?? undefined))
@@ -328,7 +331,9 @@ export async function callAIModel(
         return { text: "", sources: [], error: `[${model}] Empty response from Responses API` };
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        console.error(`[OpenAI] model=${model} responses failed:`, errMsg);
+        const errStatus = (err as any)?.status ?? "unknown";
+        if (isGpt54) console.error(`[GPT-5.4 CALLAI] CAUGHT ERROR: status=${errStatus}, message=${errMsg}`);
+        else console.error(`[OpenAI] model=${model} responses failed:`, errMsg);
         return { text: "", sources: [], error: `[${model}] ${errMsg}` };
       }
     }

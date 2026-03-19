@@ -258,28 +258,41 @@ export const runCompetitiveAnalysis = inngest.createFunction(
 
           if (!prompt) continue;
 
+          const isGpt54 = prompt.model === "gpt-5.4";
+          if (isGpt54) console.log(`[GPT-5.4 COMPARISON] Starting call for ${promptId}, query: "${prompt.query_text?.slice(0, 80)}"`);
+
           try {
+            if (isGpt54) console.log(`[GPT-5.4 COMPARISON] Calling callAIModel(model="${prompt.model}", browsing=true)`);
             const result = await callAIModel(prompt.query_text, prompt.model, true);
+
+            if (isGpt54) console.log(`[GPT-5.4 COMPARISON] Result: text_len=${result.text?.length ?? 0}, error=${result.error ?? "none"}, sources=${result.sources?.length ?? 0}`);
 
             if (!result.text && result.error) {
               console.error(`[competitive] ${prompt.model} failed for ${promptId}: ${result.error}`);
             }
 
-            await (supabase.from("competitive_prompts") as any)
-              .update({
-                response_text: result.text || (result.error ? `ERROR: ${result.error}` : null),
-                status: result.text ? "completed" : "error",
-              })
+            const updatePayload = {
+              response_text: result.text || (result.error ? `ERROR: ${result.error}` : null),
+              status: result.text ? "completed" : "error",
+            };
+            if (isGpt54) console.log(`[GPT-5.4 COMPARISON] DB update: status=${updatePayload.status}, response_text_len=${updatePayload.response_text?.length ?? 0}`);
+
+            const { error: dbErr } = await (supabase.from("competitive_prompts") as any)
+              .update(updatePayload)
               .eq("id", promptId);
+
+            if (dbErr) console.error(`[GPT-5.4 COMPARISON] DB update FAILED:`, dbErr.message);
+            else if (isGpt54) console.log(`[GPT-5.4 COMPARISON] DB update OK for ${promptId}`);
           } catch (e: any) {
             const errMsg = e?.message ?? String(e);
-            console.error(`[competitive] model call threw for ${promptId}:`, errMsg);
-            await (supabase.from("competitive_prompts") as any)
+            console.error(`[GPT-5.4 COMPARISON] EXCEPTION for ${promptId}:`, errMsg);
+            const { error: dbErr } = await (supabase.from("competitive_prompts") as any)
               .update({
                 response_text: `EXCEPTION: ${errMsg}`,
                 status: "error",
               })
               .eq("id", promptId);
+            if (dbErr) console.error(`[GPT-5.4 COMPARISON] DB error-update FAILED:`, dbErr.message);
           }
         }
       });
