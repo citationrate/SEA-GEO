@@ -359,10 +359,9 @@ export async function callAIModel(
         console.log(`[OpenAI] model=${model} apiModel=${apiModel} chat.completions.create (fallback)`);
         const completion = await openai.chat.completions.create({
           model: apiModel,
-          temperature: 0.7,
-          max_tokens: 4096,
+          max_completion_tokens: 4096,
           messages: [{ role: "user", content: prompt }],
-        });
+        } as any);
         const text = completion.choices[0]?.message?.content ?? "";
         console.log(`[OpenAI] model=${model} chat.completions fallback text_len=${text.length}`);
         if (text) {

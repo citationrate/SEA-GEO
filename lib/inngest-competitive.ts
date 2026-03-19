@@ -237,60 +237,49 @@ export const runCompetitiveAnalysis = inngest.createFunction(
       return (data as any[]).map((r: any) => r.id);
     });
 
-    // Step 2: Execute all prompts (batched)
-    const batchSize = 3;
-    const batches: string[][] = [];
-    for (let i = 0; i < promptIds.length; i += batchSize) {
-      batches.push(promptIds.slice(i, i + batchSize));
-    }
-
-    for (let i = 0; i < batches.length; i++) {
-      await step.run(`execute-batch-${i}`, async () => {
+    // Step 2: Execute all prompts — one step per prompt to avoid Vercel 60s timeout
+    // GPT-5.4 Responses API takes 14-21s per call, so batching would exceed the limit
+    for (let i = 0; i < promptIds.length; i++) {
+      await step.run(`execute-prompt-${i}`, async () => {
         const supabase = createServiceClient();
+        const promptId = promptIds[i];
+        const { data: prompt } = await (supabase.from("competitive_prompts") as any)
+          .select("*")
+          .eq("id", promptId)
+          .single();
 
-        for (let j = 0; j < batches[i].length; j++) {
-          const promptId = batches[i][j];
-          const { data: prompt } = await (supabase.from("competitive_prompts") as any)
-            .select("*")
-            .eq("id", promptId)
-            .single();
+        if (!prompt) return;
 
-          if (!prompt) continue;
+        // Delay for Gemini rate limiting
+        if (i > 0 && prompt.model?.startsWith("gemini")) {
+          await new Promise((r) => setTimeout(r, 2000));
+        }
 
-          // Delay between calls to avoid rate limiting (especially Gemini free tier)
-          if (j > 0) {
-            const isGemini = prompt.model?.startsWith("gemini");
-            await new Promise((r) => setTimeout(r, isGemini ? 2000 : 500));
+        try {
+          let result = await callAIModel(prompt.query_text, prompt.model, true);
+
+          // If first attempt failed, retry once with short backoff
+          if (!result.text && result.error) {
+            console.warn(`[competitive] ${prompt.model} failed for ${promptId}: ${result.error} — retrying in 3s`);
+            await new Promise((r) => setTimeout(r, 3000));
+            result = await callAIModel(prompt.query_text, prompt.model, true);
           }
 
-          try {
-            let result = await callAIModel(prompt.query_text, prompt.model, true);
-
-            // If first attempt returned an error (e.g. rate limit), retry once with backoff
-            if (!result.text && result.error) {
-              console.warn(`[competitive] ${prompt.model} failed for ${promptId}: ${result.error} — retrying in 5s`);
-              await new Promise((r) => setTimeout(r, 5000));
-              result = await callAIModel(prompt.query_text, prompt.model, true);
-            }
-
-            if (!result.text && result.error) {
-              console.error(`[competitive] ${prompt.model} failed permanently for ${promptId}: ${result.error}`);
-            }
-
-            const responseText = result.text;
-
-            await (supabase.from("competitive_prompts") as any)
-              .update({
-                response_text: responseText || null,
-                status: responseText ? "completed" : "error",
-              })
-              .eq("id", promptId);
-          } catch (e: any) {
-            console.error(`[competitive] model call threw for ${promptId}:`, e?.message);
-            await (supabase.from("competitive_prompts") as any)
-              .update({ status: "error" })
-              .eq("id", promptId);
+          if (!result.text && result.error) {
+            console.error(`[competitive] ${prompt.model} failed permanently for ${promptId}: ${result.error}`);
           }
+
+          await (supabase.from("competitive_prompts") as any)
+            .update({
+              response_text: result.text || null,
+              status: result.text ? "completed" : "error",
+            })
+            .eq("id", promptId);
+        } catch (e: any) {
+          console.error(`[competitive] model call threw for ${promptId}:`, e?.message);
+          await (supabase.from("competitive_prompts") as any)
+            .update({ status: "error" })
+            .eq("id", promptId);
         }
       });
     }
