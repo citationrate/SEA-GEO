@@ -317,50 +317,66 @@ export async function callAIModel(
     const useResponsesApi = RESPONSES_API_MODELS.has(model);
 
     // Responses API path: browsing with web_search OR Responses-only models
-    if (browsing || useResponsesApi) {
-      // Attempt 1: with web search tools (if browsing)
-      if (browsing) {
-        try {
-          console.log(`[OpenAI] model=${model} apiModel=${apiModel} responses.create with web_search_preview`);
-          const response = await openai.responses.create({
-            model: apiModel,
-            tools: [{ type: "web_search_preview" }],
-            input: prompt,
-          });
-          const text = response.output_text || "";
-          console.log(`[OpenAI] model=${model} responses.create+search text_len=${text.length}`);
-          if (text) {
-            const annotationSources = extractFromAnnotations(response.output || [], brandDomain ?? undefined);
-            const textSources = extractFromText(text, brandDomain ?? undefined);
-            return { text, sources: mergeSources(annotationSources, textSources) };
+    if (useResponsesApi) {
+      return await retryCall(2, async () => {
+        // Attempt 1: with web search tools (if browsing)
+        if (browsing) {
+          try {
+            console.log(`[OpenAI] model=${model} apiModel=${apiModel} responses.create with web_search_preview`);
+            const response = await openai.responses.create({
+              model: apiModel,
+              tools: [{ type: "web_search_preview" }],
+              input: prompt,
+            });
+            const text = response.output_text || "";
+            console.log(`[OpenAI] model=${model} responses.create+search text_len=${text.length}`);
+            if (text) {
+              const annotationSources = extractFromAnnotations(response.output || [], brandDomain ?? undefined);
+              const textSources = extractFromText(text, brandDomain ?? undefined);
+              return { text, sources: mergeSources(annotationSources, textSources) };
+            }
+          } catch (browsingErr) {
+            console.error(`[OpenAI] model=${model} responses.create+search failed:`, browsingErr instanceof Error ? browsingErr.message : browsingErr);
           }
-        } catch (browsingErr) {
-          console.error(`[OpenAI] model=${model} responses.create+search failed:`, browsingErr instanceof Error ? browsingErr.message : browsingErr);
         }
-      }
 
-      // Attempt 2: Responses API without tools (for Responses-only models, or as fallback)
-      if (useResponsesApi) {
-        try {
-          console.log(`[OpenAI] model=${model} apiModel=${apiModel} responses.create without tools`);
-          const response = await openai.responses.create({
-            model: apiModel,
-            input: prompt,
-          });
-          const text = response.output_text || "";
-          console.log(`[OpenAI] model=${model} responses.create text_len=${text.length}`);
-          if (text) {
-            return { text, sources: extractFromText(text, brandDomain ?? undefined) };
-          }
-          return { text: "", sources: [], error: `[${model}] Empty response from Responses API` };
-        } catch (responsesErr) {
-          const errMsg = responsesErr instanceof Error ? responsesErr.message : String(responsesErr);
-          console.error(`[OpenAI] model=${model} responses.create FAILED:`, errMsg);
-          return { text: "", sources: [], error: `[${model}] ${errMsg}` };
+        // Attempt 2: Responses API without tools (fallback or non-browsing)
+        console.log(`[OpenAI] model=${model} apiModel=${apiModel} responses.create without tools`);
+        const response = await openai.responses.create({
+          model: apiModel,
+          input: prompt,
+        });
+        const text = response.output_text || "";
+        console.log(`[OpenAI] model=${model} responses.create text_len=${text.length}`);
+        if (text) {
+          return { text, sources: extractFromText(text, brandDomain ?? undefined) };
         }
+        throw new Error(`Empty response from Responses API`);
+      }, "OpenAI-Responses");
+    }
+
+    // Standard OpenAI models: try Responses API with web_search when browsing
+    if (browsing) {
+      try {
+        console.log(`[OpenAI] model=${model} apiModel=${apiModel} responses.create with web_search_preview (standard)`);
+        const response = await openai.responses.create({
+          model: apiModel,
+          tools: [{ type: "web_search_preview" }],
+          input: prompt,
+        });
+        const text = response.output_text || "";
+        console.log(`[OpenAI] model=${model} responses.create+search text_len=${text.length}`);
+        if (text) {
+          const annotationSources = extractFromAnnotations(response.output || [], brandDomain ?? undefined);
+          const textSources = extractFromText(text, brandDomain ?? undefined);
+          return { text, sources: mergeSources(annotationSources, textSources) };
+        }
+      } catch (browsingErr) {
+        console.error(`[OpenAI] model=${model} responses.create+search failed, falling back to chat.completions:`, browsingErr instanceof Error ? browsingErr.message : browsingErr);
       }
     }
 
+    // Fallback: Chat Completions API (standard path)
     try {
       if (model.startsWith("o1") || model.startsWith("o3")) {
         const completion = await openai.chat.completions.create({
