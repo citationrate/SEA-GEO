@@ -264,14 +264,18 @@ export const runCompetitiveAnalysis = inngest.createFunction(
 
           await (supabase.from("competitive_prompts") as any)
             .update({
-              response_text: result.text || null,
+              response_text: result.text || (result.error ? `ERROR: ${result.error}` : null),
               status: result.text ? "completed" : "error",
             })
             .eq("id", promptId);
         } catch (e: any) {
-          console.error(`[competitive] model call threw for ${promptId}:`, e?.message);
+          const errMsg = e?.message ?? String(e);
+          console.error(`[competitive] model call threw for ${promptId}:`, errMsg);
           await (supabase.from("competitive_prompts") as any)
-            .update({ status: "error" })
+            .update({
+              response_text: `EXCEPTION: ${errMsg}`,
+              status: "error",
+            })
             .eq("id", promptId);
         }
       });
