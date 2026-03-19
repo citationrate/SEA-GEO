@@ -261,14 +261,17 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
       });
   }, []);
 
-  // Tour activates ONLY on signup (when ?welcome=1 is in URL)
+  // Tour activates on first login (onboarding_completed = false) or via ?welcome=1
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const lsDone = localStorage.getItem(LS_KEY);
     const isWelcome = searchParamsRef.current?.get("welcome") === "1";
-    if (isWelcome && !onboardingCompleted) {
+
+    // Activate if: first login (not completed in DB and not dismissed locally) OR explicit ?welcome=1
+    if ((isWelcome || (!onboardingCompleted && !lsDone)) && pathname === "/dashboard") {
       setActive(true);
       // Clean the URL without reload
-      window.history.replaceState({}, "", pathname);
+      if (isWelcome) window.history.replaceState({}, "", pathname);
     }
   }, [onboardingCompleted, pathname]);
 
