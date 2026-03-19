@@ -92,7 +92,7 @@ export interface ProviderGroup {
   label: string;
   badge: string;
   color: string;
-  models: { id: string; label: string; descriptionKey: string; expensive?: boolean }[];
+  models: { id: string; label: string; descriptionKey: string; expensive?: boolean; proOnly?: boolean }[];
   comingSoon?: boolean;
 }
 
@@ -102,14 +102,14 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
     models: [
       { id: "gpt-4o-mini", label: "GPT-4o Mini", descriptionKey: "modelDescriptions.gpt-4o-mini" },
       { id: "gpt-4o", label: "GPT-4o", descriptionKey: "modelDescriptions.gpt-4o" },
-      { id: "gpt-5.4", label: "GPT-5.4", descriptionKey: "modelDescriptions.gpt-5.4" },
+      { id: "gpt-5.4", label: "GPT-5.4", descriptionKey: "modelDescriptions.gpt-5.4", proOnly: true },
     ],
   },
   {
     id: "google", label: "Google", badge: "Gemini", color: "text-blue-500",
     models: [
       { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", descriptionKey: "modelDescriptions.gemini-2.5-flash" },
-      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", descriptionKey: "modelDescriptions.gemini-2.5-pro" },
+      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", descriptionKey: "modelDescriptions.gemini-2.5-pro", proOnly: true },
     ],
   },
   {
@@ -117,13 +117,13 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
     models: [
       { id: "claude-haiku", label: "Claude Haiku 4.5", descriptionKey: "modelDescriptions.claude-haiku" },
       { id: "claude-sonnet", label: "Claude Sonnet 4.5", descriptionKey: "modelDescriptions.claude-sonnet" },
-      { id: "claude-opus", label: "Claude Opus 4.5", descriptionKey: "modelDescriptions.claude-opus", expensive: true },
+      { id: "claude-opus", label: "Claude Opus 4.5", descriptionKey: "modelDescriptions.claude-opus", expensive: true, proOnly: true },
     ],
   },
   {
     id: "xai", label: "xAI", badge: "Grok", color: "text-gray-400",
     models: [
-      { id: "grok-3", label: "Grok 3", descriptionKey: "modelDescriptions.grok-3" },
+      { id: "grok-3", label: "Grok 3", descriptionKey: "modelDescriptions.grok-3", proOnly: true },
       { id: "grok-3-mini", label: "Grok 3 Mini", descriptionKey: "modelDescriptions.grok-3-mini" },
     ],
   },
@@ -131,7 +131,7 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
     id: "perplexity", label: "Perplexity", badge: "Sonar", color: "text-cyan-500",
     models: [
       { id: "perplexity-sonar", label: "Sonar", descriptionKey: "modelDescriptions.perplexity-sonar" },
-      { id: "perplexity-sonar-pro", label: "Sonar Pro", descriptionKey: "modelDescriptions.perplexity-sonar-pro" },
+      { id: "perplexity-sonar-pro", label: "Sonar Pro", descriptionKey: "modelDescriptions.perplexity-sonar-pro", proOnly: true },
     ],
   },
   {
@@ -141,3 +141,8 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
     ],
   },
 ];
+
+/** Models that require a Pro subscription */
+export const PRO_ONLY_MODEL_IDS = new Set(
+  PROVIDER_GROUPS.flatMap((g) => g.models.filter((m) => m.proOnly).map((m) => m.id))
+);

@@ -13,6 +13,7 @@ interface ModelOption {
   label: string;
   description: string;
   expensive?: boolean;
+  proOnly?: boolean;
 }
 
 interface ProviderOption {
@@ -85,6 +86,7 @@ export default function NewProjectPage() {
       label: m.label,
       description: t(m.descriptionKey),
       expensive: m.expensive,
+      proOnly: m.proOnly,
     })),
   }));
 
@@ -494,18 +496,23 @@ export default function NewProjectPage() {
                     <div className="px-4 pb-3 pt-0 space-y-0.5">
                       {provider.models.map((model) => {
                         const isSelected = currentModel === model.id;
+                        const locked = model.proOnly && !isPro;
                         return (
-                          <label key={model.id} onClick={() => selectModel(provider.id, model.id)}
-                            className={`flex items-center gap-2 p-2 rounded-[2px] cursor-pointer transition-colors ${
-                              isSelected ? "bg-primary/10" : "hover:bg-muted/30"
-                            }`}>
+                          <label key={model.id} onClick={() => !locked && selectModel(provider.id, model.id)}
+                            className={`flex items-center gap-2 p-2 rounded-[2px] transition-colors ${
+                              locked ? "opacity-50 cursor-not-allowed" : isSelected ? "bg-primary/10 cursor-pointer" : "hover:bg-muted/30 cursor-pointer"
+                            }`}
+                            title={locked ? "Disponibile dal piano Pro" : undefined}>
                             <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                              isSelected ? "border-primary" : "border-muted-foreground"
+                              locked ? "border-muted-foreground/40" : isSelected ? "border-primary" : "border-muted-foreground"
                             }`}>
-                              {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                              {isSelected && !locked && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <span className={`text-sm font-medium ${isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-sm font-medium ${locked ? "text-muted-foreground" : isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
+                                {model.proOnly && <span className="font-mono text-[0.625rem] tracking-wide text-[#d4a817] bg-[#d4a817]/15 border border-[#d4a817]/30 px-1 py-0.5 rounded-[2px]">PRO</span>}
+                              </div>
                               <p className="text-xs text-muted-foreground">{model.description}</p>
                             </div>
                           </label>

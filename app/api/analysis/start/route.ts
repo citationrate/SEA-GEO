@@ -1,7 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ALL_MODEL_IDS } from "@/lib/engine/models";
+import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS } from "@/lib/engine/models";
 import { inngest } from "@/lib/inngest";
 import { getUserPlanLimits, getCurrentUsage, incrementPromptsUsed } from "@/lib/usage";
 
@@ -63,6 +63,16 @@ export async function POST(request: Request) {
     const plan = await getUserPlanLimits(user.id);
     const usage = await getCurrentUsage(user.id);
     const promptCost = queries.length;
+
+    // Check for Pro-only models on Base plan
+    const userPlanId = plan.id ?? "base";
+    const isProPlan = userPlanId === "pro" || userPlanId === "agency";
+    if (!isProPlan) {
+      const proModelsUsed = validModels.filter((id: string) => PRO_ONLY_MODEL_IDS.has(id));
+      if (proModelsUsed.length > 0) {
+        return NextResponse.json({ error: `${proModelsUsed.join(", ")} disponibile solo dal piano Pro.` }, { status: 403 });
+      }
+    }
 
     if (validModels.length > plan.max_models_per_project) {
       return NextResponse.json({ error: `Il tuo piano supporta max ${plan.max_models_per_project} modelli per progetto.` }, { status: 403 });

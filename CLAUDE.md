@@ -136,7 +136,7 @@ User triggers analysis → Inngest function starts
 | AI query generation | YES | YES |
 | Dataset access | NO | YES |
 | Comparisons access | NO | YES |
-| Price | €29/month | €79/month |
+| Price | €99/month | €199/month |
 
 ### How Prompts Are Counted
 Each prompt executed = 1 unit consumed from monthly limit.
@@ -179,7 +179,7 @@ Each prompt makes 2 API calls:
 - Inngest: free tier (up to 50k events/month)
 - **Total fixed: ~$45/month** (scales to ~$100 at 500+ users)
 
-### Margin Analysis (€29 Base / €79 Pro, 70/30 mix)
+### Margin Analysis (€99 Base / €199 Pro, 70/30 mix)
 
 | Users | Base | Pro | Revenue | AI costs | Infra | **Profit** | **Margin** |
 |---|---|---|---|---|---|---|---|
@@ -192,8 +192,8 @@ Each prompt makes 2 API calls:
 
 | Plan | Price | AI cost | **Gross margin** |
 |---|---|---|---|
-| Base | €29 | €0.29 | **€28.71 (99%)** |
-| Pro | €79 | €2.05 | **€76.95 (97%)** |
+| Base | €99 | €0.29 | **€28.71 (99%)** |
+| Pro | €199 | €2.05 | **€76.95 (97%)** |
 
 ### Break-Even (infra only, €45/month)
 - 2 Base users (2 × €29 = €58 > €45)

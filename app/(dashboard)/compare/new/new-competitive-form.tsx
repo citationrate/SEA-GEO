@@ -22,7 +22,7 @@ interface ProviderGroup {
   label: string;
   badge: string;
   color: string;
-  models: { id: string; label: string; descriptionKey: string; expensive?: boolean }[];
+  models: { id: string; label: string; descriptionKey: string; expensive?: boolean; proOnly?: boolean }[];
 }
 
 export function NewCompetitiveForm({
@@ -300,7 +300,10 @@ export function NewCompetitiveForm({
                           {selected && <Check className="w-3 h-3 text-primary-foreground" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <span className={`text-sm font-medium ${selected ? "text-primary" : "text-foreground"}`}>{m.label}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-sm font-medium ${selected ? "text-primary" : "text-foreground"}`}>{m.label}</span>
+                            {m.proOnly && <span className="font-mono text-[0.625rem] tracking-wide text-[#d4a817] bg-[#d4a817]/15 border border-[#d4a817]/30 px-1 py-0.5 rounded-[2px]">PRO</span>}
+                          </div>
                           <p className="text-xs text-muted-foreground">{t(m.descriptionKey)}</p>
                         </div>
                       </label>
