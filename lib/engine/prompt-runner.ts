@@ -313,46 +313,66 @@ export async function callAIModel(
     }
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    // GPT-5.4 and similar models require the Responses API (not Chat Completions)
+    // GPT-5.4 and similar models: try Responses API first, then fallback to Chat Completions
     const useResponsesApi = RESPONSES_API_MODELS.has(model);
 
-    // Responses API path: browsing with web_search OR Responses-only models
     if (useResponsesApi) {
-      return await retryCall(2, async () => {
-        // Attempt 1: with web search tools (if browsing)
-        if (browsing) {
-          try {
-            console.log(`[OpenAI] model=${model} apiModel=${apiModel} responses.create with web_search_preview`);
-            const response = await openai.responses.create({
-              model: apiModel,
-              tools: [{ type: "web_search_preview" }],
-              input: prompt,
-            });
-            const text = response.output_text || "";
-            console.log(`[OpenAI] model=${model} responses.create+search text_len=${text.length}`);
-            if (text) {
-              const annotationSources = extractFromAnnotations(response.output || [], brandDomain ?? undefined);
-              const textSources = extractFromText(text, brandDomain ?? undefined);
-              return { text, sources: mergeSources(annotationSources, textSources) };
-            }
-          } catch (browsingErr) {
-            console.error(`[OpenAI] model=${model} responses.create+search failed:`, browsingErr instanceof Error ? browsingErr.message : browsingErr);
+      // Attempt 1: Responses API with web search (if browsing)
+      if (browsing) {
+        try {
+          console.log(`[OpenAI] model=${model} apiModel=${apiModel} responses.create with web_search_preview`);
+          const response = await openai.responses.create({
+            model: apiModel,
+            tools: [{ type: "web_search_preview" }],
+            input: prompt,
+          });
+          const text = response.output_text || "";
+          console.log(`[OpenAI] model=${model} responses+search text_len=${text.length}`);
+          if (text) {
+            const annotationSources = extractFromAnnotations(response.output || [], brandDomain ?? undefined);
+            const textSources = extractFromText(text, brandDomain ?? undefined);
+            return { text, sources: mergeSources(annotationSources, textSources) };
           }
+        } catch (err) {
+          console.error(`[OpenAI] model=${model} responses+search failed:`, err instanceof Error ? err.message : err);
         }
+      }
 
-        // Attempt 2: Responses API without tools (fallback or non-browsing)
+      // Attempt 2: Responses API without tools
+      try {
         console.log(`[OpenAI] model=${model} apiModel=${apiModel} responses.create without tools`);
         const response = await openai.responses.create({
           model: apiModel,
           input: prompt,
         });
         const text = response.output_text || "";
-        console.log(`[OpenAI] model=${model} responses.create text_len=${text.length}`);
+        console.log(`[OpenAI] model=${model} responses text_len=${text.length}`);
         if (text) {
           return { text, sources: extractFromText(text, brandDomain ?? undefined) };
         }
-        throw new Error(`Empty response from Responses API`);
-      }, "OpenAI-Responses");
+      } catch (err) {
+        console.error(`[OpenAI] model=${model} responses failed:`, err instanceof Error ? err.message : err);
+      }
+
+      // Attempt 3: Chat Completions API as final fallback
+      try {
+        console.log(`[OpenAI] model=${model} apiModel=${apiModel} chat.completions.create (fallback)`);
+        const completion = await openai.chat.completions.create({
+          model: apiModel,
+          temperature: 0.7,
+          max_tokens: 4096,
+          messages: [{ role: "user", content: prompt }],
+        });
+        const text = completion.choices[0]?.message?.content ?? "";
+        console.log(`[OpenAI] model=${model} chat.completions fallback text_len=${text.length}`);
+        if (text) {
+          return { text, sources: extractFromText(text, brandDomain ?? undefined) };
+        }
+      } catch (err) {
+        console.error(`[OpenAI] model=${model} chat.completions fallback failed:`, err instanceof Error ? err.message : err);
+      }
+
+      return { text: "", sources: [], error: `[${model}] All API attempts failed (responses+search, responses, chat.completions)` };
     }
 
     // Standard OpenAI models: try Responses API with web_search when browsing
