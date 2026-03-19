@@ -93,9 +93,8 @@ export async function callAIModel(
               .map((b: any) => b.text)
               .join("\n");
 
-            console.log(`[CLAUDE DEBUG] model=${model} browsing=true max_tokens=4096 stop_reason=${msg.stop_reason} text_len=${text.length} blocks=${msg.content.length} input_tokens=${msg.usage?.input_tokens} output_tokens=${msg.usage?.output_tokens}`);
             if (msg.stop_reason === "max_tokens") {
-              console.warn(`[CLAUDE DEBUG] TRUNCATED: ${model} hit max_tokens with web search`);
+              console.warn(`[Anthropic] model=${model} TRUNCATED: hit max_tokens with web search`);
             }
 
             if (text) {
@@ -120,9 +119,8 @@ export async function callAIModel(
           .map((b: any) => b.text)
           .join("\n");
 
-        console.log(`[CLAUDE DEBUG] model=${model} browsing=false max_tokens=4096 stop_reason=${msg.stop_reason} text_len=${text.length} blocks=${msg.content.length} input_tokens=${msg.usage?.input_tokens} output_tokens=${msg.usage?.output_tokens}`);
         if (msg.stop_reason === "max_tokens") {
-          console.warn(`[CLAUDE DEBUG] TRUNCATED: ${model} hit max_tokens`);
+          console.warn(`[Anthropic] model=${model} TRUNCATED: hit max_tokens`);
         }
 
         if (!text) throw new Error("Anthropic returned empty response");
@@ -148,19 +146,13 @@ export async function callAIModel(
 
         try {
           const text = resp.text();
-          if (text) {
-            console.log(`[Gemini] text extracted via resp.text(), length=${text.length}`);
-            return text;
-          }
+          if (text) return text;
         } catch { /* .text() throws if no text candidates */ }
 
         const parts = candidate?.content?.parts;
         if (parts?.length > 0) {
           const text = parts.map((p: any) => p.text ?? "").join("");
-          if (text) {
-            console.log(`[Gemini] text extracted via parts, length=${text.length}`);
-            return text;
-          }
+          if (text) return text;
         }
 
         console.error("[Gemini] empty response. Raw:", JSON.stringify({
@@ -327,7 +319,6 @@ export async function callAIModel(
           ...(tools ? { tools } : {}),
         });
         const text = response.output_text || "";
-        console.log(`[OpenAI] model=${model} responses text_len=${text.length}`);
         if (text) {
           const sources = useSearch
             ? mergeSources(extractFromAnnotations(response.output || [], brandDomain ?? undefined), extractFromText(text, brandDomain ?? undefined))
@@ -352,7 +343,6 @@ export async function callAIModel(
           input: prompt,
         });
         const text = response.output_text || "";
-        console.log(`[OpenAI] model=${model} responses.create+search text_len=${text.length}`);
         if (text) {
           const annotationSources = extractFromAnnotations(response.output || [], brandDomain ?? undefined);
           const textSources = extractFromText(text, brandDomain ?? undefined);
@@ -383,7 +373,6 @@ export async function callAIModel(
         messages: [{ role: "user", content: prompt }],
       });
       const text = completion.choices[0]?.message?.content ?? "";
-      console.log(`[OpenAI] model=${model} text_len=${text.length} finish_reason=${completion.choices[0]?.finish_reason}`);
       return { text, sources: extractFromText(text, brandDomain ?? undefined) };
     } catch (openaiErr) {
       const errMsg = openaiErr instanceof Error ? openaiErr.message : String(openaiErr);

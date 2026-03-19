@@ -414,26 +414,13 @@ COMPETITOR TYPES:
 - channel: distribution channels
 - aggregator: comparison/discovery platforms
 
-RULES for competitors_found:
-Extract ONLY commercial competitors — companies or services that a user could choose as an alternative to "${targetBrand}" for the same service.
-INCLUDE: companies, brands, or services that actively sell or provide the same service and compete for the same customer.
-ABSOLUTELY EXCLUDE:
-- The target brand "${targetBrand}" itself
-- Sub-brands or variants of the target brand
-- Generic descriptions without a proper name
-- Government bodies or public institutions (INAIL, INPS, IVASS, MISE, Ministero, Regione, Comune, ASL)
-- Regulatory or supervisory authorities (Autorità, Garante, CONSOB, AGCM)
-- Courts, tribunals, or legal institutions (Tribunale, Corte di Cassazione, Corte d'Appello)
-- Industry associations or trade bodies (Confindustria, ANIA, ABI, Ordine)
-- Informational or government portals (Portale dell'Automobilista, SUAP)
+COMPETITOR RULES:
+Extract ONLY commercial competitors — companies/services a user could choose instead of "${targetBrand}".
+INCLUDE: companies, brands, services that sell/provide the same service and compete for the same customer.
+EXCLUDE: "${targetBrand}" itself (any form), sub-brands/variants, generic descriptions without a proper name, government/public bodies (INAIL, INPS, IVASS, MISE, Ministero, Regione, Comune, ASL), regulators (Autorità, Garante, CONSOB, AGCM), courts/tribunals, industry associations (Confindustria, ANIA, ABI, Ordine), government portals.
 Return ONLY the commercial name.
 
-SOURCES — extract ONLY real citations used to justify the response:
-- Extract URLs/domains that the AI cites AS SOURCES for its answer
-- Valid citation patterns: "[1] https://example.com", "Fonte: www.example.com", inline links "[text](https://url)", "source: domain.com", numbered references with URLs at the end
-- ONLY extract domains/URLs that are LITERALLY written in the response text as strings
-- DO NOT infer domains from brand names (if it says "Amazon" without a URL, do NOT add "amazon.it")
-- DO NOT invent URLs — if no explicit URLs or domains appear in the text, return "sources": []
+SOURCES — extract ONLY URLs/domains LITERALLY written in the response. Do NOT infer domains from brand names. If no explicit URLs appear, return "sources": [].
 source_type: media|review|ecommerce|social|competitor|wikipedia|other
 
 Analyze this response:
@@ -574,17 +561,21 @@ You MUST distinguish between:
 Only set brand_mentioned=true if the response refers to the SPECIFIC COMPANY "${targetBrand}"${brandDomain ? ` (website: ${brandDomain})` : ""}, NOT when category words appear generically.`
     : "";
 
-  const systemPrompt = `You are an AI analyst. Analyze an AI model's response and extract structured data.
-IMPORTANT: All extracted topics, adjectives, labels, and text fields MUST be in ${lang} — match the language of the response being analyzed.
+  const competitorExclusionRules = `Extract ONLY commercial competitors — companies/services a user could choose instead of "${targetBrand}".
+INCLUDE: companies, brands, services that sell/provide the same service and compete for the same customer.
+EXCLUDE: "${targetBrand}" itself (any form), sub-brands/variants, generic descriptions without a proper name, government/public bodies (INAIL, INPS, IVASS, MISE, Ministero, Regione, Comune, ASL), regulators (Autorità, Garante, CONSOB, AGCM), courts/tribunals, industry associations (Confindustria, ANIA, ABI, Ordine), government portals.
+Return ONLY the commercial name.`;
 
-Brand to analyze: "${targetBrand}"${domainContext}
+  const systemPrompt = `You are an AI analyst. Extract structured data from an AI response. All text fields MUST be in ${lang}.
+
+Brand: "${targetBrand}"${domainContext}
 ${sectorContext}
 Brand type: ${brandTypeContext}
 ${genericNameWarning}
 
 Respond ONLY with valid JSON, no markdown or extra text.
 
-Required JSON schema:
+JSON schema:
 {
   "brand_mentioned": boolean,
   "brand_rank": number | null,
@@ -598,77 +589,28 @@ Required JSON schema:
   "sources": [{ "url": string|null, "domain": string, "label": string|null, "source_type": string, "is_brand_owned": boolean, "context": string }]
 }
 
-Rules:
-- brand_mentioned: true if the target brand appears in the response
-- brand_rank: position where the brand appears relative to other brands.
-  1 = mentioned first or as primary recommendation.
-  2 = mentioned as second option.
-  3+ = mentioned after other brands.
-  null = ONLY if brand_mentioned is false.
-  IMPORTANT: If brand_mentioned is true, brand_rank CANNOT be null.
-- brand_occurrences: number of times the brand appears in the text
-- competitors_count: how many total competitors are cited (DO NOT include the target brand)
-- tone_score: Analyze the specific language used to describe the brand.
-  First identify 2-3 key adjectives/phrases, then assign the score.
-  Examples:
-  - 'iconic, beloved, excellent quality' → +0.8
-  - 'good, reliable, solid' → +0.5
-  - 'known, available, among the best sellers' → +0.2
-  - 'average, not particularly distinctive' → -0.1
-  - 'criticized, controversial, problematic' → -0.6
-  - 'not recommended, low quality' → -0.9
-  IMPORTANT:
-  - Use the full scale from -1.0 to +1.0 with 0.1 granularity
-  - Do NOT default to 0.5 — reason from the text
-  - If the brand has no specific adjectives use 0.2 (neutral-positive) or 0.0 (purely neutral)
-  If brand_mentioned is false, use 0.0.
-- brand_adjectives: list 2-3 key adjectives/phrases used to describe the brand (in ${lang}). Empty array if brand_mentioned is false.
-- recommendation_score: Does the AI explicitly recommend the brand?
-  +1.0 = explicitly recommended as first/only choice
-  +0.5 = mentioned positively, depends on context
-  0.0 = no recommendation expressed
-  -0.5 = discouraged with reservations
-  -1.0 = explicitly discouraged
-  If brand_mentioned is false, use 0.0.
-- topics: main topics discussed in the response (in ${lang})
-- competitors_found: for each competitor found:
-  - name: brand name
-  - type: competitor type ("direct"|"indirect"|"channel"|"aggregator")
-  - rank: position in which it appears (1=first cited)
-  - sentiment: tone used (-1.0/+1.0)
-  - recommendation: is it recommended? (+1=yes, 0=neutral, -1=discouraged)
+Field rules:
+- brand_mentioned: true if target brand appears in response
+- brand_rank: position among other brands (1=first/primary, 2=second, etc.). null ONLY if brand_mentioned=false. MANDATORY when brand_mentioned=true.
+- brand_occurrences: count of brand appearances
+- competitors_count: total competitors cited (exclude target brand)
+- tone_score: language sentiment toward brand on [-1.0, +1.0] scale with 0.1 granularity. Identify 2-3 key adjectives first, then score.
+  Examples: 'iconic, excellent quality' → +0.8 | 'good, reliable' → +0.5 | 'criticized, problematic' → -0.6
+  Do NOT default to 0.5 — reason from text. No adjectives → 0.2 (neutral-positive) or 0.0 (neutral). If brand_mentioned=false → 0.0.
+- brand_adjectives: 2-3 key adjectives describing brand (in ${lang}). Empty if not mentioned.
+- recommendation_score: +1.0=explicitly recommended first, +0.5=positive mention, 0.0=none, -0.5=discouraged, -1.0=explicitly discouraged. If brand_mentioned=false → 0.0.
+- topics: main topics discussed (in ${lang})
+- competitors_found: name, type (direct|indirect|channel|aggregator), rank (1=first cited), sentiment (-1.0/+1.0), recommendation (+1/0/-1)
 
-CRITICAL RULE: If brand_mentioned is true, brand_rank, tone_score and recommendation_score are MANDATORY and cannot be null.
+CRITICAL: If brand_mentioned=true, brand_rank/tone_score/recommendation_score are MANDATORY (cannot be null).
 
-COMPETITOR TYPES:
-1. DIRECT — same product/service, same target market
-2. INDIRECT — satisfies the same need with a different approach
-3. CHANNEL — distribution channels between brand and consumer
-4. AGGREGATOR — comparison/discovery platforms
+Competitor types: DIRECT=same product+market, INDIRECT=different product same need, CHANNEL=distribution, AGGREGATOR=comparison/discovery platforms.
+Use sector and brand type to infer type. Include ALL cited entities — every brand cited instead of target has strategic relevance.
 
-Use sector and brand type to infer the correct type.
-Do NOT exclude entities because they are "not direct competitors" — in AI visibility every entity cited instead of the brand has strategic relevance.
+${competitorExclusionRules}
 
-SOURCES — CRITICAL RULES TO AVOID HALLUCINATIONS:
-- Extract ONLY URLs and domains that are EXPLICITLY written in the response as actual links or URL strings
-- DO NOT infer domains from brand/company mentions (e.g. if it says "Amazon" do NOT add "amazon.it" unless the URL is literally in the text)
-- DO NOT invent or guess URLs — if no explicit URLs appear in the response, return "sources": []
-- Only include a source if you can point to the exact URL/domain string in the response text
-source_type: media|review|ecommerce|social|competitor|wikipedia|other
-
-RULES for competitors_found:
-Extract ONLY commercial competitors — companies or services that a user could choose as an alternative to "${targetBrand}" for the same service.
-INCLUDE: companies, brands, or services that actively sell or provide the same service and compete for the same customer.
-ABSOLUTELY EXCLUDE:
-- Sub-brands or variants of the target brand (e.g. if target is 'Coca-Cola', exclude 'Coca-Cola Zero')
-- The target brand "${targetBrand}" itself in any form
-- Generic descriptions without a proper name
-- Government bodies or public institutions (INAIL, INPS, IVASS, MISE, Ministero, Regione, Comune, ASL)
-- Regulatory or supervisory authorities (Autorità, Garante, CONSOB, AGCM)
-- Courts, tribunals, or legal institutions (Tribunale, Corte di Cassazione)
-- Industry associations or trade bodies (Confindustria, ANIA, ABI, Ordine)
-- Informational or government portals
-FORMAT: Return ONLY the commercial name.`;
+SOURCES — extract ONLY URLs/domains LITERALLY written in the response text. Do NOT infer domains from brand names. If no explicit URLs appear, return "sources": [].
+source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const message = await anthropic.messages.create({
@@ -677,7 +619,6 @@ FORMAT: Return ONLY the commercial name.`;
     messages: [
       {
         role: "user",
-        // Strip Perplexity-style citation markers [1], [2] that can pollute extracted names
         content: `${systemPrompt}\n\nAnalizza questa risposta:\n\n${response.replace(/\[(\d{1,2})\]/g, "").replace(/\s{2,}/g, " ")}`,
       },
     ],
@@ -767,10 +708,39 @@ FORMAT: Return ONLY the commercial name.`;
     // returned malformed JSON.
     console.error("[extractor] JSON parse failed for brand extraction. raw:", raw?.slice(0, 300), "error:", parseErr);
 
-    // Still attempt partial extraction for competitors/topics
-    const partialResult = await extractCompetitorsTopicsSources(
-      response, targetBrand, sector, brandType, language, brandDomain
-    );
+    // Try to salvage partial data from the malformed Haiku output instead of
+    // making a second Haiku call (saves ~$0.0014 per failure).
+    let partialTopics: string[] = [];
+    let partialCompetitors: ExtractionResult["competitors_found"] = [];
+    let partialSources: ExtractionResult["sources"] = [];
+    try {
+      const stripped = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+      const topicsMatch = stripped.match(/"topics"\s*:\s*(\[[\s\S]*?\])/);
+      const competitorsMatch = stripped.match(/"competitors_found"\s*:\s*(\[[\s\S]*?\])/);
+      const sourcesMatch = stripped.match(/"sources"\s*:\s*(\[[\s\S]*?\])/);
+      if (topicsMatch) partialTopics = JSON.parse(topicsMatch[1]);
+      if (competitorsMatch) {
+        partialCompetitors = JSON.parse(competitorsMatch[1]).map((c: any) => {
+          const name = typeof c === "string" ? c : c.name;
+          if (typeof c === "string") return { name: canonicalizeCompetitorName(name), type: "direct" as const, rank: null, sentiment: null, recommendation: null };
+          const compTone = c.sentiment ?? 0;
+          const compRec = c.recommendation ?? 0;
+          return { name: canonicalizeCompetitorName(name), type: c.type ?? "direct", rank: c.rank ?? null, sentiment: Math.max(-1, Math.min(1, (compTone * 0.6) + (compRec * 0.4))), recommendation: c.recommendation ?? null };
+        });
+      }
+      if (sourcesMatch) {
+        partialSources = validateSources(
+          JSON.parse(sourcesMatch[1]).map((s: any) => ({
+            url: s.url ?? null, domain: s.domain ?? null, label: s.label ?? null,
+            source_type: VALID_SOURCE_TYPES.includes(s.source_type) ? s.source_type : "other",
+            is_brand_owned: Boolean(s.is_brand_owned), context: s.context ?? null,
+          })),
+          response,
+        );
+      }
+    } catch {
+      // Partial extraction also failed — return empty arrays
+    }
 
     return {
       brand_mentioned: detection.mentioned,
@@ -781,9 +751,9 @@ FORMAT: Return ONLY the commercial name.`;
       position_score: null,
       recommendation_score: null,
       brand_adjectives: [],
-      topics: partialResult.topics,
-      competitors_found: partialResult.competitors_found,
-      sources: partialResult.sources,
+      topics: partialTopics,
+      competitors_found: partialCompetitors,
+      sources: partialSources,
     };
   }
 }

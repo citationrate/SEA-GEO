@@ -473,12 +473,12 @@ async function executePrompt(
     const { error: compUpsertErr } = await (supabase.from("competitors") as any)
       .upsert(compRows, { onConflict: "project_id,name", ignoreDuplicates: false });
     if (compUpsertErr) console.error("[inngest] competitors upsert error:", compUpsertErr.message, compUpsertErr);
-    for (const c of compRows) {
-      await (supabase.rpc as any)("increment_competitor_count", {
-        p_project_id: task.projectId,
-        p_name: c.name,
-      });
-    }
+    // Batch-increment mention_count for all competitors in one RPC call
+    const compNames = compRows.map(c => c.name);
+    await (supabase.rpc as any)("batch_increment_competitor_count", {
+      p_project_id: task.projectId,
+      p_names: compNames,
+    });
   }
 
   // Batch upsert topics
@@ -496,12 +496,12 @@ async function executePrompt(
   if (topicRows.length > 0) {
     await (supabase.from("topics") as any)
       .upsert(topicRows, { onConflict: "project_id,name", ignoreDuplicates: false });
-    for (const t of topicRows) {
-      await (supabase.rpc as any)("increment_topic_frequency", {
-        p_project_id: task.projectId,
-        p_name: t.name,
-      });
-    }
+    // Batch-increment frequency for all topics in one RPC call
+    const topicNames = topicRows.map(t => t.name);
+    await (supabase.rpc as any)("batch_increment_topic_frequency", {
+      p_project_id: task.projectId,
+      p_names: topicNames,
+    });
   }
 }
 

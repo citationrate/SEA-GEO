@@ -194,15 +194,18 @@ ${truncated}`;
       }
     }
 
-    // Save results to DB
+    // Save results to DB in a single batch upsert
     let saveErrors = 0;
-    for (const result of results) {
-      const { error: updateErr } = await (supabase.from("competitors") as any)
-        .update({ theme_analysis: result.analysis })
-        .eq("id", result.id);
-      if (updateErr) {
-        console.error(`[competitors/analyze] DB update error for "${result.name}":`, updateErr.message);
-        saveErrors++;
+    const upsertPayload = results.map(r => ({
+      id: r.id,
+      theme_analysis: r.analysis,
+    }));
+    if (upsertPayload.length > 0) {
+      const { error: batchErr } = await (supabase.from("competitors") as any)
+        .upsert(upsertPayload, { onConflict: "id" });
+      if (batchErr) {
+        console.error(`[competitors/analyze] batch upsert error:`, batchErr.message);
+        saveErrors = upsertPayload.length;
       }
     }
 
