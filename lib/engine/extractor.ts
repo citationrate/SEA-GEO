@@ -379,7 +379,8 @@ async function extractCompetitorsTopicsSources(
     .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
     .replace(/\[(\d{1,2})\]/g, "")
     .replace(/\s{2,}/g, " ")
-    .trim();
+    .trim()
+    .slice(0, 3000);
 
   if (!cleanResponse || cleanResponse.length < 50) {
     return { topics: [], competitors_found: [], sources: [] };
@@ -619,7 +620,7 @@ source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
     messages: [
       {
         role: "user",
-        content: `${systemPrompt}\n\nAnalizza questa risposta:\n\n${response.replace(/\[(\d{1,2})\]/g, "").replace(/\s{2,}/g, " ")}`,
+        content: `${systemPrompt}\n\nAnalizza questa risposta:\n\n${response.replace(/\[(\d{1,2})\]/g, "").replace(/\s{2,}/g, " ").slice(0, 3000)}`,
       },
     ],
   });

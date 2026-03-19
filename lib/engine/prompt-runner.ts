@@ -60,11 +60,12 @@ export async function callAIModel(
         return { text: "", sources: [], error: `[${model}] SKIPPED: ANTHROPIC_API_KEY non configurata` };
       }
 
-      // Opus is extremely expensive with web search (30K+ input tokens from search results)
-      // Limit max_tokens and web search uses for expensive models
-      const isExpensiveModel = model === "claude-opus";
-      const maxTokens = isExpensiveModel ? 2048 : 4096;
-      const searchMaxUses = isExpensiveModel ? 1 : 3;
+      // Web search adds 10-30K input tokens (search result pages billed as input)
+      // Limit search uses to control costs: Opus=1, Sonnet=2, Haiku=3
+      const isOpus = model === "claude-opus";
+      const isSonnet = model === "claude-sonnet";
+      const maxTokens = isOpus ? 2048 : 4096;
+      const searchMaxUses = isOpus ? 1 : isSonnet ? 2 : 3;
 
       return await retryCall(2, async () => {
         const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
