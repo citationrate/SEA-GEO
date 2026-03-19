@@ -12,6 +12,7 @@ interface ModelOption {
   id: string;
   label: string;
   description: string;
+  expensive?: boolean;
 }
 
 interface ProviderOption {
@@ -83,6 +84,7 @@ export default function NewProjectPage() {
       id: m.id,
       label: m.label,
       description: t(m.descriptionKey),
+      expensive: m.expensive,
     })),
   }));
 
@@ -503,7 +505,10 @@ export default function NewProjectPage() {
                               {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <span className={`text-sm font-medium ${isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-sm font-medium ${isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
+                                {model.expensive && <span className="text-[10px] font-mono text-amber-500 border border-amber-500/30 bg-amber-500/10 px-1 py-0.5 rounded-[2px]">ALTO CONSUMO</span>}
+                              </div>
                               <p className="text-xs text-muted-foreground">{model.description}</p>
                             </div>
                           </label>

@@ -60,6 +60,12 @@ export async function callAIModel(
         return { text: "", sources: [], error: `[${model}] SKIPPED: ANTHROPIC_API_KEY non configurata` };
       }
 
+      // Opus is extremely expensive with web search (30K+ input tokens from search results)
+      // Limit max_tokens and web search uses for expensive models
+      const isExpensiveModel = model === "claude-opus";
+      const maxTokens = isExpensiveModel ? 2048 : 4096;
+      const searchMaxUses = isExpensiveModel ? 1 : 3;
+
       return await retryCall(2, async () => {
         const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -67,12 +73,12 @@ export async function callAIModel(
           try {
             const msg = await anthropic.messages.create({
               model: apiModel,
-              max_tokens: 4096,
+              max_tokens: maxTokens,
               messages: [{ role: "user", content: prompt }],
               tools: [{
                 type: "web_search_20250305",
                 name: "web_search",
-                max_uses: 3,
+                max_uses: searchMaxUses,
                 user_location: {
                   type: "approximate",
                   country: "IT",
@@ -109,7 +115,7 @@ export async function callAIModel(
 
         const msg = await anthropic.messages.create({
           model: apiModel,
-          max_tokens: 4096,
+          max_tokens: maxTokens,
           messages: [{ role: "user", content: prompt }],
         });
 

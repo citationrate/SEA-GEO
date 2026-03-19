@@ -3,6 +3,8 @@ export interface AIModel {
   label: string;
   desc: string;
   provider: "openai" | "anthropic" | "google" | "xai" | "perplexity" | "azure";
+  /** High token consumption — shows cost warning in UI */
+  expensive?: boolean;
 }
 
 export const AI_MODELS: AIModel[] = [
@@ -13,7 +15,7 @@ export const AI_MODELS: AIModel[] = [
   // Anthropic (short IDs — canonical)
   { id: "claude-haiku",   label: "Claude Haiku 4.5",   desc: "Veloce e diretto",                          provider: "anthropic" },
   { id: "claude-sonnet",  label: "Claude Sonnet 4.5",  desc: "Bilanciato e preciso",                      provider: "anthropic" },
-  { id: "claude-opus",    label: "Claude Opus 4.5",    desc: "Massima qualità",                           provider: "anthropic" },
+  { id: "claude-opus",    label: "Claude Opus 4.5",    desc: "Massima qualità",                           provider: "anthropic", expensive: true },
   // Anthropic (legacy full IDs — kept for backward compat with existing DB data, hidden from UI)
   { id: "claude-haiku-4-5-20251001",  label: "Claude Haiku 4.5",  desc: "Veloce e diretto",              provider: "anthropic" },
   { id: "claude-sonnet-4-5", label: "Claude Sonnet 4.5", desc: "Bilanciato e preciso",                   provider: "anthropic" },
@@ -90,7 +92,7 @@ export interface ProviderGroup {
   label: string;
   badge: string;
   color: string;
-  models: { id: string; label: string; descriptionKey: string }[];
+  models: { id: string; label: string; descriptionKey: string; expensive?: boolean }[];
   comingSoon?: boolean;
 }
 
@@ -115,7 +117,7 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
     models: [
       { id: "claude-haiku", label: "Claude Haiku 4.5", descriptionKey: "modelDescriptions.claude-haiku" },
       { id: "claude-sonnet", label: "Claude Sonnet 4.5", descriptionKey: "modelDescriptions.claude-sonnet" },
-      { id: "claude-opus", label: "Claude Opus 4.5", descriptionKey: "modelDescriptions.claude-opus" },
+      { id: "claude-opus", label: "Claude Opus 4.5", descriptionKey: "modelDescriptions.claude-opus", expensive: true },
     ],
   },
   {
