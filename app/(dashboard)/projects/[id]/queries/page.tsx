@@ -149,7 +149,6 @@ export default function QueriesPage() {
           >
             <Sparkles className="w-4 h-4" />
             {t("settings.generatePromptAI")}
-            <span className="font-mono text-[0.69rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1.5 py-0.5 rounded-[2px] bg-[#c4a882]/10">PRO</span>
           </a>
         </div>
       </div>

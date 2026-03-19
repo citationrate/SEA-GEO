@@ -356,7 +356,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           >
             <Sparkles className="w-4 h-4" />
             <T k="settings.generatePromptAI" />
-            <span className="inline-flex items-center gap-0.5 font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">&#10022; Pro</span>
           </a>
           <a
             href={`/projects/${params.id}/segments`}
