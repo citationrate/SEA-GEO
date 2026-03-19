@@ -256,17 +256,10 @@ export const runCompetitiveAnalysis = inngest.createFunction(
         }
 
         try {
-          let result = await callAIModel(prompt.query_text, prompt.model, true);
-
-          // If first attempt failed, retry once with short backoff
-          if (!result.text && result.error) {
-            console.warn(`[competitive] ${prompt.model} failed for ${promptId}: ${result.error} — retrying in 3s`);
-            await new Promise((r) => setTimeout(r, 3000));
-            result = await callAIModel(prompt.query_text, prompt.model, true);
-          }
+          const result = await callAIModel(prompt.query_text, prompt.model, true);
 
           if (!result.text && result.error) {
-            console.error(`[competitive] ${prompt.model} failed permanently for ${promptId}: ${result.error}`);
+            console.error(`[competitive] ${prompt.model} failed for ${promptId}: ${result.error}`);
           }
 
           await (supabase.from("competitive_prompts") as any)
