@@ -475,6 +475,14 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
                     ol: ({ children }) => <ol className="list-decimal list-outside ml-4 mb-2 space-y-0.5">{children}</ol>,
                     li: ({ children }) => <li className="text-sm text-foreground leading-relaxed">{children}</li>,
                     code: ({ children }) => <code className="font-mono text-[13px] bg-surface-2 px-1 py-0.5 rounded-[2px]">{children}</code>,
+                    table: ({ children }) => <table className="w-full text-sm border-collapse border border-border rounded-[2px] my-3">{children}</table>,
+                    thead: ({ children }) => <thead className="bg-surface-2">{children}</thead>,
+                    tbody: ({ children }) => <tbody>{children}</tbody>,
+                    tr: ({ children }) => <tr className="border-b border-border last:border-b-0">{children}</tr>,
+                    th: ({ children }) => <th className="text-left text-xs font-semibold text-foreground px-3 py-2 border-r border-border last:border-r-0">{children}</th>,
+                    td: ({ children }) => <td className="text-sm text-foreground px-3 py-2 border-r border-border last:border-r-0">{children}</td>,
+                    a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{children}</a>,
+                    blockquote: ({ children }) => <blockquote className="border-l-2 border-primary/40 pl-3 my-2 text-sm text-muted-foreground italic">{children}</blockquote>,
                   }}
                 >
                   {row.raw_response}
