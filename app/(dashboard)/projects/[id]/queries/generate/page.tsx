@@ -277,6 +277,13 @@ export default function GenerateQueriesPage() {
           project_id: projectId,
           count: targetCount,
           tofu_pct: tofuPercent,
+          categoria: categoria.trim() || undefined,
+          mercato: mercato.trim() || undefined,
+          luogo: luogo.trim() || undefined,
+          punti_di_forza: puntiDiForza.length > 0 ? puntiDiForza : undefined,
+          competitor: competitor.length > 0 ? competitor : undefined,
+          obiezioni: obiezioni.length > 0 ? obiezioni : undefined,
+          personas: personasEnabled && personas.length > 0 ? personas : undefined,
         }),
       });
       if (!res.ok) {

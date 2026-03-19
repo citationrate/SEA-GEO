@@ -7,6 +7,13 @@ const schema = z.object({
   project_id: z.string().uuid(),
   count: z.number().int().min(1).max(100),
   tofu_pct: z.number().min(0).max(100).default(60),
+  categoria: z.string().optional(),
+  mercato: z.string().optional(),
+  luogo: z.string().optional(),
+  punti_di_forza: z.array(z.string()).optional(),
+  competitor: z.array(z.string()).optional(),
+  obiezioni: z.array(z.string()).optional(),
+  personas: z.array(z.any()).optional(),
 });
 
 export async function POST(request: Request) {
@@ -19,7 +26,7 @@ export async function POST(request: Request) {
     const parsed = schema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { project_id, count, tofu_pct } = parsed.data;
+    const { project_id, count, tofu_pct, categoria, mercato, luogo, punti_di_forza, competitor, obiezioni, personas } = parsed.data;
 
     // Load project with all context
     const { data: project } = await supabase
@@ -56,7 +63,8 @@ export async function POST(request: Request) {
     const nTofu = Math.round(count * (tofu_pct / 100));
     const nMofu = count - nTofu;
 
-    const systemPrompt = buildSystemPrompt(p, existingTexts, count, nTofu, nMofu, websiteContext);
+    const userInputs = { categoria, mercato, luogo, punti_di_forza, competitor, obiezioni, personas };
+    const systemPrompt = buildSystemPrompt(p, existingTexts, count, nTofu, nMofu, websiteContext, userInputs);
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -258,9 +266,12 @@ function buildSystemPrompt(
   nTofu: number,
   nMofu: number,
   websiteContext?: string,
+  userInputs?: { categoria?: string; mercato?: string; luogo?: string; punti_di_forza?: string[]; competitor?: string[]; obiezioni?: string[]; personas?: any[] },
 ): string {
   const lang = project.language === "it" ? "italiano" : "English";
-  const competitors = (project.known_competitors ?? []).join(", ") || "non specificati";
+  const competitors = userInputs?.competitor?.length
+    ? userInputs.competitor.join(", ")
+    : (project.known_competitors ?? []).join(", ") || "non specificati";
 
   const existingBlock = existingTexts.length > 0
     ? `\nQuery già presenti nel progetto (NON duplicarle):\n${existingTexts.map((t: string) => `- ${t}`).join("\n")}\n`
@@ -268,6 +279,24 @@ function buildSystemPrompt(
 
   const websiteBlock = websiteContext
     ? `\n--- CONTENUTO SITO WEB (${project.website_url}) ---\n${websiteContext}\n--- FINE CONTENUTO SITO ---\n\nUsa le informazioni estratte dal sito per capire cosa offre il brand, i suoi prodotti/servizi, il tono di comunicazione, e i punti di forza. Genera query che riflettano i temi reali del brand.\n`
+    : "";
+
+  // Build user-provided context block
+  const userContextParts: string[] = [];
+  if (userInputs?.categoria) userContextParts.push(`- Categoria prodotto/servizio: ${userInputs.categoria}`);
+  if (userInputs?.mercato) userContextParts.push(`- Mercato di riferimento: ${userInputs.mercato}`);
+  if (userInputs?.luogo) userContextParts.push(`- Localizzazione: ${userInputs.luogo}`);
+  if (userInputs?.punti_di_forza?.length) userContextParts.push(`- Punti di forza del brand: ${userInputs.punti_di_forza.join(", ")}`);
+  if (userInputs?.obiezioni?.length) userContextParts.push(`- Obiezioni comuni dei clienti: ${userInputs.obiezioni.join(", ")}`);
+  if (userInputs?.personas?.length) {
+    const personaDescs = userInputs.personas
+      .filter((p: any) => p.name)
+      .map((p: any) => `  - ${p.name}: ${p.prompt_context || JSON.stringify(p.attributes ?? {}).slice(0, 100)}`)
+      .join("\n");
+    if (personaDescs) userContextParts.push(`- Personas target:\n${personaDescs}`);
+  }
+  const userContextBlock = userContextParts.length > 0
+    ? `\nContesto specifico dall'utente:\n${userContextParts.join("\n")}\n\nUSA ATTIVAMENTE questi dettagli per generare query più mirate. Le query MOFU devono riflettere i bisogni reali dei clienti, i punti di forza e le obiezioni.\n`
     : "";
 
   return `Sei un esperto di AI Search Optimization. Il tuo compito è generare query realistiche che utenti reali farebbero a ChatGPT, Gemini o Perplexity quando cercano informazioni nel settore di ${project.target_brand}.
@@ -281,7 +310,7 @@ Contesto brand:
 - Sito: ${project.website_url ?? "non specificato"}
 - Competitor noti: ${competitors}
 - Contesto aggiuntivo: ${project.market_context ?? "nessuno"}
-${websiteBlock}${existingBlock}
+${userContextBlock}${websiteBlock}${existingBlock}
 Genera esattamente ${count} query uniche e realistiche in ${lang}.
 
 DUE TIPOLOGIE DI QUERY:
