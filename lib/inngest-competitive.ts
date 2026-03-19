@@ -119,23 +119,36 @@ async function evaluateResponse(
 
   const prompt = `Sei un analista competitivo. Leggi questa risposta AI a una query comparativa tra Brand A (${brandALabel}) e Brand B (${brandBLabel}).
 
-REGOLA CASE-INSENSITIVE: I nomi dei brand possono apparire in qualsiasi capitalizzazione nella risposta. Tratta "${brandA}", "${brandANorm}", "${brandA.toUpperCase()}" come lo stesso brand (Brand A). Tratta "${brandB}", "${brandBNorm}", "${brandB.toUpperCase()}" come lo stesso brand (Brand B).
+REGOLA CASE-INSENSITIVE: I nomi dei brand possono apparire in qualsiasi capitalizzazione. Tratta "${brandA}", "${brandANorm}", "${brandA.toUpperCase()}" come Brand A. Tratta "${brandB}", "${brandBNorm}", "${brandB.toUpperCase()}" come Brand B.
 
 REGOLE TASSATIVE:
-- recommendation DEVE essere esattamente 1, 2, o 0.5. Nessun altro valore è ammesso. Mai 0, mai 1.5, mai null.
-  - 1 = la risposta favorisce Brand A ${brandALabel} (più vantaggi, tono più positivo, raccomandazione più esplicita)
-  - 2 = la risposta favorisce Brand B ${brandBLabel} (più vantaggi, tono più positivo, raccomandazione più esplicita)
-  - 0.5 = pareggio REALE — SOLO se entrambi i brand ricevono peso identico senza alcuna preferenza rilevabile
-- Sii decisivo: anche se la risposta è diplomatica, identifica quale brand viene presentato con PIÙ vantaggi o raccomandato PIÙ esplicitamente. Usa 0.5 SOLO se è davvero impossibile distinguere una preferenza.
-- first_mention: "A" se Brand A (${brandALabel}) appare per primo nel testo, "B" se Brand B (${brandBLabel}) appare per primo, "tie" se appaiono nella stessa frase iniziale.
-- key_arguments: max 3 argomenti principali usati nella risposta.
+- recommendation DEVE essere esattamente 1, 2, o 0.5. Mai 0, mai 1.5, mai null.
+  - 1 = la risposta favorisce Brand A ${brandALabel}
+  - 2 = la risposta favorisce Brand B ${brandBLabel}
+  - 0.5 = pareggio REALE — SOLO se ENTRAMBI i brand ricevono trattamento IDENTICO senza alcuna preferenza rilevabile
+
+PREFERENZE IMPLICITE — LEGGI ATTENTAMENTE:
+Le risposte AI sono spesso diplomatiche. NON farti ingannare da formule di cortesia. Cerca la preferenza IMPLICITA:
+- "X appare più strutturata/visibile/solida/affidabile" → X VINCE (anche se la frase inizia con "entrambi sono buoni")
+- "X sembra avere una presenza più forte/consolidata" → X VINCE
+- "X mostra più vantaggi/risultati/recensioni" → X VINCE
+- "Non posso dire con certezza, ma X..." + più dettagli su X → X VINCE
+- Più vantaggi elencati per X che per Y (es. 3 vs 1) → X VINCE
+- X descritto con aggettivi più positivi di Y → X VINCE
+- La risposta suggerisce X come prima scelta o raccomandazione → X VINCE
+- Usa 0.5 SOLO se il linguaggio è davvero identico per entrambi, senza alcun segnale di preferenza
+
+- first_mention: "A" se Brand A appare per primo nel testo, "B" se Brand B appare per primo, "tie" se nella stessa frase.
+- key_arguments: max 3 argomenti principali.
 
 ESEMPI:
-- "Entrambi sono ottimi, dipende dalle preferenze" ma poi elenca 3 vantaggi di ${brandBNorm} e solo 1 di ${brandANorm} → recommendation: 2
-- "${brandANorm} è leader di mercato con navi moderne e ottime recensioni" → recommendation: 1
-- "Sono intercambiabili, stessa qualità, stesso prezzo, stesse rotte" → recommendation: 0.5
+- "Entrambi sono ottimi, dipende dalle preferenze" ma 3 vantaggi di ${brandBNorm} e 1 di ${brandANorm} → recommendation: 2
+- "${brandANorm} è leader di mercato con ottime recensioni" → recommendation: 1
+- "${brandANorm} appare più strutturata e con una presenza più solida online" → recommendation: 1
+- "Non ho dati certi, ma ${brandBNorm} sembra più citata nelle fonti" → recommendation: 2
+- "Sono intercambiabili, stessa qualità, stesso prezzo" → recommendation: 0.5
 
-Rispondi SOLO con questo JSON, senza testo aggiuntivo:
+Rispondi SOLO con questo JSON:
 {"recommendation": 1, "first_mention": "A", "key_arguments": ["arg1", "arg2"]}
 
 Risposta AI da valutare:
