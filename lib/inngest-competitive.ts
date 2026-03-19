@@ -237,46 +237,50 @@ export const runCompetitiveAnalysis = inngest.createFunction(
       return (data as any[]).map((r: any) => r.id);
     });
 
-    // Step 2: Execute all prompts — one step per prompt to avoid Vercel 60s timeout
-    // GPT-5.4 Responses API takes 14-21s per call, so batching would exceed the limit
-    for (let i = 0; i < promptIds.length; i++) {
-      await step.run(`execute-prompt-${i}`, async () => {
+    // Step 2: Execute all prompts (1 per batch to stay under Vercel 60s timeout)
+    // GPT-5.4 Responses API takes 23-30s per call — batching multiple would exceed limit
+    const batchSize = 1;
+    const batches: string[][] = [];
+    for (let i = 0; i < promptIds.length; i += batchSize) {
+      batches.push(promptIds.slice(i, i + batchSize));
+    }
+
+    for (let i = 0; i < batches.length; i++) {
+      await step.run(`execute-batch-${i}`, async () => {
         const supabase = createServiceClient();
-        const promptId = promptIds[i];
-        const { data: prompt } = await (supabase.from("competitive_prompts") as any)
-          .select("*")
-          .eq("id", promptId)
-          .single();
 
-        if (!prompt) return;
+        for (let j = 0; j < batches[i].length; j++) {
+          const promptId = batches[i][j];
+          const { data: prompt } = await (supabase.from("competitive_prompts") as any)
+            .select("*")
+            .eq("id", promptId)
+            .single();
 
-        // Delay for Gemini rate limiting
-        if (i > 0 && prompt.model?.startsWith("gemini")) {
-          await new Promise((r) => setTimeout(r, 2000));
-        }
+          if (!prompt) continue;
 
-        try {
-          const result = await callAIModel(prompt.query_text, prompt.model, true);
+          try {
+            const result = await callAIModel(prompt.query_text, prompt.model, true);
 
-          if (!result.text && result.error) {
-            console.error(`[competitive] ${prompt.model} failed for ${promptId}: ${result.error}`);
+            if (!result.text && result.error) {
+              console.error(`[competitive] ${prompt.model} failed for ${promptId}: ${result.error}`);
+            }
+
+            await (supabase.from("competitive_prompts") as any)
+              .update({
+                response_text: result.text || (result.error ? `ERROR: ${result.error}` : null),
+                status: result.text ? "completed" : "error",
+              })
+              .eq("id", promptId);
+          } catch (e: any) {
+            const errMsg = e?.message ?? String(e);
+            console.error(`[competitive] model call threw for ${promptId}:`, errMsg);
+            await (supabase.from("competitive_prompts") as any)
+              .update({
+                response_text: `EXCEPTION: ${errMsg}`,
+                status: "error",
+              })
+              .eq("id", promptId);
           }
-
-          await (supabase.from("competitive_prompts") as any)
-            .update({
-              response_text: result.text || (result.error ? `ERROR: ${result.error}` : null),
-              status: result.text ? "completed" : "error",
-            })
-            .eq("id", promptId);
-        } catch (e: any) {
-          const errMsg = e?.message ?? String(e);
-          console.error(`[competitive] model call threw for ${promptId}:`, errMsg);
-          await (supabase.from("competitive_prompts") as any)
-            .update({
-              response_text: `EXCEPTION: ${errMsg}`,
-              status: "error",
-            })
-            .eq("id", promptId);
         }
       });
     }
