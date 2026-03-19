@@ -473,9 +473,21 @@ ${cleanResponse}`;
       competitors_found: Array.isArray(parsed.competitors_found)
         ? parsed.competitors_found.map((c: any) => {
             const raw = typeof c === "string" ? c : c.name;
-            return typeof c === "string"
-              ? { name: canonicalizeCompetitorName(raw), type: "direct" as const, rank: null, sentiment: null, recommendation: null }
-              : { name: canonicalizeCompetitorName(raw), type: c.type ?? "direct", rank: c.rank ?? null, sentiment: c.sentiment ?? null, recommendation: c.recommendation ?? null };
+            if (typeof c === "string") {
+              return { name: canonicalizeCompetitorName(raw), type: "direct" as const, rank: null, sentiment: null, recommendation: null };
+            }
+            // Compose sentiment from tone + recommendation using the SAME formula as brand:
+            // sentiment = tone × 0.6 + recommendation × 0.4, clamped to [-1, +1]
+            const compTone = c.sentiment ?? 0;
+            const compRec = c.recommendation ?? 0;
+            const compSentiment = Math.max(-1, Math.min(1, (compTone * 0.6) + (compRec * 0.4)));
+            return {
+              name: canonicalizeCompetitorName(raw),
+              type: c.type ?? "direct",
+              rank: c.rank ?? null,
+              sentiment: compSentiment,
+              recommendation: c.recommendation ?? null,
+            };
           })
         : [],
       sources: validateSources(
@@ -718,9 +730,21 @@ FORMAT: Return ONLY the commercial name.`;
         const competitorsRaw = Array.isArray(parsed.competitors_found) ? parsed.competitors_found : [];
         return competitorsRaw.map((c: any) => {
           const raw = typeof c === 'string' ? c : c.name;
-          return typeof c === 'string'
-            ? { name: canonicalizeCompetitorName(raw), type: "direct" as const, rank: null, sentiment: null, recommendation: null }
-            : { name: canonicalizeCompetitorName(raw), type: c.type ?? "direct", rank: c.rank ?? null, sentiment: c.sentiment ?? null, recommendation: c.recommendation ?? null };
+          if (typeof c === 'string') {
+            return { name: canonicalizeCompetitorName(raw), type: "direct" as const, rank: null, sentiment: null, recommendation: null };
+          }
+          // Compose sentiment from tone + recommendation using the SAME formula as brand:
+          // sentiment = tone × 0.6 + recommendation × 0.4, clamped to [-1, +1]
+          const compTone = c.sentiment ?? 0;
+          const compRec = c.recommendation ?? 0;
+          const compSentiment = Math.max(-1, Math.min(1, (compTone * 0.6) + (compRec * 0.4)));
+          return {
+            name: canonicalizeCompetitorName(raw),
+            type: c.type ?? "direct",
+            rank: c.rank ?? null,
+            sentiment: compSentiment,
+            recommendation: c.recommendation ?? null,
+          };
         });
       })(),
       sources: validateSources(

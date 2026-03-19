@@ -8,9 +8,9 @@ import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
 
 const RUN_OPTIONS = [
-  { value: 1, label: "1 run", desc: "Veloce" },
-  { value: 2, label: "2 run", desc: "Bilanciato" },
-  { value: 3, label: "3 run", desc: "Preciso" },
+  { value: 1, label: "1 run", descKey: "analysisLauncher.runOptFast" },
+  { value: 2, label: "2 run", descKey: "analysisLauncher.runOptBalanced" },
+  { value: 3, label: "3 run", descKey: "analysisLauncher.runOptPrecise" },
 ] as const;
 
 export function AnalysisLauncher({
@@ -155,7 +155,7 @@ export function AnalysisLauncher({
                     }`}
                   >
                     <p className="text-sm font-medium text-foreground">{opt.label}</p>
-                    <p className="text-[13px] text-muted-foreground">{opt.desc}</p>
+                    <p className="text-[13px] text-muted-foreground">{t(opt.descKey)}</p>
                   </button>
                 ))}
               </div>
@@ -165,7 +165,7 @@ export function AnalysisLauncher({
             <div className="space-y-2">
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                 {t("analysisLauncher.webBrowsing")}
-                <InfoTooltip text="Abilita la navigazione web per i modelli AI. Produce risposte più aggiornate e più fonti, ma è più lento." />
+                <InfoTooltip text={t("analysisLauncher.browsingTooltip")} />
               </p>
               <button
                 onClick={() => setBrowsing(!browsing)}
@@ -185,7 +185,7 @@ export function AnalysisLauncher({
                     <p className="text-sm font-medium text-foreground">{t("analysisLauncher.browsingActive")}</p>
                   </div>
                   <p className="text-[13px] text-muted-foreground mt-0.5">
-                    I modelli cercano informazioni aggiornate sul web (piu lento, piu fonti)
+                    {t("analysisLauncher.browsingDescShort")}
                   </p>
                 </div>
               </button>
@@ -194,14 +194,14 @@ export function AnalysisLauncher({
             {/* Query cost breakdown */}
             <div className="space-y-2 rounded-[2px] border border-border bg-muted/20 px-4 py-3">
               <p className="text-sm text-muted-foreground">
-                {t("analysisLauncher.thisAnalysisWillUse")} <span className="text-foreground font-bold">{totalPrompts}</span> prompt sul tuo piano
+                {t("analysisLauncher.thisAnalysisWillUse")} <span className="text-foreground font-bold">{totalPrompts}</span> {t("analysisLauncher.promptsOnPlan")}
               </p>
               <p className="text-xs text-muted-foreground">
-                {queryCount} query &times; {modelsConfig.length} modell{modelsConfig.length === 1 ? "o" : "i"} &times; {Math.max(segmentCount, 1)} segment{segmentCount === 1 ? "o" : "i"} &times; {runCount} run = {totalPrompts} prompt
+                {queryCount} query &times; {modelsConfig.length} {modelsConfig.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} &times; {Math.max(segmentCount, 1)} {segmentCount === 1 ? t("analysisLauncher.segmentSingular") : t("analysisLauncher.segmentPlural")} &times; {runCount} run = {totalPrompts} prompt
               </p>
               {profileLoaded && (
                 <p className="text-xs text-muted-foreground">
-                  Hai <span className="text-foreground font-medium">{remaining}</span> prompt disponibili questo mese ({usage.promptsUsed}/{usage.promptsLimit} utilizzati)
+                  {t("analysisLauncher.youHave")} <span className="text-foreground font-medium">{remaining}</span> {t("analysisLauncher.promptsAvailableThisMonth")} ({usage.promptsUsed}/{usage.promptsLimit} {t("analysisLauncher.used")})
                 </p>
               )}
             </div>
@@ -219,14 +219,14 @@ export function AnalysisLauncher({
               <div className="flex items-start gap-2.5 rounded-[2px] border border-destructive/30 bg-destructive/10 px-4 py-3">
                 <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
                 <p className="text-xs text-destructive">
-                  Il tuo piano supporta max {usage.maxModelsPerProject} modelli per progetto.
+                  {t("analysisLauncher.maxModelsExceed").replace("{n}", String(usage.maxModelsPerProject))}
                 </p>
               </div>
             )}
 
             {/* Footer info */}
             <p className="text-sm text-muted-foreground text-center">
-              <span className="text-foreground font-medium">{modelsConfig.length}</span> modell{modelsConfig.length === 1 ? "o" : "i"} &middot;{" "}
+              <span className="text-foreground font-medium">{modelsConfig.length}</span> {modelsConfig.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} &middot;{" "}
               <span className="text-foreground font-medium">{totalPrompts}</span> {t("analysisLauncher.totalPrompts")}
             </p>
 

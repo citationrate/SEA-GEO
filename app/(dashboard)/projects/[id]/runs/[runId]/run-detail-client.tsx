@@ -246,19 +246,20 @@ export function RunDetailClient({
 }
 
 function ConsultationCTA() {
+  const { t } = useTranslation();
   const { openModal } = useConsultation();
   return (
     <div className="card p-4 flex items-center justify-between border-[#c4a882]/20 bg-[#c4a882]/5">
       <div>
-        <p className="text-sm font-semibold text-foreground">Non sai come interpretare il tuo AVI Score?</p>
-        <p className="text-xs text-muted-foreground mt-0.5">Parla con un esperto SeaGeo per un&apos;analisi personalizzata.</p>
+        <p className="text-sm font-semibold text-foreground">{t("consultation.ctaTitle")}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{t("consultation.ctaDesc")}</p>
       </div>
       <button
         onClick={openModal}
         className="flex items-center gap-1.5 text-sm font-semibold text-[#c4a882] border border-[#c4a882]/30 px-4 py-2 rounded-[2px] hover:bg-[#c4a882]/10 transition-colors shrink-0"
       >
         <MessageSquareText className="w-4 h-4" />
-        Richiedi consulenza
+        {t("consultation.ctaButton")}
       </button>
     </div>
   );

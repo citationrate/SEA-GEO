@@ -181,7 +181,7 @@ export function NewCompetitiveForm({
             required
             value={brandB}
             onChange={(e) => setBrandB(e.target.value)}
-            placeholder="Es. Vexio"
+            placeholder={t("competitiveForm.competitorPlaceholder")}
             className="input-base"
           />
         </div>
@@ -218,14 +218,14 @@ export function NewCompetitiveForm({
                 className="flex items-center gap-1.5 px-3 py-2 bg-primary/10 border border-primary/30 text-primary text-xs font-medium rounded-[2px] hover:bg-primary/20 transition-colors disabled:opacity-50"
               >
                 {generatingQueries ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                {generatingQueries ? "Generazione..." : "Genera query"}
+                {generatingQueries ? t("competitiveForm.generating") : t("competitiveForm.generateQuery")}
               </button>
             </div>
 
             {generatedQueries && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Query generate</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("competitiveForm.generatedQueries")}</p>
                   <button
                     type="button"
                     onClick={generateCustomQueries}
@@ -233,7 +233,7 @@ export function NewCompetitiveForm({
                     className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <RefreshCw className={`w-3 h-3 ${generatingQueries ? "animate-spin" : ""}`} />
-                    Rigenera
+                    {t("competitiveForm.regenerate")}
                   </button>
                 </div>
                 {generatedQueries.map((q, i) => (
@@ -316,7 +316,7 @@ export function NewCompetitiveForm({
       {/* Config info */}
       <div className="bg-muted/30 border border-border rounded-[2px] px-4 py-3">
         <p className="text-xs text-muted-foreground">
-          3 query × {selectedModels.length} modell{selectedModels.length === 1 ? "o" : "i"} × {RUNS_PER_QUERY} run = {totalPrompts} {t("competitiveForm.totalResponses")}
+          3 query × {selectedModels.length} {selectedModels.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} × {RUNS_PER_QUERY} run = {totalPrompts} {t("competitiveForm.totalResponses")}
         </p>
       </div>
 

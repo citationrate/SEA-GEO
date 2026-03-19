@@ -197,6 +197,16 @@ async function computeCompetitorAVI(
     return;
   }
 
+  // Use response_analysis count as denominator (same as brand AVI)
+  // This ensures both calculations use the same base for averaging
+  const { count: analysisCount } = await supabase
+    .from("response_analysis")
+    .select("*", { count: "exact", head: true })
+    .in("prompt_executed_id",
+      (await supabase.from("prompts_executed").select("id").eq("run_id", runId)).data?.map((p: any) => p.id) ?? []
+    );
+  const denominator = analysisCount ?? totalPrompts;
+
   // Group by competitor name
   const byCompetitor = new Map<string, any[]>();
   for (const m of rows) {
@@ -209,10 +219,11 @@ async function computeCompetitorAVI(
   for (const [name, mentionRows] of Array.from(byCompetitor.entries())) {
     const count = mentionRows.length;
 
-    // Prominence: mentions / total_prompts × 100
-    const prominence = Math.min(100, (count / totalPrompts) * 100);
+    // Presence: mentions / denominator × 100 (same formula as brand)
+    const presence_score = (count / denominator) * 100;
 
-    // Rank score: SUM(rank > 0 ? MAX(0, 100-(rank-1)*20) : 0) / total_prompts
+    // Rank score: SUM(rank > 0 ? MAX(0, 100-(rank-1)×20) : 0) / denominator
+    // Same formula as brand: averages over ALL prompts, 0 for non-mentioned
     // IMPORTANT: Number() coercion for Supabase NUMERIC columns returned as strings
     const rankSum = mentionRows.reduce((s: number, m: any) => {
       const rank = m.rank != null ? Number(m.rank) : 0;
@@ -221,9 +232,10 @@ async function computeCompetitorAVI(
       }
       return s;
     }, 0);
-    const rankScore = Math.min(100, rankSum / totalPrompts);
+    const rank_score = rankSum / denominator;
 
-    // Sentiment score: SUM((sentiment+1)*50) / total_prompts
+    // Sentiment score: SUM((sentiment+1)×50) / denominator
+    // Same formula as brand: averages over ALL prompts, 0 for non-mentioned
     const sentimentSum = mentionRows.reduce((s: number, m: any) => {
       if (m.sentiment != null) {
         const sentiment = Number(m.sentiment);
@@ -231,25 +243,26 @@ async function computeCompetitorAVI(
       }
       return s;
     }, 0);
-    const sentimentScore = Math.min(100, sentimentSum / totalPrompts);
+    const sentiment_score = sentimentSum / denominator;
 
-    // Consistency: mention_count / total_prompts × 100
-    const consistency = Math.min(100, (count / totalPrompts) * 100);
+    // Consistency: mention_count / denominator × 100
+    const consistency = (count / denominator) * 100;
 
-    // AVI = prominence×0.40 + rank_score×0.35 + sentiment_score×0.25
+    // AVI = presence×0.40 + rank×0.35 + sentiment×0.25
+    // Same rounding as brand: 1 decimal place
     const aviScore = Math.round(
-      (prominence * 0.40) + (rankScore * 0.35) + (sentimentScore * 0.25)
-    );
+      (presence_score * 0.40 + rank_score * 0.35 + sentiment_score * 0.25) * 10
+    ) / 10;
 
     upsertRows.push({
       project_id: projectId,
       run_id: runId,
       competitor_name: name,
-      avi_score: Math.min(100, Math.max(0, aviScore)),
-      prominence_score: prominence,
-      rank_score: rankScore,
-      sentiment_score: sentimentScore,
-      consistency_score: consistency,
+      avi_score: Math.max(0, Math.min(100, aviScore)),
+      prominence_score: Math.round(presence_score * 100) / 100,
+      rank_score: Math.round(rank_score * 100) / 100,
+      sentiment_score: Math.round(sentiment_score * 100) / 100,
+      consistency_score: Math.round(consistency * 100) / 100,
       mention_count: count,
       computed_at: new Date().toISOString(),
     });

@@ -90,6 +90,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
   const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null);
   const [modalPrompt, setModalPrompt] = useState<any | null>(null);
   const [topicsExpanded, setTopicsExpanded] = useState(false);
+  const [competitorsExpanded, setCompetitorsExpanded] = useState(false);
 
   // Build query map for funnel stage lookup
   const queryMap = useMemo(() => {
@@ -457,23 +458,34 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
           {competitorList.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">{t("runMetrics.noCompetitor")}</p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {competitorList.map(([name, count]) => {
-                const cAvi = computedCompAviMap[name] ?? computedCompAviMap[name.toLowerCase().trim()];
-                const aviColor = cAvi != null
-                  ? cAvi >= 70 ? "text-success" : cAvi >= 40 ? "text-amber-500" : "text-destructive"
-                  : "";
-                return (
-                  <span key={name} className="badge badge-primary flex items-center gap-1.5">
-                    {name}
-                    <span className="text-[11px] opacity-70">({count})</span>
-                    {cAvi != null && (
-                      <span className={`text-[12px] font-bold ${aviColor}`}>AVI {cAvi}</span>
-                    )}
-                  </span>
-                );
-              })}
-            </div>
+            <>
+              <div className="flex flex-wrap gap-2">
+                {(competitorsExpanded ? competitorList : competitorList.slice(0, 8)).map(([name, count]) => {
+                  const cAvi = computedCompAviMap[name] ?? computedCompAviMap[name.toLowerCase().trim()];
+                  const aviColor = cAvi != null
+                    ? cAvi >= 70 ? "text-success" : cAvi >= 40 ? "text-amber-500" : "text-destructive"
+                    : "";
+                  return (
+                    <span key={name} className="badge badge-primary flex items-center gap-1.5">
+                      {name}
+                      <span className="text-[11px] opacity-70">({count})</span>
+                      {cAvi != null && (
+                        <span className={`text-[12px] font-bold ${aviColor}`}>AVI {cAvi}</span>
+                      )}
+                    </span>
+                  );
+                })}
+              </div>
+              {competitorList.length > 8 && (
+                <button
+                  onClick={() => setCompetitorsExpanded(!competitorsExpanded)}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {competitorsExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                  {competitorsExpanded ? t("common.showLess") : `${t("common.showAll")} (${competitorList.length})`}
+                </button>
+              )}
+            </>
           )}
         </div>
 

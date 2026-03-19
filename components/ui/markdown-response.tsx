@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 /**
  * Render AI response text with basic markdown formatting and citation badges.
@@ -16,6 +17,7 @@ export function MarkdownResponse({
   truncateAt?: number;
   className?: string;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const shouldTruncate = truncateAt > 0 && text.length > truncateAt;
   const displayText = shouldTruncate && !expanded ? text.slice(0, truncateAt) + "..." : text;
@@ -32,7 +34,7 @@ export function MarkdownResponse({
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-2"
         >
           {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-          {expanded ? "Mostra meno" : "Mostra tutto"}
+          {expanded ? t("common.showLess") : t("common.showAll")}
         </button>
       )}
     </div>

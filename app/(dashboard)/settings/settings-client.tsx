@@ -40,7 +40,7 @@ export function SettingsClient({
   notifyAnalysisComplete: initialNotifyAnalysis,
   usage,
 }: SettingsClientProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const router = useRouter();
 
   const [fullName, setFullName] = useState(initialName);
@@ -225,8 +225,8 @@ export function SettingsClient({
           </div>
           <p className="text-xs text-muted-foreground">
             {usage.promptsLimit - usage.promptsUsed > 0
-              ? `${usage.promptsLimit - usage.promptsUsed} query disponibili`
-              : "Limite raggiunto"}
+              ? `${usage.promptsLimit - usage.promptsUsed} ${t("settings.queriesAvailable")}`
+              : t("settings.limitReached")}
           </p>
         </div>
 
@@ -252,12 +252,12 @@ export function SettingsClient({
         {/* Models per project */}
         <div className="flex items-center justify-between text-sm pt-2 border-t border-border">
           <span className="text-muted-foreground">{t("settings.maxModels").replace("{n}", String(usage.maxModels))}</span>
-          <span className="text-foreground font-medium">{usage.maxModels === 999 ? "Illimitati" : `Max ${usage.maxModels}`}</span>
+          <span className="text-foreground font-medium">{usage.maxModels === 999 ? t("settings.unlimited") : `Max ${usage.maxModels}`}</span>
         </div>
 
         {/* Reset date */}
         <p className="text-xs text-muted-foreground">
-          Si rinnova il 1 {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString("it-IT", { month: "long" })}
+          {t("settings.renewsOn")} 1 {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString(locale === "it" ? "it-IT" : locale === "en" ? "en-US" : locale === "fr" ? "fr-FR" : locale === "de" ? "de-DE" : "es-ES", { month: "long" })}
         </p>
       </div>
 
@@ -274,7 +274,7 @@ export function SettingsClient({
             value={voucher}
             onChange={(e) => setVoucher(e.target.value.toUpperCase())}
             onKeyDown={(e) => e.key === "Enter" && redeemVoucher()}
-            placeholder="Es. SEAGEO-PRO-2026"
+            placeholder={t("settings.voucherPlaceholder")}
             className="input-base flex-1 font-mono uppercase tracking-wider"
           />
           <button

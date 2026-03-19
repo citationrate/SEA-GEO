@@ -173,10 +173,10 @@ export function Sidebar({ profile }: SidebarProps) {
             "w-full flex items-center gap-2 px-2 py-2 rounded-[2px] text-[#c4a882] border border-[#c4a882]/20 bg-[#c4a882]/5 hover:bg-[#c4a882]/10 transition-colors",
             collapsed && "justify-center px-0",
           )}
-          title={collapsed ? "Richiedi consulenza" : undefined}
+          title={collapsed ? t("sidebar.requestConsultation") : undefined}
         >
           <MessageSquareText className="w-4 h-4 shrink-0" />
-          {!collapsed && <span className="text-xs font-semibold">Richiedi consulenza</span>}
+          {!collapsed && <span className="text-xs font-semibold">{t("sidebar.requestConsultation")}</span>}
         </button>
       </div>
 

@@ -124,6 +124,81 @@ User triggers analysis → Inngest function starts
 - All providers fall back to standard mode if browsing fails
 - `browsing` defaults to `true` in UI and API
 
+## Cost Architecture
+
+### Plan Structure
+
+| | **Base** | **Pro** |
+|---|---|---|
+| Monthly prompts | 100 | 500 |
+| Max models/project | 3 | 5 |
+| Comparisons/month | 0 | 10 (separate counter) |
+| AI query generation | YES | YES |
+| Dataset access | NO | YES |
+| Comparisons access | NO | YES |
+| Price | €29/month | €79/month |
+
+### How Prompts Are Counted
+Each prompt executed = 1 unit consumed from monthly limit.
+`prompts = queries × models × segments × run_count` (all counted together).
+Example: 10 queries × 3 models × 1 segment × 2 runs = **60 prompts consumed**.
+
+### How Comparisons Are Counted
+Each comparison analysis = 1 unit (regardless of internal prompts).
+A typical comparison generates ~27 prompts internally but counts as 1 comparison.
+
+### AI Cost Per Prompt
+Each prompt makes 2 API calls:
+1. **Main AI model** (GPT, Gemini, Claude, Perplexity, Grok)
+2. **Claude Haiku extractor** (brand/competitor extraction) — always ~$0.0016
+
+| Model | Main call | + Haiku | **Total/prompt** |
+|---|---|---|---|
+| GPT-4o Mini | $0.001 | $0.0016 | **$0.003** |
+| Gemini 2.5 Flash | $0.0008 | $0.0016 | **$0.0024** |
+| Claude Haiku | $0.0005 | $0.0016 | **$0.0021** |
+| Perplexity Sonar | $0.002 | $0.0016 | **$0.0036** |
+| **Average across models** | ~$0.0014 | $0.0016 | **~$0.003** |
+
+### AI Cost Per Comparison
+~27 prompts × 2 calls each:
+- Main model: ~27 × $0.002 = ~$0.054
+- Haiku extractor: ~27 × $0.0005 = ~$0.014
+- **Total per comparison: ~$0.068**
+
+### Monthly AI Cost Per User (worst case — full usage)
+
+| Plan | Prompts | Comparisons | Query gen | **Total AI cost** |
+|---|---|---|---|---|
+| Base | 100 × $0.003 = $0.30 | — | ~$0.01 | **~$0.31** |
+| Pro | 500 × $0.003 = $1.50 | 10 × $0.068 = $0.68 | ~$0.03 | **~$2.21** |
+
+### Infrastructure Costs (fixed, shared)
+- Vercel Pro: $20/month
+- Supabase Pro: $25/month
+- Inngest: free tier (up to 50k events/month)
+- **Total fixed: ~$45/month** (scales to ~$100 at 500+ users)
+
+### Margin Analysis (€29 Base / €79 Pro, 70/30 mix)
+
+| Users | Base | Pro | Revenue | AI costs | Infra | **Profit** | **Margin** |
+|---|---|---|---|---|---|---|---|
+| 10 | 7 | 3 | €440 | €8 | €45 | **€387** | **88%** |
+| 50 | 35 | 15 | €2,200 | €41 | €45 | **€2,114** | **96%** |
+| 100 | 70 | 30 | €4,400 | €82 | €45 | **€4,273** | **97%** |
+| 500 | 350 | 150 | €22,000 | €409 | €100 | **€21,491** | **98%** |
+
+### Margin by plan (single user)
+
+| Plan | Price | AI cost | **Gross margin** |
+|---|---|---|---|
+| Base | €29 | €0.29 | **€28.71 (99%)** |
+| Pro | €79 | €2.05 | **€76.95 (97%)** |
+
+### Break-Even (infra only, €45/month)
+- 2 Base users (2 × €29 = €58 > €45)
+- 1 Pro user (€79 > €45)
+
 ## Environment Variables
 Required in `.env.local`:
 - `NEXT_PUBLIC_SUPABASE_URL`

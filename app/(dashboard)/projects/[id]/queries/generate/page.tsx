@@ -87,6 +87,71 @@ export default function GenerateQueriesPage() {
   const projectId = params.id as string;
 
   const { t } = useTranslation();
+
+  const OPTION_LABELS: Record<string, string> = {
+    // Gender
+    "Maschile": t("generateQueries.genderMale"),
+    "Femminile": t("generateQueries.genderFemale"),
+    "Non specificato": t("generateQueries.genderUnspecified"),
+    // Zona
+    "Nord Italia": t("generateQueries.zonaNorth"),
+    "Centro Italia": t("generateQueries.zonaCenter"),
+    "Sud Italia": t("generateQueries.zonaSouth"),
+    "Italia intera": t("generateQueries.zonaAll"),
+    "Europa": t("generateQueries.zonaEurope"),
+    "Globale": t("generateQueries.zonaGlobal"),
+    // Occupazione
+    "Dipendente": t("generateQueries.occEmployee"),
+    "Libero Professionista": t("generateQueries.occFreelance"),
+    "Imprenditore": t("generateQueries.occEntrepreneur"),
+    "Manager": t("generateQueries.occManager"),
+    "Studente": t("generateQueries.occStudent"),
+    "Pensionato": t("generateQueries.occRetired"),
+    // Titolo studio
+    "Tutti i livelli": t("generateQueries.eduAll"),
+    "Scuola Secondaria": t("generateQueries.eduSecondary"),
+    "Diploma": t("generateQueries.eduDiploma"),
+    "Laurea Triennale": t("generateQueries.eduBachelor"),
+    "Master / Dottorato": t("generateQueries.eduMaster"),
+    // Interessi
+    "Sport": t("generateQueries.intSport"),
+    "Tecnologia": t("generateQueries.intTech"),
+    "Finanza": t("generateQueries.intFinance"),
+    "Salute": t("generateQueries.intHealth"),
+    "Viaggi": t("generateQueries.intTravel"),
+    "Moda": t("generateQueries.intFashion"),
+    "Casa": t("generateQueries.intHome"),
+    "Famiglia": t("generateQueries.intFamily"),
+    "Automotive": t("generateQueries.intAutomotive"),
+    "Gaming": t("generateQueries.intGaming"),
+    "Arte": t("generateQueries.intArt"),
+    "Alimentazione": t("generateQueries.intFood"),
+    // Valori
+    "Risparmio": t("generateQueries.valSaving"),
+    "Qualità": t("generateQueries.valQuality"),
+    "Sostenibilità": t("generateQueries.valSustainability"),
+    "Innovazione": t("generateQueries.valInnovation"),
+    "Tradizione": t("generateQueries.valTradition"),
+    "Comodità": t("generateQueries.valComfort"),
+    "Status": t("generateQueries.valStatus"),
+    // Stile vita
+    "Molto attivo": t("generateQueries.styleVeryActive"),
+    "Attivo": t("generateQueries.styleActive"),
+    "Sedentario": t("generateQueries.styleSedentary"),
+    "Digitale": t("generateQueries.styleDigital"),
+    "Ibrido": t("generateQueries.styleHybrid"),
+  };
+  const optLabel = (v: string) => OPTION_LABELS[v] || v;
+
+  const PERSONA_TEMPLATE_LABELS: Record<string, { label: string; description: string }> = {
+    "Professionista Urbano": { label: t("generateQueries.tplUrbanProf"), description: t("generateQueries.tplUrbanProfDesc") },
+    "Pensionato Attivo": { label: t("generateQueries.tplActiveRetiree"), description: t("generateQueries.tplActiveRetireeDesc") },
+    "Giovane Professionista": { label: t("generateQueries.tplYoungProf"), description: t("generateQueries.tplYoungProfDesc") },
+    "Genitore Pratico": { label: t("generateQueries.tplPracticalParent"), description: t("generateQueries.tplPracticalParentDesc") },
+    "Imprenditore Digitale": { label: t("generateQueries.tplDigitalEntrepreneur"), description: t("generateQueries.tplDigitalEntrepreneurDesc") },
+    "Giovane Studente": { label: t("generateQueries.tplYoungStudent"), description: t("generateQueries.tplYoungStudentDesc") },
+  };
+
   const [step, setStep] = useState<Step>(1);
   const [saving, setSaving] = useState(false);
   const [isPro, setIsPro] = useState(false);
@@ -418,7 +483,7 @@ export default function GenerateQueriesPage() {
             setInput={setPuntiInput}
             onAdd={() => addTag(puntiDiForza, setPuntiDiForza, puntiInput, setPuntiInput)}
             onRemove={(i) => removeTag(puntiDiForza, setPuntiDiForza, i)}
-            placeholder="es. qualità artigianale, spedizione veloce"
+            placeholder={t("generateQueries.strengthsPlaceholder")}
           />
 
           {/* Principali competitor */}
@@ -442,7 +507,7 @@ export default function GenerateQueriesPage() {
             setInput={setObiezioniInput}
             onAdd={() => addTag(obiezioni, setObiezioni, obiezioniInput, setObiezioniInput)}
             onRemove={(i) => removeTag(obiezioni, setObiezioni, i)}
-            placeholder="es. troppo costoso, scarsa reperibilità"
+            placeholder={t("generateQueries.objectionsPlaceholder")}
           />
 
           {/* AI Conversational Intake */}
@@ -565,9 +630,9 @@ export default function GenerateQueriesPage() {
                       >
                         <div className="flex items-center gap-2">
                           <span className="text-lg">{tpl.emoji}</span>
-                          <span className="font-display font-semibold text-xs text-foreground leading-tight">{tpl.label}</span>
+                          <span className="font-display font-semibold text-xs text-foreground leading-tight">{PERSONA_TEMPLATE_LABELS[tpl.label]?.label ?? tpl.label}</span>
                         </div>
-                        <p className="text-[11px] text-muted-foreground leading-snug">{tpl.description}</p>
+                        <p className="text-[11px] text-muted-foreground leading-snug">{PERSONA_TEMPLATE_LABELS[tpl.label]?.description ?? tpl.description}</p>
                       </button>
                     ))}
                   </div>
@@ -968,6 +1033,54 @@ function PersonaBuilderDrawer({
   const [attrs, setAttrs] = useState<PersonaAttributes>({});
   const { t } = useTranslation();
 
+  const OPTION_LABELS: Record<string, string> = {
+    "Maschile": t("generateQueries.genderMale"),
+    "Femminile": t("generateQueries.genderFemale"),
+    "Non specificato": t("generateQueries.genderUnspecified"),
+    "Nord Italia": t("generateQueries.zonaNorth"),
+    "Centro Italia": t("generateQueries.zonaCenter"),
+    "Sud Italia": t("generateQueries.zonaSouth"),
+    "Italia intera": t("generateQueries.zonaAll"),
+    "Europa": t("generateQueries.zonaEurope"),
+    "Globale": t("generateQueries.zonaGlobal"),
+    "Dipendente": t("generateQueries.occEmployee"),
+    "Libero Professionista": t("generateQueries.occFreelance"),
+    "Imprenditore": t("generateQueries.occEntrepreneur"),
+    "Manager": t("generateQueries.occManager"),
+    "Studente": t("generateQueries.occStudent"),
+    "Pensionato": t("generateQueries.occRetired"),
+    "Tutti i livelli": t("generateQueries.eduAll"),
+    "Scuola Secondaria": t("generateQueries.eduSecondary"),
+    "Diploma": t("generateQueries.eduDiploma"),
+    "Laurea Triennale": t("generateQueries.eduBachelor"),
+    "Master / Dottorato": t("generateQueries.eduMaster"),
+    "Sport": t("generateQueries.intSport"),
+    "Tecnologia": t("generateQueries.intTech"),
+    "Finanza": t("generateQueries.intFinance"),
+    "Salute": t("generateQueries.intHealth"),
+    "Viaggi": t("generateQueries.intTravel"),
+    "Moda": t("generateQueries.intFashion"),
+    "Casa": t("generateQueries.intHome"),
+    "Famiglia": t("generateQueries.intFamily"),
+    "Automotive": t("generateQueries.intAutomotive"),
+    "Gaming": t("generateQueries.intGaming"),
+    "Arte": t("generateQueries.intArt"),
+    "Alimentazione": t("generateQueries.intFood"),
+    "Risparmio": t("generateQueries.valSaving"),
+    "Qualità": t("generateQueries.valQuality"),
+    "Sostenibilità": t("generateQueries.valSustainability"),
+    "Innovazione": t("generateQueries.valInnovation"),
+    "Tradizione": t("generateQueries.valTradition"),
+    "Comodità": t("generateQueries.valComfort"),
+    "Status": t("generateQueries.valStatus"),
+    "Molto attivo": t("generateQueries.styleVeryActive"),
+    "Attivo": t("generateQueries.styleActive"),
+    "Sedentario": t("generateQueries.styleSedentary"),
+    "Digitale": t("generateQueries.styleDigital"),
+    "Ibrido": t("generateQueries.styleHybrid"),
+  };
+  const optLabel = (v: string) => OPTION_LABELS[v] || v;
+
   function setSingle(key: keyof PersonaAttributes, val: string) {
     setAttrs((prev) => ({ ...prev, [key]: prev[key] === val ? undefined : val }));
   }
@@ -1006,7 +1119,7 @@ function PersonaBuilderDrawer({
 
             <p className="text-xs font-medium text-foreground mb-1.5">Sesso</p>
             <div className="flex flex-wrap gap-2">
-              {SESSO_OPTIONS.map((o) => <Chip key={o} label={o} active={attrs.sesso === o} onClick={() => setSingle("sesso", o)} />)}
+              {SESSO_OPTIONS.map((o) => <Chip key={o} label={optLabel(o)} active={attrs.sesso === o} onClick={() => setSingle("sesso", o)} />)}
             </div>
 
             <p className="text-xs font-medium text-foreground mb-1.5 mt-3">Et&agrave;</p>
@@ -1016,17 +1129,17 @@ function PersonaBuilderDrawer({
 
             <p className="text-xs font-medium text-foreground mb-1.5 mt-3">Zona</p>
             <div className="flex flex-wrap gap-2">
-              {ZONA_OPTIONS.map((o) => <Chip key={o} label={o} active={attrs.zona?.includes(o) ?? false} onClick={() => toggleMulti("zona", o)} />)}
+              {ZONA_OPTIONS.map((o) => <Chip key={o} label={optLabel(o)} active={attrs.zona?.includes(o) ?? false} onClick={() => toggleMulti("zona", o)} />)}
             </div>
 
             <p className="text-xs font-medium text-foreground mb-1.5 mt-3">Occupazione</p>
             <div className="flex flex-wrap gap-2">
-              {OCCUPAZIONE_OPTIONS.map((o) => <Chip key={o} label={o} active={attrs.occupazione?.includes(o) ?? false} onClick={() => toggleMulti("occupazione", o)} />)}
+              {OCCUPAZIONE_OPTIONS.map((o) => <Chip key={o} label={optLabel(o)} active={attrs.occupazione?.includes(o) ?? false} onClick={() => toggleMulti("occupazione", o)} />)}
             </div>
 
             <p className="text-xs font-medium text-foreground mb-1.5 mt-3">Titolo di studio</p>
             <div className="flex flex-wrap gap-2">
-              {TITOLO_OPTIONS.map((o) => <Chip key={o} label={o} active={attrs.titolo_studio === o} onClick={() => setSingle("titolo_studio", o)} />)}
+              {TITOLO_OPTIONS.map((o) => <Chip key={o} label={optLabel(o)} active={attrs.titolo_studio === o} onClick={() => setSingle("titolo_studio", o)} />)}
             </div>
 
             <p className="text-xs font-medium text-foreground mb-1.5 mt-3">Reddito</p>
@@ -1041,17 +1154,17 @@ function PersonaBuilderDrawer({
 
             <p className="text-xs font-medium text-foreground mb-1.5">Interessi</p>
             <div className="flex flex-wrap gap-2">
-              {INTERESSI_OPTIONS.map((o) => <Chip key={o} label={o} active={attrs.interessi?.includes(o) ?? false} onClick={() => toggleMulti("interessi", o)} />)}
+              {INTERESSI_OPTIONS.map((o) => <Chip key={o} label={optLabel(o)} active={attrs.interessi?.includes(o) ?? false} onClick={() => toggleMulti("interessi", o)} />)}
             </div>
 
             <p className="text-xs font-medium text-foreground mb-1.5 mt-3">Valori</p>
             <div className="flex flex-wrap gap-2">
-              {VALORI_OPTIONS.map((o) => <Chip key={o} label={o} active={attrs.valori?.includes(o) ?? false} onClick={() => toggleMulti("valori", o)} />)}
+              {VALORI_OPTIONS.map((o) => <Chip key={o} label={optLabel(o)} active={attrs.valori?.includes(o) ?? false} onClick={() => toggleMulti("valori", o)} />)}
             </div>
 
             <p className="text-xs font-medium text-foreground mb-1.5 mt-3">Stile di vita</p>
             <div className="flex flex-wrap gap-2">
-              {STILE_OPTIONS.map((o) => <Chip key={o} label={o} active={attrs.stile_vita?.includes(o) ?? false} onClick={() => toggleMulti("stile_vita", o)} />)}
+              {STILE_OPTIONS.map((o) => <Chip key={o} label={optLabel(o)} active={attrs.stile_vita?.includes(o) ?? false} onClick={() => toggleMulti("stile_vita", o)} />)}
             </div>
           </div>
 
@@ -1079,7 +1192,7 @@ function PersonaBuilderDrawer({
             className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-3 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
-            Aggiungi Persona
+            {t("generateQueries.addPersona")}
           </button>
         </div>
       </div>

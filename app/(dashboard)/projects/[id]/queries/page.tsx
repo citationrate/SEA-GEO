@@ -178,7 +178,7 @@ export default function QueriesPage() {
           </div>
           {/* Funnel filter */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground mr-1">Funnel</span>
+            <span className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground mr-1">{t("generateQueries.funnelFilter")}</span>
             {(["all", "tofu", "mofu"] as const).map((v) => (
               <button
                 key={v}
@@ -211,7 +211,7 @@ export default function QueriesPage() {
               value={tofuText}
               onChange={(e) => setTofuText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addQuery(tofuText, "tofu"))}
-              placeholder="Es. Quali sono le tendenze nel mio settore?"
+              placeholder={t("queries.tofuPlaceholder")}
               className="input-base flex-1"
             />
             <button
@@ -250,7 +250,7 @@ export default function QueriesPage() {
               value={mofuText}
               onChange={(e) => setMofuText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addQuery(mofuText, "mofu"))}
-              placeholder="Es. Qual è il miglior prodotto per..."
+              placeholder={t("generateQueries.queryPlaceholder")}
               className="input-base flex-1"
             />
             <button

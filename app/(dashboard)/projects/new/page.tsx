@@ -23,63 +23,51 @@ interface ProviderOption {
   comingSoon?: boolean;
 }
 
-const COUNTRIES = [
-  "Globale / Worldwide",
-  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola",
-  "Antigua e Barbuda", "Arabia Saudita", "Argentina", "Armenia", "Australia",
-  "Austria", "Azerbaigian",
-  "Bahamas", "Bahrein", "Bangladesh", "Barbados", "Belgio", "Belize",
-  "Benin", "Bhutan", "Bielorussia", "Bolivia", "Bosnia ed Erzegovina",
-  "Botswana", "Brasile", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
-  "Cambogia", "Camerun", "Canada", "Capo Verde", "Ciad", "Cile", "Cina",
-  "Cipro", "Colombia", "Comore", "Corea del Nord", "Corea del Sud",
-  "Costa d'Avorio", "Costa Rica", "Croazia", "Cuba",
-  "Danimarca", "Dominica",
-  "Ecuador", "Egitto", "El Salvador", "Emirati Arabi Uniti", "Eritrea",
-  "Estonia", "Eswatini", "Etiopia",
-  "Figi", "Filippine", "Finlandia", "Francia",
-  "Gabon", "Gambia", "Georgia", "Germania", "Ghana", "Giamaica",
-  "Giappone", "Gibuti", "Giordania", "Grecia", "Grenada", "Guatemala",
-  "Guinea", "Guinea Equatoriale", "Guinea-Bissau", "Guyana",
-  "Haiti", "Honduras",
-  "India", "Indonesia", "Iran", "Iraq", "Irlanda", "Islanda", "Israele",
-  "Italia",
-  "Kazakistan", "Kenya", "Kirghizistan", "Kiribati", "Kuwait",
-  "Laos", "Lesotho", "Lettonia", "Libano", "Liberia", "Libia",
-  "Liechtenstein", "Lituania", "Lussemburgo",
-  "Macedonia del Nord", "Madagascar", "Malawi", "Malaysia", "Maldive",
-  "Mali", "Malta", "Marocco", "Mauritania", "Mauritius", "Messico",
-  "Micronesia", "Moldavia", "Monaco", "Mongolia", "Montenegro",
-  "Mozambico", "Myanmar",
-  "Namibia", "Nauru", "Nepal", "Nicaragua", "Niger", "Nigeria", "Norvegia",
-  "Nuova Zelanda",
-  "Oman",
-  "Paesi Bassi", "Pakistan", "Palau", "Palestina", "Panama",
-  "Papua Nuova Guinea", "Paraguay", "Perù", "Polonia", "Portogallo",
-  "Qatar",
-  "Regno Unito", "Repubblica Ceca", "Repubblica Centrafricana",
-  "Repubblica del Congo", "Repubblica Democratica del Congo",
-  "Repubblica Dominicana", "Romania", "Ruanda", "Russia",
-  "Saint Kitts e Nevis", "Saint Lucia", "Saint Vincent e Grenadine",
-  "Samoa", "San Marino", "São Tomé e Príncipe", "Senegal", "Serbia",
-  "Seychelles", "Sierra Leone", "Singapore", "Siria", "Slovacchia",
-  "Slovenia", "Somalia", "Spagna", "Sri Lanka", "Stati Uniti",
-  "Sud Africa", "Sudan", "Sudan del Sud", "Suriname", "Svezia",
-  "Svizzera",
-  "Tagikistan", "Taiwan", "Tanzania", "Thailandia", "Timor Est", "Togo",
-  "Tonga", "Trinidad e Tobago", "Tunisia", "Turchia", "Turkmenistan",
-  "Tuvalu",
-  "Ucraina", "Uganda", "Ungheria", "Uruguay", "Uzbekistan",
-  "Vanuatu", "Vaticano", "Venezuela", "Vietnam",
-  "Yemen",
-  "Zambia", "Zimbabwe",
+const COUNTRY_CODES = [
+  "GLOBAL",
+  "AF","AL","DZ","AD","AO","AG","SA","AR","AM","AU","AT","AZ",
+  "BS","BH","BD","BB","BE","BZ","BJ","BT","BY","BO","BA","BW","BR","BN","BG","BF","BI",
+  "KH","CM","CA","CV","TD","CL","CN","CY","CO","KM","KP","KR","CI","CR","HR","CU",
+  "DK","DM",
+  "EC","EG","SV","AE","ER","EE","SZ","ET",
+  "FJ","PH","FI","FR",
+  "GA","GM","GE","DE","GH","JM","JP","DJ","JO","GR","GD","GT","GN","GQ","GW","GY",
+  "HT","HN",
+  "IN","ID","IR","IQ","IE","IS","IL","IT",
+  "KZ","KE","KG","KI","KW",
+  "LA","LS","LV","LB","LR","LY","LI","LT","LU",
+  "MK","MG","MW","MY","MV","ML","MT","MA","MR","MU","MX","FM","MD","MC","MN","ME","MZ","MM",
+  "NA","NR","NP","NI","NE","NG","NO","NZ",
+  "OM",
+  "NL","PK","PW","PS","PA","PG","PY","PE","PL","PT",
+  "QA",
+  "GB","CZ","CF","CG","CD","DO","RO","RW","RU",
+  "KN","LC","VC","WS","SM","ST","SN","RS","SC","SL","SG","SY","SK","SI","SO","ES","LK","US","ZA","SD","SS","SR","SE","CH",
+  "TJ","TW","TZ","TH","TL","TG","TO","TT","TN","TR","TM","TV",
+  "UA","UG","HU","UY","UZ",
+  "VU","VA","VE","VN",
+  "YE",
+  "ZM","ZW"
 ];
 
 const BASE_MODEL_LIMIT = 3;
 
 export default function NewProjectPage() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+
+  const localeMap: Record<string, string> = { it: "it", en: "en", fr: "fr", de: "de", es: "es" };
+  const displayNames = new Intl.DisplayNames([localeMap[locale] || "it"], { type: "region" });
+
+  const COUNTRIES = COUNTRY_CODES.map(code => {
+    if (code === "GLOBAL") return locale === "it" ? "Globale / Worldwide" : locale === "en" ? "Global / Worldwide" : locale === "fr" ? "Mondial / Worldwide" : locale === "de" ? "Global / Weltweit" : "Global / Mundial";
+    try { return displayNames.of(code) || code; } catch { return code; }
+  }).sort((a, b) => {
+    if (a.startsWith("Global") || a.startsWith("Mondial")) return -1;
+    if (b.startsWith("Global") || b.startsWith("Mondial")) return 1;
+    return a.localeCompare(b, localeMap[locale] || "it");
+  });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [existingProjectCount, setExistingProjectCount] = useState<number | null>(null);

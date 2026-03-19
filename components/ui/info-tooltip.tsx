@@ -44,7 +44,7 @@ export function InfoTooltip({ text }: { text: string | undefined }) {
         onMouseLeave={() => setShow(false)}
         onClick={() => setShow(!show)}
         className="text-muted-foreground hover:text-foreground transition-colors focus:outline-none inline-flex"
-        aria-label="Informazioni"
+        aria-label="Info"
       >
         <Info className="w-3.5 h-3.5" />
       </button>
