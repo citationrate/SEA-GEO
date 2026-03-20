@@ -8,7 +8,7 @@ import { useTranslation } from "@/lib/i18n/context";
 import {
   LayoutDashboard, FolderOpen, Play, BarChart3,
   Users, Link2, Tag, GitCompare, Settings,
-  Database, ChevronRight, Layers, Plus,
+  Database, ChevronRight, Plus,
   PanelLeftClose, PanelLeftOpen, MessageSquareText,
 } from "lucide-react";
 import { useConsultation } from "@/lib/consultation-context";
@@ -76,17 +76,21 @@ export function Sidebar({ profile }: SidebarProps) {
       <div className="h-12 flex items-center justify-between px-3 border-b border-border flex-shrink-0">
         {!collapsed && (
           <Link href="/dashboard" className="flex items-center gap-2.5 group">
-            <div className="w-7 h-7 rounded-[2px] flex items-center justify-center transition-all group-hover:glow-primary" style={{ background: "var(--primary-glow)", border: "1px solid var(--primary-hover)" }}>
-              <Layers className="w-3.5 h-3.5 text-primary" />
-            </div>
-            <span className="font-display text-[22px] text-foreground tracking-tight" style={{ fontWeight: 300 }}>SeaGeo</span>
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="flex-shrink-0">
+              <rect width="32" height="32" rx="7" fill="#7ab89a"/>
+              <text x="6" y="22" fontSize="20" fontFamily="Georgia, serif" fill="white" opacity="0.9">&ldquo;</text>
+              <text x="14" y="22" fontSize="20" fontFamily="Georgia, serif" fill="#3d6b52" opacity="0.85">&ldquo;</text>
+            </svg>
+            <span className="font-display text-[22px] tracking-tight" style={{ fontWeight: 300, color: "#f5f5f0", letterSpacing: "-0.02em" }}>Sea<span style={{ color: "#7ab89a" }}>Geo</span></span>
           </Link>
         )}
         {collapsed && (
           <Link href="/dashboard" className="mx-auto">
-            <div className="w-7 h-7 rounded-[2px] flex items-center justify-center" style={{ background: "var(--primary-glow)", border: "1px solid var(--primary-hover)" }}>
-              <Layers className="w-3.5 h-3.5 text-primary" />
-            </div>
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="7" fill="#7ab89a"/>
+              <text x="6" y="22" fontSize="20" fontFamily="Georgia, serif" fill="white" opacity="0.9">&ldquo;</text>
+              <text x="14" y="22" fontSize="20" fontFamily="Georgia, serif" fill="#3d6b52" opacity="0.85">&ldquo;</text>
+            </svg>
           </Link>
         )}
         <button

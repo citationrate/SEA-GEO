@@ -13,14 +13,12 @@ export default function ForgotPasswordPage() {
       <div className="relative w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2.5 mb-3">
-            <div className="w-9 h-9 rounded-[2px] flex items-center justify-center glow-primary" style={{ background: "var(--primary-glow)", border: "1px solid var(--primary-hover)" }}>
-              <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                <path d="M2 17l10 5 10-5"/>
-                <path d="M2 12l10 5 10-5"/>
-              </svg>
-            </div>
-            <span className="font-display text-2xl text-foreground" style={{ fontWeight: 300 }}>SeaGeo</span>
+            <svg width="36" height="36" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="7" fill="#7ab89a"/>
+              <text x="6" y="22" fontSize="20" fontFamily="Georgia, serif" fill="white" opacity="0.9">&ldquo;</text>
+              <text x="14" y="22" fontSize="20" fontFamily="Georgia, serif" fill="#3d6b52" opacity="0.85">&ldquo;</text>
+            </svg>
+            <span className="font-display text-2xl text-foreground" style={{ fontWeight: 300 }}>Sea<span style={{ color: "#7ab89a" }}>Geo</span></span>
           </div>
           <p className="text-sm text-muted-foreground font-sans">AI Visibility Intelligence</p>
         </div>

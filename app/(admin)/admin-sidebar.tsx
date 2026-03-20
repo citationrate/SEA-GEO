@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import {
   LayoutDashboard, Users, FolderOpen, Activity,
-  Swords, Trophy, Server, ScrollText, Settings, Layers, Shield,
+  Swords, Trophy, Server, ScrollText, Settings, Shield,
 } from "lucide-react";
 
 const NAV = [
@@ -90,7 +90,11 @@ export function AdminSidebar() {
 
       <div className="border-t border-border p-3 flex-shrink-0">
         <Link href="/dashboard" className="flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] text-sm text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors">
-          <Layers className="w-[15px] h-[15px]" />
+          <svg width="15" height="15" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="7" fill="#7ab89a"/>
+            <text x="6" y="22" fontSize="20" fontFamily="Georgia, serif" fill="white" opacity="0.9">&ldquo;</text>
+            <text x="14" y="22" fontSize="20" fontFamily="Georgia, serif" fill="#3d6b52" opacity="0.85">&ldquo;</text>
+          </svg>
           Torna alla Dashboard
         </Link>
       </div>
