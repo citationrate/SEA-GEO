@@ -90,10 +90,10 @@ export function AdminSidebar() {
 
       <div className="border-t border-border p-3 flex-shrink-0">
         <Link href="/dashboard" className="flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] text-sm text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors">
-          <svg width="15" height="15" viewBox="0 0 32 32" fill="none">
-            <rect width="32" height="32" rx="7" fill="#7ab89a"/>
-            <text x="6" y="22" fontSize="20" fontFamily="Georgia, serif" fill="white" opacity="0.9">&ldquo;</text>
-            <text x="14" y="22" fontSize="20" fontFamily="Georgia, serif" fill="#3d6b52" opacity="0.85">&ldquo;</text>
+          <svg width="15" height="15" viewBox="0 0 36 36" fill="none">
+            <rect width="36" height="36" rx="8" fill="#7ab89a"/>
+            <text x="-1" y="28" fontSize="34" fontFamily="Georgia, 'Times New Roman', serif" fill="white">&#x2018;</text>
+            <text x="15" y="32" fontSize="34" fontFamily="Georgia, 'Times New Roman', serif" fill="#2d5a3d">&#x2019;</text>
           </svg>
           Torna alla Dashboard
         </Link>

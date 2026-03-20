@@ -13,10 +13,10 @@ export default function RegisterPage() {
       <div className="relative w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2.5 mb-3">
-            <svg width="36" height="36" viewBox="0 0 32 32" fill="none">
-              <rect width="32" height="32" rx="7" fill="#7ab89a"/>
-              <text x="6" y="22" fontSize="20" fontFamily="Georgia, serif" fill="white" opacity="0.9">&ldquo;</text>
-              <text x="14" y="22" fontSize="20" fontFamily="Georgia, serif" fill="#3d6b52" opacity="0.85">&ldquo;</text>
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+              <rect width="36" height="36" rx="8" fill="#7ab89a"/>
+              <text x="-1" y="28" fontSize="34" fontFamily="Georgia, 'Times New Roman', serif" fill="white">&#x2018;</text>
+              <text x="15" y="32" fontSize="34" fontFamily="Georgia, 'Times New Roman', serif" fill="#2d5a3d">&#x2019;</text>
             </svg>
             <span className="font-display text-2xl text-foreground" style={{ fontWeight: 300 }}>Sea<span style={{ color: "#7ab89a" }}>Geo</span></span>
           </div>
