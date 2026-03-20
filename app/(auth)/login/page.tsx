@@ -15,8 +15,10 @@ export default function LoginPage() {
           <div className="inline-flex items-center gap-2.5 mb-3">
             <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
               <rect width="36" height="36" rx="8" fill="#7ab89a"/>
-              <text x="-1" y="28" fontSize="34" fontFamily="Georgia, 'Times New Roman', serif" fill="white">&#x2018;</text>
-              <text x="15" y="32" fontSize="34" fontFamily="Georgia, 'Times New Roman', serif" fill="#2d5a3d">&#x2019;</text>
+              <circle cx="13" cy="10" r="8" fill="white"/>
+              <path d="M5 13 C4 19 2 24 0 29 C4 27 9 22 13 17 Z" fill="white"/>
+              <circle cx="26" cy="13" r="7" fill="#3d6b52"/>
+              <path d="M19 16 C18 21 16 26 13 31 C17 29 22 24 25 19 Z" fill="#3d6b52"/>
             </svg>
             <span className="font-display text-2xl text-foreground" style={{ fontWeight: 300 }}>Sea<span style={{ color: "#7ab89a" }}>Geo</span></span>
           </div>
