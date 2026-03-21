@@ -244,16 +244,26 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         {r.completed_at && <div><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.endLabel" />:</span>{" "}<span className="text-foreground" suppressHydrationWarning>{new Date(r.completed_at).toLocaleString("it-IT")}</span></div>}
       </div>
 
-      {/* Loading banner when running */}
+      {/* Progress bar when running */}
       {r.status === "running" && (
-        <div className="flex flex-col items-center justify-center py-8 gap-4">
-          <img
-            src="/loading.gif"
-            alt="loading"
-            className="w-full max-w-2xl object-contain"
-          />
-          <p className="text-sm text-muted-foreground animate-pulse">
-            <TranslatedLabel tkey="runDetail.analysisInProgress" />
+        <div className="card p-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-foreground font-medium flex items-center gap-2">
+              <Loader2 className="w-4 h-4 text-primary animate-spin" />
+              <TranslatedLabel tkey="runDetail.analysisInProgress" />
+            </p>
+            <span className="text-sm text-foreground font-semibold">
+              {r.total_prompts > 0 ? Math.round((r.completed_prompts / r.total_prompts) * 100) : 0}%
+            </span>
+          </div>
+          <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-700 ease-out"
+              style={{ width: `${r.total_prompts > 0 ? Math.max(Math.round((r.completed_prompts / r.total_prompts) * 100), 2) : 0}%` }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            <span className="text-foreground font-medium">{r.completed_prompts}</span> / {r.total_prompts} prompt completati
           </p>
         </div>
       )}

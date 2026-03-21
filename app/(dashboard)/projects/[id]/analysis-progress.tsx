@@ -64,10 +64,8 @@ export function AnalysisProgress({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
       <div className="relative card p-8 w-full max-w-md border-primary/30 shadow-xl shadow-primary/5 space-y-6 text-center">
-        <img src="/loading.gif" alt="loading" className="w-40 h-40 mx-auto object-contain" />
-
         <div>
-          <h2 className="font-display font-bold text-xl text-foreground animate-pulse">
+          <h2 className="font-display font-bold text-xl text-foreground">
             {t("analysisProgress.inProgress")}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -77,19 +75,22 @@ export function AnalysisProgress({
 
         {/* Progress bar */}
         <div className="space-y-2">
-          <div className="h-3 rounded-[2px] bg-muted overflow-hidden">
+          <div className="h-2.5 rounded-full bg-muted overflow-hidden">
             <div
-              className="h-full rounded-[2px] bg-primary transition-all duration-700 ease-out"
-              style={{ width: `${pct}%` }}
+              className="h-full rounded-full bg-primary transition-all duration-700 ease-out"
+              style={{ width: `${Math.max(pct, 2)}%` }}
             />
           </div>
-          <p className="text-sm text-muted-foreground">
-            <span className="text-foreground font-semibold">{completed}</span> / {totalPrompts} {t("analysisProgress.promptsCompleted")}
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              <span className="text-foreground font-semibold">{completed}</span> / {totalPrompts} {t("analysisProgress.promptsCompleted")}
+            </p>
+            <span className="text-sm text-foreground font-semibold">{pct}%</span>
+          </div>
         </div>
 
         {/* Rotating message */}
-        <p className="text-sm text-primary font-medium h-5 transition-opacity duration-300">
+        <p className="text-sm text-primary font-medium h-5 transition-opacity duration-300 animate-pulse">
           {MESSAGES[msgIndex]}
         </p>
       </div>
