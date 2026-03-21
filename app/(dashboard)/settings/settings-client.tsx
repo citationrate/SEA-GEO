@@ -235,6 +235,7 @@ export function SettingsClient({
               <li className="flex items-center gap-1"><Cpu className="w-3 h-3" /> 70 prompt senza browsing</li>
               <li>Max 3 modelli/progetto</li>
               <li>6 modelli base selezionabili</li>
+              <li className="text-foreground">Generazione query AI</li>
               <li className="text-muted-foreground/50">Nessun confronto</li>
               <li className="text-muted-foreground/50">Nessun dataset</li>
             </ul>
@@ -248,7 +249,7 @@ export function SettingsClient({
 
           {/* Pro */}
           <div className={`rounded-[2px] p-4 space-y-3 border-2 relative ${isPro ? "border-primary bg-primary/5" : "border-[#d4a817]/50 bg-[#d4a817]/5"}`}>
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 font-mono text-[0.625rem] tracking-wide text-[#d4a817] bg-[#d4a817]/15 border border-[#d4a817]/30 px-2 py-0.5 rounded-[2px]">
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 font-sans text-[0.6875rem] font-semibold tracking-wide text-[#d4a817] bg-background border border-[#d4a817]/40 px-3 py-1 rounded-full whitespace-nowrap shadow-sm">
               Più popolare
             </span>
             <div>
