@@ -207,9 +207,9 @@ export function SettingsClient({
               <p className="font-semibold text-foreground text-sm">Demo Gratuita</p>
               <p className="text-2xl font-display font-bold text-foreground mt-1">Gratis</p>
             </div>
-            <ul className="space-y-1.5 text-xs text-muted-foreground">
-              <li>40 prompt (senza browsing)</li>
-              <li>2 modelli fissi (GPT-4o, Gemini 2.5 Pro)</li>
+            <ul className="space-y-1.5 text-xs">
+              <li className="text-foreground">40 prompt (senza browsing)</li>
+              <li className="text-foreground">2 modelli fissi (GPT-4o, Gemini 2.5 Pro)</li>
               <li className="text-muted-foreground/50">Nessun confronto</li>
               <li className="text-muted-foreground/50">Nessun dataset</li>
               <li className="text-muted-foreground/50">Nessun browsing</li>
@@ -230,11 +230,11 @@ export function SettingsClient({
                 </div>
               )}
             </div>
-            <ul className="space-y-1.5 text-xs text-muted-foreground">
-              <li className="flex items-center gap-1"><Globe className="w-3 h-3" /> 30 prompt con browsing</li>
-              <li className="flex items-center gap-1"><Cpu className="w-3 h-3" /> 70 prompt senza browsing</li>
-              <li>Max 3 modelli/progetto</li>
-              <li>6 modelli base selezionabili</li>
+            <ul className="space-y-1.5 text-xs">
+              <li className="text-foreground flex items-center gap-1"><Globe className="w-3 h-3" /> 30 prompt con browsing</li>
+              <li className="text-foreground flex items-center gap-1"><Cpu className="w-3 h-3" /> 70 prompt senza browsing</li>
+              <li className="text-foreground">Max 3 modelli/progetto</li>
+              <li className="text-foreground">6 modelli base selezionabili</li>
               <li className="text-foreground">Generazione query AI</li>
               <li className="text-muted-foreground/50">Nessun confronto</li>
               <li className="text-muted-foreground/50">Nessun dataset</li>
@@ -263,11 +263,11 @@ export function SettingsClient({
                 </div>
               )}
             </div>
-            <ul className="space-y-1.5 text-xs text-muted-foreground">
-              <li className="flex items-center gap-1"><Globe className="w-3 h-3" /> 90 prompt con browsing</li>
-              <li className="flex items-center gap-1"><Cpu className="w-3 h-3" /> 210 prompt senza browsing</li>
-              <li>Max 5 modelli/progetto</li>
-              <li>Tutti i modelli sbloccati (11)</li>
+            <ul className="space-y-1.5 text-xs">
+              <li className="text-foreground flex items-center gap-1"><Globe className="w-3 h-3" /> 90 prompt con browsing</li>
+              <li className="text-foreground flex items-center gap-1"><Cpu className="w-3 h-3" /> 210 prompt senza browsing</li>
+              <li className="text-foreground">Max 5 modelli/progetto</li>
+              <li className="text-foreground">Tutti i modelli sbloccati (11)</li>
               <li className="text-foreground">10 confronti AI/mese</li>
               <li className="text-foreground">Dataset sbloccato</li>
               <li className="text-foreground">Generazione query AI</li>
