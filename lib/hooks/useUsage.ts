@@ -88,7 +88,19 @@ export function useUsage(): UsageData {
           .single();
 
         if (planData) {
-          setPlan(planData as Plan);
+          // Fallback for plans table rows missing new columns (migration not yet applied)
+          const p = planData as any;
+          const fallbacks: Record<string, { bp: number; nbp: number }> = {
+            demo: { bp: 0, nbp: 40 },
+            base: { bp: 30, nbp: 70 },
+            pro:  { bp: 90, nbp: 210 },
+          };
+          const fb = fallbacks[p.id] ?? fallbacks.demo;
+          setPlan({
+            ...p,
+            browsing_prompts: Number(p.browsing_prompts) || fb.bp,
+            no_browsing_prompts: Number(p.no_browsing_prompts) || fb.nbp,
+          } as Plan);
         } else {
           setPlan(DEFAULT_PLAN);
         }
@@ -96,7 +108,7 @@ export function useUsage(): UsageData {
         // Get current month usage
         const period = getCurrentPeriod();
         const { data: usage } = await (supabase.from("usage_monthly") as any)
-          .select("prompts_used, comparisons_used, browsing_prompts_used, no_browsing_prompts_used")
+          .select("*")
           .eq("user_id", user.id)
           .eq("period", period)
           .maybeSingle();

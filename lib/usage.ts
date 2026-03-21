@@ -125,7 +125,21 @@ export async function getUserPlanLimits(userId: string) {
     can_access_comparisons: false,
   };
 
-  return plan ?? defaultPlan;
+  if (!plan) return defaultPlan;
+
+  // Fallback for plans table rows missing new columns (migration not yet applied)
+  const p = plan as any;
+  const fallbacks: Record<string, { bp: number; nbp: number }> = {
+    demo: { bp: 0, nbp: 40 },
+    base: { bp: 30, nbp: 70 },
+    pro:  { bp: 90, nbp: 210 },
+  };
+  const fb = fallbacks[p.id] ?? fallbacks.demo;
+  return {
+    ...p,
+    browsing_prompts: Number(p.browsing_prompts) || fb.bp,
+    no_browsing_prompts: Number(p.no_browsing_prompts) || fb.nbp,
+  };
 }
 
 /**
@@ -136,7 +150,7 @@ export async function getCurrentUsage(userId: string) {
   const period = getCurrentPeriod();
 
   const { data } = await (svc.from("usage_monthly") as any)
-    .select("prompts_used, comparisons_used, browsing_prompts_used, no_browsing_prompts_used")
+    .select("*")
     .eq("user_id", userId)
     .eq("period", period)
     .maybeSingle();
