@@ -102,14 +102,14 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
     models: [
       { id: "gpt-4o-mini", label: "GPT-4o Mini", descriptionKey: "modelDescriptions.gpt-4o-mini" },
       { id: "gpt-4o", label: "GPT-4o", descriptionKey: "modelDescriptions.gpt-4o" },
-      { id: "gpt-5.4", label: "GPT-5.4", descriptionKey: "modelDescriptions.gpt-5.4", proOnly: true },
+      { id: "gpt-5.4", label: "GPT-5.4", descriptionKey: "modelDescriptions.gpt-54", proOnly: true },
     ],
   },
   {
     id: "google", label: "Google", badge: "Gemini", color: "text-blue-500",
     models: [
-      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", descriptionKey: "modelDescriptions.gemini-2.5-flash" },
-      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", descriptionKey: "modelDescriptions.gemini-2.5-pro", proOnly: true },
+      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", descriptionKey: "modelDescriptions.gemini-25-flash" },
+      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", descriptionKey: "modelDescriptions.gemini-25-pro", proOnly: true },
     ],
   },
   {
@@ -146,3 +146,15 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
 export const PRO_ONLY_MODEL_IDS = new Set(
   PROVIDER_GROUPS.flatMap((g) => g.models.filter((m) => m.proOnly).map((m) => m.id))
 );
+
+/** Demo plan: fixed models, not selectable */
+export const DEMO_MODEL_IDS = ["gpt-4o", "gemini-2.5-pro"] as const;
+
+/** Comparison module: fixed models, always no-browsing, Pro only */
+export const COMPARISON_MODEL_IDS = [
+  "claude-haiku",
+  "gpt-4o-mini",
+  "gemini-2.5-flash",
+  "grok-3-mini",
+  "perplexity-sonar",
+] as const;

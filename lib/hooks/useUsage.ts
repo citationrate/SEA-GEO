@@ -7,7 +7,12 @@ const getCurrentPeriod = () => new Date().toISOString().slice(0, 7);
 
 interface Plan {
   id: string;
-  monthly_prompts: number;
+  display_name?: string;
+  monthly_price?: number;
+  annual_price?: number;
+  annual_discount?: number;
+  browsing_prompts: number;
+  no_browsing_prompts: number;
   max_models_per_project: number;
   max_comparisons: number;
   can_generate_queries: boolean;
@@ -17,9 +22,13 @@ interface Plan {
 
 interface UsageData {
   plan: Plan | null;
-  promptsUsed: number;
-  promptsLimit: number;
-  promptsRemaining: number;
+  planId: string;
+  browsingPromptsUsed: number;
+  browsingPromptsLimit: number;
+  browsingPromptsRemaining: number;
+  noBrowsingPromptsUsed: number;
+  noBrowsingPromptsLimit: number;
+  noBrowsingPromptsRemaining: number;
   comparisonsUsed: number;
   comparisonsLimit: number;
   comparisonsRemaining: number;
@@ -27,13 +36,21 @@ interface UsageData {
   canAccessDataset: boolean;
   canAccessComparisons: boolean;
   maxModelsPerProject: number;
+  isDemo: boolean;
+  isPro: boolean;
   loading: boolean;
+  // Legacy compat
+  promptsUsed: number;
+  promptsLimit: number;
+  promptsRemaining: number;
 }
 
 const DEFAULT_PLAN: Plan = {
-  id: "base",
-  monthly_prompts: 100,
-  max_models_per_project: 3,
+  id: "demo",
+  display_name: "Demo Gratuita",
+  browsing_prompts: 0,
+  no_browsing_prompts: 40,
+  max_models_per_project: 2,
   max_comparisons: 0,
   can_generate_queries: false,
   can_access_dataset: false,
@@ -42,7 +59,8 @@ const DEFAULT_PLAN: Plan = {
 
 export function useUsage(): UsageData {
   const [plan, setPlan] = useState<Plan | null>(null);
-  const [promptsUsed, setPromptsUsed] = useState(0);
+  const [browsingPromptsUsed, setBrowsingPromptsUsed] = useState(0);
+  const [noBrowsingPromptsUsed, setNoBrowsingPromptsUsed] = useState(0);
   const [comparisonsUsed, setComparisonsUsed] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -60,8 +78,8 @@ export function useUsage(): UsageData {
           .eq("id", user.id)
           .single();
 
-        const planId = (profile as any)?.plan ?? "free";
-        const effectivePlanId = planId === "free" ? "base" : planId === "agency" ? "pro" : planId;
+        const planId = (profile as any)?.plan ?? "demo";
+        const effectivePlanId = planId === "free" ? "demo" : planId === "agency" ? "pro" : planId;
 
         // Get plan details
         const { data: planData } = await (supabase.from("plans") as any)
@@ -78,13 +96,14 @@ export function useUsage(): UsageData {
         // Get current month usage
         const period = getCurrentPeriod();
         const { data: usage } = await (supabase.from("usage_monthly") as any)
-          .select("prompts_used, comparisons_used")
+          .select("prompts_used, comparisons_used, browsing_prompts_used, no_browsing_prompts_used")
           .eq("user_id", user.id)
           .eq("period", period)
           .maybeSingle();
 
         if (usage) {
-          setPromptsUsed(Number(usage.prompts_used) || 0);
+          setBrowsingPromptsUsed(Number(usage.browsing_prompts_used) || 0);
+          setNoBrowsingPromptsUsed(Number(usage.no_browsing_prompts_used) || 0);
           setComparisonsUsed(Number(usage.comparisons_used) || 0);
         }
       } catch (err) {
@@ -97,12 +116,22 @@ export function useUsage(): UsageData {
   }, []);
 
   const effectivePlan = plan ?? DEFAULT_PLAN;
+  const isDemo = effectivePlan.id === "demo";
+  const isPro = effectivePlan.id === "pro";
+
+  // Legacy compat: total prompts = browsing + no_browsing
+  const totalUsed = browsingPromptsUsed + noBrowsingPromptsUsed;
+  const totalLimit = effectivePlan.browsing_prompts + effectivePlan.no_browsing_prompts;
 
   return {
     plan: effectivePlan,
-    promptsUsed,
-    promptsLimit: effectivePlan.monthly_prompts,
-    promptsRemaining: Math.max(0, effectivePlan.monthly_prompts - promptsUsed),
+    planId: effectivePlan.id,
+    browsingPromptsUsed,
+    browsingPromptsLimit: effectivePlan.browsing_prompts,
+    browsingPromptsRemaining: Math.max(0, effectivePlan.browsing_prompts - browsingPromptsUsed),
+    noBrowsingPromptsUsed,
+    noBrowsingPromptsLimit: effectivePlan.no_browsing_prompts,
+    noBrowsingPromptsRemaining: Math.max(0, effectivePlan.no_browsing_prompts - noBrowsingPromptsUsed),
     comparisonsUsed,
     comparisonsLimit: effectivePlan.max_comparisons,
     comparisonsRemaining: Math.max(0, effectivePlan.max_comparisons - comparisonsUsed),
@@ -110,6 +139,12 @@ export function useUsage(): UsageData {
     canAccessDataset: effectivePlan.can_access_dataset,
     canAccessComparisons: effectivePlan.can_access_comparisons,
     maxModelsPerProject: effectivePlan.max_models_per_project,
+    isDemo,
+    isPro,
     loading,
+    // Legacy compat
+    promptsUsed: totalUsed,
+    promptsLimit: totalLimit,
+    promptsRemaining: Math.max(0, totalLimit - totalUsed),
   };
 }

@@ -18,7 +18,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     ...(profile as any),
     plan: isProUser(profile as any, user.user_metadata)
       ? ((profile as any)?.plan === "agency" ? "agency" : "pro")
-      : ((profile as any)?.plan ?? "free"),
+      : ((profile as any)?.plan ?? "demo"),
   };
 
   return (

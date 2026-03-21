@@ -2,13 +2,15 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { User, CreditCard, Ticket, Bell, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2 } from "lucide-react";
+import { User, CreditCard, Ticket, Bell, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2, Globe, Cpu } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { RestartTourButton } from "./restart-tour-button";
 
 interface UsageData {
-  promptsUsed: number;
-  promptsLimit: number;
+  browsingPromptsUsed: number;
+  browsingPromptsLimit: number;
+  noBrowsingPromptsUsed: number;
+  noBrowsingPromptsLimit: number;
   comparisonsUsed: number;
   comparisonsLimit: number;
   maxModels: number;
@@ -47,6 +49,7 @@ export function SettingsClient({
   const [savingName, setSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
   const [notifyAnalysis, setNotifyAnalysis] = useState(initialNotifyAnalysis);
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
 
   // Voucher
   const [voucher, setVoucher] = useState("");
@@ -57,6 +60,8 @@ export function SettingsClient({
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
 
   const isPro = plan === "pro" || plan === "agency";
+  const isBase = plan === "base";
+  const isDemo = !plan || plan === "demo" || plan === "free";
 
   const saveName = useCallback(async () => {
     setSavingName(true);
@@ -150,55 +155,130 @@ export function SettingsClient({
         </div>
       </div>
 
-      {/* 2. Piano Abbonamento */}
-      <div className="card p-6 space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <CreditCard className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-semibold text-foreground">{t("settings.subscription")}</h2>
+      {/* 2. Piano Abbonamento — Pricing Cards */}
+      <div className="card p-6 space-y-5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-primary" />
+            <h2 className="font-display font-semibold text-foreground">{t("settings.subscription")}</h2>
+          </div>
+
+          {/* Monthly / Annual toggle */}
+          <div className="flex items-center gap-1 bg-muted/30 rounded-[2px] p-0.5">
+            <button
+              onClick={() => setBillingPeriod("monthly")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-[2px] transition-colors ${billingPeriod === "monthly" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Mensile
+            </button>
+            <button
+              onClick={() => setBillingPeriod("annual")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-[2px] transition-colors ${billingPeriod === "annual" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Annuale
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 mb-3">
+        {/* Current plan badge */}
+        <div className="flex items-center gap-3">
           {isPro ? (
             <span className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-[2px] bg-primary/10 border border-primary/30 text-primary">
               <Check className="w-4 h-4" />
-              {t("settings.proActive")}
+              Pro attivo
+            </span>
+          ) : isBase ? (
+            <span className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-[2px] bg-primary/10 border border-primary/30 text-primary">
+              <Check className="w-4 h-4" />
+              Base attivo
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-[2px] bg-muted/30 border border-border text-foreground">
-              {t("settings.basePlan")}
+              Demo gratuita
             </span>
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-muted/20 rounded-[2px] p-4 space-y-2 border border-border">
-            <p className="font-semibold text-foreground text-sm">{t("settings.baseStarter")}</p>
-            <ul className="space-y-1 text-xs text-muted-foreground">
-              <li>100 {t("settings.queriesMonth")}</li>
-              <li>{t("settings.maxProjects").replace("{n}", "3")}</li>
-              <li>{t("settings.maxModels").replace("{n}", "3")}</li>
-              <li>{t("settings.basicAvi")}</li>
+        {/* 3 Plan Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Demo */}
+          <div className={`rounded-[2px] p-4 space-y-3 border ${isDemo ? "border-primary/30 bg-primary/5" : "border-border bg-muted/20"}`}>
+            <div>
+              <p className="font-semibold text-foreground text-sm">Demo Gratuita</p>
+              <p className="text-2xl font-display font-bold text-foreground mt-1">Gratis</p>
+            </div>
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              <li>40 prompt (senza browsing)</li>
+              <li>2 modelli fissi (GPT-4o, Gemini 2.5 Pro)</li>
+              <li className="text-muted-foreground/50">Nessun confronto</li>
+              <li className="text-muted-foreground/50">Nessun dataset</li>
+              <li className="text-muted-foreground/50">Nessun browsing</li>
             </ul>
+            {isDemo && <p className="text-xs text-primary font-semibold">Piano attuale</p>}
           </div>
-          <div className="bg-primary/5 rounded-[2px] p-4 space-y-2 border border-primary/20">
-            <p className="font-semibold text-primary text-sm">Pro</p>
-            <ul className="space-y-1 text-xs text-muted-foreground">
-              <li>500 {t("settings.queriesMonth")}</li>
-              <li>{t("settings.maxProjects").replace("{n}", "10")}</li>
-              <li>{t("settings.allModelsUnlocked")}</li>
-              <li>10 {t("settings.compareDetections")}</li>
-              <li>{t("settings.generatePromptAI")}</li>
-              <li>{t("settings.datasetUnlocked")}</li>
-              <li>{t("settings.fullAvi")}</li>
+
+          {/* Base */}
+          <div className={`rounded-[2px] p-4 space-y-3 border ${isBase ? "border-primary/30 bg-primary/5" : "border-border bg-muted/20"}`}>
+            <div>
+              <p className="font-semibold text-foreground text-sm">Base</p>
+              {billingPeriod === "monthly" ? (
+                <p className="text-2xl font-display font-bold text-foreground mt-1">&euro;59<span className="text-sm font-normal text-muted-foreground">/mese</span></p>
+              ) : (
+                <div className="mt-1">
+                  <p className="text-2xl font-display font-bold text-foreground">&euro;54<span className="text-sm font-normal text-muted-foreground">/mese</span></p>
+                  <p className="text-xs text-primary mt-0.5">&euro;649 fatturati annualmente &middot; Risparmia &euro;59/anno</p>
+                </div>
+              )}
+            </div>
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              <li className="flex items-center gap-1"><Globe className="w-3 h-3" /> 30 prompt con browsing</li>
+              <li className="flex items-center gap-1"><Cpu className="w-3 h-3" /> 70 prompt senza browsing</li>
+              <li>Max 3 modelli/progetto</li>
+              <li>6 modelli base selezionabili</li>
+              <li className="text-muted-foreground/50">Nessun confronto</li>
+              <li className="text-muted-foreground/50">Nessun dataset</li>
             </ul>
+            {isBase && <p className="text-xs text-primary font-semibold">Piano attuale</p>}
+            {isDemo && (
+              <button className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-[2px] text-xs font-semibold opacity-50 cursor-not-allowed" disabled>
+                Upgrade a Base (coming soon)
+              </button>
+            )}
+          </div>
+
+          {/* Pro */}
+          <div className={`rounded-[2px] p-4 space-y-3 border-2 relative ${isPro ? "border-primary bg-primary/5" : "border-[#d4a817]/50 bg-[#d4a817]/5"}`}>
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 font-mono text-[0.625rem] tracking-wide text-[#d4a817] bg-[#d4a817]/15 border border-[#d4a817]/30 px-2 py-0.5 rounded-[2px]">
+              Più popolare
+            </span>
+            <div>
+              <p className="font-semibold text-foreground text-sm">Pro</p>
+              {billingPeriod === "monthly" ? (
+                <p className="text-2xl font-display font-bold text-foreground mt-1">&euro;159<span className="text-sm font-normal text-muted-foreground">/mese</span></p>
+              ) : (
+                <div className="mt-1">
+                  <p className="text-2xl font-display font-bold text-foreground">&euro;143<span className="text-sm font-normal text-muted-foreground">/mese</span></p>
+                  <p className="text-xs text-primary mt-0.5">&euro;1.719 fatturati annualmente &middot; Risparmia &euro;191/anno</p>
+                </div>
+              )}
+            </div>
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              <li className="flex items-center gap-1"><Globe className="w-3 h-3" /> 90 prompt con browsing</li>
+              <li className="flex items-center gap-1"><Cpu className="w-3 h-3" /> 210 prompt senza browsing</li>
+              <li>Max 5 modelli/progetto</li>
+              <li>Tutti i modelli sbloccati (11)</li>
+              <li className="text-foreground">10 confronti AI/mese</li>
+              <li className="text-foreground">Dataset sbloccato</li>
+              <li className="text-foreground">Generazione query AI</li>
+            </ul>
+            {isPro && <p className="text-xs text-primary font-semibold">Piano attuale</p>}
+            {!isPro && (
+              <button className="w-full px-3 py-2 bg-[#d4a817] text-background rounded-[2px] text-xs font-semibold opacity-50 cursor-not-allowed" disabled>
+                Upgrade a Pro (coming soon)
+              </button>
+            )}
           </div>
         </div>
-
-        {!isPro && (
-          <button className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold opacity-50 cursor-not-allowed" disabled>
-            {t("settings.upgradeProSoon")}
-          </button>
-        )}
       </div>
 
       {/* 2b. Utilizzo mensile */}
@@ -208,25 +288,52 @@ export function SettingsClient({
           <h2 className="font-display font-semibold text-foreground">{t("settings.monthlyUsage")}</h2>
         </div>
 
-        {/* Query usage */}
+        {/* Browsing prompts usage */}
+        {!isDemo && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" /> Prompt con browsing</span>
+              <span className="text-foreground font-medium">{usage.browsingPromptsUsed} / {usage.browsingPromptsLimit}</span>
+            </div>
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${usage.browsingPromptsLimit > 0 ? Math.min(100, (usage.browsingPromptsUsed / usage.browsingPromptsLimit) * 100) : 0}%`,
+                  background: usage.browsingPromptsUsed >= usage.browsingPromptsLimit ? "var(--destructive)" : "var(--primary)",
+                }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {usage.browsingPromptsLimit - usage.browsingPromptsUsed > 0
+                ? `${usage.browsingPromptsLimit - usage.browsingPromptsUsed} disponibili`
+                : "Limite raggiunto"}
+            </p>
+          </div>
+        )}
+
+        {/* No-browsing prompts usage */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{t("settings.queriesMonth")}</span>
-            <span className="text-foreground font-medium">{usage.promptsUsed} / {usage.promptsLimit}</span>
+            <span className="text-muted-foreground flex items-center gap-1.5">
+              <Cpu className="w-3.5 h-3.5" />
+              {isDemo ? "Prompt demo" : "Prompt senza browsing"}
+            </span>
+            <span className="text-foreground font-medium">{usage.noBrowsingPromptsUsed} / {usage.noBrowsingPromptsLimit}</span>
           </div>
           <div className="h-2 rounded-full bg-muted overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
-                width: `${Math.min(100, (usage.promptsUsed / usage.promptsLimit) * 100)}%`,
-                background: usage.promptsUsed >= usage.promptsLimit ? "var(--destructive)" : "var(--primary)",
+                width: `${usage.noBrowsingPromptsLimit > 0 ? Math.min(100, (usage.noBrowsingPromptsUsed / usage.noBrowsingPromptsLimit) * 100) : 0}%`,
+                background: usage.noBrowsingPromptsUsed >= usage.noBrowsingPromptsLimit ? "var(--destructive)" : "var(--primary)",
               }}
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            {usage.promptsLimit - usage.promptsUsed > 0
-              ? `${usage.promptsLimit - usage.promptsUsed} ${t("settings.queriesAvailable")}`
-              : t("settings.limitReached")}
+            {usage.noBrowsingPromptsLimit - usage.noBrowsingPromptsUsed > 0
+              ? `${usage.noBrowsingPromptsLimit - usage.noBrowsingPromptsUsed} disponibili`
+              : "Limite raggiunto"}
           </p>
         </div>
 
@@ -252,7 +359,7 @@ export function SettingsClient({
         {/* Models per project */}
         <div className="flex items-center justify-between text-sm pt-2 border-t border-border">
           <span className="text-muted-foreground">{t("settings.maxModels").replace("{n}", String(usage.maxModels))}</span>
-          <span className="text-foreground font-medium">{usage.maxModels === 999 ? t("settings.unlimited") : `Max ${usage.maxModels}`}</span>
+          <span className="text-foreground font-medium">Max {usage.maxModels}</span>
         </div>
 
         {/* Reset date */}

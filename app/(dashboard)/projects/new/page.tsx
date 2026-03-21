@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, X, Loader2, Lock, Check, Search, ChevronDown } from "lucide-react";
-import { PROVIDER_GROUPS } from "@/lib/engine/models";
+import { PROVIDER_GROUPS, DEMO_MODEL_IDS } from "@/lib/engine/models";
+import { getEffectivePlanId } from "@/lib/utils/is-pro";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import confetti from "canvas-confetti";
 import { useTranslation } from "@/lib/i18n/context";
@@ -74,6 +75,7 @@ export default function NewProjectPage() {
   const [error, setError] = useState("");
   const [existingProjectCount, setExistingProjectCount] = useState<number | null>(null);
   const [isPro, setIsPro] = useState(false);
+  const [planId, setPlanId] = useState<"demo" | "base" | "pro">("demo");
 
   const AVAILABLE_PROVIDERS: ProviderOption[] = PROVIDER_GROUPS.map((g) => ({
     id: g.id,
@@ -123,7 +125,11 @@ export default function NewProjectPage() {
       .catch(() => setExistingProjectCount(0));
     fetch("/api/profile")
       .then((r) => r.json())
-      .then((p) => setIsPro(p?.plan === "pro" || p?.plan === "agency"))
+      .then((p) => {
+        const ePlan = getEffectivePlanId(p?.plan);
+        setPlanId(ePlan);
+        setIsPro(ePlan === "pro");
+      })
       .catch(() => {});
   }, []);
 
@@ -205,6 +211,7 @@ export default function NewProjectPage() {
   }
 
   function getModelsConfig(): string[] {
+    if (planId === "demo") return [...DEMO_MODEL_IDS];
     return AVAILABLE_PROVIDERS
       .filter((p) => activeProviders.has(p.id))
       .map((p) => selectedModelPerProvider[p.id] ?? p.models[0].id);
@@ -455,97 +462,121 @@ export default function NewProjectPage() {
         {/* Modelli AI */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">{t("projects.aiModels")}</label>
-          <p className="text-xs text-muted-foreground">
-            {t("projects.selectProviderModel")}
-            {!isPro && ` (${t("projects.maxModels").replace("{n}", String(BASE_MODEL_LIMIT))})`}
-          </p>
-          <div className="space-y-2">
-            {AVAILABLE_PROVIDERS.map((provider) => {
-              const isSoon = !!provider.comingSoon;
-              const isActive = !isSoon && activeProviders.has(provider.id);
-              const currentModel = selectedModelPerProvider[provider.id] ?? provider.models[0].id;
-              const isDisabled = isSoon || (!isActive && atLimit);
 
-              return (
-                <div key={provider.id}
-                  className={`rounded-sm border transition-all ${
-                    isSoon ? "border-border opacity-50"
-                      : isActive ? "border-primary/50 bg-primary/5"
-                      : isDisabled ? "border-border opacity-40"
-                      : "border-border"
-                  }`}>
-                  <button type="button" onClick={() => !isDisabled && toggleProvider(provider)} disabled={isDisabled}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
-                    <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${
-                      isActive ? "border-primary bg-primary" : "border-muted-foreground"
-                    }`}>
+          {/* Demo plan: fixed models, not selectable */}
+          {planId === "demo" ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Il piano Demo include 2 modelli fissi. Passa al piano Base o Pro per scegliere i modelli.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {DEMO_MODEL_IDS.map((modelId) => (
+                  <span key={modelId} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-sm border border-primary/30 bg-primary/5 text-sm font-medium text-foreground">
+                    <Check className="w-3.5 h-3.5 text-primary" />
+                    {modelId === "gpt-4o" ? "GPT-4o" : "Gemini 2.5 Pro"}
+                  </span>
+                ))}
+              </div>
+              <div className="flex items-start gap-2">
+                <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">{t("projects.modelsFixed")}</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground">
+                {t("projects.selectProviderModel")}
+                {!isPro && ` (${t("projects.maxModels").replace("{n}", String(BASE_MODEL_LIMIT))})`}
+              </p>
+              <div className="space-y-2">
+                {AVAILABLE_PROVIDERS.map((provider) => {
+                  const isSoon = !!provider.comingSoon;
+                  const isActive = !isSoon && activeProviders.has(provider.id);
+                  const currentModel = selectedModelPerProvider[provider.id] ?? provider.models[0].id;
+                  const isDisabled = isSoon || (!isActive && atLimit);
+
+                  return (
+                    <div key={provider.id}
+                      className={`rounded-sm border transition-all ${
+                        isSoon ? "border-border opacity-50"
+                          : isActive ? "border-primary/50 bg-primary/5"
+                          : isDisabled ? "border-border opacity-40"
+                          : "border-border"
+                      }`}>
+                      <button type="button" onClick={() => !isDisabled && toggleProvider(provider)} disabled={isDisabled}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-left ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                        <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${
+                          isActive ? "border-primary bg-primary" : "border-muted-foreground"
+                        }`}>
+                          {isActive && (
+                            <svg className="w-2.5 h-2.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className={`text-sm font-semibold ${isSoon ? "text-muted-foreground" : provider.color}`}>{provider.label}</span>
+                        <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{provider.badge}</span>
+                        {isSoon && (
+                          <span className="font-mono text-[0.69rem] tracking-wide text-amber-500 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded-[2px] ml-auto">SOON</span>
+                        )}
+                      </button>
+
                       {isActive && (
-                        <svg className="w-2.5 h-2.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                        <div className="px-4 pb-3 pt-0 space-y-0.5">
+                          {provider.models.map((model) => {
+                            const isSelected = currentModel === model.id;
+                            const locked = model.proOnly && !isPro;
+                            return (
+                              <label key={model.id} onClick={() => !locked && selectModel(provider.id, model.id)}
+                                className={`flex items-center gap-2 p-2 rounded-[2px] transition-colors ${
+                                  locked ? "opacity-50 cursor-not-allowed" : isSelected ? "bg-primary/10 cursor-pointer" : "hover:bg-muted/30 cursor-pointer"
+                                }`}
+                                title={locked ? "Disponibile dal piano Pro — €159/mese" : undefined}>
+                                <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                  locked ? "border-muted-foreground/40" : isSelected ? "border-primary" : "border-muted-foreground"
+                                }`}>
+                                  {isSelected && !locked && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`text-sm font-medium ${locked ? "text-muted-foreground" : isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
+                                    {model.proOnly && <span className="font-mono text-[0.625rem] tracking-wide text-[#d4a817] bg-[#d4a817]/15 border border-[#d4a817]/30 px-1 py-0.5 rounded-[2px]">PRO</span>}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">{model.description}</p>
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
-                    <span className={`text-sm font-semibold ${isSoon ? "text-muted-foreground" : provider.color}`}>{provider.label}</span>
-                    <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{provider.badge}</span>
-                    {isSoon && (
-                      <span className="font-mono text-[0.69rem] tracking-wide text-amber-500 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded-[2px] ml-auto">SOON</span>
-                    )}
-                  </button>
+                  );
+                })}
+              </div>
 
-                  {isActive && (
-                    <div className="px-4 pb-3 pt-0 space-y-0.5">
-                      {provider.models.map((model) => {
-                        const isSelected = currentModel === model.id;
-                        const locked = model.proOnly && !isPro;
-                        return (
-                          <label key={model.id} onClick={() => !locked && selectModel(provider.id, model.id)}
-                            className={`flex items-center gap-2 p-2 rounded-[2px] transition-colors ${
-                              locked ? "opacity-50 cursor-not-allowed" : isSelected ? "bg-primary/10 cursor-pointer" : "hover:bg-muted/30 cursor-pointer"
-                            }`}
-                            title={locked ? "Disponibile dal piano Pro" : undefined}>
-                            <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                              locked ? "border-muted-foreground/40" : isSelected ? "border-primary" : "border-muted-foreground"
-                            }`}>
-                              {isSelected && !locked && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className={`text-sm font-medium ${locked ? "text-muted-foreground" : isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
-                                {model.proOnly && <span className="font-mono text-[0.625rem] tracking-wide text-[#d4a817] bg-[#d4a817]/15 border border-[#d4a817]/30 px-1 py-0.5 rounded-[2px]">PRO</span>}
-                              </div>
-                              <p className="text-xs text-muted-foreground">{model.description}</p>
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  )}
+              <div className="flex items-center justify-between">
+                <div className="flex items-start gap-2">
+                  <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground">{t("projects.modelsFixed")}</p>
                 </div>
-              );
-            })}
-          </div>
+                <p className="text-xs text-muted-foreground shrink-0 ml-4">
+                  <span className="text-foreground font-bold">{activeProviders.size}</span>
+                  {isPro ? ` ${t("projects.modelsSelected")}` : ` / ${BASE_MODEL_LIMIT} ${t("projects.modelsOf")}`}
+                </p>
+              </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-start gap-2">
-              <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground">{t("projects.modelsFixed")}</p>
-            </div>
-            <p className="text-xs text-muted-foreground shrink-0 ml-4">
-              <span className="text-foreground font-bold">{activeProviders.size}</span>
-              {isPro ? ` ${t("projects.modelsSelected")}` : ` / ${BASE_MODEL_LIMIT} ${t("projects.modelsOf")}`}
-            </p>
-          </div>
-
-          {atLimit && (
-            <p className="text-xs text-[#c4a882]">
-              {t("projects.modelLimitReached").replace("{n}", String(BASE_MODEL_LIMIT))}
-            </p>
+              {atLimit && (
+                <p className="text-xs text-[#c4a882]">
+                  {t("projects.modelLimitReached").replace("{n}", String(BASE_MODEL_LIMIT))}
+                </p>
+              )}
+            </>
           )}
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <button type="submit" disabled={loading || activeProviders.size === 0}
+        <button type="submit" disabled={loading || (planId !== "demo" && activeProviders.size === 0)}
           className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50">
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           {loading ? t("common.saving") : t("projects.createProject")}

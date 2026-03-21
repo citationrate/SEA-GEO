@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Play, X, Loader2, Cpu, Globe, AlertTriangle } from "lucide-react";
+import { Play, X, Loader2, Cpu, Globe, AlertTriangle, Lock } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
@@ -44,6 +44,10 @@ export function AnalysisLauncher({
   // Usage & plan limits
   const usage = useUsage();
   const profileLoaded = !usage.loading;
+  const isDemo = usage.isDemo;
+
+  // Demo plan: no browsing allowed
+  const effectiveBrowsing = isDemo ? false : browsing;
 
   const totalPrompts = useMemo(() => {
     return modelsConfig.length * queryCount * Math.max(segmentCount, 1) * runCount;
@@ -52,9 +56,24 @@ export function AnalysisLauncher({
   // Query cost = number of queries only (models × runs are free repetitions)
   const queryCost = queryCount;
 
-  const remaining = usage.promptsRemaining;
-  const wouldExceed = queryCost > remaining;
+  // Check against the appropriate counter
+  const browsingRemaining = usage.browsingPromptsRemaining;
+  const noBrowsingRemaining = usage.noBrowsingPromptsRemaining;
+
+  const wouldExceed = effectiveBrowsing
+    ? queryCost > browsingRemaining
+    : queryCost > noBrowsingRemaining;
   const modelsExceed = modelsConfig.length > usage.maxModelsPerProject;
+
+  // Auto-disable browsing when browsing counter exhausted
+  useEffect(() => {
+    if (profileLoaded && browsingRemaining <= 0 && !isDemo) {
+      setBrowsing(false);
+    }
+  }, [profileLoaded, browsingRemaining, isDemo]);
+
+  // Full-screen upgrade modal for demo users who exhausted prompts
+  const demoExhausted = isDemo && noBrowsingRemaining <= 0 && profileLoaded;
 
   async function startAnalysis() {
     setLoading(true);
@@ -64,7 +83,7 @@ export function AnalysisLauncher({
       const res = await fetch("/api/analysis/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, run_count: runCount, browsing }),
+        body: JSON.stringify({ project_id: projectId, run_count: runCount, browsing: effectiveBrowsing }),
       });
 
       if (!res.ok) {
@@ -89,6 +108,10 @@ export function AnalysisLauncher({
 
   const canStart = hasQueries;
 
+  // Next month name for renewal message
+  const nextMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1)
+    .toLocaleDateString("it-IT", { day: "numeric", month: "long" });
+
   return (
     <>
       <button
@@ -104,7 +127,29 @@ export function AnalysisLauncher({
         <p className="text-xs text-destructive mt-1">{error}</p>
       )}
 
-      {open && (
+      {/* Demo exhausted — full-screen upgrade modal */}
+      {demoExhausted && open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/90 backdrop-blur-sm" />
+          <div className="relative card p-8 w-full max-w-md text-center space-y-5 shadow-xl">
+            <Lock className="w-12 h-12 text-[#c4a882] mx-auto" />
+            <h2 className="font-display font-bold text-xl text-foreground">Demo esaurita</h2>
+            <p className="text-muted-foreground text-sm">
+              Hai utilizzato tutti i 40 prompt della demo gratuita. Passa al piano Base o Pro per continuare le analisi.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setOpen(false)} className="flex-1 text-sm font-semibold py-2.5 rounded-sm border border-border text-muted-foreground hover:text-foreground transition-colors">
+                Chiudi
+              </button>
+              <a href="/settings" className="flex-1 flex items-center justify-center gap-2 bg-[#c4a882] text-background font-semibold text-sm py-2.5 rounded-sm hover:bg-[#c4a882]/85 transition-colors">
+                Scegli un piano
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {open && !demoExhausted && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => !loading && setOpen(false)} />
           <div className="relative card p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-5 shadow-xl">
@@ -161,37 +206,41 @@ export function AnalysisLauncher({
               </div>
             </div>
 
-            {/* Browsing toggle */}
-            <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                {t("analysisLauncher.webBrowsing")}
-                <InfoTooltip text={t("analysisLauncher.browsingTooltip")} />
-              </p>
-              <button
-                onClick={() => setBrowsing(!browsing)}
-                disabled={loading}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm border transition-all text-left ${
-                  browsing
-                    ? "border-primary/50 bg-primary/5"
-                    : "border-border hover:border-border/80"
-                }`}
-              >
-                <div className={`relative w-11 h-6 rounded-full transition-colors ${browsing ? "bg-primary" : "bg-muted-foreground/30"}`}>
-                  <div className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${browsing ? "translate-x-[22px]" : "translate-x-[2px]"}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <Globe className="w-3.5 h-3.5 text-primary" />
-                    <p className="text-sm font-medium text-foreground">{t("analysisLauncher.browsingActive")}</p>
+            {/* Browsing toggle — hidden for demo */}
+            {!isDemo && (
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                  {t("analysisLauncher.webBrowsing")}
+                  <InfoTooltip text={t("analysisLauncher.browsingTooltip")} />
+                </p>
+                <button
+                  onClick={() => browsingRemaining > 0 && setBrowsing(!browsing)}
+                  disabled={loading || browsingRemaining <= 0}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm border transition-all text-left ${
+                    browsing && browsingRemaining > 0
+                      ? "border-primary/50 bg-primary/5"
+                      : "border-border hover:border-border/80"
+                  } ${browsingRemaining <= 0 ? "opacity-60" : ""}`}
+                >
+                  <div className={`relative w-11 h-6 rounded-full transition-colors ${browsing && browsingRemaining > 0 ? "bg-primary" : "bg-muted-foreground/30"}`}>
+                    <div className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${browsing && browsingRemaining > 0 ? "translate-x-[22px]" : "translate-x-[2px]"}`} />
                   </div>
-                  <p className="text-[13px] text-muted-foreground mt-0.5">
-                    {t("analysisLauncher.browsingDescShort")}
-                  </p>
-                </div>
-              </button>
-            </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-primary" />
+                      <p className="text-sm font-medium text-foreground">{t("analysisLauncher.browsingActive")}</p>
+                    </div>
+                    <p className="text-[13px] text-muted-foreground mt-0.5">
+                      {browsingRemaining <= 0
+                        ? `Browsing esaurito — riprende il ${nextMonth}`
+                        : t("analysisLauncher.browsingDescShort")}
+                    </p>
+                  </div>
+                </button>
+              </div>
+            )}
 
-            {/* Query cost breakdown */}
+            {/* Dual usage counters */}
             <div className="space-y-2 rounded-[2px] border border-border bg-muted/20 px-4 py-3">
               <p className="text-sm text-muted-foreground">
                 {t("analysisLauncher.thisAnalysisWillUse")} <span className="text-foreground font-bold">{totalPrompts}</span> {t("analysisLauncher.promptsOnPlan")}
@@ -199,9 +248,23 @@ export function AnalysisLauncher({
               <p className="text-xs text-muted-foreground">
                 {queryCount} query &times; {modelsConfig.length} {modelsConfig.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} &times; {Math.max(segmentCount, 1)} {segmentCount === 1 ? t("analysisLauncher.segmentSingular") : t("analysisLauncher.segmentPlural")} &times; {runCount} run = {totalPrompts} prompt
               </p>
-              {profileLoaded && (
+
+              {profileLoaded && !isDemo && (
+                <div className="space-y-1.5 pt-2 border-t border-border mt-2">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Globe className="w-3 h-3" />
+                    Con browsing: <span className="text-foreground font-medium">{usage.browsingPromptsUsed}/{usage.browsingPromptsLimit}</span> utilizzati
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Cpu className="w-3 h-3" />
+                    Senza browsing: <span className="text-foreground font-medium">{usage.noBrowsingPromptsUsed}/{usage.noBrowsingPromptsLimit}</span> utilizzati
+                  </p>
+                </div>
+              )}
+
+              {profileLoaded && isDemo && (
                 <p className="text-xs text-muted-foreground">
-                  {t("analysisLauncher.youHave")} <span className="text-foreground font-medium">{remaining}</span> {t("analysisLauncher.promptsAvailableThisMonth")} ({usage.promptsUsed}/{usage.promptsLimit} {t("analysisLauncher.used")})
+                  {usage.noBrowsingPromptsUsed} / {usage.noBrowsingPromptsLimit} prompt demo utilizzati
                 </p>
               )}
             </div>
@@ -211,7 +274,9 @@ export function AnalysisLauncher({
               <div className="flex items-start gap-2.5 rounded-[2px] border border-destructive/30 bg-destructive/10 px-4 py-3">
                 <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
                 <p className="text-xs text-destructive">
-                  {t("analysisLauncher.notEnoughQueries")}
+                  {effectiveBrowsing
+                    ? `Hai esaurito i prompt con browsing. Disattiva il browsing per continuare.`
+                    : t("analysisLauncher.notEnoughQueries")}
                 </p>
               </div>
             )}

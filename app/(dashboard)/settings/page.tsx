@@ -30,14 +30,16 @@ export default async function SettingsPage() {
         userId={user.id}
         email={user.email ?? ""}
         fullName={p.full_name ?? ""}
-        plan={p.plan ?? "free"}
+        plan={p.plan ?? "demo"}
         notifyAnalysisComplete={p.notify_analysis_complete ?? true}
         usage={{
-          promptsUsed: usage.promptsUsed,
-          promptsLimit: planLimits.monthly_prompts,
+          browsingPromptsUsed: usage.browsingPromptsUsed,
+          browsingPromptsLimit: Number(planLimits.browsing_prompts) || 0,
+          noBrowsingPromptsUsed: usage.noBrowsingPromptsUsed,
+          noBrowsingPromptsLimit: Number(planLimits.no_browsing_prompts) || 40,
           comparisonsUsed: usage.comparisonsUsed,
-          comparisonsLimit: planLimits.max_comparisons,
-          maxModels: planLimits.max_models_per_project,
+          comparisonsLimit: Number(planLimits.max_comparisons) || 0,
+          maxModels: Number(planLimits.max_models_per_project) || 2,
         }}
       />
     </div>

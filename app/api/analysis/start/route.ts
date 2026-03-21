@@ -1,9 +1,9 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS } from "@/lib/engine/models";
+import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS, DEMO_MODEL_IDS } from "@/lib/engine/models";
 import { inngest } from "@/lib/inngest";
-import { getUserPlanLimits, getCurrentUsage, incrementPromptsUsed } from "@/lib/usage";
+import { getUserPlanLimits, getCurrentUsage, incrementBrowsingPromptsUsed, incrementNoBrowsingPromptsUsed } from "@/lib/usage";
 
 const startSchema = z.object({
   project_id: z.string().uuid(),
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const parsed = startSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { project_id, run_count, browsing } = parsed.data;
+    const { project_id, run_count, browsing: requestedBrowsing } = parsed.data;
 
     // Auto-fail stale running runs (older than 30 minutes)
     await (supabase.from("analysis_runs") as any)
@@ -59,18 +59,35 @@ export async function POST(request: Request) {
 
     if (!queries?.length) return NextResponse.json({ error: "Nessuna query configurata" }, { status: 400 });
 
-    // Plan limits check — cost = number of queries (models × runs are free repetitions)
+    // Plan limits check
     const plan = await getUserPlanLimits(user.id);
     const usage = await getCurrentUsage(user.id);
     const promptCost = queries.length;
-
-    // Check for Pro-only models on Base plan
-    const userPlanId = plan.id ?? "base";
+    const userPlanId = plan.id ?? "demo";
     const isProPlan = userPlanId === "pro" || userPlanId === "agency";
+    const isDemoPlan = userPlanId === "demo";
+
+    // Demo plan enforcement: only fixed models, no browsing
+    if (isDemoPlan) {
+      const demoIds = new Set(DEMO_MODEL_IDS as readonly string[]);
+      const invalidModels = validModels.filter((id: string) => !demoIds.has(id));
+      if (invalidModels.length > 0) {
+        return NextResponse.json({ error: "Il piano Demo consente solo GPT-4o e Gemini 2.5 Pro." }, { status: 403 });
+      }
+    }
+
+    // Browsing enforcement: demo plan cannot use browsing
+    const browsing = isDemoPlan ? false : requestedBrowsing;
+
+    // Check for Pro-only models on non-Pro plans
     if (!isProPlan) {
       const proModelsUsed = validModels.filter((id: string) => PRO_ONLY_MODEL_IDS.has(id));
-      if (proModelsUsed.length > 0) {
-        return NextResponse.json({ error: `${proModelsUsed.join(", ")} disponibile solo dal piano Pro.` }, { status: 403 });
+      // Demo has gemini-2.5-pro which is normally pro-only, but allowed for demo
+      const filteredProModels = isDemoPlan
+        ? proModelsUsed.filter((id: string) => !(DEMO_MODEL_IDS as readonly string[]).includes(id))
+        : proModelsUsed;
+      if (filteredProModels.length > 0) {
+        return NextResponse.json({ error: `${filteredProModels.join(", ")} disponibile solo dal piano Pro.` }, { status: 403 });
       }
     }
 
@@ -78,8 +95,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Il tuo piano supporta max ${plan.max_models_per_project} modelli per progetto.` }, { status: 403 });
     }
 
-    if (usage.promptsUsed + promptCost > plan.monthly_prompts) {
-      return NextResponse.json({ error: "Hai esaurito i prompt mensili del tuo piano. Passa al piano Pro per continuare." }, { status: 403 });
+    // Browsing counter logic
+    if (browsing) {
+      if (usage.browsingPromptsUsed + promptCost > Number(plan.browsing_prompts)) {
+        return NextResponse.json({
+          error: `Hai esaurito i ${plan.browsing_prompts} prompt con browsing di questo mese. Puoi continuare senza browsing.`,
+        }, { status: 403 });
+      }
+    } else {
+      if (usage.noBrowsingPromptsUsed + promptCost > Number(plan.no_browsing_prompts)) {
+        return NextResponse.json({
+          error: "Hai esaurito i prompt disponibili questo mese.",
+        }, { status: 403 });
+      }
     }
 
     // Count existing runs for version number
@@ -121,10 +149,16 @@ export async function POST(request: Request) {
       },
     });
 
-    // Increment usage
-    await incrementPromptsUsed(user.id, promptCost).catch((err) =>
-      console.error("[analysis/start] usage increment error:", err)
-    );
+    // Increment the appropriate usage counter
+    if (browsing) {
+      await incrementBrowsingPromptsUsed(user.id, promptCost).catch((err) =>
+        console.error("[analysis/start] browsing usage increment error:", err)
+      );
+    } else {
+      await incrementNoBrowsingPromptsUsed(user.id, promptCost).catch((err) =>
+        console.error("[analysis/start] no-browsing usage increment error:", err)
+      );
+    }
 
     return NextResponse.json({
       run_id: run.id,

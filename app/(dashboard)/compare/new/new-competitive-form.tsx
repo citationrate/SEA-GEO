@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Play, Check, Sparkles, RefreshCw } from "lucide-react";
+import { Loader2, Play, Sparkles, RefreshCw, Cpu } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
+import { COMPARISON_MODEL_IDS } from "@/lib/engine/models";
+import { useUsage } from "@/lib/hooks/useUsage";
 
 const RUNS_PER_QUERY = 3;
 
@@ -17,25 +19,16 @@ const DRIVER_OPTIONS = [
   "Trasparenza",
 ];
 
-interface ProviderGroup {
-  id: string;
-  label: string;
-  badge: string;
-  color: string;
-  models: { id: string; label: string; descriptionKey: string; expensive?: boolean; proOnly?: boolean }[];
-}
-
 export function NewCompetitiveForm({
   projects,
   topCompetitors,
-  providerGroups,
 }: {
   projects: { id: string; name: string; brand: string }[];
   topCompetitors: Record<string, string>;
-  providerGroups: ProviderGroup[];
 }) {
   const router = useRouter();
   const { t } = useTranslation();
+  const usage = useUsage();
 
   const driverLabels: Record<string, string> = {
     "Prezzo/Convenienza": t("competitiveForm.driverPrice"),
@@ -50,9 +43,6 @@ export function NewCompetitiveForm({
   const [brandB, setBrandB] = useState(topCompetitors[projects[0]?.id] ?? "");
   const [driver, setDriver] = useState(DRIVER_OPTIONS[0]);
   const [customDriver, setCustomDriver] = useState("");
-  const [selectedModels, setSelectedModels] = useState<string[]>(
-    providerGroups[0]?.models[0] ? [providerGroups[0].models[0].id] : [],
-  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [generatedQueries, setGeneratedQueries] = useState<{ pattern: string; text: string }[] | null>(null);
@@ -61,28 +51,12 @@ export function NewCompetitiveForm({
   const selectedProject = projects.find((p) => p.id === projectId);
   const effectiveDriver = driver === "Altro" ? customDriver : driver;
 
-  const allModelIds = providerGroups.flatMap((g) => g.models.map((m) => m.id));
+  const totalPrompts = 3 * COMPARISON_MODEL_IDS.length * RUNS_PER_QUERY;
 
   function handleProjectChange(newId: string) {
     setProjectId(newId);
     setBrandB(topCompetitors[newId] ?? "");
   }
-
-  function toggleModel(id: string) {
-    setSelectedModels((prev) =>
-      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id],
-    );
-  }
-
-  function toggleAll() {
-    if (selectedModels.length === allModelIds.length) {
-      setSelectedModels([]);
-    } else {
-      setSelectedModels(allModelIds);
-    }
-  }
-
-  const totalPrompts = 3 * selectedModels.length * RUNS_PER_QUERY;
 
   async function generateCustomQueries() {
     if (!selectedProject?.brand || !brandB.trim() || !customDriver.trim()) return;
@@ -111,7 +85,7 @@ export function NewCompetitiveForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!projectId || !brandB.trim() || !effectiveDriver.trim() || selectedModels.length === 0) return;
+    if (!projectId || !brandB.trim() || !effectiveDriver.trim()) return;
     setLoading(true);
     setError("");
 
@@ -123,7 +97,6 @@ export function NewCompetitiveForm({
           project_id: projectId,
           brand_b: brandB.trim(),
           driver: effectiveDriver.trim(),
-          models: selectedModels,
         }),
       });
 
@@ -257,77 +230,39 @@ export function NewCompetitiveForm({
         )}
       </div>
 
-      {/* Modelli AI — grouped by provider */}
+      {/* Fixed models info */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-foreground">{t("projects.aiModels")} *</label>
-          <button
-            type="button"
-            onClick={toggleAll}
-            className="text-xs text-primary hover:text-primary/80 transition-colors"
-          >
-            {selectedModels.length === allModelIds.length ? t("generateQueries.deselectAll") : t("generateQueries.selectAll")}
-          </button>
-        </div>
-        <div className="space-y-2">
-          {providerGroups.map((group) => {
-            const hasSelected = group.models.some((m) => selectedModels.includes(m.id));
-            return (
-              <div
-                key={group.id}
-                className={`rounded-sm border transition-all ${
-                  hasSelected ? "border-primary/50 bg-primary/5" : "border-border"
-                }`}
-              >
-                <div className="flex items-center gap-3 px-4 py-3">
-                  <span className={`text-sm font-semibold ${group.color}`}>{group.label}</span>
-                  <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{group.badge}</span>
-                </div>
-                <div className="px-4 pb-3 pt-0 space-y-0.5">
-                  {group.models.map((m) => {
-                    const selected = selectedModels.includes(m.id);
-                    return (
-                      <label
-                        key={m.id}
-                        onClick={() => toggleModel(m.id)}
-                        className={`flex items-center gap-2 p-2 rounded-[2px] cursor-pointer transition-colors ${
-                          selected ? "bg-primary/10" : "hover:bg-muted/30"
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded-[2px] border flex items-center justify-center flex-shrink-0 ${
-                          selected ? "bg-primary border-primary" : "border-muted-foreground/40"
-                        }`}>
-                          {selected && <Check className="w-3 h-3 text-primary-foreground" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`text-sm font-medium ${selected ? "text-primary" : "text-foreground"}`}>{m.label}</span>
-                            {m.proOnly && <span className="font-mono text-[0.625rem] tracking-wide text-[#d4a817] bg-[#d4a817]/15 border border-[#d4a817]/30 px-1 py-0.5 rounded-[2px]">PRO</span>}
-                          </div>
-                          <p className="text-xs text-muted-foreground">{t(m.descriptionKey)}</p>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+        <label className="text-sm font-medium text-foreground">Modelli AI (fissi)</label>
+        <p className="text-xs text-muted-foreground">
+          I confronti utilizzano automaticamente 5 modelli ottimizzati, senza browsing.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {COMPARISON_MODEL_IDS.map((modelId) => (
+            <span key={modelId} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-primary/30 bg-primary/5 text-foreground">
+              <Cpu className="w-3 h-3 text-primary" />
+              {modelId}
+            </span>
+          ))}
         </div>
       </div>
 
       {/* Config info */}
-      <div className="bg-muted/30 border border-border rounded-[2px] px-4 py-3">
+      <div className="bg-muted/30 border border-border rounded-[2px] px-4 py-3 space-y-1">
         <p className="text-xs text-muted-foreground">
-          3 query × {selectedModels.length} {selectedModels.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} × {RUNS_PER_QUERY} run = {totalPrompts} {t("competitiveForm.totalResponses")}
+          3 query × {COMPARISON_MODEL_IDS.length} modelli × {RUNS_PER_QUERY} run = {totalPrompts} risposte totali
         </p>
+        {!usage.loading && (
+          <p className="text-xs text-muted-foreground">
+            Confronti: <span className="text-foreground font-medium">{usage.comparisonsUsed}/{usage.comparisonsLimit}</span> utilizzati questo mese
+          </p>
+        )}
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <button
         type="submit"
-        disabled={loading || !brandB.trim() || !effectiveDriver.trim() || selectedModels.length === 0}
+        disabled={loading || !brandB.trim() || !effectiveDriver.trim()}
         className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}

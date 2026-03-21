@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { useTranslation } from "@/lib/i18n/context";
@@ -76,25 +77,13 @@ export function Sidebar({ profile }: SidebarProps) {
       <div className="h-12 flex items-center justify-between px-3 border-b border-border flex-shrink-0">
         {!collapsed && (
           <Link href="/dashboard" className="flex items-center gap-2.5 group">
-            <svg width="28" height="28" viewBox="0 0 36 36" fill="none" className="flex-shrink-0">
-              <rect width="36" height="36" rx="8" fill="#7ab89a"/>
-              <circle cx="13" cy="10" r="8" fill="white"/>
-              <path d="M5 13 C4 19 2 24 0 29 C4 27 9 22 13 17 Z" fill="white"/>
-              <circle cx="26" cy="13" r="7" fill="#3d6b52"/>
-              <path d="M19 16 C18 21 16 26 13 31 C17 29 22 24 25 19 Z" fill="#3d6b52"/>
-            </svg>
+            <Image src="/logo.jpg" alt="SeaGeo" width={28} height={28} className="flex-shrink-0 rounded-md" />
             <span className="font-display text-[22px] tracking-tight" style={{ fontWeight: 300, color: "#f5f5f0", letterSpacing: "-0.02em" }}>Sea<span style={{ color: "#7ab89a" }}>Geo</span></span>
           </Link>
         )}
         {collapsed && (
           <Link href="/dashboard" className="mx-auto">
-            <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
-              <rect width="36" height="36" rx="8" fill="#7ab89a"/>
-              <circle cx="13" cy="10" r="8" fill="white"/>
-              <path d="M5 13 C4 19 2 24 0 29 C4 27 9 22 13 17 Z" fill="white"/>
-              <circle cx="26" cy="13" r="7" fill="#3d6b52"/>
-              <path d="M19 16 C18 21 16 26 13 31 C17 29 22 24 25 19 Z" fill="#3d6b52"/>
-            </svg>
+            <Image src="/logo.jpg" alt="SeaGeo" width={28} height={28} className="rounded-md" />
           </Link>
         )}
         <button
@@ -207,7 +196,7 @@ export function Sidebar({ profile }: SidebarProps) {
                 {profile?.full_name ?? profile?.email ?? t("sidebar.user")}
               </p>
               <p className="font-mono text-[0.75rem] text-muted-foreground uppercase tracking-wide">
-                {t("sidebar.plan")} {profile?.plan === "free" || !profile?.plan ? t("sidebar.planBase") : profile.plan === "pro" ? "Pro" : profile.plan === "agency" ? "Agency" : profile.plan}
+                {t("sidebar.plan")} {!profile?.plan || profile.plan === "free" || profile.plan === "demo" ? "Demo" : profile.plan === "base" ? "Base" : profile.plan === "pro" ? "Pro" : profile.plan === "agency" ? "Agency" : profile.plan}
               </p>
             </div>
           )}

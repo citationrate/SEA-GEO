@@ -90,13 +90,7 @@ export function AdminSidebar() {
 
       <div className="border-t border-border p-3 flex-shrink-0">
         <Link href="/dashboard" className="flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] text-sm text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors">
-          <svg width="15" height="15" viewBox="0 0 36 36" fill="none">
-            <rect width="36" height="36" rx="8" fill="#7ab89a"/>
-            <circle cx="13" cy="10" r="8" fill="white"/>
-            <path d="M5 13 C4 19 2 24 0 29 C4 27 9 22 13 17 Z" fill="white"/>
-            <circle cx="26" cy="13" r="7" fill="#3d6b52"/>
-            <path d="M19 16 C18 21 16 26 13 31 C17 29 22 24 25 19 Z" fill="#3d6b52"/>
-          </svg>
+          <img src="/logo.jpg" alt="SeaGeo" width={15} height={15} className="rounded-sm" />
           Torna alla Dashboard
         </Link>
       </div>

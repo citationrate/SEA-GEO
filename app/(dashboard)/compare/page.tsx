@@ -1,6 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { isProUser } from "@/lib/utils/is-pro";
+import { isProUser, isDemoUser } from "@/lib/utils/is-pro";
 import { resolveProjectId } from "@/lib/utils/resolve-project";
 import { ComparePaywall, CompareList } from "./compare-content";
 

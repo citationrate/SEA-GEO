@@ -128,24 +128,30 @@ User triggers analysis → Inngest function starts
 
 ### Plan Structure
 
-| | **Base** | **Pro** |
-|---|---|---|
-| Monthly prompts | 100 | 500 |
-| Max models/project | 3 | 5 |
-| Comparisons/month | 0 | 10 (separate counter) |
-| AI query generation | YES | YES |
-| Dataset access | NO | YES |
-| Comparisons access | NO | YES |
-| Price | €99/month | €199/month |
+| | **Demo (free)** | **Base** | **Pro** |
+|---|---|---|---|
+| Browsing prompts | 0 | 30 | 90 |
+| No-browsing prompts | 40 | 70 | 210 |
+| Max models/project | 2 (fixed: GPT-4o, Gemini 2.5 Pro) | 3 | 5 |
+| Comparisons/month | 0 | 0 | 10 |
+| AI query generation | NO | YES | YES |
+| Dataset access | NO | NO | YES |
+| Comparisons access | NO | NO | YES |
+| Monthly price | €0 | €59 | €159 |
+| Annual price | €0 | €649 (8.3% off) | €1,719 (10% off) |
+
+**Base models (selectable in AVI):** GPT-4o Mini, Gemini 2.5 Flash, Grok 3 Mini, Claude Haiku, Perplexity Sonar, Claude Sonnet
+**Pro-only models:** Claude Opus, GPT-5.4, Grok 3, Perplexity Sonar Pro, Gemini 2.5 Pro
+**Comparison models (fixed, Pro only):** Claude Haiku, GPT-4o Mini, Gemini 2.5 Flash, Grok 3 Mini, Perplexity Sonar
 
 ### How Prompts Are Counted
-Each prompt executed = 1 unit consumed from monthly limit.
-`prompts = queries × models × segments × run_count` (all counted together).
-Example: 10 queries × 3 models × 1 segment × 2 runs = **60 prompts consumed**.
+Two separate counters: `browsing_prompts_used` and `no_browsing_prompts_used`.
+Cost = number of queries (models × runs are free repetitions).
+Comparison prompts count against `no_browsing_prompts_used`.
 
 ### How Comparisons Are Counted
 Each comparison analysis = 1 unit (regardless of internal prompts).
-A typical comparison generates ~27 prompts internally but counts as 1 comparison.
+Comparisons use 5 fixed models, always without browsing. Also consumes 3 no_browsing prompts.
 
 ### AI Cost Per Prompt
 Each prompt makes 2 API calls:
@@ -179,25 +185,25 @@ Each prompt makes 2 API calls:
 - Inngest: free tier (up to 50k events/month)
 - **Total fixed: ~$45/month** (scales to ~$100 at 500+ users)
 
-### Margin Analysis (€99 Base / €199 Pro, 70/30 mix)
+### Margin Analysis (€59 Base / €159 Pro, 70/30 mix)
 
 | Users | Base | Pro | Revenue | AI costs | Infra | **Profit** | **Margin** |
 |---|---|---|---|---|---|---|---|
-| 10 | 7 | 3 | €440 | €8 | €45 | **€387** | **88%** |
-| 50 | 35 | 15 | €2,200 | €41 | €45 | **€2,114** | **96%** |
-| 100 | 70 | 30 | €4,400 | €82 | €45 | **€4,273** | **97%** |
-| 500 | 350 | 150 | €22,000 | €409 | €100 | **€21,491** | **98%** |
+| 10 | 7 | 3 | €890 | €5 | €45 | **€840** | **94%** |
+| 50 | 35 | 15 | €4,450 | €25 | €45 | **€4,380** | **98%** |
+| 100 | 70 | 30 | €8,900 | €50 | €45 | **€8,805** | **99%** |
+| 500 | 350 | 150 | €44,350 | €250 | €100 | **€44,000** | **99%** |
 
 ### Margin by plan (single user)
 
 | Plan | Price | AI cost | **Gross margin** |
 |---|---|---|---|
-| Base | €99 | €0.29 | **€28.71 (99%)** |
-| Pro | €199 | €2.05 | **€76.95 (97%)** |
+| Base | €59 | ~€0.30 | **€58.70 (99%)** |
+| Pro | €159 | ~€1.60 | **€157.40 (99%)** |
 
 ### Break-Even (infra only, €45/month)
-- 2 Base users (2 × €29 = €58 > €45)
-- 1 Pro user (€79 > €45)
+- 1 Base user (€59 > €45)
+- 1 Pro user (€159 > €45)
 
 ## Environment Variables
 Required in `.env.local`:

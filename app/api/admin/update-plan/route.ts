@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const schema = z.object({
   user_id: z.string().uuid(),
-  plan: z.enum(["free", "pro", "agency"]),
+  plan: z.enum(["demo", "free", "base", "pro", "agency"]),
 });
 
 export async function POST(request: Request) {

@@ -18,6 +18,7 @@ export function DatasetsPaywall() {
         <Lock className="w-12 h-12 text-[#c4a882]/40 mx-auto" />
         <h2 className="font-display font-semibold text-xl text-foreground">{t("compare.proFeature")}</h2>
         <p className="text-muted-foreground text-sm max-w-md mx-auto">{t("datasets.proDescription")}</p>
+        <p className="text-muted-foreground text-sm mt-1">Disponibile dal piano Pro — €159/mese</p>
         <a href="/settings" className="inline-flex items-center gap-2 bg-[#c4a882] text-background font-semibold text-sm px-6 py-2.5 rounded-[2px] hover:bg-[#c4a882]/85 transition-colors mt-2">
           {t("settings.upgradePro")}
         </a>

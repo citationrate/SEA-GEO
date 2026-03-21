@@ -3,14 +3,60 @@ import { createServiceClient } from "./supabase/service";
 const getCurrentPeriod = () => new Date().toISOString().slice(0, 7);
 
 /**
- * Increment prompts_used for a user in the current month.
- * Uses upsert with ON CONFLICT to handle first-time and subsequent calls.
+ * Increment browsing_prompts_used for a user in the current month.
+ */
+export async function incrementBrowsingPromptsUsed(userId: string, count: number): Promise<void> {
+  const svc = createServiceClient();
+  const period = getCurrentPeriod();
+
+  const { data: existing } = await (svc.from("usage_monthly") as any)
+    .select("browsing_prompts_used")
+    .eq("user_id", userId)
+    .eq("period", period)
+    .maybeSingle();
+
+  if (existing) {
+    await (svc.from("usage_monthly") as any)
+      .update({ browsing_prompts_used: (Number(existing.browsing_prompts_used) || 0) + count })
+      .eq("user_id", userId)
+      .eq("period", period);
+  } else {
+    await (svc.from("usage_monthly") as any)
+      .insert({ user_id: userId, period, browsing_prompts_used: count, no_browsing_prompts_used: 0, prompts_used: 0, comparisons_used: 0 });
+  }
+}
+
+/**
+ * Increment no_browsing_prompts_used for a user in the current month.
+ */
+export async function incrementNoBrowsingPromptsUsed(userId: string, count: number): Promise<void> {
+  const svc = createServiceClient();
+  const period = getCurrentPeriod();
+
+  const { data: existing } = await (svc.from("usage_monthly") as any)
+    .select("no_browsing_prompts_used")
+    .eq("user_id", userId)
+    .eq("period", period)
+    .maybeSingle();
+
+  if (existing) {
+    await (svc.from("usage_monthly") as any)
+      .update({ no_browsing_prompts_used: (Number(existing.no_browsing_prompts_used) || 0) + count })
+      .eq("user_id", userId)
+      .eq("period", period);
+  } else {
+    await (svc.from("usage_monthly") as any)
+      .insert({ user_id: userId, period, browsing_prompts_used: 0, no_browsing_prompts_used: count, prompts_used: 0, comparisons_used: 0 });
+  }
+}
+
+/**
+ * Legacy: increment prompts_used (kept for backward compat).
  */
 export async function incrementPromptsUsed(userId: string, count: number): Promise<void> {
   const svc = createServiceClient();
   const period = getCurrentPeriod();
 
-  // Try to get existing row
   const { data: existing } = await (svc.from("usage_monthly") as any)
     .select("prompts_used")
     .eq("user_id", userId)
@@ -24,7 +70,7 @@ export async function incrementPromptsUsed(userId: string, count: number): Promi
       .eq("period", period);
   } else {
     await (svc.from("usage_monthly") as any)
-      .insert({ user_id: userId, period, prompts_used: count, comparisons_used: 0 });
+      .insert({ user_id: userId, period, prompts_used: count, comparisons_used: 0, browsing_prompts_used: 0, no_browsing_prompts_used: 0 });
   }
 }
 
@@ -48,7 +94,7 @@ export async function incrementComparisonsUsed(userId: string): Promise<void> {
       .eq("period", period);
   } else {
     await (svc.from("usage_monthly") as any)
-      .insert({ user_id: userId, period, prompts_used: 0, comparisons_used: 1 });
+      .insert({ user_id: userId, period, prompts_used: 0, comparisons_used: 1, browsing_prompts_used: 0, no_browsing_prompts_used: 0 });
   }
 }
 
@@ -59,15 +105,20 @@ export async function getUserPlanLimits(userId: string) {
   const svc = createServiceClient();
 
   const { data: profile } = await svc.from("profiles").select("plan").eq("id", userId).single();
-  const planId = (profile as any)?.plan ?? "free";
-  const effectivePlanId = planId === "free" ? "base" : planId === "agency" ? "pro" : planId;
+  const planId = (profile as any)?.plan ?? "demo";
+  const effectivePlanId = planId === "free" ? "demo" : planId === "agency" ? "pro" : planId;
 
   const { data: plan } = await (svc.from("plans") as any).select("*").eq("id", effectivePlanId).single();
 
   const defaultPlan = {
-    id: "base",
-    monthly_prompts: 100,
-    max_models_per_project: 3,
+    id: "demo",
+    display_name: "Demo Gratuita",
+    monthly_price: 0,
+    annual_price: 0,
+    annual_discount: 0,
+    browsing_prompts: 0,
+    no_browsing_prompts: 40,
+    max_models_per_project: 2,
     max_comparisons: 0,
     can_generate_queries: false,
     can_access_dataset: false,
@@ -85,7 +136,7 @@ export async function getCurrentUsage(userId: string) {
   const period = getCurrentPeriod();
 
   const { data } = await (svc.from("usage_monthly") as any)
-    .select("prompts_used, comparisons_used")
+    .select("prompts_used, comparisons_used, browsing_prompts_used, no_browsing_prompts_used")
     .eq("user_id", userId)
     .eq("period", period)
     .maybeSingle();
@@ -93,5 +144,7 @@ export async function getCurrentUsage(userId: string) {
   return {
     promptsUsed: Number(data?.prompts_used) || 0,
     comparisonsUsed: Number(data?.comparisons_used) || 0,
+    browsingPromptsUsed: Number(data?.browsing_prompts_used) || 0,
+    noBrowsingPromptsUsed: Number(data?.no_browsing_prompts_used) || 0,
   };
 }
