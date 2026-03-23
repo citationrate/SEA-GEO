@@ -71,7 +71,7 @@ export async function POST(request: Request) {
       const demoIds = new Set(DEMO_MODEL_IDS as readonly string[]);
       const invalidModels = validModels.filter((id: string) => !demoIds.has(id));
       if (invalidModels.length > 0) {
-        return NextResponse.json({ error: "Il piano Demo consente solo GPT-5.4 Mini e Gemini 3.1 Pro." }, { status: 403 });
+        return NextResponse.json({ error: "Il piano Demo consente solo GPT-5.4 Mini e Gemini 2.5 Flash." }, { status: 403 });
       }
     }
 

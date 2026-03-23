@@ -263,7 +263,7 @@ export function SettingsClient({
             </div>
             <ul className="space-y-1.5 text-xs">
               <li className="text-foreground">40 prompt (senza browsing)</li>
-              <li className="text-foreground">2 modelli fissi (GPT-5.4 Mini, Gemini 3.1 Pro)</li>
+              <li className="text-foreground">2 modelli fissi (GPT-5.4 Mini, Gemini 2.5 Flash)</li>
               <li className="text-muted-foreground/50">Nessun confronto</li>
               <li className="text-muted-foreground/50">Nessun dataset</li>
               <li className="text-muted-foreground/50">Nessun browsing</li>
