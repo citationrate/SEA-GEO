@@ -13,6 +13,7 @@ export function CursorFollower() {
     if ("ontouchstart" in window || navigator.maxTouchPoints > 0) return;
 
     setVisible(true);
+    document.documentElement.classList.add("custom-cursor");
 
     let mouseX = 0;
     let mouseY = 0;
@@ -79,6 +80,7 @@ export function CursorFollower() {
       document.removeEventListener("mouseover", onMouseOver);
       document.removeEventListener("mouseout", onMouseOut);
       cancelAnimationFrame(rafId);
+      document.documentElement.classList.remove("custom-cursor");
     };
   }, []);
 

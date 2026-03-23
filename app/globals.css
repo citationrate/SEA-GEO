@@ -2,10 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom cursor — hide default on non-touch devices */
-@media (pointer: fine) {
-  * { cursor: none !important; }
-}
+/* Custom cursor — hide default only when JS cursor is active */
+html.custom-cursor * { cursor: none !important; }
 
 @layer base {
   :root {
