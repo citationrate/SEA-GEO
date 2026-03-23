@@ -8,7 +8,7 @@ const COOKIE_DOMAIN = process.env.NODE_ENV === "production" ? ".citationrate.com
 
 function cookieOptions(base?: Record<string, unknown>) {
   if (!COOKIE_DOMAIN) return base;
-  return { ...base, domain: COOKIE_DOMAIN };
+  return { ...base, domain: COOKIE_DOMAIN, path: "/", sameSite: "lax" as const, secure: true };
 }
 
 /* ─── AUTH client — CitationRate project (login/session) ─── */

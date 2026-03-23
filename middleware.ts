@@ -2,9 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const COOKIE_DOMAIN = process.env.NODE_ENV === "production" ? ".citationrate.com" : undefined;
-const LOGIN_URL = process.env.NODE_ENV === "production"
-  ? "https://suite.citationrate.com"
-  : "/login";
+const SUITE_LOGIN_URL = "https://suite.citationrate.com/auth/login";
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
@@ -27,7 +25,7 @@ export async function middleware(request: NextRequest) {
           response = NextResponse.next({ request });
           toSet.forEach(({ name, value, options }) => {
             const opts = COOKIE_DOMAIN
-              ? { ...(options as Record<string, unknown>), domain: COOKIE_DOMAIN }
+              ? { ...(options as Record<string, unknown>), domain: COOKIE_DOMAIN, path: "/", sameSite: "lax", secure: true }
               : options;
             response.cookies.set(name, value, opts as never);
           });
@@ -38,17 +36,23 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const isAuthRoute = path.startsWith("/login") || path.startsWith("/register");
+  const isAuthRoute = path.startsWith("/login") || path.startsWith("/register") || path.startsWith("/forgot-password");
   const isPublic = path === "/" || path.startsWith("/share/") || path.startsWith("/auth/");
 
-  if (!user && !isAuthRoute && !isPublic) {
-    // In production, redirect to CitationRate login (shared auth)
-    // In dev, redirect to local /login page
-    if (LOGIN_URL.startsWith("http")) {
-      return NextResponse.redirect(LOGIN_URL);
-    }
-    return NextResponse.redirect(new URL(LOGIN_URL, request.url));
+  // In production: login/register pages redirect to suite (login lives there)
+  if (COOKIE_DOMAIN && isAuthRoute) {
+    return NextResponse.redirect(SUITE_LOGIN_URL);
   }
+
+  if (!user && !isAuthRoute && !isPublic) {
+    // Not authenticated → redirect to CitationRate login
+    if (COOKIE_DOMAIN) {
+      return NextResponse.redirect(SUITE_LOGIN_URL);
+    }
+    // Dev: use local login page
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
   if (user && isAuthRoute) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
