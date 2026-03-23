@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const COOKIE_DOMAIN = process.env.NODE_ENV === "production" ? ".citationrate.com" : undefined;
-const SUITE_LOGIN_URL = "https://suite.citationrate.com/auth/login";
+const SUITE_LOGIN_URL = "https://suite.citationrate.com";
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
