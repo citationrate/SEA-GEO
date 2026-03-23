@@ -67,11 +67,18 @@ interface CompRow {
   modelMentions: Record<string, boolean>;
 }
 
-const COMP_TYPE_CONFIG: Record<string, { label: string; border: string; text: string }> = {
-  direct:     { label: "Diretto",      border: "border-primary/30",     text: "text-primary" },
-  indirect:   { label: "Indiretto",    border: "border-[#c4a882]/30",   text: "text-[#c4a882]" },
-  channel:    { label: "Canale",       border: "border-[#7eb3d4]/30",   text: "text-[#7eb3d4]" },
-  aggregator: { label: "Aggregatore",  border: "border-[#e8956d]/30",   text: "text-[#e8956d]" },
+const COMP_TYPE_STYLE: Record<string, { border: string; text: string }> = {
+  direct:     { border: "border-primary/30",     text: "text-primary" },
+  indirect:   { border: "border-[#c4a882]/30",   text: "text-[#c4a882]" },
+  channel:    { border: "border-[#7eb3d4]/30",   text: "text-[#7eb3d4]" },
+  aggregator: { border: "border-[#e8956d]/30",   text: "text-[#e8956d]" },
+};
+
+const COMP_TYPE_KEYS: Record<string, string> = {
+  direct: "competitors.typeDirect",
+  indirect: "competitors.typeIndirect",
+  channel: "competitors.typeChannel",
+  aggregator: "competitors.typeAggregator",
 };
 
 /* ─── Helpers ─── */
@@ -253,7 +260,7 @@ export function CompetitorsClient({
         >
           {t("common.all")}
         </button>
-        {Object.entries(COMP_TYPE_CONFIG).map(([type, cfg]) => (
+        {Object.keys(COMP_TYPE_STYLE).map((type) => (
           <button
             key={type}
             onClick={() => setTypeFilter(typeFilter === type ? null : type)}
@@ -264,7 +271,7 @@ export function CompetitorsClient({
                 : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
             }
           >
-            {cfg.label}
+            {t(COMP_TYPE_KEYS[type])}
           </button>
         ))}
       </div>
@@ -386,10 +393,11 @@ function CompetitorCard({
           </span>
           <h3 className="font-display font-bold text-lg text-foreground">{row.name}</h3>
           {(() => {
-            const cfg = COMP_TYPE_CONFIG[row.competitorType];
-            return cfg ? (
-              <span className={`font-mono text-[0.69rem] tracking-wide uppercase px-1.5 py-0.5 rounded-[2px] border ${cfg.border} ${cfg.text}`}>
-                {cfg.label}
+            const style = COMP_TYPE_STYLE[row.competitorType];
+            const key = COMP_TYPE_KEYS[row.competitorType];
+            return style && key ? (
+              <span className={`font-mono text-[0.69rem] tracking-wide uppercase px-1.5 py-0.5 rounded-[2px] border ${style.border} ${style.text}`}>
+                {t(key)}
               </span>
             ) : null;
           })()}
@@ -436,7 +444,7 @@ function CompetitorCard({
       {themes.length > 0 && (
         <div className="space-y-1.5">
           <p className="text-[12px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Citato in contesti di:
+            {t("competitors.citedInContexts")}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {themes.map((t) => (
@@ -529,7 +537,7 @@ function ThemeDrawer({
           <div>
             <h2 className="font-display font-bold text-lg text-foreground">{theme.theme}</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Contesto per <span className="text-primary font-medium">{compName}</span>
+              {t("competitors.contextFor")} <span className="text-primary font-medium">{compName}</span>
             </p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">

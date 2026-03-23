@@ -22,7 +22,7 @@ interface Props {
 }
 
 export function TopicsClient({ topics, brand }: Props) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [categories, setCategories] = useState<CategoryGroup[] | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,6 +45,7 @@ export function TopicsClient({ topics, brand }: Props) {
         body: JSON.stringify({
           topics: topics.map((t) => ({ name: t.name, count: t.count })),
           brand,
+          lang: locale,
         }),
       });
       if (!res.ok) {
