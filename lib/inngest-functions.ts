@@ -3,7 +3,7 @@ import { createServiceClient } from "./supabase/service";
 import { extractFromResponse } from "./engine/extractor";
 import { calculateAVI } from "./engine/avi";
 import { type ExtractedSource, mergeSources } from "./engine/sources-extractor";
-import { canonicalizeCompetitorName } from "./engine/competitor-names";
+import { canonicalizeCompetitorName, extractBrandOnly } from "./engine/competitor-names";
 import { callAIModel, type AIModelResult } from "./engine/prompt-runner";
 import { filterAvailableModels } from "./engine/models";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -374,7 +374,7 @@ async function executePrompt(
       if (!n) {
         console.log(`[executePrompt] competitor FILTERED by normalization: "${c.name}"`);
       }
-      return n ? canonicalizeCompetitorName(n) : null;
+      return n ? canonicalizeCompetitorName(extractBrandOnly(n)) : null;
     })
     .filter((n): n is string => n != null && n !== task.targetBrand);
   if (normalizedCompNames.length < extraction.competitors_found.length) {
@@ -403,7 +403,7 @@ async function executePrompt(
       .map((c) => {
         const normalized = normalizeCompetitorName(c.name, task.targetBrand, normCache);
         if (!normalized) return null;
-        const canonical = canonicalizeCompetitorName(normalized);
+        const canonical = canonicalizeCompetitorName(extractBrandOnly(normalized));
         if (canonical === task.targetBrand) return null;
         return {
           run_id: task.runId,
@@ -458,7 +458,7 @@ async function executePrompt(
   for (const rawComp of extraction.competitors_found || []) {
     const normalizedName = normalizeCompetitorName(rawComp.name, task.targetBrand, normCache);
     if (!normalizedName || normalizedName === task.targetBrand) continue;
-    const canonicalName = canonicalizeCompetitorName(normalizedName);
+    const canonicalName = canonicalizeCompetitorName(extractBrandOnly(normalizedName));
     if (canonicalName === task.targetBrand) continue;
     compRows.push({
       project_id: task.projectId,

@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { canonicalizeCompetitorName } from "./competitor-names";
+import { canonicalizeCompetitorName, extractBrandOnly } from "./competitor-names";
 
 export interface ExtractionResult {
   brand_mentioned: boolean;
@@ -416,10 +416,12 @@ COMPETITOR TYPES:
 - aggregator: comparison/discovery platforms
 
 COMPETITOR RULES:
+Extract ONLY the parent brand/company name for each competitor mentioned. Never include product model names, version numbers, or product lines.
+Examples: 'Samsung Galaxy S24 Ultra' → 'Samsung', 'Asus ProArt Studiobook' → 'Asus', 'Google Pixel Watch' → 'Google', 'Microsoft Surface' → 'Microsoft', 'Dell XPS 14' → 'Dell'.
+Return the brand name only, not the full product name. Deduplicate: if the same brand appears multiple times with different products, return it once.
 Extract ONLY commercial competitors — companies/services a user could choose instead of "${targetBrand}".
 INCLUDE: companies, brands, services that sell/provide the same service and compete for the same customer.
 EXCLUDE: "${targetBrand}" itself (any form), sub-brands/variants, generic descriptions without a proper name, government/public bodies (INAIL, INPS, IVASS, MISE, Ministero, Regione, Comune, ASL), regulators (Autorità, Garante, CONSOB, AGCM), courts/tribunals, industry associations (Confindustria, ANIA, ABI, Ordine), government portals.
-Return ONLY the commercial name.
 
 SOURCES — extract ONLY URLs/domains LITERALLY written in the response. Do NOT infer domains from brand names. If no explicit URLs appear, return "sources": [].
 source_type: media|review|ecommerce|social|competitor|wikipedia|other
@@ -458,26 +460,34 @@ ${cleanResponse}`;
     }
     return {
       topics: Array.isArray(parsed.topics) ? parsed.topics : [],
-      competitors_found: Array.isArray(parsed.competitors_found)
-        ? parsed.competitors_found.map((c: any) => {
-            const raw = typeof c === "string" ? c : c.name;
-            if (typeof c === "string") {
-              return { name: canonicalizeCompetitorName(raw), type: "direct" as const, rank: null, sentiment: null, recommendation: null };
-            }
-            // Compose sentiment from tone + recommendation using the SAME formula as brand:
-            // sentiment = tone × 0.6 + recommendation × 0.4, clamped to [-1, +1]
-            const compTone = c.sentiment ?? 0;
-            const compRec = c.recommendation ?? 0;
-            const compSentiment = Math.max(-1, Math.min(1, (compTone * 0.6) + (compRec * 0.4)));
-            return {
-              name: canonicalizeCompetitorName(raw),
-              type: c.type ?? "direct",
-              rank: c.rank ?? null,
-              sentiment: compSentiment,
-              recommendation: c.recommendation ?? null,
-            };
-          })
-        : [],
+      competitors_found: (() => {
+        const mapped = Array.isArray(parsed.competitors_found)
+          ? parsed.competitors_found.map((c: any) => {
+              const raw = typeof c === "string" ? c : c.name;
+              if (typeof c === "string") {
+                return { name: canonicalizeCompetitorName(extractBrandOnly(raw)), type: "direct" as const, rank: null, sentiment: null, recommendation: null };
+              }
+              const compTone = c.sentiment ?? 0;
+              const compRec = c.recommendation ?? 0;
+              const compSentiment = Math.max(-1, Math.min(1, (compTone * 0.6) + (compRec * 0.4)));
+              return {
+                name: canonicalizeCompetitorName(extractBrandOnly(raw)),
+                type: c.type ?? "direct",
+                rank: c.rank ?? null,
+                sentiment: compSentiment,
+                recommendation: c.recommendation ?? null,
+              };
+            })
+          : [];
+        // Deduplicate by brand name (keep first occurrence)
+        const seen = new Set<string>();
+        return mapped.filter((c: any) => {
+          const key = c.name.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      })(),
       sources: validateSources(
         Array.isArray(parsed.sources)
           ? parsed.sources.map((s: any) => ({
@@ -562,10 +572,12 @@ You MUST distinguish between:
 Only set brand_mentioned=true if the response refers to the SPECIFIC COMPANY "${targetBrand}"${brandDomain ? ` (website: ${brandDomain})` : ""}, NOT when category words appear generically.`
     : "";
 
-  const competitorExclusionRules = `Extract ONLY commercial competitors — companies/services a user could choose instead of "${targetBrand}".
+  const competitorExclusionRules = `Extract ONLY the parent brand/company name for each competitor mentioned. Never include product model names, version numbers, or product lines.
+Examples: 'Samsung Galaxy S24 Ultra' → 'Samsung', 'Asus ProArt Studiobook' → 'Asus', 'Google Pixel Watch' → 'Google', 'Microsoft Surface' → 'Microsoft', 'Dell XPS 14' → 'Dell'.
+Return the brand name only, not the full product name. Deduplicate: if the same brand appears multiple times with different products, return it once.
+Extract ONLY commercial competitors — companies/services a user could choose instead of "${targetBrand}".
 INCLUDE: companies, brands, services that sell/provide the same service and compete for the same customer.
-EXCLUDE: "${targetBrand}" itself (any form), sub-brands/variants, generic descriptions without a proper name, government/public bodies (INAIL, INPS, IVASS, MISE, Ministero, Regione, Comune, ASL), regulators (Autorità, Garante, CONSOB, AGCM), courts/tribunals, industry associations (Confindustria, ANIA, ABI, Ordine), government portals.
-Return ONLY the commercial name.`;
+EXCLUDE: "${targetBrand}" itself (any form), sub-brands/variants, generic descriptions without a proper name, government/public bodies (INAIL, INPS, IVASS, MISE, Ministero, Regione, Comune, ASL), regulators (Autorità, Garante, CONSOB, AGCM), courts/tribunals, industry associations (Confindustria, ANIA, ABI, Ordine), government portals.`;
 
   const systemPrompt = `You are an AI analyst. Extract structured data from an AI response. All text fields MUST be in ${lang}.
 
@@ -670,23 +682,29 @@ source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
       topics: Array.isArray(parsed.topics) ? parsed.topics : [],
       competitors_found: (() => {
         const competitorsRaw = Array.isArray(parsed.competitors_found) ? parsed.competitors_found : [];
-        return competitorsRaw.map((c: any) => {
+        const mapped = competitorsRaw.map((c: any) => {
           const raw = typeof c === 'string' ? c : c.name;
           if (typeof c === 'string') {
-            return { name: canonicalizeCompetitorName(raw), type: "direct" as const, rank: null, sentiment: null, recommendation: null };
+            return { name: canonicalizeCompetitorName(extractBrandOnly(raw)), type: "direct" as const, rank: null, sentiment: null, recommendation: null };
           }
-          // Compose sentiment from tone + recommendation using the SAME formula as brand:
-          // sentiment = tone × 0.6 + recommendation × 0.4, clamped to [-1, +1]
           const compTone = c.sentiment ?? 0;
           const compRec = c.recommendation ?? 0;
           const compSentiment = Math.max(-1, Math.min(1, (compTone * 0.6) + (compRec * 0.4)));
           return {
-            name: canonicalizeCompetitorName(raw),
+            name: canonicalizeCompetitorName(extractBrandOnly(raw)),
             type: c.type ?? "direct",
             rank: c.rank ?? null,
             sentiment: compSentiment,
             recommendation: c.recommendation ?? null,
           };
+        });
+        // Deduplicate by brand name (keep first occurrence)
+        const seen = new Set<string>();
+        return mapped.filter((c: any) => {
+          const key = c.name.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
         });
       })(),
       sources: validateSources(
@@ -723,10 +741,10 @@ source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
       if (competitorsMatch) {
         partialCompetitors = JSON.parse(competitorsMatch[1]).map((c: any) => {
           const name = typeof c === "string" ? c : c.name;
-          if (typeof c === "string") return { name: canonicalizeCompetitorName(name), type: "direct" as const, rank: null, sentiment: null, recommendation: null };
+          if (typeof c === "string") return { name: canonicalizeCompetitorName(extractBrandOnly(name)), type: "direct" as const, rank: null, sentiment: null, recommendation: null };
           const compTone = c.sentiment ?? 0;
           const compRec = c.recommendation ?? 0;
-          return { name: canonicalizeCompetitorName(name), type: c.type ?? "direct", rank: c.rank ?? null, sentiment: Math.max(-1, Math.min(1, (compTone * 0.6) + (compRec * 0.4))), recommendation: c.recommendation ?? null };
+          return { name: canonicalizeCompetitorName(extractBrandOnly(name)), type: c.type ?? "direct", rank: c.rank ?? null, sentiment: Math.max(-1, Math.min(1, (compTone * 0.6) + (compRec * 0.4))), recommendation: c.recommendation ?? null };
         });
       }
       if (sourcesMatch) {
