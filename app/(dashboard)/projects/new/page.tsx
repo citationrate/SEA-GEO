@@ -540,7 +540,6 @@ export default function NewProjectPage() {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5">
                                     <span className={`text-sm font-medium ${locked ? "text-muted-foreground" : isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
-                                    {model.proOnly && <span className="font-mono text-[0.625rem] tracking-wide text-[#d4a817] bg-[#d4a817]/15 border border-[#d4a817]/30 px-1 py-0.5 rounded-[2px]">PRO</span>}
                                   </div>
                                   <p className="text-xs text-muted-foreground">{model.description}</p>
                                 </div>

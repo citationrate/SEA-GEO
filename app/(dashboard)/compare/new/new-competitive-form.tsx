@@ -263,18 +263,18 @@ export function NewCompetitiveForm({
       {!usage.loading && (
         <div className="bg-muted/30 border border-border rounded-[2px] px-4 py-3 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">{t("competitiveForm.comparisonsAvailable")}</span>
+            <span className="text-xs text-muted-foreground">{t("competitiveForm.comparisons")} {t("competitiveForm.usedThisMonth")}</span>
             <span className={`text-xs font-semibold ${
-              usage.comparisonsRemaining > 5 ? "text-success" : usage.comparisonsRemaining >= 2 ? "text-warning" : "text-destructive"
+              usage.comparisonsRemaining > 5 ? "text-foreground" : usage.comparisonsRemaining >= 2 ? "text-warning" : "text-destructive"
             }`}>
-              {usage.comparisonsRemaining} / {usage.comparisonsLimit}
+              {usage.comparisonsUsed} / {usage.comparisonsLimit}
             </span>
           </div>
           <div className="w-full h-1.5 bg-ink-3 rounded-sm overflow-hidden">
             <div
               className="h-full rounded-sm transition-all duration-500"
               style={{
-                width: usage.comparisonsLimit > 0 ? `${(usage.comparisonsRemaining / usage.comparisonsLimit) * 100}%` : "0%",
+                width: usage.comparisonsLimit > 0 ? `${(usage.comparisonsUsed / usage.comparisonsLimit) * 100}%` : "0%",
                 backgroundColor: usage.comparisonsRemaining > 5 ? "var(--success)" : usage.comparisonsRemaining >= 2 ? "var(--warning)" : "var(--destructive)",
               }}
             />
