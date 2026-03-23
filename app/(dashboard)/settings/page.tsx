@@ -17,6 +17,7 @@ export default async function SettingsPage() {
     .single();
 
   const p = (profile ?? {}) as any;
+  console.log("[PLAN DEBUG SETTINGS] profile.plan:", p.plan, "profile.plan_id:", p.plan_id, "full profile keys:", Object.keys(p));
 
   // Fetch plan limits and current usage
   const planLimits = await getUserPlanLimits(user.id);
