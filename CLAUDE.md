@@ -1,7 +1,7 @@
-# SeaGeo — AI Visibility Intelligence Platform
+# AI Visibility Index (AVI) — AI Visibility Intelligence Platform
 
 ## Project Overview
-SeaGeo is a Next.js 14 platform that measures brand visibility across AI models (OpenAI, Claude, Gemini, Perplexity, Grok). It calculates an AVI (AI Visibility Index) score and provides competitor discovery, topic analysis, and source extraction.
+AI Visibility Index (AVI) is a Next.js 14 platform that measures brand visibility across AI models (OpenAI, Claude, Gemini, Perplexity, Grok). It calculates an AVI (AI Visibility Index) score and provides competitor discovery, topic analysis, and source extraction.
 
 ## Tech Stack
 - **Framework:** Next.js 14 (App Router) with TypeScript

@@ -105,7 +105,7 @@ export default function SharedReportPage() {
       <div className="max-w-4xl mx-auto px-6 py-12 space-y-8">
         {/* Header */}
         <div className="text-center space-y-2">
-          <p className="text-xs uppercase tracking-widest text-cyan-400 font-semibold">SeaGeo Report</p>
+          <p className="text-xs uppercase tracking-widest text-cyan-400 font-semibold">AI Visibility Index Report</p>
           <h1 className="text-3xl font-bold">{project.name}</h1>
           <p className="text-sm text-gray-400">
             {project.brand} &middot; Analisi v{run.version} &middot; {run.completedAt ? new Date(run.completedAt).toLocaleDateString("it-IT") : ""}
@@ -186,7 +186,7 @@ export default function SharedReportPage() {
 
         {/* Footer */}
         <div className="text-center text-xs text-gray-500 pt-4 border-t border-gray-800">
-          Generato da SeaGeo &middot; AI Visibility Intelligence Platform
+          AI Visibility Index &middot; aicitationrate.com
         </div>
       </div>
     </div>

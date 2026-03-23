@@ -77,13 +77,13 @@ export function Sidebar({ profile }: SidebarProps) {
       <div className="h-12 flex items-center justify-between px-3 border-b border-border flex-shrink-0">
         {!collapsed && (
           <Link href="/dashboard" className="flex items-center gap-2.5 group">
-            <Image src="/logo.jpg" alt="SeaGeo" width={28} height={28} className="flex-shrink-0 rounded-md" />
-            <span className="font-display text-[22px] tracking-tight" style={{ fontWeight: 300, color: "#f5f5f0", letterSpacing: "-0.02em" }}>Sea<span style={{ color: "#7ab89a" }}>Geo</span></span>
+            <Image src="/logo.jpg" alt="AVI" width={28} height={28} className="flex-shrink-0 rounded-md" />
+            <span className="font-display text-[22px] tracking-tight" style={{ fontWeight: 300, color: "#f5f5f0", letterSpacing: "-0.02em" }}>A<span style={{ color: "#7ab89a" }}>VI</span></span>
           </Link>
         )}
         {collapsed && (
           <Link href="/dashboard" className="mx-auto">
-            <Image src="/logo.jpg" alt="SeaGeo" width={28} height={28} className="rounded-md" />
+            <Image src="/logo.jpg" alt="AVI" width={28} height={28} className="rounded-md" />
           </Link>
         )}
         <button

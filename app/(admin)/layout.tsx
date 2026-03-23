@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
 import { AdminSidebar } from "./admin-sidebar";
 
-export const metadata = { title: { default: "Admin — SeaGeo", template: "%s | Admin SeaGeo" } };
+export const metadata = { title: { default: "Admin — AVI", template: "%s | Admin AVI" } };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createServerClient();

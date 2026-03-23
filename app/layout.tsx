@@ -27,8 +27,8 @@ const dmMono = DM_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "SeaGeo — AI Visibility Intelligence",
-    template: "%s | SeaGeo",
+    default: "AVI — AI Visibility Intelligence",
+    template: "%s | AVI",
   },
   description:
     "Misura la visibilità del tuo brand nelle risposte AI. Analisi per audience segment, competitor discovery, AVI score.",

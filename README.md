@@ -1,4 +1,4 @@
-# SeaGeo 🛰️
+# AI Visibility Index (AVI)
 **AI Visibility Intelligence Platform**
 
 ---
@@ -14,7 +14,7 @@
 cd /percorso/alla/cartella/seageo
 git init
 git add .
-git commit -m "Initial commit — SeaGeo Phase 1"
+git commit -m "Initial commit — AVI Phase 1"
 git remote add origin https://github.com/TUO-USERNAME/seageo.git
 git push -u origin main
 ```

@@ -90,7 +90,7 @@ export async function GET(
 <html lang="${locale}">
 <head>
 <meta charset="utf-8">
-<title>SeaGeo Report - ${proj?.name ?? ""} v${r.version}</title>
+<title>AVI Report - ${proj?.name ?? ""} v${r.version}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
@@ -312,7 +312,7 @@ export async function GET(
 <body>
 
 <div class="header">
-  <h1>SeaGeo Report</h1>
+  <h1>AI Visibility Index Report</h1>
   <p class="subtitle">${proj?.name ?? ""} &middot; ${proj?.target_brand ?? ""} &middot; v${r.version} &middot; ${date}</p>
 </div>
 
@@ -380,7 +380,7 @@ ${domainList.length > 0 ? `
 </table>
 
 <div class="footer">
-  SeaGeo &middot; ${new Date().toLocaleDateString(locale)} &middot; AI Visibility Intelligence Platform
+  AI Visibility Index &middot; ${new Date().toLocaleDateString(locale)} &middot; aicitationrate.com
 </div>
 
 <script>window.onload = function() { window.print(); }</script>

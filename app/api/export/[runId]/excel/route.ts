@@ -100,7 +100,7 @@ export async function GET(
 
   // Sheet 1: Riepilogo AVI
   const summaryRows = [
-    ["SeaGeo - Export"],
+    ["AI Visibility Index - Export"],
     [],
     [t("results.project"), proj?.name ?? "—"],
     [t("datasets.brand"), proj?.target_brand ?? "—"],

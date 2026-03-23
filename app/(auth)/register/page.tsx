@@ -13,8 +13,8 @@ export default function RegisterPage() {
       <div className="relative w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2.5 mb-3">
-            <img src="/logo.jpg" alt="SeaGeo" width={36} height={36} className="rounded-lg" />
-            <span className="font-display text-2xl text-foreground" style={{ fontWeight: 300 }}>Sea<span style={{ color: "#7ab89a" }}>Geo</span></span>
+            <img src="/logo.jpg" alt="AVI" width={36} height={36} className="rounded-lg" />
+            <span className="font-display text-2xl text-foreground" style={{ fontWeight: 300 }}>A<span style={{ color: "#7ab89a" }}>VI</span></span>
           </div>
           <p className="text-sm text-muted-foreground font-sans">AI Visibility Intelligence</p>
         </div>

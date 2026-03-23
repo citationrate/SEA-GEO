@@ -90,7 +90,7 @@ export function AdminSidebar() {
 
       <div className="border-t border-border p-3 flex-shrink-0">
         <Link href="/dashboard" className="flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] text-sm text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors">
-          <img src="/logo.jpg" alt="SeaGeo" width={15} height={15} className="rounded-sm" />
+          <img src="/logo.jpg" alt="AVI" width={15} height={15} className="rounded-sm" />
           Torna alla Dashboard
         </Link>
       </div>

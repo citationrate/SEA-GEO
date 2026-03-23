@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const htmlBody = `
-<h2>Nuova richiesta di consulenza SeaGeo</h2>
+<h2>Nuova richiesta di consulenza AI Visibility Index</h2>
 
 <h3>1. Informazioni</h3>
 <table style="border-collapse:collapse;width:100%">
@@ -59,13 +59,13 @@ export async function POST(request: Request) {
 <p>${d.note ? esc(d.note) : "<em>Nessuna nota</em>"}</p>
 
 <hr/>
-<p style="color:#888;font-size:12px">Inviato da SeaGeo Consultation Form</p>
+<p style="color:#888;font-size:12px">Inviato da AI Visibility Index Consultation Form</p>
 `;
 
     await resend.emails.send({
-      from: "SeaGeo <noreply@seageo.it>",
+      from: "AI Visibility Index <noreply@aicitationrate.com>",
       to: process.env.CONSULTATION_EMAIL || "info@seageo.it",
-      subject: `Nuova richiesta di consulenza SeaGeo — ${d.nome} — ${d.azienda}`,
+      subject: `Nuova richiesta di consulenza AI Visibility Index — ${d.nome} — ${d.azienda}`,
       html: htmlBody,
       replyTo: d.email,
     });

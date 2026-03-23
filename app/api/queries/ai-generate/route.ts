@@ -140,7 +140,7 @@ async function fetchPage(pageUrl: string): Promise<{ url: string; title: string;
   try {
     const res = await fetch(pageUrl, {
       signal: controller.signal,
-      headers: { "User-Agent": "SeaGeo-Bot/1.0 (AI Visibility Analysis)" },
+      headers: { "User-Agent": "AVI-Bot/1.0 (AI Visibility Analysis)" },
       redirect: "follow",
     });
     clearTimeout(timeout);
@@ -235,7 +235,7 @@ async function fetchWebsiteContext(url: string): Promise<string> {
 
   // 2. Find internal links from homepage HTML
   const homepageHtmlRes = await fetch(baseUrl, {
-    headers: { "User-Agent": "SeaGeo-Bot/1.0" },
+    headers: { "User-Agent": "AVI-Bot/1.0" },
     signal: AbortSignal.timeout(6000),
   }).catch(() => null);
   const homepageHtml = homepageHtmlRes ? await homepageHtmlRes.text() : "";
