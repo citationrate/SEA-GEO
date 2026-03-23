@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 `;
 
     await resend.emails.send({
-      from: "AI Visibility Index <noreply@aicitationrate.com>",
+      from: "AI Visibility Index <noreply@ai.citationrate.com>",
       to: process.env.CONSULTATION_EMAIL || "info@seageo.it",
       subject: `Nuova richiesta di consulenza AI Visibility Index — ${d.nome} — ${d.azienda}`,
       html: htmlBody,

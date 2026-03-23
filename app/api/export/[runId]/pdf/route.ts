@@ -380,7 +380,7 @@ ${domainList.length > 0 ? `
 </table>
 
 <div class="footer">
-  AI Visibility Index &middot; ${new Date().toLocaleDateString(locale)} &middot; aicitationrate.com
+  AI Visibility Index &middot; ${new Date().toLocaleDateString(locale)} &middot; ai.citationrate.com
 </div>
 
 <script>window.onload = function() { window.print(); }</script>

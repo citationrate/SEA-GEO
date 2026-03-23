@@ -186,7 +186,7 @@ export default function SharedReportPage() {
 
         {/* Footer */}
         <div className="text-center text-xs text-gray-500 pt-4 border-t border-gray-800">
-          AI Visibility Index &middot; aicitationrate.com
+          AI Visibility Index &middot; ai.citationrate.com
         </div>
       </div>
     </div>
