@@ -60,7 +60,12 @@ export function NewCompetitiveForm({
   const selectedProject = projects.find((p) => p.id === projectId);
   const effectiveDriver = driver === "Altro" ? customDriver : driver;
 
-  const totalPrompts = 3 * selectedModels.size * RUNS_PER_QUERY;
+  const comparisonsExhausted = !usage.loading && usage.comparisonsRemaining <= 0;
+
+  // Next month reset date (1st of next month)
+  const resetDate = new Date();
+  resetDate.setMonth(resetDate.getMonth() + 1, 1);
+  const resetDateStr = resetDate.toLocaleDateString(undefined, { day: "numeric", month: "long" });
 
   function toggleModel(modelId: string) {
     setSelectedModels((prev) => {
@@ -253,6 +258,29 @@ export function NewCompetitiveForm({
         )}
       </div>
 
+      {/* Usage counter */}
+      {!usage.loading && (
+        <div className="bg-muted/30 border border-border rounded-[2px] px-4 py-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">{t("competitiveForm.comparisonsAvailable")}</span>
+            <span className={`text-xs font-semibold ${
+              usage.comparisonsRemaining > 5 ? "text-success" : usage.comparisonsRemaining >= 2 ? "text-warning" : "text-destructive"
+            }`}>
+              {usage.comparisonsRemaining} / {usage.comparisonsLimit}
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-ink-3 rounded-sm overflow-hidden">
+            <div
+              className="h-full rounded-sm transition-all duration-500"
+              style={{
+                width: usage.comparisonsLimit > 0 ? `${(usage.comparisonsRemaining / usage.comparisonsLimit) * 100}%` : "0%",
+                backgroundColor: usage.comparisonsRemaining > 5 ? "var(--success)" : usage.comparisonsRemaining >= 2 ? "var(--warning)" : "var(--destructive)",
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Model selector */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">{t("competitiveForm.aiModels")}</label>
@@ -281,28 +309,34 @@ export function NewCompetitiveForm({
         </div>
       </div>
 
-      {/* Config info */}
-      <div className="bg-muted/30 border border-border rounded-[2px] px-4 py-3 space-y-1">
+      {/* Config summary */}
+      <div className="bg-muted/30 border border-border rounded-[2px] px-4 py-3">
         <p className="text-xs text-muted-foreground">
-          3 {t("competitiveForm.configInfo")} × {selectedModels.size} {t("competitiveForm.modelWord")} × {RUNS_PER_QUERY} run = {totalPrompts} {t("competitiveForm.totalResponses")}
+          {selectedModels.size} {t("competitiveForm.modelWord")} {t("competitiveForm.selectedSummary")} · {RUNS_PER_QUERY} {t("competitiveForm.runsPerQuery")}
         </p>
-        {!usage.loading && (
-          <p className="text-xs text-muted-foreground">
-            {t("competitiveForm.comparisons")} <span className="text-foreground font-medium">{usage.comparisonsUsed}/{usage.comparisonsLimit}</span> {t("competitiveForm.usedThisMonth")}
-          </p>
-        )}
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={loading || !brandB.trim() || !effectiveDriver.trim()}
-        className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
-      >
-        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-        {loading ? t("competitiveForm.starting") : t("analysisLauncher.startAnalysis")}
-      </button>
+      {comparisonsExhausted ? (
+        <div className="w-full text-center py-3 px-4 bg-destructive/10 border border-destructive/30 rounded-[2px]">
+          <p className="text-sm text-destructive font-medium">
+            {t("competitiveForm.allUsed")}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {t("competitiveForm.resetsOn")} {resetDateStr}.
+          </p>
+        </div>
+      ) : (
+        <button
+          type="submit"
+          disabled={loading || !brandB.trim() || !effectiveDriver.trim()}
+          className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
+        >
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+          {loading ? t("competitiveForm.starting") : t("analysisLauncher.startAnalysis")}
+        </button>
+      )}
     </form>
   );
 }
