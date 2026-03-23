@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Syne, DM_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import dynamic from "next/dynamic";
 import { LanguageProvider } from "@/lib/i18n/context";
 import { ConsultationProvider } from "@/lib/consultation-context";
 import { ConsultationModal } from "@/components/consultation-modal";
-import { CursorFollower } from "@/components/cursor-follower";
 import "./globals.css";
+
+const CursorFollower = dynamic(
+  () => import("@/components/cursor-follower").then((m) => m.CursorFollower),
+  { ssr: false },
+);
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
