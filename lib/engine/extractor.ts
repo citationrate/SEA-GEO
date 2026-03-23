@@ -604,7 +604,17 @@ JSON schema:
 
 Field rules:
 - brand_mentioned: true if target brand appears in response
-- brand_rank: position among other brands (1=first/primary, 2=second, etc.). null ONLY if brand_mentioned=false. MANDATORY when brand_mentioned=true.
+- brand_rank: the EXACT position where "${targetBrand}" first appears in the response, counting from 1.
+  Determine rank by counting DISTINCT brand/company mentions in order of appearance:
+  - Count only DISTINCT brand/company names, not product model names
+  - Rank = position of first mention of "${targetBrand}" relative to other brands
+  - If "${targetBrand}" is the ONLY brand mentioned → rank 1
+  - If "${targetBrand}" is mentioned in the opening sentence with no other brands before it → rank 1
+  - If other brands are mentioned BEFORE "${targetBrand}" → rank > 1
+  - If the response lists options/alternatives and "${targetBrand}" is 3rd in the list → rank 3
+  - Example: "Samsung and Google dominate the market, while Apple offers premium alternatives" → Apple rank = 3
+  - Do NOT assume rank 1 if uncertain — return null if position cannot be clearly determined
+  - null if brand_mentioned=false
 - brand_occurrences: count of brand appearances
 - competitors_count: total competitors cited (exclude target brand)
 - tone_score: language sentiment toward brand on [-1.0, +1.0] scale with 0.1 granularity. Identify 2-3 key adjectives first, then score.
@@ -656,9 +666,9 @@ source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
     // Enforce brand_rank when brand is mentioned
     let brandRank: number | null = parsed.brand_rank != null ? Number(parsed.brand_rank) : null;
 
-    if (brandMentioned && brandRank == null) {
-      brandRank = 1;
-    }
+    // Do NOT default to rank 1 when Haiku returns null — null means
+    // position could not be clearly determined, which is more accurate
+    // than assuming the brand is ranked first.
 
     // Multidimensional sentiment — position tracked SEPARATELY via brand_rank/rank_score
     // to avoid double-counting in AVI (which already weights rank_score at 35%)
