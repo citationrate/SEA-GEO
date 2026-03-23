@@ -11,8 +11,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user) redirect("/login");
 
   const supabase = createDataClient();
-  const { data: profile } = await supabase
-    .from("profiles").select("*").eq("id", user.id).single();
+
+  // Auto-create profile in seageo1 if first visit from CitationRate auth
+  let { data: profile } = await (supabase.from("profiles") as any)
+    .select("*").eq("id", user.id).maybeSingle();
+
+  if (!profile) {
+    await (supabase.from("profiles") as any).insert({
+      id: user.id,
+      email: user.email ?? "",
+      full_name: (user.user_metadata?.full_name as string) ?? null,
+      plan: "demo",
+    });
+    ({ data: profile } = await (supabase.from("profiles") as any)
+      .select("*").eq("id", user.id).single());
+  }
 
   // Merge is_pro from user metadata into profile for downstream components
   const enrichedProfile = {

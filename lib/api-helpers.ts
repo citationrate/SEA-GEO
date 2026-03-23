@@ -2,8 +2,33 @@ import { NextResponse } from "next/server";
 import { createAuthServiceClient, createDataClient } from "@/lib/supabase/server";
 
 /**
+ * Ensure a profile exists in seageo1 for the given CitationRate user.
+ * Creates one with demo plan if missing. Runs on every authenticated request
+ * but the SELECT is fast (PK lookup) and the INSERT only happens once.
+ */
+async function ensureProfile(
+  supabase: ReturnType<typeof createDataClient>,
+  user: { id: string; email?: string; user_metadata?: Record<string, unknown> },
+) {
+  const { data } = await (supabase.from("profiles") as any)
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!data) {
+    await (supabase.from("profiles") as any).insert({
+      id: user.id,
+      email: user.email ?? "",
+      full_name: (user.user_metadata?.full_name as string) ?? null,
+      plan: "demo",
+    });
+  }
+}
+
+/**
  * Authenticate the current request via CitationRate auth,
  * then return the seageo1 data client + user.
+ * Auto-creates profile in seageo1 if not yet synced.
  * Returns a 401 NextResponse if not authenticated.
  */
 export async function requireAuth() {
@@ -13,6 +38,7 @@ export async function requireAuth() {
     return { supabase: null, user: null, error: apiError("Non autenticato", 401) } as const;
   }
   const supabase = createDataClient();
+  await ensureProfile(supabase, user);
   return { supabase, user, error: null } as const;
 }
 
