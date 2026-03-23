@@ -153,7 +153,7 @@ export const PRO_ONLY_MODEL_IDS = new Set(
 );
 
 /** Demo plan: fixed models, not selectable */
-export const DEMO_MODEL_IDS = ["gpt-5.4", "gemini-3.1-pro"] as const;
+export const DEMO_MODEL_IDS = ["gpt-5.4-mini", "gemini-3.1-pro"] as const;
 
 /** Comparison module: fixed models, always no-browsing, Pro only */
 export const COMPARISON_MODEL_IDS = [
