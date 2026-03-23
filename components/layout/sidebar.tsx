@@ -11,6 +11,7 @@ import {
   Users, Link2, Tag, GitCompare, Settings,
   Database, ChevronRight, Plus,
   PanelLeftClose, PanelLeftOpen, MessageSquareText,
+  LayoutGrid,
 } from "lucide-react";
 import { useConsultation } from "@/lib/consultation-context";
 
@@ -175,6 +176,24 @@ export function Sidebar({ profile }: SidebarProps) {
           <MessageSquareText className="w-4 h-4 shrink-0" />
           {!collapsed && <span className="text-xs font-semibold">{t("sidebar.requestConsultation")}</span>}
         </button>
+      </div>
+
+      {/* Switch tool */}
+      <div className="px-2 pb-2 flex-shrink-0">
+        <Link
+          href="https://suite.citationrate.com/hub"
+          className={cn(
+            "flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm font-ui transition-colors mt-1",
+            collapsed && "justify-center px-0",
+          )}
+          style={{ color: "var(--c-sage)", borderRadius: "2px" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--c-sage-bg)"; e.currentTarget.style.color = "var(--c-cream)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--c-sage)"; }}
+          title={collapsed ? t("sidebar.switchTool") : undefined}
+        >
+          <LayoutGrid size={16} className="shrink-0" />
+          {!collapsed && t("sidebar.switchTool")}
+        </Link>
       </div>
 
       {/* Profile → links to settings */}

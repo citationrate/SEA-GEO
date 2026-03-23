@@ -32,6 +32,9 @@ interface UsageData {
   comparisonsUsed: number;
   comparisonsLimit: number;
   comparisonsRemaining: number;
+  extraBrowsingPrompts: number;
+  extraNoBrowsingPrompts: number;
+  extraComparisons: number;
   canGenerateQueries: boolean;
   canAccessDataset: boolean;
   canAccessComparisons: boolean;
@@ -62,6 +65,9 @@ export function useUsage(): UsageData {
   const [browsingPromptsUsed, setBrowsingPromptsUsed] = useState(0);
   const [noBrowsingPromptsUsed, setNoBrowsingPromptsUsed] = useState(0);
   const [comparisonsUsed, setComparisonsUsed] = useState(0);
+  const [extraBrowsingPrompts, setExtraBrowsingPrompts] = useState(0);
+  const [extraNoBrowsingPrompts, setExtraNoBrowsingPrompts] = useState(0);
+  const [extraComparisons, setExtraComparisons] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -120,6 +126,9 @@ export function useUsage(): UsageData {
           setBrowsingPromptsUsed(Number(usage.browsing_prompts_used) || 0);
           setNoBrowsingPromptsUsed(Number(usage.no_browsing_prompts_used) || 0);
           setComparisonsUsed(Number(usage.comparisons_used) || 0);
+          setExtraBrowsingPrompts(Number(usage.extra_browsing_prompts) || 0);
+          setExtraNoBrowsingPrompts(Number(usage.extra_no_browsing_prompts) || 0);
+          setExtraComparisons(Number(usage.extra_comparisons) || 0);
         }
       } catch (err) {
         console.error("[useUsage] error:", err);
@@ -134,22 +143,30 @@ export function useUsage(): UsageData {
   const isDemo = effectivePlan.id === "demo";
   const isPro = effectivePlan.id === "pro";
 
+  // Effective limits = plan base + extra purchased
+  const effectiveBrowsingLimit = effectivePlan.browsing_prompts + extraBrowsingPrompts;
+  const effectiveNoBrowsingLimit = effectivePlan.no_browsing_prompts + extraNoBrowsingPrompts;
+  const effectiveComparisonsLimit = effectivePlan.max_comparisons + extraComparisons;
+
   // Legacy compat: total prompts = browsing + no_browsing
   const totalUsed = browsingPromptsUsed + noBrowsingPromptsUsed;
-  const totalLimit = effectivePlan.browsing_prompts + effectivePlan.no_browsing_prompts;
+  const totalLimit = effectiveBrowsingLimit + effectiveNoBrowsingLimit;
 
   return {
     plan: effectivePlan,
     planId: effectivePlan.id,
     browsingPromptsUsed,
-    browsingPromptsLimit: effectivePlan.browsing_prompts,
-    browsingPromptsRemaining: Math.max(0, effectivePlan.browsing_prompts - browsingPromptsUsed),
+    browsingPromptsLimit: effectiveBrowsingLimit,
+    browsingPromptsRemaining: Math.max(0, effectiveBrowsingLimit - browsingPromptsUsed),
     noBrowsingPromptsUsed,
-    noBrowsingPromptsLimit: effectivePlan.no_browsing_prompts,
-    noBrowsingPromptsRemaining: Math.max(0, effectivePlan.no_browsing_prompts - noBrowsingPromptsUsed),
+    noBrowsingPromptsLimit: effectiveNoBrowsingLimit,
+    noBrowsingPromptsRemaining: Math.max(0, effectiveNoBrowsingLimit - noBrowsingPromptsUsed),
     comparisonsUsed,
-    comparisonsLimit: effectivePlan.max_comparisons,
-    comparisonsRemaining: Math.max(0, effectivePlan.max_comparisons - comparisonsUsed),
+    comparisonsLimit: effectiveComparisonsLimit,
+    comparisonsRemaining: Math.max(0, effectiveComparisonsLimit - comparisonsUsed),
+    extraBrowsingPrompts,
+    extraNoBrowsingPrompts,
+    extraComparisons,
     canGenerateQueries: effectivePlan.can_generate_queries,
     canAccessDataset: effectivePlan.can_access_dataset,
     canAccessComparisons: effectivePlan.can_access_comparisons,

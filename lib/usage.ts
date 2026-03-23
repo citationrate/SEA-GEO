@@ -160,5 +160,8 @@ export async function getCurrentUsage(userId: string) {
     comparisonsUsed: Number(data?.comparisons_used) || 0,
     browsingPromptsUsed: Number(data?.browsing_prompts_used) || 0,
     noBrowsingPromptsUsed: Number(data?.no_browsing_prompts_used) || 0,
+    extraBrowsingPrompts: Number(data?.extra_browsing_prompts) || 0,
+    extraNoBrowsingPrompts: Number(data?.extra_no_browsing_prompts) || 0,
+    extraComparisons: Number(data?.extra_comparisons) || 0,
   };
 }

@@ -40,6 +40,9 @@ export default async function SettingsPage() {
           comparisonsUsed: usage.comparisonsUsed,
           comparisonsLimit: Number(planLimits.max_comparisons) || 0,
           maxModels: Number(planLimits.max_models_per_project) || 2,
+          extraBrowsingPrompts: usage.extraBrowsingPrompts,
+          extraNoBrowsingPrompts: usage.extraNoBrowsingPrompts,
+          extraComparisons: usage.extraComparisons,
         }}
       />
     </div>

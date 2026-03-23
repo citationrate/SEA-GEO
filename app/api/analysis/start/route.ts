@@ -94,15 +94,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Il tuo piano supporta max ${plan.max_models_per_project} modelli per progetto.` }, { status: 403 });
     }
 
-    // Browsing counter logic
+    // Browsing counter logic (plan limit + extra purchased)
     if (browsing) {
-      if (usage.browsingPromptsUsed + promptCost > Number(plan.browsing_prompts)) {
+      const totalBrowsingAvailable = Number(plan.browsing_prompts) + usage.extraBrowsingPrompts;
+      if (usage.browsingPromptsUsed + promptCost > totalBrowsingAvailable) {
         return NextResponse.json({
-          error: `Hai esaurito i ${plan.browsing_prompts} prompt con browsing di questo mese. Puoi continuare senza browsing.`,
+          error: `Hai esaurito i prompt con browsing di questo mese. Puoi continuare senza browsing.`,
         }, { status: 403 });
       }
     } else {
-      if (usage.noBrowsingPromptsUsed + promptCost > Number(plan.no_browsing_prompts)) {
+      const totalNoBrowsingAvailable = Number(plan.no_browsing_prompts) + usage.extraNoBrowsingPrompts;
+      if (usage.noBrowsingPromptsUsed + promptCost > totalNoBrowsingAvailable) {
         return NextResponse.json({
           error: "Hai esaurito i prompt disponibili questo mese.",
         }, { status: 403 });

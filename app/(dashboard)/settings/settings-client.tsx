@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { User, CreditCard, Ticket, Bell, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2, Globe, Cpu } from "lucide-react";
+import { User, CreditCard, Ticket, Bell, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2, Globe, Cpu, Package } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { RestartTourButton } from "./restart-tour-button";
 
@@ -14,6 +14,21 @@ interface UsageData {
   comparisonsUsed: number;
   comparisonsLimit: number;
   maxModels: number;
+  extraBrowsingPrompts: number;
+  extraNoBrowsingPrompts: number;
+  extraComparisons: number;
+}
+
+interface PackageDef {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  plan_required: string;
+  browsing_prompts: number;
+  no_browsing_prompts: number;
+  comparisons: number;
+  max_per_month: number | null;
 }
 
 interface SettingsClientProps {
@@ -62,6 +77,45 @@ export function SettingsClient({
   const isPro = plan === "pro" || plan === "agency";
   const isBase = plan === "base";
   const isDemo = !plan || plan === "demo" || plan === "free";
+
+  // Packages
+  const [purchasingId, setPurchasingId] = useState<string | null>(null);
+  const [purchaseMsg, setPurchaseMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // TODO: Stripe integration — currently purchases are simulated
+  const PACKAGES: PackageDef[] = isBase ? [
+    { id: "base_100", name: "100 Query Extra", description: "+100 query senza browsing", price: 19, plan_required: "base", browsing_prompts: 0, no_browsing_prompts: 100, comparisons: 0, max_per_month: 1 },
+    { id: "base_300", name: "300 Query Extra", description: "+300 query senza browsing", price: 49, plan_required: "base", browsing_prompts: 0, no_browsing_prompts: 300, comparisons: 0, max_per_month: 1 },
+  ] : isPro ? [
+    { id: "pro_100", name: "100 Query Extra", description: "+100 query (browsing incluso)", price: 29, plan_required: "pro", browsing_prompts: 30, no_browsing_prompts: 70, comparisons: 0, max_per_month: null },
+    { id: "pro_300", name: "300 Query Extra", description: "+300 query (browsing incluso)", price: 89, plan_required: "pro", browsing_prompts: 90, no_browsing_prompts: 210, comparisons: 0, max_per_month: null },
+    { id: "pro_comp_3", name: "3 Confronti Extra", description: "+3 analisi competitive", price: 15, plan_required: "pro", browsing_prompts: 0, no_browsing_prompts: 0, comparisons: 3, max_per_month: null },
+    { id: "pro_comp_5", name: "5 Confronti Extra", description: "+5 analisi competitive", price: 19, plan_required: "pro", browsing_prompts: 0, no_browsing_prompts: 0, comparisons: 5, max_per_month: null },
+    { id: "pro_comp_10", name: "10 Confronti Extra", description: "+10 analisi competitive", price: 25, plan_required: "pro", browsing_prompts: 0, no_browsing_prompts: 0, comparisons: 10, max_per_month: null },
+  ] : [];
+
+  async function purchasePackage(pkgId: string) {
+    setPurchasingId(pkgId);
+    setPurchaseMsg(null);
+    try {
+      const res = await fetch("/api/packages/purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ package_id: pkgId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPurchaseMsg({ ok: true, text: t("settings.packageSuccess") });
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        setPurchaseMsg({ ok: false, text: data.error || t("settings.packageError") });
+      }
+    } catch {
+      setPurchaseMsg({ ok: false, text: t("settings.packageError") });
+    } finally {
+      setPurchasingId(null);
+    }
+  }
 
   const saveName = useCallback(async () => {
     setSavingName(true);
@@ -294,20 +348,23 @@ export function SettingsClient({
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" /> Prompt con browsing</span>
-              <span className="text-foreground font-medium">{usage.browsingPromptsUsed} / {usage.browsingPromptsLimit}</span>
+              <span className="text-foreground font-medium">
+                {usage.browsingPromptsUsed} / {usage.browsingPromptsLimit + usage.extraBrowsingPrompts}
+                {usage.extraBrowsingPrompts > 0 && <span className="text-primary ml-1">(+{usage.extraBrowsingPrompts} extra)</span>}
+              </span>
             </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-500"
                 style={{
-                  width: `${usage.browsingPromptsLimit > 0 ? Math.min(100, (usage.browsingPromptsUsed / usage.browsingPromptsLimit) * 100) : 0}%`,
-                  background: usage.browsingPromptsUsed >= usage.browsingPromptsLimit ? "var(--destructive)" : "var(--primary)",
+                  width: `${(usage.browsingPromptsLimit + usage.extraBrowsingPrompts) > 0 ? Math.min(100, (usage.browsingPromptsUsed / (usage.browsingPromptsLimit + usage.extraBrowsingPrompts)) * 100) : 0}%`,
+                  background: usage.browsingPromptsUsed >= (usage.browsingPromptsLimit + usage.extraBrowsingPrompts) ? "var(--destructive)" : "var(--primary)",
                 }}
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              {usage.browsingPromptsLimit - usage.browsingPromptsUsed > 0
-                ? `${usage.browsingPromptsLimit - usage.browsingPromptsUsed} disponibili`
+              {(usage.browsingPromptsLimit + usage.extraBrowsingPrompts) - usage.browsingPromptsUsed > 0
+                ? `${(usage.browsingPromptsLimit + usage.extraBrowsingPrompts) - usage.browsingPromptsUsed} disponibili`
                 : "Limite raggiunto"}
             </p>
           </div>
@@ -320,20 +377,23 @@ export function SettingsClient({
               <Cpu className="w-3.5 h-3.5" />
               {isDemo ? "Prompt demo" : "Prompt senza browsing"}
             </span>
-            <span className="text-foreground font-medium">{usage.noBrowsingPromptsUsed} / {usage.noBrowsingPromptsLimit}</span>
+            <span className="text-foreground font-medium">
+              {usage.noBrowsingPromptsUsed} / {usage.noBrowsingPromptsLimit + usage.extraNoBrowsingPrompts}
+              {usage.extraNoBrowsingPrompts > 0 && <span className="text-primary ml-1">(+{usage.extraNoBrowsingPrompts} extra)</span>}
+            </span>
           </div>
           <div className="h-2 rounded-full bg-muted overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
-                width: `${usage.noBrowsingPromptsLimit > 0 ? Math.min(100, (usage.noBrowsingPromptsUsed / usage.noBrowsingPromptsLimit) * 100) : 0}%`,
-                background: usage.noBrowsingPromptsUsed >= usage.noBrowsingPromptsLimit ? "var(--destructive)" : "var(--primary)",
+                width: `${(usage.noBrowsingPromptsLimit + usage.extraNoBrowsingPrompts) > 0 ? Math.min(100, (usage.noBrowsingPromptsUsed / (usage.noBrowsingPromptsLimit + usage.extraNoBrowsingPrompts)) * 100) : 0}%`,
+                background: usage.noBrowsingPromptsUsed >= (usage.noBrowsingPromptsLimit + usage.extraNoBrowsingPrompts) ? "var(--destructive)" : "var(--primary)",
               }}
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            {usage.noBrowsingPromptsLimit - usage.noBrowsingPromptsUsed > 0
-              ? `${usage.noBrowsingPromptsLimit - usage.noBrowsingPromptsUsed} disponibili`
+            {(usage.noBrowsingPromptsLimit + usage.extraNoBrowsingPrompts) - usage.noBrowsingPromptsUsed > 0
+              ? `${(usage.noBrowsingPromptsLimit + usage.extraNoBrowsingPrompts) - usage.noBrowsingPromptsUsed} disponibili`
               : "Limite raggiunto"}
           </p>
         </div>
@@ -343,14 +403,17 @@ export function SettingsClient({
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">{t("settings.compareDetections")}</span>
-              <span className="text-foreground font-medium">{usage.comparisonsUsed} / {usage.comparisonsLimit}</span>
+              <span className="text-foreground font-medium">
+                {usage.comparisonsUsed} / {usage.comparisonsLimit + usage.extraComparisons}
+                {usage.extraComparisons > 0 && <span className="text-primary ml-1">(+{usage.extraComparisons} extra)</span>}
+              </span>
             </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-500"
                 style={{
-                  width: `${usage.comparisonsLimit > 0 ? Math.min(100, (usage.comparisonsUsed / usage.comparisonsLimit) * 100) : 0}%`,
-                  background: usage.comparisonsUsed >= usage.comparisonsLimit ? "var(--destructive)" : "var(--primary)",
+                  width: `${(usage.comparisonsLimit + usage.extraComparisons) > 0 ? Math.min(100, (usage.comparisonsUsed / (usage.comparisonsLimit + usage.extraComparisons)) * 100) : 0}%`,
+                  background: usage.comparisonsUsed >= (usage.comparisonsLimit + usage.extraComparisons) ? "var(--destructive)" : "var(--primary)",
                 }}
               />
             </div>
@@ -368,6 +431,57 @@ export function SettingsClient({
           {t("settings.renewsOn")} 1 {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString(locale === "it" ? "it-IT" : locale === "en" ? "en-US" : locale === "fr" ? "fr-FR" : locale === "de" ? "de-DE" : "es-ES", { month: "long" })}
         </p>
       </div>
+
+      {/* 2c. Pacchetti extra — only for Base and Pro */}
+      {PACKAGES.length > 0 && (
+        <div className="card p-6 space-y-5">
+          <div className="flex items-center gap-2 mb-2">
+            <Package className="w-5 h-5 text-primary" />
+            <h2 className="font-display font-semibold text-foreground">{t("settings.extraPackages")}</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">{t("settings.extraPackagesDesc")}</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {PACKAGES.map((pkg) => (
+              <div
+                key={pkg.id}
+                className="rounded-[2px] border border-border bg-muted/20 p-4 space-y-3 flex flex-col"
+              >
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">{pkg.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{pkg.description}</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-lg font-display font-bold text-foreground">&euro;{pkg.price}</p>
+                  {pkg.max_per_month !== null && (
+                    <span className="text-[0.625rem] font-mono text-muted-foreground uppercase tracking-wide">max {pkg.max_per_month}/mese</span>
+                  )}
+                </div>
+                {/* TODO: Replace with Stripe checkout */}
+                <button
+                  onClick={() => purchasePackage(pkg.id)}
+                  disabled={purchasingId !== null}
+                  className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-[2px] text-xs font-semibold hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {purchasingId === pkg.id ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("common.loading")}</>
+                  ) : (
+                    <>{t("settings.buyPackage")}</>
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {purchaseMsg && (
+            <p className={`text-sm ${purchaseMsg.ok ? "text-primary" : "text-destructive"}`}>{purchaseMsg.text}</p>
+          )}
+
+          {isDemo && (
+            <p className="text-xs text-muted-foreground italic">{t("settings.upgradeForPackages")}</p>
+          )}
+        </div>
+      )}
 
       {/* 3. Voucher */}
       <div className="card p-6 space-y-4">

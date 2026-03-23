@@ -30,14 +30,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "I confronti AI sono disponibili dal piano Pro." }, { status: 403 });
     }
     const usage = await getCurrentUsage(user.id);
-    if (usage.comparisonsUsed >= plan.max_comparisons) {
-      return NextResponse.json({ error: `Hai raggiunto il limite di ${plan.max_comparisons} confronti mensili.` }, { status: 403 });
+    const totalComparisonsAvailable = plan.max_comparisons + usage.extraComparisons;
+    if (usage.comparisonsUsed >= totalComparisonsAvailable) {
+      return NextResponse.json({ error: `Hai raggiunto il limite di ${totalComparisonsAvailable} confronti mensili.` }, { status: 403 });
     }
 
     // Comparison prompts count against no_browsing_prompts_used
     // Typical comparison: 3 queries × 5 models × 3 runs = ~45 prompts, but cost = 3 queries
     const comparisonPromptCost = 3; // 3 default queries
-    if (usage.noBrowsingPromptsUsed + comparisonPromptCost > Number(plan.no_browsing_prompts)) {
+    const totalNoBrowsingAvailable = Number(plan.no_browsing_prompts) + usage.extraNoBrowsingPrompts;
+    if (usage.noBrowsingPromptsUsed + comparisonPromptCost > totalNoBrowsingAvailable) {
       return NextResponse.json({
         error: "Non hai abbastanza prompt senza browsing disponibili per questo confronto.",
       }, { status: 403 });

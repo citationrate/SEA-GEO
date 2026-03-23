@@ -254,10 +254,12 @@ export function AnalysisLauncher({
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <Globe className="w-3 h-3" />
                     Con browsing: <span className="text-foreground font-medium">{usage.browsingPromptsUsed}/{usage.browsingPromptsLimit}</span> utilizzati
+                    {usage.extraBrowsingPrompts > 0 && <span className="text-primary">(+{usage.extraBrowsingPrompts} extra)</span>}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <Cpu className="w-3 h-3" />
                     Senza browsing: <span className="text-foreground font-medium">{usage.noBrowsingPromptsUsed}/{usage.noBrowsingPromptsLimit}</span> utilizzati
+                    {usage.extraNoBrowsingPrompts > 0 && <span className="text-primary">(+{usage.extraNoBrowsingPrompts} extra)</span>}
                   </p>
                 </div>
               )}
