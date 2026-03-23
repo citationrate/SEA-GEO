@@ -261,19 +261,24 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
       });
   }, []);
 
-  // Tour activates on first login (onboarding_completed = false) or via ?welcome=1
+  // Tour activates ONLY on first-ever login (onboarding not completed in DB or localStorage)
   useEffect(() => {
     if (typeof window === "undefined") return;
     const lsDone = localStorage.getItem(LS_KEY);
     const isWelcome = searchParamsRef.current?.get("welcome") === "1";
 
-    // Activate if: first login (not completed in DB and not dismissed locally) OR explicit ?welcome=1
-    if ((isWelcome || (!onboardingCompleted && !lsDone)) && pathname === "/dashboard") {
-      setActive(true);
-      // Clean the URL without reload
-      if (isWelcome) window.history.replaceState({}, "", pathname);
+    // Clean the ?welcome=1 param from URL immediately (prevent re-triggers on re-render)
+    if (isWelcome) {
+      window.history.replaceState({}, "", pathname);
+      searchParamsRef.current = new URLSearchParams(); // prevent re-reading stale params
     }
-  }, [onboardingCompleted, pathname]);
+
+    // Show tour ONLY if not completed in EITHER DB or localStorage
+    if (!onboardingCompleted && !lsDone && pathname === "/dashboard") {
+      setActive(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Listen for manual restart
   useEffect(() => {
@@ -348,11 +353,20 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
     setActive(false);
     localStorage.setItem(LS_KEY, "true");
     cancelAnimationFrame(rafRef.current);
-    fetch("/api/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ onboarding_completed: true }),
-    }).catch(() => {});
+
+    // Persist to DB BEFORE navigating — await to ensure it completes
+    try {
+      await fetch("/api/onboarding/complete", { method: "POST" });
+    } catch {
+      // Fallback: try the profile PATCH endpoint
+      try {
+        await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ onboarding_completed: true }),
+        });
+      } catch { /* localStorage will prevent re-show on this device */ }
+    }
 
     // First-time user (no projects) → redirect to new project creation
     // Returning user (restarted tour) → stay on dashboard
@@ -362,7 +376,7 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
     } else {
       router.push("/dashboard");
     }
-  }, [router, firstProjectId]);
+  }, [router, firstProjectId, t]);
 
   function handleNext() {
     let next = current + 1;
