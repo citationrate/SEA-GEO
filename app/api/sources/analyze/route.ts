@@ -2,6 +2,7 @@ import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
+import { getUserPlanLimits, getCurrentUsage, incrementUrlAnalysesUsed } from "@/lib/usage";
 
 const bodySchema = z.object({
   domain: z.string().min(1),
@@ -19,6 +20,19 @@ export async function POST(request: Request) {
     const body = await request.json();
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
+
+    // Pro plan check + usage limit
+    const plan = await getUserPlanLimits(user.id);
+    const planId = plan.id ?? "demo";
+    const effectivePlan = planId === "agency" ? "pro" : planId;
+    if (effectivePlan !== "pro") {
+      return NextResponse.json({ error: "Questa funzione è disponibile dal piano Pro.", code: "PRO_REQUIRED" }, { status: 403 });
+    }
+    const usage = await getCurrentUsage(user.id);
+    const maxUrlAnalyses = Number((plan as any).max_url_analyses) || 50;
+    if (usage.urlAnalysesUsed >= maxUrlAnalyses) {
+      return NextResponse.json({ error: `Hai raggiunto il limite di ${maxUrlAnalyses} analisi URL questo mese.`, code: "LIMIT_REACHED" }, { status: 403 });
+    }
 
     const { domain, contexts, citations, brand, lang } = parsed.data;
 
@@ -55,6 +69,11 @@ Respond ONLY with valid JSON.`,
     if (jsonMatch) {
       try { analysis = JSON.parse(jsonMatch[0]); } catch { /* use default */ }
     }
+
+    // Increment usage counter
+    await incrementUrlAnalysesUsed(user.id).catch((err) =>
+      console.error("[sources/analyze] usage increment error:", err)
+    );
 
     return NextResponse.json(analysis);
   } catch {

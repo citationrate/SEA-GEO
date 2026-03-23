@@ -35,6 +35,12 @@ interface UsageData {
   extraBrowsingPrompts: number;
   extraNoBrowsingPrompts: number;
   extraComparisons: number;
+  urlAnalysesUsed: number;
+  urlAnalysesLimit: number;
+  urlAnalysesRemaining: number;
+  contextAnalysesUsed: number;
+  contextAnalysesLimit: number;
+  contextAnalysesRemaining: number;
   canGenerateQueries: boolean;
   canAccessDataset: boolean;
   canAccessComparisons: boolean;
@@ -68,6 +74,8 @@ export function useUsage(): UsageData {
   const [extraBrowsingPrompts, setExtraBrowsingPrompts] = useState(0);
   const [extraNoBrowsingPrompts, setExtraNoBrowsingPrompts] = useState(0);
   const [extraComparisons, setExtraComparisons] = useState(0);
+  const [urlAnalysesUsed, setUrlAnalysesUsed] = useState(0);
+  const [contextAnalysesUsed, setContextAnalysesUsed] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -129,6 +137,8 @@ export function useUsage(): UsageData {
           setExtraBrowsingPrompts(Number(usage.extra_browsing_prompts) || 0);
           setExtraNoBrowsingPrompts(Number(usage.extra_no_browsing_prompts) || 0);
           setExtraComparisons(Number(usage.extra_comparisons) || 0);
+          setUrlAnalysesUsed(Number(usage.url_analyses_used) || 0);
+          setContextAnalysesUsed(Number(usage.context_analyses_used) || 0);
         }
       } catch (err) {
         console.error("[useUsage] error:", err);
@@ -167,6 +177,12 @@ export function useUsage(): UsageData {
     extraBrowsingPrompts,
     extraNoBrowsingPrompts,
     extraComparisons,
+    urlAnalysesUsed,
+    urlAnalysesLimit: isPro ? 50 : 0,
+    urlAnalysesRemaining: isPro ? Math.max(0, 50 - urlAnalysesUsed) : 0,
+    contextAnalysesUsed,
+    contextAnalysesLimit: isPro ? 5 : 0,
+    contextAnalysesRemaining: isPro ? Math.max(0, 5 - contextAnalysesUsed) : 0,
     canGenerateQueries: effectivePlan.can_generate_queries,
     canAccessDataset: effectivePlan.can_access_dataset,
     canAccessComparisons: effectivePlan.can_access_comparisons,

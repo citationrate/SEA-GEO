@@ -5,8 +5,10 @@ import {
   Globe, X, Loader2, ExternalLink, Search,
   Lightbulb, Newspaper, Star, ShoppingCart,
   MessageCircle, BookOpen, HelpCircle, Swords,
+  Crown, Lock,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
+import { useUsage } from "@/lib/hooks/useUsage";
 
 /* ─── Types ─── */
 interface SourceDomain {
@@ -56,6 +58,7 @@ export function SourcesClient({
   brand: string;
 }) {
   const { t, locale } = useTranslation();
+  const usage = useUsage();
   const [filter, setFilter] = useState<string | null>(null);
   const [drawerDomain, setDrawerDomain] = useState<SourceDomain | null>(null);
   const [insights, setInsights] = useState<Insight[] | null>(null);
@@ -178,7 +181,7 @@ export function SourcesClient({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((d) => (
-            <DomainCard key={d.domain} domain={d} onAnalyze={() => setDrawerDomain(d)} />
+            <DomainCard key={d.domain} domain={d} onAnalyze={() => setDrawerDomain(d)} isPro={usage.isPro} />
           ))}
         </div>
       )}
@@ -189,6 +192,9 @@ export function SourcesClient({
           domain={drawerDomain}
           brand={brand}
           onClose={() => setDrawerDomain(null)}
+          isPro={usage.isPro}
+          urlAnalysesRemaining={usage.urlAnalysesRemaining}
+          urlAnalysesLimit={usage.urlAnalysesLimit}
         />
       )}
     </div>
@@ -206,7 +212,7 @@ function StatCard({ value, label, highlight }: { value: string; label: string; h
 }
 
 /* ─── Domain Card ─── */
-function DomainCard({ domain: d, onAnalyze }: { domain: SourceDomain; onAnalyze: () => void }) {
+function DomainCard({ domain: d, onAnalyze, isPro }: { domain: SourceDomain; onAnalyze: () => void; isPro: boolean }) {
   const { t } = useTranslation();
   const cfg = TYPE_CONFIG[d.sourceType] ?? TYPE_CONFIG.other;
   const Icon = cfg.icon;
@@ -250,12 +256,21 @@ function DomainCard({ domain: d, onAnalyze }: { domain: SourceDomain; onAnalyze:
       )}
 
       {/* Analyze button */}
-      <button
-        onClick={onAnalyze}
-        className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/70 transition-colors"
-      >
-        <Search className="w-3 h-3" /> {t("sources.analyzeUrl")}
-      </button>
+      {isPro ? (
+        <button
+          onClick={onAnalyze}
+          className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/70 transition-colors"
+        >
+          <Search className="w-3 h-3" /> {t("sources.analyzeUrl")}
+        </button>
+      ) : (
+        <span className="flex items-center gap-1.5 text-xs font-medium text-[#c4a882]">
+          <Lock className="w-3 h-3" /> {t("sources.analyzeUrl")}
+          <span className="inline-flex items-center gap-0.5 font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">
+            <Crown className="w-2.5 h-2.5" /> PRO
+          </span>
+        </span>
+      )}
     </div>
   );
 }
@@ -265,10 +280,16 @@ function AnalyzeDrawer({
   domain: d,
   brand,
   onClose,
+  isPro,
+  urlAnalysesRemaining,
+  urlAnalysesLimit,
 }: {
   domain: SourceDomain;
   brand: string;
   onClose: () => void;
+  isPro: boolean;
+  urlAnalysesRemaining: number;
+  urlAnalysesLimit: number;
 }) {
   const { t, locale } = useTranslation();
   const [analysis, setAnalysis] = useState<DomainAnalysis | null>(null);
@@ -376,13 +397,36 @@ function AnalyzeDrawer({
               <Lightbulb className="w-3 h-3" /> {t("sources.whatAISay")}
             </h4>
 
-            {!analysis && !loading && (
-              <button
-                onClick={runAnalysis}
-                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors"
-              >
-                <Search className="w-4 h-4" /> {t("sources.analyzeWithAI")}
-              </button>
+            {!analysis && !loading && isPro && urlAnalysesRemaining > 0 && (
+              <div className="space-y-2">
+                <button
+                  onClick={runAnalysis}
+                  className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors"
+                >
+                  <Search className="w-4 h-4" /> {t("sources.analyzeWithAI")}
+                </button>
+                <p className="text-xs text-muted-foreground text-center">
+                  {urlAnalysesRemaining}/{urlAnalysesLimit} {t("sources.analysesRemaining")}
+                </p>
+              </div>
+            )}
+
+            {!analysis && !loading && isPro && urlAnalysesRemaining <= 0 && (
+              <div className="card p-4 border-[#c4a882]/20 text-center space-y-1.5">
+                <p className="text-sm text-[#c4a882] font-medium">{t("sources.urlLimitReached")}</p>
+                <p className="text-xs text-muted-foreground">{t("sources.urlLimitDesc")}</p>
+              </div>
+            )}
+
+            {!analysis && !loading && !isPro && (
+              <div className="card p-4 border-[#c4a882]/20 text-center space-y-1.5">
+                <div className="flex items-center justify-center gap-1.5">
+                  <Crown className="w-4 h-4 text-[#c4a882]" />
+                  <p className="text-sm text-[#c4a882] font-medium">{t("sources.proRequiredUrl")}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">{t("sources.proRequiredUrlDesc")}</p>
+                <a href="/settings" className="inline-block text-xs font-semibold text-[#c4a882] hover:text-[#c4a882]/80 transition-colors mt-1">{t("settings.upgradePro")} &rarr;</a>
+              </div>
             )}
 
             {loading && (

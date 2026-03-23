@@ -2,6 +2,7 @@ import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
+import { getUserPlanLimits, getCurrentUsage, incrementContextAnalysesUsed } from "@/lib/usage";
 
 const bodySchema = z.object({
   project_id: z.string().uuid(),
@@ -19,6 +20,19 @@ export async function POST(request: Request) {
     }
 
     const { project_id } = parsed.data;
+
+    // Pro plan check + usage limit
+    const plan = await getUserPlanLimits(user.id);
+    const planId = plan.id ?? "demo";
+    const effectivePlan = planId === "agency" ? "pro" : planId;
+    if (effectivePlan !== "pro") {
+      return NextResponse.json({ error: "Questa funzione è disponibile dal piano Pro.", code: "PRO_REQUIRED" }, { status: 403 });
+    }
+    const usage = await getCurrentUsage(user.id);
+    const maxContextAnalyses = Number((plan as any).max_context_analyses) || 5;
+    if (usage.contextAnalysesUsed >= maxContextAnalyses) {
+      return NextResponse.json({ error: `Hai raggiunto il limite di ${maxContextAnalyses} analisi contesti questo mese.`, code: "LIMIT_REACHED" }, { status: 403 });
+    }
 
     // Verify project ownership
     const { data: project } = await supabase
@@ -205,6 +219,11 @@ ${truncated}`;
         saveErrors = upsertPayload.length;
       }
     }
+
+    // Increment usage counter
+    await incrementContextAnalysesUsed(user.id).catch((err) =>
+      console.error("[competitors/analyze] usage increment error:", err)
+    );
 
     return NextResponse.json({ success: true, analyzed: results.length, saveErrors });
   } catch (err) {

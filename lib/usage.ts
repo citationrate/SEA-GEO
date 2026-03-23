@@ -163,5 +163,55 @@ export async function getCurrentUsage(userId: string) {
     extraBrowsingPrompts: Number(data?.extra_browsing_prompts) || 0,
     extraNoBrowsingPrompts: Number(data?.extra_no_browsing_prompts) || 0,
     extraComparisons: Number(data?.extra_comparisons) || 0,
+    urlAnalysesUsed: Number(data?.url_analyses_used) || 0,
+    contextAnalysesUsed: Number(data?.context_analyses_used) || 0,
   };
+}
+
+/**
+ * Increment url_analyses_used for a user in the current month.
+ */
+export async function incrementUrlAnalysesUsed(userId: string): Promise<void> {
+  const svc = createServiceClient();
+  const period = getCurrentPeriod();
+
+  const { data: existing } = await (svc.from("usage_monthly") as any)
+    .select("url_analyses_used")
+    .eq("user_id", userId)
+    .eq("period", period)
+    .maybeSingle();
+
+  if (existing) {
+    await (svc.from("usage_monthly") as any)
+      .update({ url_analyses_used: (Number(existing.url_analyses_used) || 0) + 1 })
+      .eq("user_id", userId)
+      .eq("period", period);
+  } else {
+    await (svc.from("usage_monthly") as any)
+      .insert({ user_id: userId, period, url_analyses_used: 1, browsing_prompts_used: 0, no_browsing_prompts_used: 0, prompts_used: 0, comparisons_used: 0 });
+  }
+}
+
+/**
+ * Increment context_analyses_used for a user in the current month.
+ */
+export async function incrementContextAnalysesUsed(userId: string): Promise<void> {
+  const svc = createServiceClient();
+  const period = getCurrentPeriod();
+
+  const { data: existing } = await (svc.from("usage_monthly") as any)
+    .select("context_analyses_used")
+    .eq("user_id", userId)
+    .eq("period", period)
+    .maybeSingle();
+
+  if (existing) {
+    await (svc.from("usage_monthly") as any)
+      .update({ context_analyses_used: (Number(existing.context_analyses_used) || 0) + 1 })
+      .eq("user_id", userId)
+      .eq("period", period);
+  } else {
+    await (svc.from("usage_monthly") as any)
+      .insert({ user_id: userId, period, context_analyses_used: 1, browsing_prompts_used: 0, no_browsing_prompts_used: 0, prompts_used: 0, comparisons_used: 0 });
+  }
 }

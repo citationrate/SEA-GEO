@@ -8,6 +8,7 @@ import {
   Check, Info,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
+import { useUsage } from "@/lib/hooks/useUsage";
 
 const MODEL_LABELS: Record<string, string> = {
   "gpt-5.4-mini": "GPT-5.4 Mini",
@@ -118,15 +119,9 @@ export function CompetitorsClient({
   const [analyzeError, setAnalyzeError] = useState("");
   const [drawerTheme, setDrawerTheme] = useState<{ compName: string; theme: MacroTheme } | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
-  const [isPro, setIsPro] = useState(false);
+  const usage = useUsage();
+  const isPro = usage.isPro;
   const [showProGate, setShowProGate] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/profile")
-      .then((r) => r.json())
-      .then((p) => setIsPro(p?.plan === "pro" || p?.plan === "agency"))
-      .catch(() => {});
-  }, []);
 
   const filteredRows = typeFilter ? rows.filter((r) => r.competitorType === typeFilter) : rows;
 
@@ -177,9 +172,10 @@ export function CompetitorsClient({
                 data-tour="analyze-contexts-btn"
                 onClick={() => {
                   if (!isPro) { setShowProGate(true); return; }
+                  if (usage.contextAnalysesRemaining <= 0) { setAnalyzeError(t("competitors.contextLimitReached")); return; }
                   analyzeContexts();
                 }}
-                disabled={analyzing}
+                disabled={analyzing || (isPro && usage.contextAnalysesRemaining <= 0)}
                 className={`flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-[2px] transition-colors disabled:opacity-50 ${
                   isPro
                     ? "bg-primary text-primary-foreground hover:bg-primary/85"
@@ -188,6 +184,9 @@ export function CompetitorsClient({
               >
                 {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {analyzing ? t("competitors.analyzingContexts") : t("competitors.analyzeContexts")}
+                {isPro && !analyzing && (
+                  <span className="text-xs font-normal opacity-70 ml-1">({usage.contextAnalysesRemaining}/{usage.contextAnalysesLimit})</span>
+                )}
                 {!isPro && (
                   <span className="inline-flex items-center gap-0.5 font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px] ml-1">
                     <Crown className="w-2.5 h-2.5" /> PRO
