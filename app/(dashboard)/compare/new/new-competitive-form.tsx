@@ -61,7 +61,7 @@ export function NewCompetitiveForm({
   const selectedProject = projects.find((p) => p.id === projectId);
   const effectiveDriver = driver === "Altro" ? customDriver : driver;
 
-  const comparisonsExhausted = !usage.loading && usage.comparisonsRemaining <= 0;
+  const comparisonsExhausted = !usage.loading && usage.comparisonsLimit > 0 && usage.comparisonsRemaining <= 0;
 
   // Next month reset date (1st of next month)
   const resetDate = new Date();

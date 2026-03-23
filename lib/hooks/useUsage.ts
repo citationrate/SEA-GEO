@@ -96,10 +96,12 @@ export function useUsage(): UsageData {
             pro:  { bp: 90, nbp: 210 },
           };
           const fb = fallbacks[p.id] ?? fallbacks.demo;
+          const maxCompFallback = p.id === "pro" ? 10 : p.id === "base" ? 0 : 0;
           setPlan({
             ...p,
             browsing_prompts: Number(p.browsing_prompts) || fb.bp,
             no_browsing_prompts: Number(p.no_browsing_prompts) || fb.nbp,
+            max_comparisons: Number(p.max_comparisons) || maxCompFallback,
           } as Plan);
         } else {
           setPlan(DEFAULT_PLAN);
