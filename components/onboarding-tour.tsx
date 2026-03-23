@@ -237,13 +237,24 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useTranslation();
-  const searchParamsRef = useRef(typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null);
+  const searchParamsRef = useRef<URLSearchParams | null>(null);
 
   const [active, setActive] = useState(false);
   const [current, setCurrent] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const [firstProjectId, setFirstProjectId] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
+  const [viewportSize, setViewportSize] = useState({ vw: 1920, vh: 1080 });
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    searchParamsRef.current = new URLSearchParams(window.location.search);
+    setViewportSize({ vw: window.innerWidth, vh: window.innerHeight });
+    const onResize = () => setViewportSize({ vw: window.innerWidth, vh: window.innerHeight });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   const rafRef = useRef<number>(0);
   const steps = getSteps(firstProjectId, t);
@@ -404,10 +415,10 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
     }
   }
 
-  if (!active) return null;
+  if (!active || !mounted) return null;
 
-  const vw = typeof window !== "undefined" ? window.innerWidth : 1920;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 1080;
+  const vw = viewportSize.vw;
+  const vh = viewportSize.vh;
 
   const tooltipW = 410;
 
