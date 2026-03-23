@@ -8,6 +8,7 @@ const bodySchema = z.object({
   contexts: z.array(z.string()),
   citations: z.number(),
   brand: z.string().min(1),
+  lang: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -20,9 +21,12 @@ export async function POST(request: Request) {
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { domain, contexts, citations, brand } = parsed.data;
+    const { domain, contexts, citations, brand, lang } = parsed.data;
 
     const contextList = contexts.slice(0, 10).map((c, i) => `${i + 1}. ${c}`).join("\n");
+
+    const langName: Record<string, string> = { it: "Italian", en: "English", fr: "French", de: "German", es: "Spanish" };
+    const outputLang = langName[lang ?? "en"] ?? "English";
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
@@ -31,18 +35,18 @@ export async function POST(request: Request) {
       max_tokens: 600,
       messages: [{
         role: "user",
-        content: `Questo dominio "${domain}" viene citato ${citations} volte nelle risposte AI analizzate per il brand "${brand}".
+        content: `The domain "${domain}" is cited ${citations} times in AI responses analyzed for the brand "${brand}".
 
-Contesti di citazione:
+Citation contexts:
 ${contextList}
 
-Analizza e rispondi in italiano con questo formato JSON:
+Analyze and respond in ${outputLang} with this JSON format:
 {
-  "why_cited": "perch\u00E9 le AI citano questo sito",
-  "authority": "che autorit\u00E0 ha questo sito nel settore"
+  "why_cited": "why AI models cite this site",
+  "authority": "what authority this site has in the sector"
 }
 
-Rispondi SOLO con JSON valido.`,
+Respond ONLY with valid JSON.`,
       }],
     });
 

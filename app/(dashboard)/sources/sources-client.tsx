@@ -55,7 +55,7 @@ export function SourcesClient({
   mediaPct: number;
   brand: string;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [filter, setFilter] = useState<string | null>(null);
   const [drawerDomain, setDrawerDomain] = useState<SourceDomain | null>(null);
   const [insights, setInsights] = useState<Insight[] | null>(null);
@@ -77,6 +77,7 @@ export function SourcesClient({
           citations: d.citations,
         })),
         brand,
+        lang: locale,
       }),
     })
       .then((r) => r.json())
@@ -106,7 +107,7 @@ export function SourcesClient({
       <div className="grid grid-cols-3 gap-3">
         <StatCard value={String(domains.length)} label={t("sources.uniqueDomains")} />
         <StatCard value={String(totalCitations)} label={t("sources.totalCitations")} />
-        <StatCard value={`${mediaPct}%`} label={t("sources.media")} />
+        <StatCard value={`${mediaPct}%`} label={t("sources.mediaStatLabel")} />
       </div>
 
       {/* AI Insights */}
@@ -269,7 +270,7 @@ function AnalyzeDrawer({
   brand: string;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [analysis, setAnalysis] = useState<DomainAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -287,6 +288,7 @@ function AnalyzeDrawer({
         contexts: d.contexts,
         citations: d.citations,
         brand,
+        lang: locale,
       }),
     })
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
