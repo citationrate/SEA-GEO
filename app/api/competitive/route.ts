@@ -9,6 +9,7 @@ const startSchema = z.object({
   project_id: z.string().uuid(),
   brand_b: z.string().min(1),
   driver: z.string().min(1),
+  models: z.array(z.string()).min(1).optional(),
 });
 
 export async function POST(request: Request) {
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
     const parsed = startSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { project_id, brand_b, driver } = parsed.data;
+    const { project_id, brand_b, driver, models: requestedModels } = parsed.data;
 
     // Plan limits check
     const plan = await getUserPlanLimits(user.id);
@@ -55,8 +56,14 @@ export async function POST(request: Request) {
 
     const brandA = (project as any).target_brand;
 
-    // Fixed models for comparisons — always no-browsing
-    const models = [...COMPARISON_MODEL_IDS];
+    // Filter to only allowed comparison models — always no-browsing
+    const allowedSet = new Set<string>(COMPARISON_MODEL_IDS);
+    const models = requestedModels
+      ? requestedModels.filter((m) => allowedSet.has(m))
+      : [...COMPARISON_MODEL_IDS];
+    if (models.length === 0) {
+      return NextResponse.json({ error: "At least one valid comparison model required" }, { status: 400 });
+    }
 
     // Create analysis
     const { data: analysis, error } = await (supabase.from("competitive_analyses") as any)

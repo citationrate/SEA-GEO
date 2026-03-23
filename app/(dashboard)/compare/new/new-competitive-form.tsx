@@ -9,6 +9,14 @@ import { useUsage } from "@/lib/hooks/useUsage";
 
 const RUNS_PER_QUERY = 3;
 
+const COMPARISON_MODEL_LABELS: Record<string, string> = {
+  "claude-haiku": "Claude Haiku",
+  "gpt-4o-mini": "GPT-4o Mini",
+  "gemini-2.5-flash": "Gemini 2.5 Flash",
+  "grok-3-mini": "Grok 3 Mini",
+  "perplexity-sonar": "Perplexity Sonar",
+};
+
 const DRIVER_OPTIONS = [
   "Prezzo/Convenienza",
   "Qualità del prodotto",
@@ -47,11 +55,25 @@ export function NewCompetitiveForm({
   const [error, setError] = useState("");
   const [generatedQueries, setGeneratedQueries] = useState<{ pattern: string; text: string }[] | null>(null);
   const [generatingQueries, setGeneratingQueries] = useState(false);
+  const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set(COMPARISON_MODEL_IDS));
 
   const selectedProject = projects.find((p) => p.id === projectId);
   const effectiveDriver = driver === "Altro" ? customDriver : driver;
 
-  const totalPrompts = 3 * COMPARISON_MODEL_IDS.length * RUNS_PER_QUERY;
+  const totalPrompts = 3 * selectedModels.size * RUNS_PER_QUERY;
+
+  function toggleModel(modelId: string) {
+    setSelectedModels((prev) => {
+      const next = new Set(prev);
+      if (next.has(modelId)) {
+        if (next.size <= 1) return prev; // minimum 1
+        next.delete(modelId);
+      } else {
+        next.add(modelId);
+      }
+      return next;
+    });
+  }
 
   function handleProjectChange(newId: string) {
     setProjectId(newId);
@@ -97,6 +119,7 @@ export function NewCompetitiveForm({
           project_id: projectId,
           brand_b: brandB.trim(),
           driver: effectiveDriver.trim(),
+          models: Array.from(selectedModels),
         }),
       });
 
@@ -230,30 +253,42 @@ export function NewCompetitiveForm({
         )}
       </div>
 
-      {/* Fixed models info */}
+      {/* Model selector */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">Modelli AI (fissi)</label>
+        <label className="text-sm font-medium text-foreground">{t("competitiveForm.aiModels")}</label>
         <p className="text-xs text-muted-foreground">
-          I confronti utilizzano automaticamente 5 modelli ottimizzati, senza browsing.
+          {t("competitiveForm.aiModelsDesc")}
         </p>
         <div className="flex flex-wrap gap-2">
-          {COMPARISON_MODEL_IDS.map((modelId) => (
-            <span key={modelId} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-primary/30 bg-primary/5 text-foreground">
-              <Cpu className="w-3 h-3 text-primary" />
-              {modelId}
-            </span>
-          ))}
+          {COMPARISON_MODEL_IDS.map((modelId) => {
+            const isSelected = selectedModels.has(modelId);
+            return (
+              <button
+                key={modelId}
+                type="button"
+                onClick={() => toggleModel(modelId)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  isSelected
+                    ? "border-primary/30 bg-primary/5 text-foreground"
+                    : "border-border bg-muted/30 text-muted-foreground/50 line-through"
+                }`}
+              >
+                <Cpu className={`w-3 h-3 ${isSelected ? "text-primary" : "text-muted-foreground/30"}`} />
+                {COMPARISON_MODEL_LABELS[modelId] ?? modelId}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Config info */}
       <div className="bg-muted/30 border border-border rounded-[2px] px-4 py-3 space-y-1">
         <p className="text-xs text-muted-foreground">
-          3 query × {COMPARISON_MODEL_IDS.length} modelli × {RUNS_PER_QUERY} run = {totalPrompts} risposte totali
+          3 {t("competitiveForm.configInfo")} × {selectedModels.size} {t("competitiveForm.modelWord")} × {RUNS_PER_QUERY} run = {totalPrompts} {t("competitiveForm.totalResponses")}
         </p>
         {!usage.loading && (
           <p className="text-xs text-muted-foreground">
-            Confronti: <span className="text-foreground font-medium">{usage.comparisonsUsed}/{usage.comparisonsLimit}</span> utilizzati questo mese
+            {t("competitiveForm.comparisons")} <span className="text-foreground font-medium">{usage.comparisonsUsed}/{usage.comparisonsLimit}</span> {t("competitiveForm.usedThisMonth")}
           </p>
         )}
       </div>
