@@ -1,11 +1,10 @@
-import { createServiceClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServiceClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+    const { supabase, user, error } = await requireAuth();
+    if (error) return error;
 
     const runId = request.nextUrl.searchParams.get("run_id");
     if (!runId) return NextResponse.json({ error: "run_id richiesto" }, { status: 400 });

@@ -207,9 +207,11 @@ Each prompt makes 2 API calls:
 
 ## Environment Variables
 Required in `.env.local`:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_PUBLIC_SUPABASE_URL` (Auth — CitationRate project)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Auth — CitationRate project)
+- `NEXT_PUBLIC_SEAGEO_SUPABASE_URL` (Data — seageo1 project)
+- `NEXT_PUBLIC_SEAGEO_SUPABASE_ANON_KEY` (Data — seageo1 project)
+- `SEAGEO_SERVICE_ROLE_KEY` (Data — seageo1 service role)
 - `OPENAI_API_KEY`
 - `ANTHROPIC_API_KEY`
 - `GOOGLE_AI_API_KEY`

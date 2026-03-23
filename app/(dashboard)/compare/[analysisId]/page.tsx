@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { CompetitiveResults } from "./competitive-results";
 
@@ -7,10 +7,11 @@ export default async function CompetitiveResultsPage({
 }: {
   params: { analysisId: string };
 }) {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = createServerClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) redirect("/login");
 
+  const supabase = createDataClient();
   const { data: analysis } = await (supabase.from("competitive_analyses") as any)
     .select("*")
     .eq("id", params.analysisId)

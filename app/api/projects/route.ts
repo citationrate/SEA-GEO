@@ -1,11 +1,10 @@
-import { createServiceClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 export async function GET() {
-  const supabase = createServiceClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json([], { status: 200 });
+  const { supabase, user, error } = await requireAuth();
+  if (error) return error;
 
   const { data } = await supabase
     .from("projects")
@@ -31,12 +30,8 @@ const projectSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const supabase = createServiceClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
-    }
+    const { supabase, user, error } = await requireAuth();
+    if (error) return error;
 
     const body = await request.json();
     const parsed = projectSchema.safeParse(body);
@@ -45,14 +40,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    const { data, error: dbError } = await supabase
       .from("projects")
       .insert({ ...parsed.data, user_id: user.id } as any)
       .select("id")
       .single();
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (dbError) {
+      return NextResponse.json({ error: dbError.message }, { status: 500 });
     }
 
     return NextResponse.json(data, { status: 201 });

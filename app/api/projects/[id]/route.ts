@@ -1,4 +1,4 @@
-import { createServiceClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -6,10 +6,8 @@ export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createServiceClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+  const { supabase, user, error } = await requireAuth();
+  if (error) return error;
 
   const { data: project } = await supabase
     .from("projects")
@@ -38,10 +36,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createServiceClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+  const { supabase, user, error } = await requireAuth();
+  if (error) return error;
 
   const { data: project } = await supabase
     .from("projects")
@@ -56,10 +52,10 @@ export async function PATCH(
 
   // Handle restore action
   if (body.restore === true) {
-    const { error } = await (supabase.from("projects") as any)
+    const { error: dbError } = await (supabase.from("projects") as any)
       .update({ deleted_at: null })
       .eq("id", params.id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
     return NextResponse.json({ ok: true });
   }
 
@@ -69,11 +65,11 @@ export async function PATCH(
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  const { error } = await (supabase.from("projects") as any)
+  const { error: dbError } = await (supabase.from("projects") as any)
     .update({ ...parsed.data, updated_at: new Date().toISOString() })
     .eq("id", params.id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
   return NextResponse.json({ ok: true });
 }
@@ -82,10 +78,8 @@ export async function DELETE(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createServiceClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+  const { supabase, user, error } = await requireAuth();
+  if (error) return error;
 
   // Verify project belongs to user and is not already deleted
   const { data: project } = await supabase
@@ -99,11 +93,11 @@ export async function DELETE(
   if ((project as any).user_id !== user.id) return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
 
   // Soft delete: set deleted_at instead of deleting
-  const { error } = await (supabase.from("projects") as any)
+  const { error: dbError } = await (supabase.from("projects") as any)
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", params.id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
   return NextResponse.json({ ok: true });
 }

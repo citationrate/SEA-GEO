@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createAuthServiceClient, createDataClient } from "@/lib/supabase/server";
 
 /**
- * Authenticate the current request and return the Supabase client + user.
+ * Authenticate the current request via CitationRate auth,
+ * then return the seageo1 data client + user.
  * Returns a 401 NextResponse if not authenticated.
  */
 export async function requireAuth() {
-  const supabase = createServiceClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = createAuthServiceClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) {
     return { supabase: null, user: null, error: apiError("Non autenticato", 401) } as const;
   }
+  const supabase = createDataClient();
   return { supabase, user, error: null } as const;
 }
 
@@ -24,7 +26,7 @@ export function apiError(message: string, status: number) {
  * response.
  */
 export async function requireProject(
-  supabase: ReturnType<typeof createServiceClient>,
+  supabase: ReturnType<typeof createDataClient>,
   projectId: string,
   userId: string,
 ) {

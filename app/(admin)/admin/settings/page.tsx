@@ -5,8 +5,9 @@ export const metadata = { title: "Settings Admin" };
 
 export default function AdminSettingsPage() {
   const envVars = [
-    { key: "NEXT_PUBLIC_SUPABASE_URL", set: !!process.env.NEXT_PUBLIC_SUPABASE_URL },
-    { key: "SUPABASE_SERVICE_ROLE_KEY", set: !!process.env.SUPABASE_SERVICE_ROLE_KEY },
+    { key: "NEXT_PUBLIC_SUPABASE_URL (Auth)", set: !!process.env.NEXT_PUBLIC_SUPABASE_URL },
+    { key: "NEXT_PUBLIC_SEAGEO_SUPABASE_URL (Data)", set: !!process.env.NEXT_PUBLIC_SEAGEO_SUPABASE_URL },
+    { key: "SEAGEO_SERVICE_ROLE_KEY", set: !!process.env.SEAGEO_SERVICE_ROLE_KEY },
     { key: "ANTHROPIC_API_KEY", set: !!process.env.ANTHROPIC_API_KEY },
     { key: "OPENAI_API_KEY", set: !!process.env.OPENAI_API_KEY },
     { key: "GOOGLE_AI_API_KEY", set: !!process.env.GOOGLE_AI_API_KEY },

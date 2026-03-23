@@ -1,12 +1,11 @@
-import { createServiceClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
 export async function POST(request: Request) {
   try {
-    const supabase = createServiceClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+    const { supabase, user, error } = await requireAuth();
+    if (error) return error;
 
     const { domains, brand, lang } = await request.json();
     if (!Array.isArray(domains) || !brand) {

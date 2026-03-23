@@ -1,4 +1,4 @@
-import { createServiceClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
@@ -13,9 +13,8 @@ const bodySchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const supabase = createServiceClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+    const { supabase, user, error } = await requireAuth();
+    if (error) return error;
 
     const body = await request.json();
     const parsed = bodySchema.safeParse(body);

@@ -1,8 +1,7 @@
 export const dynamic = "force-dynamic";
 
-import { createServerClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
-import { notFound } from "next/navigation";
+import { createServerClient, createDataClient } from "@/lib/supabase/server";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, Archive } from "lucide-react";
 import { ExportButtons } from "./export-buttons";
 import { RunAutoRefresh } from "./run-auto-refresh";
@@ -22,7 +21,11 @@ const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = 
 // AVI_MAIN_COMPONENTS moved to run-detail-client.tsx
 
 export default async function RunDetailPage({ params }: { params: { id: string; runId: string } }) {
-  const supabase = createServerClient();
+  const auth = createServerClient();
+  const { data: { user } } = await auth.auth.getUser();
+  if (!user) redirect("/login");
+
+  const supabase = createDataClient();
 
   const { data: run } = await supabase
     .from("analysis_runs")
@@ -37,6 +40,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     .from("projects")
     .select("name, target_brand")
     .eq("id", params.id)
+    .eq("user_id", user.id)
     .single();
 
   const { data: avi } = await supabase
@@ -100,9 +104,8 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
   // Fetch competitor AVI scores from DB (pre-computed by inngest)
   // Use service client: competitor_avi table was created via exec_sql and may lack
   // GRANT/RLS policies for the authenticated role.
-  const svc = createServiceClient();
   console.log("[DEBUG competitor_avi] BEFORE query — params.runId:", params.runId, "type:", typeof params.runId);
-  const { data: competitorAviData, error: competitorAviError } = await (svc.from("competitor_avi") as any)
+  const { data: competitorAviData, error: competitorAviError } = await (supabase.from("competitor_avi") as any)
     .select("competitor_name, avi_score, prominence_score, rank_score, sentiment_score, consistency_score, mention_count")
     .eq("run_id", params.runId);
 

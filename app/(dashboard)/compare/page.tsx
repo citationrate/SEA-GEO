@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { isProUser, isDemoUser } from "@/lib/utils/is-pro";
 import { resolveProjectId } from "@/lib/utils/resolve-project";
@@ -11,10 +11,11 @@ export default async function ComparePage({
 }: {
   searchParams: { upgrade?: string; projectId?: string };
 }) {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = createServerClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) redirect("/login");
 
+  const supabase = createDataClient();
   const { data: profile } = await supabase
     .from("profiles")
     .select("plan")

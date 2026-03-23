@@ -1,5 +1,5 @@
 // Deploy 2026-03-06
-import { createServiceClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -22,20 +22,19 @@ const patchSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServiceClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+    const { supabase, user, error } = await requireAuth();
+    if (error) return error;
 
     const projectId = request.nextUrl.searchParams.get("project_id");
     if (!projectId) return NextResponse.json({ error: "project_id richiesto" }, { status: 400 });
 
-    const { data, error } = await supabase
+    const { data, error: dbError } = await supabase
       .from("audience_segments")
       .select("*")
       .eq("project_id", projectId)
       .order("created_at", { ascending: true });
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
     return NextResponse.json(data);
   } catch {
     return NextResponse.json({ error: "Errore interno" }, { status: 500 });
@@ -44,23 +43,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
   try {
-    const supabase = createServiceClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+    const { supabase, user, error } = await requireAuth();
+    if (error) return error;
 
     const body = await request.json();
     const parsed = segmentSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { data, error } = await supabase
+    const { data, error: dbError } = await supabase
       .from("audience_segments")
       .insert(parsed.data as any)
       .select("*")
       .single();
 
-    if (error) {
-      console.error("[segments POST] Supabase error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (dbError) {
+      console.error("[segments POST] Supabase error:", dbError);
+      return NextResponse.json({ error: dbError.message }, { status: 500 });
     }
     return NextResponse.json(data, { status: 201 });
   } catch (err) {
@@ -71,23 +69,22 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const supabase = createServiceClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+    const { supabase, user, error } = await requireAuth();
+    if (error) return error;
 
     const body = await request.json();
     const parsed = patchSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
     const { id, ...updates } = parsed.data;
-    const { data, error } = await (supabase
+    const { data, error: dbError } = await (supabase
       .from("audience_segments") as any)
       .update(updates)
       .eq("id", id)
       .select("*")
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
     return NextResponse.json(data);
   } catch {
     return NextResponse.json({ error: "Errore interno" }, { status: 500 });
@@ -96,19 +93,18 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createServiceClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+    const { supabase, user, error } = await requireAuth();
+    if (error) return error;
 
     const id = request.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id richiesto" }, { status: 400 });
 
-    const { error } = await supabase
+    const { error: dbError } = await supabase
       .from("audience_segments")
       .delete()
       .eq("id", id);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Errore interno" }, { status: 500 });

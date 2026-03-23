@@ -1,15 +1,16 @@
 import { redirect } from "next/navigation";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
 import { isProUser } from "@/lib/utils/is-pro";
 import { OnboardingTour } from "@/components/onboarding-tour";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = createServerClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) redirect("/login");
 
+  const supabase = createDataClient();
   const { data: profile } = await supabase
     .from("profiles").select("*").eq("id", user.id).single();
 

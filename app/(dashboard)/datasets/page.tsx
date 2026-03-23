@@ -1,5 +1,4 @@
-import { createServerClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { isProUser } from "@/lib/utils/is-pro";
 import { getUserPlanLimits } from "@/lib/usage";
@@ -9,13 +8,12 @@ import { DatasetsPaywall } from "./datasets-paywall";
 export const metadata = { title: "Dataset" };
 
 export default async function DatasetsPage() {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = createServerClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) redirect("/login");
 
-  // Use service client to bypass RLS for plan check
-  const svc = createServiceClient();
-  const { data: profile } = await (svc.from("profiles") as any)
+  const supabase = createDataClient();
+  const { data: profile } = await (supabase.from("profiles") as any)
     .select("plan")
     .eq("id", user.id)
     .single();

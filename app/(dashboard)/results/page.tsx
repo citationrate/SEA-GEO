@@ -1,17 +1,33 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createDataClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { ResultsTable } from "./results-table";
 import { ResultsHeader, ResultsEmpty } from "./results-header";
 
 export const metadata = { title: "Risultati" };
 
 export default async function ResultsPage() {
-  const supabase = createServerClient();
+  const auth = createServerClient();
+  const { data: { user } } = await auth.auth.getUser();
+  if (!user) redirect("/login");
 
-  const { data: runs } = await supabase
-    .from("analysis_runs")
-    .select("*")
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
+  const supabase = createDataClient();
+
+  // Get user's projects first, then filter runs by those projects
+  const { data: userProjects } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("user_id", user.id)
+    .is("deleted_at", null);
+  const userProjectIds = (userProjects ?? []).map((p: any) => p.id);
+
+  const { data: runs } = userProjectIds.length > 0
+    ? await supabase
+        .from("analysis_runs")
+        .select("*")
+        .in("project_id", userProjectIds)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+    : { data: [] };
 
   const projectIds = Array.from(new Set((runs ?? []).map((r: any) => r.project_id)));
   const { data: projects } = projectIds.length > 0

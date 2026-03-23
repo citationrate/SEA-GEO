@@ -1,5 +1,5 @@
-import { createServerClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
+import { createServerClient, createDataClient } from "@/lib/supabase/server";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Cpu, Settings, Sparkles } from "lucide-react";
 import { AnalysisLauncher } from "./analysis-launcher";
 import { AnalysisProgress } from "./analysis-progress";
@@ -11,12 +11,17 @@ import { AutoLaunch } from "./auto-launch";
 import { T } from "@/components/translated-label";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
-  const supabase = createServerClient();
+  const auth = createServerClient();
+  const { data: { user } } = await auth.auth.getUser();
+  if (!user) redirect("/login");
+
+  const supabase = createDataClient();
 
   const { data: project } = await supabase
     .from("projects")
     .select("*")
     .eq("id", params.id)
+    .eq("user_id", user.id)
     .single();
 
   if (!project) notFound();

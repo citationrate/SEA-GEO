@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 
@@ -6,9 +6,8 @@ export async function POST(
   _req: Request,
   { params }: { params: { runId: string } },
 ) {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { supabase, user, error } = await requireAuth();
+  if (error) return error;
 
   // Verify ownership
   const { data: run } = await supabase
@@ -34,11 +33,11 @@ export async function POST(
   }
 
   const token = nanoid(16);
-  const { error } = await (supabase.from("analysis_runs") as any)
+  const { error: dbError } = await (supabase.from("analysis_runs") as any)
     .update({ share_token: token, shared_at: new Date().toISOString() })
     .eq("id", params.runId);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
   return NextResponse.json({ token });
 }
@@ -47,9 +46,8 @@ export async function DELETE(
   _req: Request,
   { params }: { params: { runId: string } },
 ) {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { supabase, user, error } = await requireAuth();
+  if (error) return error;
 
   const { data: run } = await supabase
     .from("analysis_runs")
@@ -68,11 +66,11 @@ export async function DELETE(
 
   if (!project) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { error } = await (supabase.from("analysis_runs") as any)
+  const { error: dbError } = await (supabase.from("analysis_runs") as any)
     .update({ share_token: null, shared_at: null })
     .eq("id", params.runId);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
   return NextResponse.json({ success: true });
 }

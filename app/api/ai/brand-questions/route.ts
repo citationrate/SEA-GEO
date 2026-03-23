@@ -1,11 +1,10 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
 export async function POST(request: Request) {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { supabase, user, error } = await requireAuth();
+  if (error) return error;
 
   const body = await request.json();
   console.log("[BRAND-QUESTIONS] Request received:", JSON.stringify(body).slice(0, 300));

@@ -1,14 +1,20 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createDataClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { ProjectsList } from "./projects-list";
 import { ProjectsHeader } from "./projects-header";
 
 export const metadata = { title: "Progetti" };
 
 export default async function ProjectsPage() {
-  const supabase = createServerClient();
+  const auth = createServerClient();
+  const { data: { user } } = await auth.auth.getUser();
+  if (!user) redirect("/login");
+
+  const supabase = createDataClient();
   const { data: projects } = await supabase
     .from("projects")
     .select("id, name, target_brand, language, created_at")
+    .eq("user_id", user.id)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 

@@ -1,11 +1,10 @@
-import { createServiceClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
 export async function POST(request: Request) {
-  const supabase = createServiceClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+  const { supabase, user, error } = await requireAuth();
+  if (error) return error;
 
   try {
     const { brandA, brandB, customDriver, sector } = await request.json();

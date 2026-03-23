@@ -1,4 +1,4 @@
-import { createServiceClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { getServerTranslator, getLocaleFromRequest } from "@/lib/i18n/server";
@@ -8,13 +8,14 @@ export async function GET(
   request: Request,
   { params }: { params: { runId: string } }
 ) {
-  const supabase = createServiceClient();
+  const { supabase, user, error } = await requireAuth();
+  if (error) return error;
+
   const runId = params.runId;
   const locale = getLocaleFromRequest(request);
   const t = getServerTranslator(locale);
 
   // Check user plan
-  const { data: { user } } = await supabase.auth.getUser();
   let isPro = false;
   if (user) {
     const { data: profile } = await (supabase.from("profiles") as any)

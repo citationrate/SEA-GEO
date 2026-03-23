@@ -1,18 +1,17 @@
-import { createServiceClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { isProUser } from "@/lib/utils/is-pro";
 
 export async function GET() {
-  const supabase = createServiceClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { supabase, user, error } = await requireAuth();
+  if (error) return error;
 
-  const { data, error } = await (supabase.from("profiles") as any)
+  const { data, error: dbError } = await (supabase.from("profiles") as any)
     .select("*")
     .eq("id", user.id)
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
   // Enrich plan from user_metadata.is_pro (same logic as dashboard layout)
   const profile = data as any;
@@ -24,9 +23,8 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const supabase = createServiceClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { supabase, user, error } = await requireAuth();
+  if (error) return error;
 
   const body = await request.json();
 
@@ -52,11 +50,11 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "No valid fields" }, { status: 400 });
   }
 
-  const { error } = await (supabase.from("profiles") as any)
+  const { error: dbError } = await (supabase.from("profiles") as any)
     .update(allowed)
     .eq("id", user.id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
   return NextResponse.json({ ok: true });
 }

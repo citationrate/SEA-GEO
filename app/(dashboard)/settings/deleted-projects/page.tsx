@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { DeletedProjectsList } from "./deleted-projects-list";
 import { T } from "@/components/translated-label";
@@ -6,10 +6,11 @@ import { T } from "@/components/translated-label";
 export const metadata = { title: "Progetti eliminati" };
 
 export default async function DeletedProjectsPage() {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = createServerClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) return null;
 
+  const supabase = createDataClient();
   const { data: projects } = await (supabase.from("projects") as any)
     .select("id, name, target_brand, deleted_at")
     .eq("user_id", user.id)

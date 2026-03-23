@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { AdminSidebar } from "./admin-sidebar";
 
 export const metadata = { title: { default: "Admin — AVI", template: "%s | Admin AVI" } };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = createServerClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) redirect("/login");
 
+  const supabase = createDataClient();
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")

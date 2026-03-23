@@ -1,5 +1,4 @@
-import { createServerClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
 import { resolveProjectId } from "@/lib/utils/resolve-project";
 
@@ -12,9 +11,11 @@ export default async function DashboardPage({
 }: {
   searchParams: { projectId?: string; model?: string };
 }) {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = createServerClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) return <DashboardClient aviScore={null} aviTrend={null} stats={[]} trendData={[]} recentRuns={[]} competitorBarData={[]} projects={[]} />;
+
+  const supabase = createDataClient();
 
   // Get all projects for this user
   const { data: projects } = await supabase
@@ -170,12 +171,11 @@ export default async function DashboardPage({
   ];
 
   // Competitor bar data — use competitor_avi scores from the latest completed run
-  const svc = createServiceClient();
   // Find the most recent completed run among the filtered runs
   const latestCompletedRun = runs.find((r: any) => r.status === "completed");
   let competitorBarData: { name: string; avi: number }[] = [];
   if (latestCompletedRun) {
-    const { data: compAviRows } = await (svc.from("competitor_avi") as any)
+    const { data: compAviRows } = await (supabase.from("competitor_avi") as any)
       .select("competitor_name, avi_score")
       .eq("run_id", (latestCompletedRun as any).id)
       .order("avi_score", { ascending: false })

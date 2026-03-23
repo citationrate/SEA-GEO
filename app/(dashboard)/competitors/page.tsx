@@ -1,6 +1,5 @@
 import { Suspense } from "react";
-import { createServerClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
 
 import { resolveProjectId } from "@/lib/utils/resolve-project";
@@ -13,10 +12,11 @@ export default async function CompetitorsPage({
 }: {
   searchParams: { projectId?: string; model?: string };
 }) {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = createServerClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) return null;
 
+  const supabase = createDataClient();
   const { data: projects } = await supabase
     .from("projects")
     .select("id, name, target_brand")
@@ -276,8 +276,7 @@ export default async function CompetitorsPage({
   // Fetch competitor AVI scores per project (case-insensitive keys)
   const compAviMap = new Map<string, number>();
   for (const pid of targetIds) {
-    const svc = createServiceClient();
-    const { data: compAviRows } = await (svc.from("competitor_avi") as any)
+    const { data: compAviRows } = await (supabase.from("competitor_avi") as any)
       .select("competitor_name, avi_score")
       .eq("project_id", pid)
       .order("computed_at", { ascending: false });

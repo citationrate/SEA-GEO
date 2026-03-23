@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, createDataClient } from "@/lib/supabase/client";
 
 const getCurrentPeriod = () => new Date().toISOString().slice(0, 7);
 
@@ -67,10 +67,11 @@ export function useUsage(): UsageData {
   useEffect(() => {
     async function load() {
       try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const authClient = createClient();
+        const { data: { user } } = await authClient.auth.getUser();
         if (!user) { setLoading(false); return; }
 
+        const supabase = createDataClient();
         // Get profile with plan_id
         const { data: profile } = await supabase
           .from("profiles")

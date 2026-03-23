@@ -1,6 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const COOKIE_DOMAIN = process.env.NODE_ENV === "production" ? ".citationrate.com" : undefined;
+const LOGIN_URL = process.env.NODE_ENV === "production"
+  ? "https://suite.citationrate.com"
+  : "/login";
+
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
@@ -20,7 +25,12 @@ export async function middleware(request: NextRequest) {
         setAll: (toSet: { name: string; value: string; options?: object }[]) => {
           toSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
-          toSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options as never));
+          toSet.forEach(({ name, value, options }) => {
+            const opts = COOKIE_DOMAIN
+              ? { ...(options as Record<string, unknown>), domain: COOKIE_DOMAIN }
+              : options;
+            response.cookies.set(name, value, opts as never);
+          });
         },
       },
     }
@@ -32,7 +42,12 @@ export async function middleware(request: NextRequest) {
   const isPublic = path === "/" || path.startsWith("/share/") || path.startsWith("/auth/");
 
   if (!user && !isAuthRoute && !isPublic) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    // In production, redirect to CitationRate login (shared auth)
+    // In dev, redirect to local /login page
+    if (LOGIN_URL.startsWith("http")) {
+      return NextResponse.redirect(LOGIN_URL);
+    }
+    return NextResponse.redirect(new URL(LOGIN_URL, request.url));
   }
   if (user && isAuthRoute) {
     return NextResponse.redirect(new URL("/dashboard", request.url));

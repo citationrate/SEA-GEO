@@ -1,5 +1,4 @@
-import { createServerClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { getUserPlanLimits, getCurrentUsage } from "@/lib/usage";
 import { SettingsClient } from "./settings-client";
 import { SettingsHeader } from "./settings-sections";
@@ -7,10 +6,11 @@ import { SettingsHeader } from "./settings-sections";
 export const metadata = { title: "Impostazioni" };
 
 export default async function SettingsPage() {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = createServerClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) return null;
 
+  const supabase = createDataClient();
   const { data: profile } = await (supabase.from("profiles") as any)
     .select("*")
     .eq("id", user.id)

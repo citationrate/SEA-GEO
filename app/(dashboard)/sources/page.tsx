@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
 
 import { resolveProjectId } from "@/lib/utils/resolve-project";
@@ -21,10 +21,11 @@ export default async function SourcesPage({
 }: {
   searchParams: { projectId?: string; model?: string };
 }) {
-  const supabase = createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = createServerClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) return null;
 
+  const supabase = createDataClient();
   const { data: projects } = await supabase
     .from("projects")
     .select("id, name, target_brand")
