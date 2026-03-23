@@ -320,22 +320,43 @@ Contesto brand:
 ${userContextBlock}${websiteBlock}${existingBlock}
 Genera esattamente ${count} query uniche e realistiche in ${lang}.
 
+OBIETTIVO CHIAVE: Le query devono far emergere COMPETITOR COMMERCIALI — aziende, studi, agenzie o servizi che un cliente potrebbe scegliere IN ALTERNATIVA a "${project.target_brand}".
+
+Evita formulazioni che farebbero emergere:
+- Enti governativi o pubblici (Ministero, INPS, INAIL, Regione, Comune)
+- Autorità regolatorie (IVASS, Garante, Autorità)
+- Sindacati o patronati (CGIL, CISL, UIL, CAF)
+- Associazioni consumatori (Altroconsumo, Codacons)
+- Portali informativi o sportelli pubblici
+
+Invece di domande generiche sulla categoria, chiedi CHI FORNISCE il servizio:
+❌ SBAGLIATO: "Quali sono i diritti dopo un incidente stradale?"
+✅ GIUSTO: "Quali aziende o studi specializzati aiutano a ottenere risarcimenti dopo un incidente stradale?"
+❌ SBAGLIATO: "Come si ottiene il risarcimento danni?"
+✅ GIUSTO: "Chi sono i migliori professionisti o società per ottenere il massimo risarcimento danni in Italia?"
+❌ SBAGLIATO: "Quali sono le migliori soluzioni fiscali?"
+✅ GIUSTO: "Quali studi o società di consulenza fiscale aiutano le PMI italiane a ridurre le tasse legalmente?"
+
+La query deve sempre puntare verso FORNITORI COMMERCIALI del servizio, non verso informazioni sul servizio stesso.
+
 DUE TIPOLOGIE DI QUERY:
 
-${nTofu} TOFU — Domande di scoperta generiche sul settore.
+${nTofu} TOFU — Domande di scoperta generiche sul settore che fanno emergere AZIENDE e BRAND.
 L'utente sta esplorando il settore, non conosce ancora i brand.
 NON menzionare "${project.target_brand}" né alcun competitor.
-Esempi di angolazione: panoramica di mercato, tendenze, criteri di scelta, problemi comuni del settore, cosa cercare in un fornitore/prodotto.
+Le query devono chiedere "quali aziende/studi/servizi..." o "chi offre..." — NON "cos'è" o "quali sono i diritti".
+Esempi di angolazione: quali aziende dominano il settore, chi sono i leader, quali servizi scegliere, migliori fornitori.
 
-${nMofu} MOFU — Domande su bisogni specifici che il brand risolve, MA senza mai nominare "${project.target_brand}" né alcun competitor.
-L'utente descrive un problema, un'esigenza o una situazione concreta che "${project.target_brand}" potrebbe risolvere.
+${nMofu} MOFU — Domande su bisogni specifici che il brand risolve, formulate per far emergere FORNITORI COMMERCIALI, MA senza mai nominare "${project.target_brand}" né alcun competitor.
+L'utente descrive un problema, un'esigenza o una situazione concreta che "${project.target_brand}" potrebbe risolvere, chiedendo CHI può aiutarlo.
 Lo scopo è intercettare i BISOGNI LATENTI: l'utente chiede aiuto all'AI descrivendo cosa gli serve, e noi misuriamo se l'AI risponde suggerendo "${project.target_brand}".
 Queste query devono:
 - Descrivere un bisogno specifico legato ai prodotti/servizi reali del brand (usa il contenuto del sito web)
+- Chiedere esplicitamente CHI fornisce il servizio o QUALE AZIENDA può aiutare
 - Usare il linguaggio che un potenziale cliente userebbe
 - NON contenere MAI il nome del brand né dei competitor — sono completamente unbranded
 - Essere abbastanza specifiche da "puntare" implicitamente verso il brand senza nominarlo
-Esempi di struttura: "Cerco un [tipo servizio] che [caratteristica specifica del brand]", "Ho bisogno di [soluzione a problema che il brand risolve]", "Quale [categoria] è migliore per chi ha [esigenza specifica]?"
+Esempi di struttura: "Quali aziende offrono [tipo servizio] per [esigenza specifica]?", "Chi sono i migliori [professionisti/società] per [problema che il brand risolve]?", "Cerco un [tipo servizio] che [caratteristica specifica del brand] — chi mi consigliate?"
 
 Regole generali:
 - Ogni query deve essere semanticamente distinta dalle altre
@@ -363,12 +384,15 @@ function buildFollowUpPrompt(
 
   return `Sei un esperto di AI Search Optimization. Devi generare ${missing} query aggiuntive per il settore di "${project.target_brand}" (settore: ${project.sector ?? "non specificato"}).
 
+OBIETTIVO: Le query devono far emergere COMPETITOR COMMERCIALI — aziende, studi, agenzie, servizi che un cliente potrebbe scegliere. NON enti pubblici, sindacati, patronati, autorità regolatorie o associazioni consumatori.
+Chiedi sempre CHI FORNISCE il servizio, non informazioni generiche sul servizio.
+
 Query già generate (NON duplicarle):
 ${allExisting.map((t) => `- ${t}`).join("\n")}
 
 Genera esattamente ${missing} query nuove in ${lang}:
-${nTofuMissing > 0 ? `${nTofuMissing} TOFU — domande generiche di scoperta sul settore, SENZA citare alcun brand` : ""}
-${nMofuMissing > 0 ? `${nMofuMissing} MOFU — domande su bisogni specifici che "${project.target_brand}" risolve, MA completamente unbranded (nessun nome brand). L'utente descrive un bisogno/problema, noi misuriamo se l'AI consiglia il brand.` : ""}
+${nTofuMissing > 0 ? `${nTofuMissing} TOFU — domande che fanno emergere AZIENDE del settore (chi sono i leader, quali servizi scegliere), SENZA citare alcun brand` : ""}
+${nMofuMissing > 0 ? `${nMofuMissing} MOFU — domande su bisogni specifici che "${project.target_brand}" risolve, formulate chiedendo CHI può aiutare (quale azienda, quale studio), MA completamente unbranded (nessun nome brand).` : ""}
 
 NESSUNA query deve contenere il nome "${project.target_brand}" né dei competitor.
 

@@ -111,6 +111,30 @@ function normalizeCompetitorName(
   return proper;
 }
 
+/* ─── Institutional blocklist (final safety net) ─── */
+
+const INSTITUTIONAL_BLOCKLIST = [
+  "inail", "inps", "ivass", "consap", "ministero",
+  "agenzia delle", "autorità", "autorita", "garante", "tribunale",
+  "corte", "comune di", "regione", "provincia",
+  "prefettura", "camera dei", "senato", "parlamento",
+  "anmil", "inca", "cgil", "cisl", "uil",
+  "patronato", "caf ", "adiconsum", "codacons",
+  "altroconsumo", "federconsumatori", "uci ",
+  "portale", "sportello", "ufficio pubblico",
+  "consob", "agcm", "anac", "mise",
+  "confindustria", "confcommercio", "confesercenti",
+  "ania", "abi", "ordine degli", "ordine dei",
+  "asl", "inpdap", "agenzia entrate",
+  "guardia di finanza", "carabinieri", "polizia",
+  "cassazione", "appello",
+];
+
+function isInstitutional(name: string): boolean {
+  const lower = name.toLowerCase().trim();
+  return INSTITUTIONAL_BLOCKLIST.some(kw => lower.includes(kw));
+}
+
 /* ─── AVI computation using canonical calculateAVI ─── */
 
 async function computeAndSaveAVI(
@@ -367,7 +391,7 @@ async function executePrompt(
     console.warn(`[executePrompt] EXTRACTION WARNING: model=${task.model} brand="${task.targetBrand}" text=${rawText.length}chars but brand_mentioned=false, competitors=0. First 300 chars: ${rawText.slice(0, 300)}`);
   }
 
-  // Save response_analysis (normalize competitor names consistently)
+  // Save response_analysis (normalize competitor names consistently + institutional filter)
   const normalizedCompNames = extraction.competitors_found
     .map(c => {
       const n = normalizeCompetitorName(c.name, task.targetBrand, normCache);
@@ -376,9 +400,16 @@ async function executePrompt(
       }
       return n ? canonicalizeCompetitorName(extractBrandOnly(n)) : null;
     })
-    .filter((n): n is string => n != null && n !== task.targetBrand);
+    .filter((n): n is string => n != null && n !== task.targetBrand)
+    .filter(n => {
+      if (isInstitutional(n)) {
+        console.log(`[executePrompt] competitor FILTERED by institutional blocklist: "${n}"`);
+        return false;
+      }
+      return true;
+    });
   if (normalizedCompNames.length < extraction.competitors_found.length) {
-    console.log(`[executePrompt] competitors after normalization: ${normalizedCompNames.length}/${extraction.competitors_found.length} kept: [${normalizedCompNames.join(", ")}]`);
+    console.log(`[executePrompt] competitors after normalization+filter: ${normalizedCompNames.length}/${extraction.competitors_found.length} kept: [${normalizedCompNames.join(", ")}]`);
   }
 
   await (supabase.from("response_analysis") as any)
@@ -397,7 +428,7 @@ async function executePrompt(
       avi_components: null,
     });
 
-  // Save competitor_mentions (with same normalization as competitors table)
+  // Save competitor_mentions (with same normalization + institutional filter as competitors table)
   if (extraction.competitors_found.length > 0) {
     const mentions = extraction.competitors_found
       .map((c) => {
@@ -405,6 +436,7 @@ async function executePrompt(
         if (!normalized) return null;
         const canonical = canonicalizeCompetitorName(extractBrandOnly(normalized));
         if (canonical === task.targetBrand) return null;
+        if (isInstitutional(canonical)) return null;
         return {
           run_id: task.runId,
           project_id: task.projectId,

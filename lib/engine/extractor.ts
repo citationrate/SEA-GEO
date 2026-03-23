@@ -355,6 +355,43 @@ function validateSources<T extends { domain: string | null }>(
   });
 }
 
+/** Sector-aware guidance for competitor extraction */
+function getSectorCompetitorGuidance(sector?: string): string {
+  const s = (sector ?? "").toLowerCase();
+  const sectorMap: Record<string, string> = {
+    "legal": "law firms, consulting firms, claims management companies, legal-tech platforms",
+    "legale": "studi legali, società di consulenza, società di gestione sinistri, piattaforme legal-tech",
+    "financial": "financial advisors, brokers, insurance companies, fintech platforms, consulting firms",
+    "finanziario": "consulenti finanziari, broker, compagnie assicurative, piattaforme fintech, società di consulenza",
+    "insurance": "insurance companies, brokers, claims management firms, insurtech platforms",
+    "assicurativo": "compagnie assicurative, broker, società di gestione sinistri, piattaforme insurtech",
+    "health": "clinics, medical centers, health platforms, private hospitals, health-tech companies",
+    "salute": "cliniche, centri medici, piattaforme sanitarie, ospedali privati, aziende health-tech",
+    "retail": "online stores, marketplaces, brands, e-commerce platforms",
+    "ecommerce": "online stores, marketplaces, brands, e-commerce platforms",
+    "tech": "SaaS companies, software providers, digital agencies, tech platforms",
+    "software": "SaaS companies, software providers, digital agencies, tech platforms",
+    "food": "food brands, restaurant chains, food companies, food delivery platforms",
+    "tourism": "hotels, tour operators, booking platforms, travel agencies",
+    "turismo": "hotel, tour operator, piattaforme di prenotazione, agenzie di viaggio",
+    "local": "local agencies, studios, local businesses, professional firms",
+  };
+
+  let validTypes = "";
+  for (const [key, types] of Object.entries(sectorMap)) {
+    if (s.includes(key)) {
+      validTypes = types;
+      break;
+    }
+  }
+
+  if (!validTypes) {
+    validTypes = "companies, agencies, studios, or services that a customer could hire or buy from";
+  }
+
+  return `For this sector (${sector ?? "generic"}), valid competitors are: ${validTypes}.`;
+}
+
 function positionScore(rank: number | null, nCompetitors: number): number {
   if (!rank || rank === 0) return 0.5; // presente ma non classificabile
   if (nCompetitors === 0) {
@@ -389,14 +426,20 @@ async function extractCompetitorsTopicsSources(
   const lang = language === "en" ? "English" : language === "fr" ? "French" : language === "de" ? "German" : language === "es" ? "Spanish" : "Italian";
   const langInstr = `IMPORTANT: All extracted topics, labels, and context text MUST be in ${lang} — match the language of the response being analyzed.`;
 
+  const sectorCompetitorGuidance = getSectorCompetitorGuidance(sector);
+
   const prompt = `You are an AI analyst. The brand "${targetBrand}" is NOT present in this response.
 Sector: ${sector ?? "generic"}
 Brand type: ${brandType ?? "manufacturer"}
 
 ${langInstr}
 
+Extract ONLY commercial competitors — companies, agencies, studios, or services that a customer could choose INSTEAD of "${targetBrand}" for the same service.
+
+${sectorCompetitorGuidance}
+
 Extract:
-- competitors_found: ALL brands/companies/services mentioned that compete with the target brand
+- competitors_found: ALL commercial brands/companies/services mentioned that compete with the target brand
 - topics: main topics discussed (in ${lang})
 - sources: most relevant sites/domains cited
 
@@ -421,7 +464,19 @@ Examples: 'Samsung Galaxy S24 Ultra' → 'Samsung', 'Asus ProArt Studiobook' →
 Return the brand name only, not the full product name. Deduplicate: if the same brand appears multiple times with different products, return it once.
 Extract ONLY commercial competitors — companies/services a user could choose instead of "${targetBrand}".
 INCLUDE: companies, brands, services that sell/provide the same service and compete for the same customer.
-EXCLUDE: "${targetBrand}" itself (any form), sub-brands/variants, generic descriptions without a proper name, government/public bodies (INAIL, INPS, IVASS, MISE, Ministero, Regione, Comune, ASL), regulators (Autorità, Garante, CONSOB, AGCM), courts/tribunals, industry associations (Confindustria, ANIA, ABI, Ordine), government portals.
+EXCLUDE: "${targetBrand}" itself (any form), sub-brands/variants, generic descriptions without a proper name.
+
+NEVER extract:
+- Government agencies (Ministero, Regione, INAIL, INPS, CONSAP, Comune, Provincia, Prefettura)
+- Regulatory bodies (IVASS, Garante, Autorità, CONSOB, AGCM, ANAC)
+- Trade unions or patronati (CGIL, CISL, UIL, INCA, ANMIL, patronato, CAF)
+- Consumer associations (Altroconsumo, Codacons, Adiconsum, Federconsumatori)
+- Public portals or offices (portale automobilista, sportello pubblico, ufficio pubblico)
+- Courts or legal institutions (Tribunale, Corte, Cassazione)
+- Industry associations (Confindustria, ANIA, ABI, Ordine degli/dei, Confcommercio)
+
+If a name sounds like an institution, exclude it. If a name sounds like a commercial company, include it.
+Return ONLY company/brand names, never product names or model numbers.
 
 SOURCES — extract ONLY URLs/domains LITERALLY written in the response. Do NOT infer domains from brand names. If no explicit URLs appear, return "sources": [].
 source_type: media|review|ecommerce|social|competitor|wikipedia|other
@@ -572,12 +627,28 @@ You MUST distinguish between:
 Only set brand_mentioned=true if the response refers to the SPECIFIC COMPANY "${targetBrand}"${brandDomain ? ` (website: ${brandDomain})` : ""}, NOT when category words appear generically.`
     : "";
 
+  const sectorGuidance = getSectorCompetitorGuidance(sector);
+
   const competitorExclusionRules = `Extract ONLY the parent brand/company name for each competitor mentioned. Never include product model names, version numbers, or product lines.
 Examples: 'Samsung Galaxy S24 Ultra' → 'Samsung', 'Asus ProArt Studiobook' → 'Asus', 'Google Pixel Watch' → 'Google', 'Microsoft Surface' → 'Microsoft', 'Dell XPS 14' → 'Dell'.
 Return the brand name only, not the full product name. Deduplicate: if the same brand appears multiple times with different products, return it once.
-Extract ONLY commercial competitors — companies/services a user could choose instead of "${targetBrand}".
+Extract ONLY commercial competitors — companies, agencies, studios, or services that a customer could choose INSTEAD of "${targetBrand}" for the same service.
 INCLUDE: companies, brands, services that sell/provide the same service and compete for the same customer.
-EXCLUDE: "${targetBrand}" itself (any form), sub-brands/variants, generic descriptions without a proper name, government/public bodies (INAIL, INPS, IVASS, MISE, Ministero, Regione, Comune, ASL), regulators (Autorità, Garante, CONSOB, AGCM), courts/tribunals, industry associations (Confindustria, ANIA, ABI, Ordine), government portals.`;
+
+${sectorGuidance}
+
+NEVER extract:
+- Government agencies (Ministero, Regione, INAIL, INPS, CONSAP, Comune, Provincia, Prefettura)
+- Regulatory bodies (IVASS, Garante, Autorità, CONSOB, AGCM, ANAC)
+- Trade unions or patronati (CGIL, CISL, UIL, INCA, ANMIL, patronato, CAF)
+- Consumer associations (Altroconsumo, Codacons, Adiconsum, Federconsumatori)
+- Public portals or offices (portale automobilista, sportello pubblico, ufficio pubblico)
+- Courts or legal institutions (Tribunale, Corte, Cassazione)
+- Industry associations (Confindustria, ANIA, ABI, Ordine degli/dei, Confcommercio)
+- "${targetBrand}" itself (any form), sub-brands/variants, generic descriptions without a proper name
+
+If a name sounds like an institution, exclude it. If a name sounds like a commercial company, include it.
+Return ONLY company/brand names, never product names or model numbers.`;
 
   const systemPrompt = `You are an AI analyst. Extract structured data from an AI response. All text fields MUST be in ${lang}.
 
