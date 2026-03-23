@@ -264,6 +264,18 @@ async function fetchWebsiteContext(url: string): Promise<string> {
   return sections.join("\n\n");
 }
 
+function buildSiteAnalysisBlock(siteAnalysis: any): string {
+  if (!siteAnalysis) return "";
+  const parts: string[] = ["\nContesto aggiuntivo dall'analisi automatica del sito:"];
+  if (siteAnalysis.main_service) parts.push(`- Servizio principale: ${siteAnalysis.main_service}`);
+  if (siteAnalysis.target_audience) parts.push(`- Pubblico target: ${siteAnalysis.target_audience}`);
+  if (siteAnalysis.value_proposition) parts.push(`- Value proposition: ${siteAnalysis.value_proposition}`);
+  if (siteAnalysis.sector_keywords?.length) parts.push(`- Parole chiave settore: ${siteAnalysis.sector_keywords.join(", ")}`);
+  if (siteAnalysis.tone) parts.push(`- Tono comunicazione: ${siteAnalysis.tone}`);
+  if (siteAnalysis.geography) parts.push(`- Copertura geografica: ${siteAnalysis.geography}`);
+  return parts.length > 1 ? parts.join("\n") + "\n\nUsa queste informazioni per generare query più precise e contestualizzate al settore del brand.\n" : "";
+}
+
 function buildSystemPrompt(
   project: any,
   existingTexts: string[],
@@ -317,7 +329,7 @@ Contesto brand:
 - Sito: ${project.website_url ?? "non specificato"}
 - Competitor noti: ${competitors}
 - Contesto aggiuntivo: ${project.market_context ?? "nessuno"}
-${userContextBlock}${websiteBlock}${existingBlock}
+${userContextBlock}${websiteBlock}${buildSiteAnalysisBlock(project.site_analysis)}${existingBlock}
 Genera esattamente ${count} query uniche e realistiche in ${lang}.
 
 OBIETTIVO CHIAVE: Le query devono far emergere COMPETITOR COMMERCIALI — aziende, studi, agenzie o servizi che un cliente potrebbe scegliere IN ALTERNATIVA a "${project.target_brand}".

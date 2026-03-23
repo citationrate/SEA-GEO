@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, type KeyboardEvent } from "react";
+import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, X, Loader2, Lock, Check, Search, ChevronDown } from "lucide-react";
+import { ArrowLeft, X, Loader2, Lock, Check, Search, ChevronDown, Globe, Sparkles } from "lucide-react";
 import { PROVIDER_GROUPS, DEMO_MODEL_IDS } from "@/lib/engine/models";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
@@ -149,6 +149,46 @@ export default function NewProjectPage() {
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const countryRef = useRef<HTMLDivElement>(null);
 
+  // Site analysis
+  const [siteAnalysis, setSiteAnalysis] = useState<any>(null);
+  const [siteAnalysisLoading, setSiteAnalysisLoading] = useState(false);
+  const [siteAnalysisError, setSiteAnalysisError] = useState("");
+  const analyzedUrlRef = useRef("");
+
+  const analyzeSite = useCallback(async (url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed || trimmed.length < 5) return;
+    if (analyzedUrlRef.current === trimmed) return;
+    analyzedUrlRef.current = trimmed;
+
+    setSiteAnalysisLoading(true);
+    setSiteAnalysisError("");
+    setSiteAnalysis(null);
+    try {
+      const res = await fetch("/api/projects/analyze-site", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmed }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setSiteAnalysisError(data.error || t("projects.siteAnalysisError"));
+        return;
+      }
+      const { analysis } = await res.json();
+      setSiteAnalysis(analysis);
+
+      // Pre-fill competitor suggestions if user hasn't entered any
+      if (analysis.competitor_signals?.length > 0 && competitors.length === 0) {
+        setCompetitors(analysis.competitor_signals.slice(0, 5));
+      }
+    } catch {
+      setSiteAnalysisError(t("projects.siteAnalysisError"));
+    } finally {
+      setSiteAnalysisLoading(false);
+    }
+  }, [competitors.length, t]);
+
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (countryRef.current && !countryRef.current.contains(e.target as Node)) {
@@ -255,6 +295,7 @@ export default function NewProjectPage() {
           language,
           country: countries.length > 0 ? countries.join(", ") : null,
           models_config: getModelsConfig(),
+          site_analysis: siteAnalysis || null,
         }),
       });
 
@@ -356,9 +397,72 @@ export default function NewProjectPage() {
             {t("projects.website")}
             <InfoTooltip text={t("projects.websiteTooltip")} />
           </label>
-          <input type="text" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)}
-            placeholder={t("projects.websitePlaceholder")} className="input-base" />
+          <div className="relative">
+            <input type="text" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)}
+              onBlur={() => analyzeSite(websiteUrl)}
+              placeholder={t("projects.websitePlaceholder")} className="input-base" />
+            {siteAnalysisLoading && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              </div>
+            )}
+          </div>
+          {siteAnalysisError && (
+            <p className="text-xs text-muted-foreground">{siteAnalysisError}</p>
+          )}
         </div>
+
+        {/* Site analysis results */}
+        {siteAnalysis && (
+          <div className="rounded-[2px] border border-primary/30 bg-primary/5 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <p className="text-sm font-semibold text-foreground">{t("projects.siteAnalyzed")}</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              {siteAnalysis.main_service && (
+                <div>
+                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{t("projects.detectedSector")}</p>
+                  <p className="text-foreground">{siteAnalysis.main_service}</p>
+                </div>
+              )}
+              {siteAnalysis.target_audience && (
+                <div>
+                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{t("projects.targetAudience")}</p>
+                  <p className="text-foreground">{siteAnalysis.target_audience}</p>
+                </div>
+              )}
+              {siteAnalysis.value_proposition && (
+                <div className="sm:col-span-2">
+                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{t("projects.valueProposition")}</p>
+                  <p className="text-foreground">{siteAnalysis.value_proposition}</p>
+                </div>
+              )}
+              {siteAnalysis.tone && (
+                <div>
+                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{t("projects.tone")}</p>
+                  <p className="text-foreground capitalize">{siteAnalysis.tone}</p>
+                </div>
+              )}
+              {siteAnalysis.geography && (
+                <div>
+                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{t("projects.geography")}</p>
+                  <p className="text-foreground capitalize">{siteAnalysis.geography}</p>
+                </div>
+              )}
+              {siteAnalysis.sector_keywords?.length > 0 && (
+                <div className="sm:col-span-2">
+                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-1">{t("projects.sectorKeywords")}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {siteAnalysis.sector_keywords.map((kw: string) => (
+                      <span key={kw} className="px-2 py-0.5 rounded-full text-[0.6875rem] font-medium border border-primary/20 bg-primary/5 text-foreground">{kw}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Competitor */}
         <div className="space-y-1.5">

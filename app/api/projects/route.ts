@@ -20,12 +20,15 @@ export async function GET() {
 const projectSchema = z.object({
   name: z.string().min(1),
   target_brand: z.string().min(1),
+  sector: z.string().nullable().default(null),
+  brand_type: z.string().nullable().default(null),
   website_url: z.string().nullable().default(null),
   known_competitors: z.array(z.string()).default([]),
   market_context: z.string().nullable().default(null),
   language: z.enum(["it", "en"]),
   country: z.string().nullable().default(null),
   models_config: z.array(z.string()).min(1).default(["gpt-5.4-mini"]),
+  site_analysis: z.any().nullable().default(null),
 });
 
 export async function POST(request: Request) {

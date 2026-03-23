@@ -325,6 +325,7 @@ interface PromptTask {
   browsing: boolean;
   sector: string | null;
   brandType: string | null;
+  sectorKeywords: string[];
 }
 
 async function executePrompt(
@@ -378,7 +379,11 @@ async function executePrompt(
 
   if (!rawText) return;
 
-  const extraction = await extractFromResponse(rawText, task.targetBrand, task.sector ?? undefined, task.brandType ?? undefined, task.language ?? undefined, task.brandDomain);
+  // Enrich sector with site_analysis keywords for better extraction
+  const enrichedSector = task.sectorKeywords.length > 0
+    ? `${task.sector ?? "generic"} (keywords: ${task.sectorKeywords.join(", ")})`
+    : task.sector ?? undefined;
+  const extraction = await extractFromResponse(rawText, task.targetBrand, enrichedSector, task.brandType ?? undefined, task.language ?? undefined, task.brandDomain);
 
   // Detailed extraction logging
   console.log(`[executePrompt] model=${task.model} brand="${task.targetBrand}" brand_mentioned=${extraction.brand_mentioned} competitors_raw=${extraction.competitors_found.length} topics=${extraction.topics.length} responseLen=${rawText.length}`);
@@ -630,6 +635,8 @@ export const runAnalysis = inngest.createFunction(
     const language = project.language;
     const sector = project.sector ?? null;
     const brandTypeVal = project.brand_type ?? null;
+    const siteAnalysis = project.site_analysis ?? null;
+    const sectorKeywords: string[] = siteAnalysis?.sector_keywords ?? [];
 
     // Build all prompt tasks
     // If no segments configured, use a default generic audience fallback (null segment_id)
@@ -661,6 +668,7 @@ export const runAnalysis = inngest.createFunction(
               browsing,
               sector,
               brandType: brandTypeVal,
+              sectorKeywords,
             });
           }
         }
