@@ -2,20 +2,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Play, Sparkles, RefreshCw, Cpu } from "lucide-react";
+import { Loader2, Play, Sparkles, RefreshCw } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
-import { COMPARISON_MODEL_IDS } from "@/lib/engine/models";
+import { COMPARISON_MODEL_IDS, PROVIDER_GROUPS } from "@/lib/engine/models";
 import { useUsage } from "@/lib/hooks/useUsage";
 
 const RUNS_PER_QUERY = 3;
 
-const COMPARISON_MODEL_LABELS: Record<string, string> = {
-  "claude-haiku": "Claude Haiku",
-  "gpt-4o-mini": "GPT-4o Mini",
-  "gemini-2.5-flash": "Gemini 2.5 Flash",
-  "grok-3-mini": "Grok 3 Mini",
-  "perplexity-sonar": "Perplexity Sonar",
-};
+/** Build comparison provider cards from the canonical PROVIDER_GROUPS, filtered to comparison models only */
+const COMPARISON_PROVIDERS = PROVIDER_GROUPS
+  .map((g) => {
+    const model = g.models.find((m) => (COMPARISON_MODEL_IDS as readonly string[]).includes(m.id));
+    if (!model) return null;
+    return { providerId: g.id, providerLabel: g.label, badge: g.badge, color: g.color, modelId: model.id, modelLabel: model.label, descriptionKey: model.descriptionKey };
+  })
+  .filter(Boolean) as { providerId: string; providerLabel: string; badge: string; color: string; modelId: string; modelLabel: string; descriptionKey: string }[];
 
 const DRIVER_OPTIONS = [
   "Prezzo/Convenienza",
@@ -281,38 +282,49 @@ export function NewCompetitiveForm({
         </div>
       )}
 
-      {/* Model selector */}
+      {/* Model selector — provider cards like project creation */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">{t("competitiveForm.aiModels")}</label>
         <p className="text-xs text-muted-foreground">
           {t("competitiveForm.aiModelsDesc")}
         </p>
-        <div className="flex flex-wrap gap-2">
-          {COMPARISON_MODEL_IDS.map((modelId) => {
-            const isSelected = selectedModels.has(modelId);
+        <div className="space-y-2">
+          {COMPARISON_PROVIDERS.map((p) => {
+            const isSelected = selectedModels.has(p.modelId);
             return (
               <button
-                key={modelId}
+                key={p.modelId}
                 type="button"
-                onClick={() => toggleModel(modelId)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                onClick={() => toggleModel(p.modelId)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm border transition-all text-left ${
                   isSelected
-                    ? "border-primary/30 bg-primary/5 text-foreground"
-                    : "border-border bg-muted/30 text-muted-foreground/50 line-through"
+                    ? "border-primary/50 bg-primary/5"
+                    : "border-border hover:border-border/80"
                 }`}
               >
-                <Cpu className={`w-3 h-3 ${isSelected ? "text-primary" : "text-muted-foreground/30"}`} />
-                {COMPARISON_MODEL_LABELS[modelId] ?? modelId}
+                <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${
+                  isSelected ? "border-primary bg-primary" : "border-muted-foreground"
+                }`}>
+                  {isSelected && (
+                    <svg className="w-2.5 h-2.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-semibold ${isSelected ? p.color : "text-muted-foreground"}`}>{p.providerLabel}</span>
+                    <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{p.badge}</span>
+                    <span className={`text-sm font-medium ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>— {p.modelLabel}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t(p.descriptionKey)}</p>
+                </div>
               </button>
             );
           })}
         </div>
-      </div>
-
-      {/* Config summary */}
-      <div className="bg-muted/30 border border-border rounded-[2px] px-4 py-3">
         <p className="text-xs text-muted-foreground">
-          {selectedModels.size} {t("competitiveForm.modelWord")} {t("competitiveForm.selectedSummary")} · {RUNS_PER_QUERY} {t("competitiveForm.runsPerQuery")}
+          <span className="text-foreground font-bold">{selectedModels.size}</span> {t("competitiveForm.modelWord")} {t("competitiveForm.selectedSummary")} · {RUNS_PER_QUERY} {t("competitiveForm.runsPerQuery")}
         </p>
       </div>
 
