@@ -30,6 +30,7 @@ function sentimentColor(v: number): string {
 }
 
 const MODEL_LABELS: Record<string, string> = {
+  "gpt-5.4-mini": "GPT-5.4 Mini",
   "gpt-4o-mini": "GPT-4o Mini",
   "gpt-4o": "GPT-4o",
   "gpt-5.4": "GPT-5.4",
@@ -37,12 +38,13 @@ const MODEL_LABELS: Record<string, string> = {
   "o3-mini": "o3 Mini",
   "o3": "o3",
   "gemini-2.5-flash": "Gemini 2.5 Flash",
+  "gemini-3.1-pro": "Gemini 3.1 Pro",
   "gemini-2.5-pro": "Gemini 2.5 Pro",
   "perplexity-sonar": "Perplexity Sonar",
   "perplexity-sonar-pro": "Perplexity Sonar Pro",
   "claude-haiku": "Claude Haiku 4.5",
-  "claude-sonnet": "Claude Sonnet 4.5",
-  "claude-opus": "Claude Opus 4.5",
+  "claude-sonnet": "Claude Sonnet 4.6",
+  "claude-opus": "Claude Opus 4.6",
   "claude-haiku-4-5-20251001": "Claude Haiku 4.5",
   "claude-sonnet-4-5": "Claude Sonnet 4.5",
   "claude-opus-4-5": "Claude Opus 4.5",

@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     const catExamples = Object.values(l.categories).map((c) => `"${c}"`).join(", ");
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5.4-mini",
       temperature: 0,
       response_format: { type: "json_object" },
       messages: [

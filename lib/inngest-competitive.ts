@@ -5,7 +5,7 @@ import { callAIModel } from "./engine/prompt-runner";
 
 /* ─── Helpers ─── */
 
-const DEFAULT_MODELS = ["gpt-4o-mini", "gemini-2.5-flash"];
+const DEFAULT_MODELS = ["gpt-5.4-mini", "gemini-2.5-flash"];
 const RUNS_PER_QUERY = 3;
 
 /** Capitalize first letter of each word: "mulino bianco" → "Mulino Bianco" */

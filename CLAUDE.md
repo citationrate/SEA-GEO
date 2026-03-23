@@ -132,7 +132,7 @@ User triggers analysis → Inngest function starts
 |---|---|---|---|
 | Browsing prompts | 0 | 30 | 90 |
 | No-browsing prompts | 40 | 70 | 210 |
-| Max models/project | 2 (fixed: GPT-4o, Gemini 2.5 Pro) | 3 | 5 |
+| Max models/project | 2 (fixed: GPT-4o, Gemini 3.1 Pro) | 3 | 5 |
 | Comparisons/month | 0 | 0 | 10 |
 | AI query generation | NO | YES | YES |
 | Dataset access | NO | NO | YES |
@@ -140,9 +140,9 @@ User triggers analysis → Inngest function starts
 | Monthly price | €0 | €59 | €159 |
 | Annual price | €0 | €649 (8.3% off) | €1,719 (10% off) |
 
-**Base models (selectable in AVI):** GPT-4o Mini, Gemini 2.5 Flash, Grok 3 Mini, Claude Haiku, Perplexity Sonar, Claude Sonnet
-**Pro-only models:** Claude Opus, GPT-5.4, Grok 3, Perplexity Sonar Pro, Gemini 2.5 Pro
-**Comparison models (fixed, Pro only):** Claude Haiku, GPT-4o Mini, Gemini 2.5 Flash, Grok 3 Mini, Perplexity Sonar
+**Base models (selectable in AVI):** GPT-5.4 Mini, Gemini 2.5 Flash, Grok 3 Mini, Claude Haiku, Perplexity Sonar, Claude Sonnet 4.6
+**Pro-only models:** Claude Opus 4.6, GPT-5.4, Grok 3, Perplexity Sonar Pro, Gemini 3.1 Pro
+**Comparison models (fixed, Pro only):** Claude Haiku, GPT-5.4 Mini, Gemini 2.5 Flash, Grok 3 Mini, Perplexity Sonar
 
 ### How Prompts Are Counted
 Two separate counters: `browsing_prompts_used` and `no_browsing_prompts_used`.
@@ -160,7 +160,7 @@ Each prompt makes 2 API calls:
 
 | Model | Main call | + Haiku | **Total/prompt** |
 |---|---|---|---|
-| GPT-4o Mini | $0.001 | $0.0016 | **$0.003** |
+| GPT-5.4 Mini | $0.001 | $0.0016 | **$0.003** |
 | Gemini 2.5 Flash | $0.0008 | $0.0016 | **$0.0024** |
 | Claude Haiku | $0.0005 | $0.0016 | **$0.0021** |
 | Perplexity Sonar | $0.002 | $0.0016 | **$0.0036** |

@@ -207,7 +207,7 @@ export default async function DashboardPage({
     projectSegmentCount = sCount ?? 0;
 
     const proj = projectMap.get(activeProjectId);
-    projectModelsConfig = (proj?.models_config as string[]) ?? ["gpt-4o-mini"];
+    projectModelsConfig = (proj?.models_config as string[]) ?? ["gpt-5.4-mini"];
   }
 
   return (

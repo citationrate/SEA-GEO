@@ -21,9 +21,10 @@ export interface AIModelResult {
 /** Map short model IDs to actual API model identifiers */
 export const API_MODEL_ID: Record<string, string> = {
   "claude-haiku": "claude-haiku-4-5-20251001",
-  "claude-sonnet": "claude-sonnet-4-5",
-  "claude-opus": "claude-opus-4-5",
-  "gemini-2.5-pro": "gemini-2.5-pro-preview-03-25",
+  "claude-sonnet": "claude-sonnet-4-6",
+  "claude-opus": "claude-opus-4-6",
+  "gemini-3.1-pro": "gemini-3.1-pro-preview",
+  "gpt-5.4-mini": "gpt-5.4-mini-2026-03-17",
   "gpt-5.4": "gpt-5.4-2026-03-05",
   "perplexity-sonar": "sonar",
   "perplexity-sonar-pro": "sonar-pro",
@@ -31,7 +32,7 @@ export const API_MODEL_ID: Record<string, string> = {
 };
 
 /** Models that require the Responses API instead of Chat Completions */
-const RESPONSES_API_MODELS = new Set(["gpt-5.4"]);
+const RESPONSES_API_MODELS = new Set(["gpt-5.4", "gpt-5.4-mini"]);
 
 /**
  * Call an AI model with retry logic and source extraction.

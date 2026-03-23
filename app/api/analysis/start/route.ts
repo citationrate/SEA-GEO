@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     if (!project) return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
 
     // Read models from project config
-    const models_used: string[] = (project as any).models_config ?? ["gpt-4o-mini"];
+    const models_used: string[] = (project as any).models_config ?? ["gpt-5.4-mini"];
     const validModels = models_used.filter((id: string) => ALL_MODEL_IDS.includes(id));
     if (!validModels.length) return NextResponse.json({ error: "Nessun modello valido configurato" }, { status: 400 });
 
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
       const demoIds = new Set(DEMO_MODEL_IDS as readonly string[]);
       const invalidModels = validModels.filter((id: string) => !demoIds.has(id));
       if (invalidModels.length > 0) {
-        return NextResponse.json({ error: "Il piano Demo consente solo GPT-4o e Gemini 2.5 Pro." }, { status: 403 });
+        return NextResponse.json({ error: "Il piano Demo consente solo GPT-4o e Gemini 3.1 Pro." }, { status: 403 });
       }
     }
 
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     // Check for Pro-only models on non-Pro plans
     if (!isProPlan) {
       const proModelsUsed = validModels.filter((id: string) => PRO_ONLY_MODEL_IDS.has(id));
-      // Demo has gemini-2.5-pro which is normally pro-only, but allowed for demo
+      // Demo has gemini-3.1-pro which is normally pro-only, but allowed for demo
       const filteredProModels = isDemoPlan
         ? proModelsUsed.filter((id: string) => !(DEMO_MODEL_IDS as readonly string[]).includes(id))
         : proModelsUsed;

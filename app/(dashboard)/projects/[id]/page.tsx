@@ -128,7 +128,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               hasQueries={(queries ?? []).length > 0}
               queryCount={(queries ?? []).length}
               segmentCount={(segments ?? []).length}
-              modelsConfig={(proj.models_config as string[]) ?? ["gpt-4o-mini"]}
+              modelsConfig={(proj.models_config as string[]) ?? ["gpt-5.4-mini"]}
             />
           </div>
         </div>
@@ -138,7 +138,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       <div className="flex items-center gap-2 flex-wrap">
         <Cpu className="w-3.5 h-3.5 text-cream-dim" />
         <span className="font-mono text-[13px] text-cream-dim"><T k="projectDetail.aiModels" /></span>
-        {((proj.models_config as string[]) ?? ["gpt-4o-mini"]).map((m: string) => (
+        {((proj.models_config as string[]) ?? ["gpt-5.4-mini"]).map((m: string) => (
           <span key={m} className="badge badge-primary text-[12px]">{m}</span>
         ))}
       </div>

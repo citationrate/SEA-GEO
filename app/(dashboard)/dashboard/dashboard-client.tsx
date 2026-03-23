@@ -58,7 +58,7 @@ export function DashboardClient({
               hasQueries={(projectQueryCount ?? 0) > 0}
               queryCount={projectQueryCount ?? 0}
               segmentCount={projectSegmentCount ?? 0}
-              modelsConfig={projectModelsConfig ?? ["gpt-4o-mini"]}
+              modelsConfig={projectModelsConfig ?? ["gpt-5.4-mini"]}
             />
           )}
         </div>

@@ -40,12 +40,14 @@ interface PromptRow {
 }
 
 const MODEL_LABELS: Record<string, string> = {
+  "gpt-5.4-mini": "GPT-5.4 Mini",
   "gpt-4o-mini": "GPT-4o Mini",
   "gpt-4o": "GPT-4o",
   "o1-mini": "o1 Mini",
   "o3-mini": "o3 Mini",
   "o3": "o3",
   "gemini-2.5-flash": "Gemini 2.5 Flash",
+  "gemini-3.1-pro": "Gemini 3.1 Pro",
   "gemini-2.5-pro": "Gemini 2.5 Pro",
   "perplexity-sonar": "Perplexity Sonar",
   "perplexity-sonar-pro": "Perplexity Sonar Pro",

@@ -11,6 +11,7 @@ interface TrendPoint {
 }
 
 const MODEL_COLORS: Record<string, string> = {
+  "gpt-5.4-mini": "#e8956d",
   "gpt-4o-mini": "#e8956d",
   "gpt-4o": "#e8956d",
   "gpt-4.1-mini": "#e8956d",
@@ -33,6 +34,7 @@ function getModelColor(model: string): string {
 
 function shortModelName(model: string): string {
   return model
+    .replace("gpt-5.4-mini", "GPT-5.4 mini")
     .replace("gpt-4o-mini", "GPT-4o mini")
     .replace("gpt-4o", "GPT-4o")
     .replace("gpt-4.1-mini", "GPT-4.1 mini")

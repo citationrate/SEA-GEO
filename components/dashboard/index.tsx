@@ -197,6 +197,7 @@ function getModelColor(model: string): string {
 }
 
 function shortModelName(model: string): string {
+  if (model.includes("gpt-5.4-mini")) return "GPT-5.4 mini";
   if (model.includes("gpt-4o-mini")) return "GPT-4o mini";
   if (model.includes("gpt-4o")) return "GPT-4o";
   if (model.includes("gpt-4.1-mini")) return "GPT-4.1 mini";
