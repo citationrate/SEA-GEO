@@ -7,10 +7,13 @@ export async function POST(request: Request) {
   if (error) return error;
 
   try {
-    const { brandA, brandB, customDriver, sector } = await request.json();
+    const { brandA, brandB, customDriver, sector, language } = await request.json();
     if (!brandA || !brandB || !customDriver) {
       return NextResponse.json({ error: "Parametri mancanti" }, { status: 400 });
     }
+
+    const lang = language === "en" ? "en" : "it";
+    const isEnglish = lang === "en";
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const msg = await anthropic.messages.create({
@@ -18,7 +21,25 @@ export async function POST(request: Request) {
       max_tokens: 500,
       messages: [{
         role: "user",
-        content: `Genera 3 domande comparative tra "${brandA}" e "${brandB}" sul tema: "${customDriver}".
+        content: isEnglish
+          ? `Generate 3 comparative questions between "${brandA}" and "${brandB}" on the topic: "${customDriver}".
+
+Context: sector ${sector || "generic"}.
+
+The questions must:
+- Be specific and searchable (trigger web search in AI)
+- Use pattern A (direct comparison), B (conditional choice), C (generic recommendation)
+- Include "today" or "according to customers" or "based on real experiences"
+- Be in natural English
+- NEVER ask abstract opinions
+
+Return ONLY a JSON array, no text before or after:
+[
+  {"pattern": "A", "text": "..."},
+  {"pattern": "B", "text": "..."},
+  {"pattern": "C", "text": "..."}
+]`
+          : `Genera 3 domande comparative tra "${brandA}" e "${brandB}" sul tema: "${customDriver}".
 
 Contesto: settore ${sector || "generico"}, mercato italiano.
 

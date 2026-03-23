@@ -17,15 +17,15 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 function buildPrompt(query: string, segmentContext: string, language: string): string {
-  const langMap: Record<string, string> = {
-    it: "Rispondi in italiano.",
-    en: "Answer in English.",
-    fr: "Réponds en français.",
-    de: "Antworte auf Deutsch.",
-    es: "Responde en español.",
+  const langMap: Record<string, { instruction: string; contextLabel: string; questionLabel: string }> = {
+    it: { instruction: "IMPORTANT: You MUST respond ONLY in Italian (italiano). Every word of your response must be in Italian.", contextLabel: "Contesto utente", questionLabel: "Domanda" },
+    en: { instruction: "IMPORTANT: You MUST respond ONLY in English. Every word of your response must be in English.", contextLabel: "User context", questionLabel: "Question" },
+    fr: { instruction: "IMPORTANT: You MUST respond ONLY in French (français). Every word of your response must be in French.", contextLabel: "Contexte utilisateur", questionLabel: "Question" },
+    de: { instruction: "IMPORTANT: You MUST respond ONLY in German (Deutsch). Every word of your response must be in German.", contextLabel: "Benutzerkontext", questionLabel: "Frage" },
+    es: { instruction: "IMPORTANT: You MUST respond ONLY in Spanish (español). Every word of your response must be in Spanish.", contextLabel: "Contexto del usuario", questionLabel: "Pregunta" },
   };
-  const lang = langMap[language] ?? langMap.en;
-  return `${lang}\n\nContesto utente: ${segmentContext}\n\nDomanda: ${query}`;
+  const l = langMap[language] ?? langMap.en;
+  return `${l.instruction}\n\n${l.contextLabel}: ${segmentContext}\n\n${l.questionLabel}: ${query}`;
 }
 
 /* ─── Competitor normalization ─── */

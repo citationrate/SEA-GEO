@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     // Get project brand
     const { data: project } = await supabase
       .from("projects")
-      .select("target_brand")
+      .select("target_brand, language")
       .eq("id", project_id)
       .is("deleted_at", null)
       .single();
@@ -56,6 +56,7 @@ export async function POST(request: Request) {
     if (!project) return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
 
     const brandA = (project as any).target_brand;
+    const projectLanguage = (project as any).language ?? "it";
 
     // Filter to only allowed comparison models — always no-browsing
     const allowedSet = new Set<string>(COMPARISON_MODEL_IDS);
@@ -91,6 +92,7 @@ export async function POST(request: Request) {
         brandB: brand_b,
         driver,
         models,
+        language: projectLanguage,
       },
     });
 
