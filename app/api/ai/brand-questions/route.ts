@@ -9,20 +9,23 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   console.log("[BRAND-QUESTIONS] Request received:", JSON.stringify(body).slice(0, 300));
-  const { categoria, mercato, punti_di_forza, competitor, obiezioni } = body;
+  const { categoria, mercato, punti_di_forza, competitor, obiezioni, lang } = body;
 
   if (!categoria) {
     console.log("[BRAND-QUESTIONS] Missing categoria");
-    return NextResponse.json({ error: "Categoria richiesta" }, { status: 400 });
+    return NextResponse.json({ error: "Category required" }, { status: 400 });
   }
 
   const context = [
-    `Categoria: ${categoria}`,
-    mercato ? `Mercato: ${mercato}` : null,
-    punti_di_forza?.length ? `Punti di forza: ${punti_di_forza.join(", ")}` : null,
-    competitor?.length ? `Competitor: ${competitor.join(", ")}` : null,
-    obiezioni?.length ? `Obiezioni comuni: ${obiezioni.join(", ")}` : null,
+    `Category: ${categoria}`,
+    mercato ? `Market: ${mercato}` : null,
+    punti_di_forza?.length ? `Strengths: ${punti_di_forza.join(", ")}` : null,
+    competitor?.length ? `Competitors: ${competitor.join(", ")}` : null,
+    obiezioni?.length ? `Common objections: ${obiezioni.join(", ")}` : null,
   ].filter(Boolean).join("\n");
+
+  const langName: Record<string, string> = { it: "Italian", en: "English", fr: "French", de: "German", es: "Spanish" };
+  const outputLang = langName[lang] ?? "English";
 
   console.log("[BRAND-QUESTIONS] ANTHROPIC_API_KEY set:", !!process.env.ANTHROPIC_API_KEY);
   try {
@@ -31,7 +34,7 @@ export async function POST(request: Request) {
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 300,
-      system: `Sei un esperto di brand marketing e AI visibility. Analizza il seguente contesto brand e genera esattamente 3 domande brevi e specifiche che ti aiuterebbero a capire meglio il brand per generare query AI più rappresentative del suo mercato reale. Le domande devono essere in italiano, pratiche, e riferite a comportamenti d'acquisto reali degli utenti. Rispondi SOLO con un array JSON: ["domanda1", "domanda2", "domanda3"]`,
+      system: `You are an expert in brand marketing and AI visibility. Analyze the following brand context and generate exactly 3 short, specific questions that would help you better understand the brand to generate AI queries more representative of its real market. The questions must be in ${outputLang}, practical, and refer to real user purchasing behaviors. Respond ONLY with a JSON array: ["question1", "question2", "question3"]`,
       messages: [{ role: "user", content: context }],
     });
 
@@ -45,6 +48,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ questions: Array.isArray(questions) ? questions.slice(0, 3) : [] });
   } catch (err: any) {
     console.error("[BRAND-QUESTIONS] ERROR:", err?.message ?? err, err?.status, err?.stack?.slice(0, 300));
-    return NextResponse.json({ error: "Errore generazione domande" }, { status: 500 });
+    return NextResponse.json({ error: "Error generating questions" }, { status: 500 });
   }
 }

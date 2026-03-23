@@ -14,6 +14,7 @@ const schema = z.object({
   competitor: z.array(z.string()).optional(),
   obiezioni: z.array(z.string()).optional(),
   personas: z.array(z.any()).optional(),
+  lang: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
     }
 
-    const { project_id, count, tofu_pct, categoria, mercato, luogo, punti_di_forza, competitor, obiezioni, personas } = parsed.data;
+    const { project_id, count, tofu_pct, categoria, mercato, luogo, punti_di_forza, competitor, obiezioni, personas, lang } = parsed.data;
 
     // Load project with all context
     const { data: project } = await supabase
@@ -69,7 +70,7 @@ export async function POST(request: Request) {
     const nMofu = count - nTofu;
 
     const userInputs = { categoria, mercato, luogo, punti_di_forza, competitor, obiezioni, personas };
-    const systemPrompt = buildSystemPrompt(p, existingTexts, count, nTofu, nMofu, websiteContext, userInputs);
+    const systemPrompt = buildSystemPrompt(p, existingTexts, count, nTofu, nMofu, websiteContext, userInputs, lang);
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
       const nTofuMissing = Math.max(0, nTofu - nTofuHave);
       const nMofuMissing = Math.max(0, nMofu - nMofuHave);
 
-      const followUpPrompt = buildFollowUpPrompt(p, [...existingTexts, ...alreadyGenerated], missing, nTofuMissing, nMofuMissing);
+      const followUpPrompt = buildFollowUpPrompt(p, [...existingTexts, ...alreadyGenerated], missing, nTofuMissing, nMofuMissing, lang);
       const extra = await callGeneration(anthropic, followUpPrompt, missing);
       queries = [...queries, ...extra];
     }
@@ -272,8 +273,10 @@ function buildSystemPrompt(
   nMofu: number,
   websiteContext?: string,
   userInputs?: { categoria?: string; mercato?: string; luogo?: string; punti_di_forza?: string[]; competitor?: string[]; obiezioni?: string[]; personas?: any[] },
+  interfaceLang?: string,
 ): string {
-  const lang = project.language === "it" ? "italiano" : "English";
+  const langMap: Record<string, string> = { it: "italiano", en: "English", fr: "français", de: "Deutsch", es: "español" };
+  const lang = interfaceLang ? (langMap[interfaceLang] ?? "English") : (project.language === "it" ? "italiano" : "English");
   const competitors = userInputs?.competitor?.length
     ? userInputs.competitor.join(", ")
     : (project.known_competitors ?? []).join(", ") || "non specificati";
@@ -354,8 +357,10 @@ function buildFollowUpPrompt(
   missing: number,
   nTofuMissing: number,
   nMofuMissing: number,
+  interfaceLang?: string,
 ): string {
-  const lang = project.language === "it" ? "italiano" : "English";
+  const langMap: Record<string, string> = { it: "italiano", en: "English", fr: "français", de: "Deutsch", es: "español" };
+  const lang = interfaceLang ? (langMap[interfaceLang] ?? "English") : (project.language === "it" ? "italiano" : "English");
 
   return `Sei un esperto di AI Search Optimization. Devi generare ${missing} query aggiuntive per il settore di "${project.target_brand}" (settore: ${project.sector ?? "non specificato"}).
 

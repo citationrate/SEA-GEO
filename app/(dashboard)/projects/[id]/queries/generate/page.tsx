@@ -86,7 +86,7 @@ export default function GenerateQueriesPage() {
   const router = useRouter();
   const projectId = params.id as string;
 
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   const OPTION_LABELS: Record<string, string> = {
     // Gender
@@ -284,6 +284,7 @@ export default function GenerateQueriesPage() {
           competitor: competitor.length > 0 ? competitor : undefined,
           obiezioni: obiezioni.length > 0 ? obiezioni : undefined,
           personas: personasEnabled && personas.length > 0 ? personas : undefined,
+          lang: locale,
         }),
       });
       if (!res.ok) {
@@ -360,6 +361,7 @@ export default function GenerateQueriesPage() {
           punti_di_forza: puntiDiForza,
           competitor,
           obiezioni,
+          lang: locale,
         }),
       });
       if (!res.ok) throw new Error(t("common.error"));
@@ -446,7 +448,7 @@ export default function GenerateQueriesPage() {
               type="text"
               value={categoria}
               onChange={(e) => setCategoria(e.target.value)}
-              placeholder="es. pasta artigianale"
+              placeholder={t("generateQueries.categoryPlaceholder")}
               className="input-base w-full"
             />
           </div>
@@ -461,7 +463,7 @@ export default function GenerateQueriesPage() {
               type="text"
               value={mercato}
               onChange={(e) => setMercato(e.target.value)}
-              placeholder="es. Italia"
+              placeholder={t("generateQueries.marketPlaceholder")}
               className="input-base w-full"
             />
           </div>
@@ -476,7 +478,7 @@ export default function GenerateQueriesPage() {
               type="text"
               value={luogo}
               onChange={(e) => setLuogo(e.target.value)}
-              placeholder="es. Milano, Nord Italia, Europa"
+              placeholder={t("generateQueries.placePlaceholder")}
               className="input-base w-full"
             />
           </div>
@@ -502,7 +504,7 @@ export default function GenerateQueriesPage() {
             setInput={setCompetitorInput}
             onAdd={() => addTag(competitor, setCompetitor, competitorInput, setCompetitorInput)}
             onRemove={(i) => removeTag(competitor, setCompetitor, i)}
-            placeholder="es. Barilla, De Cecco"
+            placeholder={t("generateQueries.competitorsFieldPlaceholder")}
           />
 
           {/* Obiezioni comuni */}
