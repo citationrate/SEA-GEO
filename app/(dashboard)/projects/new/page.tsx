@@ -473,7 +473,7 @@ export default function NewProjectPage() {
                 {DEMO_MODEL_IDS.map((modelId) => (
                   <span key={modelId} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-sm border border-primary/30 bg-primary/5 text-sm font-medium text-foreground">
                     <Check className="w-3.5 h-3.5 text-primary" />
-                    {modelId === "gpt-4o" ? "GPT-4o" : "Gemini 3.1 Pro"}
+                    {modelId === "gpt-5.4" ? "GPT-5.4" : "Gemini 3.1 Pro"}
                   </span>
                 ))}
               </div>

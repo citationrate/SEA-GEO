@@ -132,7 +132,7 @@ User triggers analysis → Inngest function starts
 |---|---|---|---|
 | Browsing prompts | 0 | 30 | 90 |
 | No-browsing prompts | 40 | 70 | 210 |
-| Max models/project | 2 (fixed: GPT-4o, Gemini 3.1 Pro) | 3 | 5 |
+| Max models/project | 2 (fixed: GPT-5.4, Gemini 3.1 Pro) | 3 | 5 |
 | Comparisons/month | 0 | 0 | 10 |
 | AI query generation | NO | YES | YES |
 | Dataset access | NO | NO | YES |
