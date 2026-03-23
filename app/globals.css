@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom cursor — hide default on non-touch devices */
+@media (pointer: fine) {
+  * { cursor: none !important; }
+}
+
 @layer base {
   :root {
     /* CitationRate Design System */

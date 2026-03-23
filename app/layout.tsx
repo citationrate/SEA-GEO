@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { LanguageProvider } from "@/lib/i18n/context";
 import { ConsultationProvider } from "@/lib/consultation-context";
 import { ConsultationModal } from "@/components/consultation-modal";
+import { CursorFollower } from "@/components/cursor-follower";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ConsultationProvider>
         {children}
         <ConsultationModal />
+        <CursorFollower />
         </ConsultationProvider>
         <Toaster
           position="bottom-right"
