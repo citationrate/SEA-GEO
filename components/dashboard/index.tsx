@@ -64,7 +64,7 @@ export function AVIRing({ score, trend, components, noBrandMentions, hideCompone
       </p>
 
       <div className="relative w-[140px] h-[140px]">
-        <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120" overflow="visible">
           <circle cx="60" cy="60" r={R} fill="none" stroke="var(--line)" strokeWidth="7"/>
           <circle cx="60" cy="60" r={R} fill="none"
             stroke={noBrandMentions ? "var(--line)" : aviColor} strokeWidth="7"

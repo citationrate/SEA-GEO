@@ -670,7 +670,7 @@ function CompScoreRing({ score }: { score: number }) {
 
   return (
     <div className="relative w-[100px] h-[100px]">
-      <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
+      <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96" overflow="visible">
         <circle cx="48" cy="48" r={R} fill="none" stroke="var(--line)" strokeWidth="6" />
         <circle cx="48" cy="48" r={R} fill="none"
           stroke={color} strokeWidth="6"
