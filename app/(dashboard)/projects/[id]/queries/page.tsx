@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, Loader2, MessageSquare, Sparkles, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, MessageSquare, Sparkles, AlertTriangle, ToggleLeft, ToggleRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -11,6 +11,7 @@ interface Query {
   text: string;
   funnel_stage: "tofu" | "mofu" | "bofu";
   set_type?: string;
+  is_active?: boolean;
   created_at: string;
 }
 
@@ -111,6 +112,23 @@ export default function QueriesPage() {
     }
   }
 
+  async function toggleQuery(id: string, currentActive: boolean) {
+    setError("");
+    try {
+      const res = await fetch("/api/queries", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, is_active: !currentActive }),
+      });
+      if (!res.ok) throw new Error(t("common.error"));
+      setQueries(queries.map((q) => q.id === id ? { ...q, is_active: !currentActive } : q));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("common.error"));
+    }
+  }
+
+  const activeCount = queries.filter((q) => q.is_active !== false).length;
+
   // Check if any queries have generation metadata
   const hasGeneratedQueries = queries.some((q) => q.set_type && q.set_type !== "manual");
 
@@ -140,7 +158,7 @@ export default function QueriesPage() {
           <div>
             <h1 className="font-display font-bold text-2xl text-foreground">{t("queries.manageTitle")}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {queries.length} query &middot; {t("queries.addOrGenerate")}
+              {activeCount}/{queries.length} query {t("queries.active") || "active"} &middot; {t("queries.addOrGenerate")}
             </p>
           </div>
           <a
@@ -229,7 +247,7 @@ export default function QueriesPage() {
           ) : (
             <ul className="space-y-2">
               {tofuQueries.map((q) => (
-                <QueryItem key={q.id} query={q} onDelete={deleteQuery} />
+                <QueryItem key={q.id} query={q} onDelete={deleteQuery} onToggle={toggleQuery} />
               ))}
             </ul>
           )}
@@ -268,7 +286,7 @@ export default function QueriesPage() {
           ) : (
             <ul className="space-y-2">
               {mofuQueries.map((q) => (
-                <QueryItem key={q.id} query={q} onDelete={deleteQuery} />
+                <QueryItem key={q.id} query={q} onDelete={deleteQuery} onToggle={toggleQuery} />
               ))}
             </ul>
           )}
@@ -290,15 +308,28 @@ function BrandWarning({ brand }: { brand: string }) {
   );
 }
 
-function QueryItem({ query, onDelete }: { query: Query; onDelete: (id: string) => void }) {
+function QueryItem({ query, onDelete, onToggle }: { query: Query; onDelete: (id: string) => void; onToggle: (id: string, active: boolean) => void }) {
   const setType = query.set_type || "manual";
   const colorCls = SET_TYPE_COLORS[setType] || SET_TYPE_COLORS.manual;
   const label = SET_TYPE_LABELS[setType] || "MAN";
+  const isActive = query.is_active !== false;
 
   return (
-    <li className="flex items-start justify-between gap-2 bg-muted rounded-[2px] px-3 py-2 border border-border group">
-      <div className="flex-1 min-w-0">
-        <span className="text-sm text-foreground">{query.text}</span>
+    <li className={`flex items-start justify-between gap-2 rounded-[2px] px-3 py-2 border group transition-colors ${
+      isActive ? "bg-muted border-border" : "bg-muted/30 border-border/50"
+    }`}>
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <button
+          onClick={() => onToggle(query.id, isActive)}
+          className="shrink-0 transition-colors"
+          title={isActive ? "Disable" : "Enable"}
+        >
+          {isActive
+            ? <ToggleRight className="w-5 h-5 text-primary" />
+            : <ToggleLeft className="w-5 h-5 text-muted-foreground/50" />
+          }
+        </button>
+        <span className={`text-sm ${isActive ? "text-foreground" : "text-muted-foreground line-through"}`}>{query.text}</span>
       </div>
       <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
         {setType !== "manual" && (

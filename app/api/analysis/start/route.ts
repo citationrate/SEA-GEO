@@ -44,11 +44,12 @@ export async function POST(request: Request) {
     const validModels = models_used.filter((id: string) => ALL_MODEL_IDS.includes(id));
     if (!validModels.length) return NextResponse.json({ error: "Nessun modello valido configurato" }, { status: 400 });
 
-    // Fetch queries and active segments
+    // Fetch only active queries and active segments
     const { data: queries } = await supabase
       .from("queries")
       .select("*")
-      .eq("project_id", project_id);
+      .eq("project_id", project_id)
+      .neq("is_active", false);
 
     const { data: segments } = await supabase
       .from("audience_segments")

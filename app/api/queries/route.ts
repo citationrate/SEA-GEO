@@ -51,6 +51,28 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PATCH(request: Request) {
+  try {
+    const { supabase, user, error } = await requireAuth();
+    if (error) return error;
+
+    const body = await request.json();
+    const { id, is_active } = body;
+    if (!id || typeof is_active !== "boolean") {
+      return NextResponse.json({ error: "id and is_active required" }, { status: 400 });
+    }
+
+    const { error: dbError } = await (supabase.from("queries") as any)
+      .update({ is_active })
+      .eq("id", id);
+
+    if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const { supabase, user, error } = await requireAuth();
