@@ -12,6 +12,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // --- Diagnostic logging: remove after debugging cookie issue ---
+  const allCookies = request.cookies.getAll();
+  const authCookies = allCookies.filter(c => c.name.startsWith("sb-"));
+  console.log("[MIDDLEWARE]", path, "| cookies:", allCookies.map(c => c.name).join(", "));
+  console.log("[MIDDLEWARE]", path, "| auth cookies:", authCookies.length > 0
+    ? authCookies.map(c => `${c.name} (${c.value.length} chars)`).join(", ")
+    : "NONE — shared cookie not arriving from suite");
+
   const isAuthRoute = path.startsWith("/login") || path.startsWith("/register") || path.startsWith("/forgot-password");
   const isPublic = path === "/" || path.startsWith("/share/") || path.startsWith("/auth/");
 
@@ -54,7 +62,8 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  console.log("[MIDDLEWARE]", path, "| getUser:", user ? `OK (${user.id})` : `FAILED (${authError?.message ?? "no user"})`);
 
   if (!user) {
     // Not authenticated → redirect to login
