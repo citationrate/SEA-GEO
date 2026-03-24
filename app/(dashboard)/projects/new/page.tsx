@@ -143,7 +143,13 @@ export default function NewProjectPage() {
   const [competitorInput, setCompetitorInput] = useState("");
   const [marketContext, setMarketContext] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
-  const [language, setLanguage] = useState<"it" | "en">("it");
+  const [language, setLanguage] = useState<"it" | "en">(() => {
+    if (typeof navigator !== "undefined") {
+      const browserLang = navigator.language?.slice(0, 2);
+      return browserLang === "en" ? "en" : "it";
+    }
+    return "it";
+  });
   const [countries, setCountries] = useState<string[]>([]);
   const [countrySearch, setCountrySearch] = useState("");
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
@@ -168,7 +174,7 @@ export default function NewProjectPage() {
       const res = await fetch("/api/projects/analyze-site", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: trimmed }),
+        body: JSON.stringify({ url: trimmed, language }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -187,7 +193,7 @@ export default function NewProjectPage() {
     } finally {
       setSiteAnalysisLoading(false);
     }
-  }, [competitors.length, t]);
+  }, [competitors.length, language, t]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -356,6 +362,29 @@ export default function NewProjectPage() {
             placeholder={t("projects.targetBrandPlaceholder")} className="input-base" />
         </div>
 
+        {/* Lingua di rilevazione */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+            <Globe className="w-3.5 h-3.5 text-primary" />
+            {t("projects.detectionLanguage")}
+            <InfoTooltip text={t("projects.detectionLanguageTooltip")} />
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => { setLanguage("it"); if (websiteUrl.trim().length >= 5) { analyzedUrlRef.current = ""; analyzeSite(websiteUrl); } }}
+              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-[2px] border text-sm font-medium transition-all ${
+                language === "it" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-muted-foreground"
+              }`}>
+              🇮🇹 Italiano
+            </button>
+            <button type="button" onClick={() => { setLanguage("en"); if (websiteUrl.trim().length >= 5) { analyzedUrlRef.current = ""; analyzeSite(websiteUrl); } }}
+              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-[2px] border text-sm font-medium transition-all ${
+                language === "en" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-muted-foreground"
+              }`}>
+              🇬🇧 English
+            </button>
+          </div>
+        </div>
+
         {/* Settore e Tipo Brand */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
@@ -490,16 +519,8 @@ export default function NewProjectPage() {
             placeholder={t("projects.marketContextPlaceholder")} rows={4} className="input-base resize-none" />
         </div>
 
-        {/* Lingua e Paese */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">{t("projects.language")}</label>
-            <select value={language} onChange={(e) => setLanguage(e.target.value as "it" | "en")} className="input-base">
-              <option value="it">Italiano</option>
-              <option value="en">English</option>
-            </select>
-          </div>
-          <div className="space-y-1.5">
+        {/* Paese */}
+        <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
               {t("projects.country")}
               <InfoTooltip text={t("projects.countryTooltip")} />
@@ -560,7 +581,6 @@ export default function NewProjectPage() {
                 </div>
               )}
             </div>
-          </div>
         </div>
 
         {/* Modelli AI */}

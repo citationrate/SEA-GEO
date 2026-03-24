@@ -5,6 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const schema = z.object({
   url: z.string().min(1),
+  language: z.enum(["it", "en"]).default("it"),
 });
 
 export interface SiteAnalysis {
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
     const parsed = schema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "URL non valido" }, { status: 400 });
 
+    const language = parsed.data.language;
     let baseUrl = parsed.data.url.trim();
     if (!baseUrl.startsWith("http")) baseUrl = `https://${baseUrl}`;
 
@@ -119,12 +121,12 @@ export async function POST(request: Request) {
       max_tokens: 1500,
       messages: [{
         role: "user",
-        content: `Analyze this website and extract structured information. Return JSON only, no other text.
+        content: `Analyze this website and extract structured information. Respond in ${language === "it" ? "Italian" : "English"}. Return JSON only, no other text.
 
 Website content:
 ${content.slice(0, 4000)}
 
-Extract:
+Extract (all text values MUST be in ${language === "it" ? "Italian" : "English"}):
 1. main_service: What is the primary service/product offered? (1-2 sentences)
 2. target_audience: Who are the customers? (B2B/B2C, demographics, profession)
 3. value_proposition: What makes this brand unique? (1-2 sentences)
