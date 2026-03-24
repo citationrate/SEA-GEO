@@ -55,10 +55,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing user_id or plan" }, { status: 400 });
     }
 
-    // Normalize plan ID
-    const normalizedPlan = newPlan === "free" ? "demo" : newPlan;
-    const validPlans = ["demo", "base", "pro", "agency", "enterprise"];
-    if (!validPlans.includes(normalizedPlan)) {
+    // Normalize CitationRate plan → AVI plan_id
+    const PLAN_MAP: Record<string, string> = {
+      demo: "demo",
+      free: "demo",
+      base: "base",
+      pro: "pro",
+      agency: "pro",
+      enterprise: "enterprise",
+    };
+    const normalizedPlan = PLAN_MAP[newPlan];
+    if (!normalizedPlan) {
       return NextResponse.json({ error: `Invalid plan: ${newPlan}` }, { status: 400 });
     }
 
