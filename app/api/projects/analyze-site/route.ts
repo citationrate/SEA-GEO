@@ -78,6 +78,42 @@ async function fetchPageText(pageUrl: string): Promise<{ title: string; descript
   }
 }
 
+/** Fallback: fetch page content via Jina Reader (bypasses WAFs like Cloudflare/Akamai) */
+async function fetchViaJina(pageUrl: string): Promise<{ title: string; description: string; headings: string[]; text: string } | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`https://r.jina.ai/${pageUrl}`, {
+      signal: controller.signal,
+      headers: { Accept: "text/plain" },
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+
+    const markdown = await res.text();
+    const titleMatch = markdown.match(/^Title:\s*(.+)$/m);
+    const title = titleMatch?.[1]?.trim() ?? "";
+    // Extract headings from markdown
+    const headings = Array.from(markdown.matchAll(/^#{1,2}\s+(.+)$/gm))
+      .map((m) => m[1].trim())
+      .filter((h) => h.length > 2 && h.length < 200)
+      .slice(0, 15);
+    // Use the markdown content as text (strip URLs and image references)
+    const text = markdown
+      .replace(/^(Title|URL Source|Markdown Content):.*$/gm, "")
+      .replace(/!\[.*?\]\(.*?\)/g, "")
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 4000);
+
+    return { title, description: "", headings, text };
+  } catch {
+    clearTimeout(timeout);
+    return null;
+  }
+}
+
 export async function POST(request: Request) {
   const { error } = await requireAuth();
   if (error) return error;
@@ -91,14 +127,20 @@ export async function POST(request: Request) {
     let baseUrl = parsed.data.url.trim();
     if (!baseUrl.startsWith("http")) baseUrl = `https://${baseUrl}`;
 
-    // Fetch homepage
-    const homepage = await fetchPageText(baseUrl);
+    // Fetch homepage (direct fetch first, Jina Reader fallback for WAF-protected sites)
+    let homepage = await fetchPageText(baseUrl);
+    let usedJina = false;
+    if (!homepage) {
+      console.log("[analyze-site] Direct fetch failed, trying Jina Reader for:", baseUrl);
+      homepage = await fetchViaJina(baseUrl);
+      usedJina = true;
+    }
     if (!homepage) {
       return NextResponse.json({ error: "Impossibile raggiungere il sito" }, { status: 422 });
     }
 
-    // Fetch up to 2 key internal pages (about/services)
-    const internalLinks: string[] = (homepage as any)._links ?? [];
+    // Fetch up to 2 key internal pages (about/services) — skip if using Jina fallback
+    const internalLinks: string[] = usedJina ? [] : ((homepage as any)._links ?? []);
     const internalPages = await Promise.all(
       internalLinks.map((link: string) => fetchPageText(link))
     );
