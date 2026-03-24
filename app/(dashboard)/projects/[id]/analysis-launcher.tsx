@@ -242,16 +242,16 @@ export function AnalysisLauncher({
               <p className="text-sm text-muted-foreground">
                 {t("analysisLauncher.thisAnalysisWillUse")} <span className="text-foreground font-bold">{totalPrompts}</span> {t("analysisLauncher.promptsOnPlan")}
               </p>
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground flex-1">
                   {queryCount} query &times; {modelsConfig.length} {modelsConfig.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} &times; {Math.max(segmentCount, 1)} {segmentCount === 1 ? t("analysisLauncher.segmentSingular") : t("analysisLauncher.segmentPlural")} &times; {runCount} run = {totalPrompts} prompt
                 </p>
                 <a
                   href={`/projects/${projectId}/queries`}
-                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/70 transition-colors shrink-0"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-medium text-primary hover:text-primary/70 border border-primary/25 rounded-[2px] px-2 py-1 transition-colors shrink-0"
                 >
                   <Settings2 className="w-3 h-3" />
-                  {t("analysisLauncher.manageQueries") || "Manage queries"}
+                  Manage queries
                 </a>
               </div>
 
