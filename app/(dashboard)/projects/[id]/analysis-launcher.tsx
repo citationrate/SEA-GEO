@@ -53,16 +53,13 @@ export function AnalysisLauncher({
     return modelsConfig.length * queryCount * Math.max(segmentCount, 1) * runCount;
   }, [modelsConfig.length, queryCount, segmentCount, runCount]);
 
-  // Query cost = number of queries only (models × runs are free repetitions)
-  const queryCost = queryCount;
-
   // Check against the appropriate counter
   const browsingRemaining = usage.browsingPromptsRemaining;
   const noBrowsingRemaining = usage.noBrowsingPromptsRemaining;
 
   const wouldExceed = effectiveBrowsing
-    ? queryCost > browsingRemaining
-    : queryCost > noBrowsingRemaining;
+    ? totalPrompts > browsingRemaining
+    : totalPrompts > noBrowsingRemaining;
   const modelsExceed = modelsConfig.length > usage.maxModelsPerProject;
 
   // Auto-disable browsing when browsing counter exhausted
@@ -243,10 +240,10 @@ export function AnalysisLauncher({
             {/* Dual usage counters */}
             <div className="space-y-2 rounded-[2px] border border-border bg-muted/20 px-4 py-3">
               <p className="text-sm text-muted-foreground">
-                {t("analysisLauncher.thisAnalysisWillUse")} <span className="text-foreground font-bold">{queryCost}</span> {t("analysisLauncher.promptsOnPlan")}
+                {t("analysisLauncher.thisAnalysisWillUse")} <span className="text-foreground font-bold">{totalPrompts}</span> {t("analysisLauncher.promptsOnPlan")}
               </p>
               <p className="text-xs text-muted-foreground">
-                {queryCount} query &rarr; {queryCost} prompt ({totalPrompts} chiamate API: {queryCount} query &times; {modelsConfig.length} {modelsConfig.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} &times; {Math.max(segmentCount, 1)} {segmentCount === 1 ? t("analysisLauncher.segmentSingular") : t("analysisLauncher.segmentPlural")} &times; {runCount} run)
+                {queryCount} query &times; {modelsConfig.length} {modelsConfig.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} &times; {Math.max(segmentCount, 1)} {segmentCount === 1 ? t("analysisLauncher.segmentSingular") : t("analysisLauncher.segmentPlural")} &times; {runCount} run = {totalPrompts} prompt
               </p>
 
               {profileLoaded && !isDemo && (
@@ -279,8 +276,8 @@ export function AnalysisLauncher({
                   <p className="font-semibold">Lancio bloccato — prompt insufficienti</p>
                   <p>
                     {effectiveBrowsing
-                      ? `Questa analisi richiede ${queryCost} prompt con browsing ma te ne restano solo ${browsingRemaining}. Disattiva il browsing oppure riduci le query.`
-                      : `Questa analisi richiede ${queryCost} prompt ma te ne restano solo ${noBrowsingRemaining}. Riduci le query o passa a un piano superiore.`}
+                      ? `Questa analisi richiede ${totalPrompts} prompt con browsing ma te ne restano solo ${browsingRemaining}. Disattiva il browsing oppure riduci le query.`
+                      : `Questa analisi richiede ${totalPrompts} prompt ma te ne restano solo ${noBrowsingRemaining}. Riduci le query o passa a un piano superiore.`}
                   </p>
                   {!usage.isPro && (
                     <a href="/settings" className="inline-flex items-center gap-1 text-[#c4a882] hover:underline font-medium">
@@ -302,7 +299,7 @@ export function AnalysisLauncher({
             {/* Footer info */}
             <p className="text-sm text-muted-foreground text-center">
               <span className="text-foreground font-medium">{modelsConfig.length}</span> {modelsConfig.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} &middot;{" "}
-              <span className="text-foreground font-medium">{queryCost}</span> {t("analysisLauncher.totalPrompts")}
+              <span className="text-foreground font-medium">{totalPrompts}</span> {t("analysisLauncher.totalPrompts")}
             </p>
 
             {error && <p className="text-sm text-destructive">{error}</p>}

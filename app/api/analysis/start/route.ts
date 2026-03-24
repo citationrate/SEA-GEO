@@ -61,7 +61,8 @@ export async function POST(request: Request) {
     // Plan limits check
     const plan = await getUserPlanLimits(user.id);
     const usage = await getCurrentUsage(user.id);
-    const promptCost = queries.length;
+    const segmentCount = Math.max((segments?.length ?? 0), 1);
+    const promptCost = queries.length * validModels.length * segmentCount * run_count;
     const userPlanId = (plan as any).id ?? "demo";
     const isProPlan = userPlanId === "pro" || userPlanId === "agency";
     const isDemoPlan = userPlanId === "demo";
