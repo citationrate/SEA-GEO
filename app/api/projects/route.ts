@@ -37,10 +37,14 @@ export async function POST(request: Request) {
     if (error) return error;
 
     const body = await request.json();
+    console.log("[API/PROJECTS] POST called, user:", user.id);
+    console.log("[API/PROJECTS] Body:", JSON.stringify(body));
+
     const parsed = projectSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
+      console.error("[API/PROJECTS] Validation failed:", parsed.error.flatten());
+      return NextResponse.json({ error: "Dati non validi", details: parsed.error.flatten() }, { status: 400 });
     }
 
     const { data, error: dbError } = await supabase
@@ -50,11 +54,14 @@ export async function POST(request: Request) {
       .single();
 
     if (dbError) {
+      console.error("[API/PROJECTS] DB error:", dbError.message, dbError.code, dbError.details);
       return NextResponse.json({ error: dbError.message }, { status: 500 });
     }
 
     return NextResponse.json(data, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Errore interno" }, { status: 500 });
+  } catch (err) {
+    console.error("[API/PROJECTS] Unhandled error:", err instanceof Error ? err.message : err);
+    console.error("[API/PROJECTS] Stack:", err instanceof Error ? err.stack : "N/A");
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Errore interno" }, { status: 500 });
   }
 }
