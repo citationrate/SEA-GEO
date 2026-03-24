@@ -11,7 +11,7 @@ import {
   Users, Link2, Tag, GitCompare, Settings,
   Database, ChevronRight, Plus,
   PanelLeftClose, PanelLeftOpen, MessageSquareText,
-  ExternalLink,
+  ExternalLink, X,
 } from "lucide-react";
 import { useConsultation } from "@/lib/consultation-context";
 
@@ -27,6 +27,7 @@ export function Sidebar({ profile }: SidebarProps) {
   const isDemo = !profile?.plan || profile.plan === "demo" || profile.plan === "free";
   const isBase = profile?.plan === "base";
   const [collapsed, setCollapsed] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
   const { t } = useTranslation();
   const { openModal } = useConsultation();
 
@@ -166,9 +167,16 @@ export function Sidebar({ profile }: SidebarProps) {
       </nav>
 
       {/* Demo upgrade banner */}
-      {isDemo && !collapsed && (
-        <div className="mx-2 mb-2 flex-shrink-0 rounded-[2px] px-3 py-2.5" style={{ background: "linear-gradient(135deg, #C0C0C0, #E8E8E8)" }}>
-          <p className="text-[11px] font-medium leading-snug" style={{ color: "#333" }}>
+      {isDemo && !collapsed && !bannerDismissed && (
+        <div className="mx-2 mb-2 flex-shrink-0 rounded-[2px] px-3 py-2.5 relative" style={{ background: "linear-gradient(135deg, #C0C0C0, #E8E8E8)" }}>
+          <button
+            onClick={() => setBannerDismissed(true)}
+            className="absolute top-1.5 right-1.5 w-4 h-4 flex items-center justify-center rounded-sm hover:bg-black/10 transition-colors"
+            style={{ color: "#555" }}
+          >
+            <X className="w-3 h-3" />
+          </button>
+          <p className="text-[11px] font-medium leading-snug pr-4" style={{ color: "#333" }}>
             {t("sidebar.demoBanner")}
           </p>
           <a
