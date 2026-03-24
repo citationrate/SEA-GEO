@@ -314,10 +314,17 @@ export function CompetitorsClient({
         <>
           {/* Benchmark vs Brand */}
           {brandAviScore != null && filteredRows.length > 0 && (() => {
-            const top5 = filteredRows.slice(0, 5);
+            // When a specific model is selected, use mentionScore (per-model) instead of aviScore (global)
+            const useModelScore = !!selectedModel;
+            const sorted = [...filteredRows].sort((a, b) => {
+              const sa = useModelScore ? (a.mentionScore ?? 0) : (a.aviScore ?? a.mentionScore ?? 0);
+              const sb = useModelScore ? (b.mentionScore ?? 0) : (b.aviScore ?? b.mentionScore ?? 0);
+              return sb - sa;
+            });
+            const top5 = sorted.slice(0, 5);
             return (
               <div className="card p-5 space-y-4">
-                <h2 className="font-display font-semibold text-foreground text-sm">Benchmark</h2>
+                <h2 className="font-display font-semibold text-foreground text-sm">Benchmark{selectedModel ? ` — ${selectedModel}` : ""}</h2>
                 <div className="space-y-2.5">
                   {/* Brand row */}
                   <div className="flex items-center gap-3">
@@ -332,8 +339,8 @@ export function CompetitorsClient({
                   </div>
                   {/* Competitor rows */}
                   {top5.map((r) => {
-                    const score = r.aviScore ?? r.mentionScore ?? 0;
-                    const isEstimate = r.aviScore == null && r.mentionScore != null;
+                    const score = useModelScore ? (r.mentionScore ?? 0) : (r.aviScore ?? r.mentionScore ?? 0);
+                    const isEstimate = useModelScore || (r.aviScore == null && r.mentionScore != null);
                     const beats = score > brandAviScore;
                     const barBg = score >= 70 ? "rgba(126,184,154,0.5)" : score >= 40 ? "rgba(232,226,214,0.3)" : "rgba(192,97,74,0.3)";
                     const textColor = beats ? "text-destructive" : score >= 70 ? "text-primary" : score >= 40 ? "text-cream" : "text-destructive";
