@@ -6,7 +6,6 @@ import { ArrowLeft, X, Loader2, Lock, Check, Search, ChevronDown, Globe, Sparkle
 import { PROVIDER_GROUPS, DEMO_MODEL_IDS } from "@/lib/engine/models";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
-import confetti from "canvas-confetti";
 import { useTranslation } from "@/lib/i18n/context";
 
 interface ModelOption {
@@ -308,20 +307,6 @@ export default function NewProjectPage() {
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || t("projects.saveError"));
-      }
-
-      if (existingProjectCount === 0) {
-        confetti({
-          particleCount: 150,
-          spread: 80,
-          origin: { y: 0.6 },
-          colors: ["#00d4ff", "#7eb3d4", "#e8956d", "#7eb89a", "#c4a882"],
-        });
-        setTimeout(() => {
-          router.push(`/projects/${data.id}`);
-          router.refresh();
-        }, 800);
-        return;
       }
 
       router.push(`/projects/${data.id}`);
