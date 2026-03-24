@@ -354,7 +354,7 @@ export function CompetitorsClient({
                           />
                         </div>
                         <span className={`text-xs font-bold w-14 text-right ${score > 0 ? textColor : "text-muted-foreground"}`}>
-                          {score > 0 ? `${isEstimate ? "" : "AVI "}${Math.round(score * 10) / 10}${isEstimate ? "%" : ""}` : "—"}
+                          {score > 0 ? `AVI ${Math.round(score * 10) / 10}` : "—"}
                         </span>
                       </div>
                     );
