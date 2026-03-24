@@ -243,10 +243,10 @@ export function AnalysisLauncher({
             {/* Dual usage counters */}
             <div className="space-y-2 rounded-[2px] border border-border bg-muted/20 px-4 py-3">
               <p className="text-sm text-muted-foreground">
-                {t("analysisLauncher.thisAnalysisWillUse")} <span className="text-foreground font-bold">{totalPrompts}</span> {t("analysisLauncher.promptsOnPlan")}
+                {t("analysisLauncher.thisAnalysisWillUse")} <span className="text-foreground font-bold">{queryCost}</span> {t("analysisLauncher.promptsOnPlan")}
               </p>
               <p className="text-xs text-muted-foreground">
-                {queryCount} query &times; {modelsConfig.length} {modelsConfig.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} &times; {Math.max(segmentCount, 1)} {segmentCount === 1 ? t("analysisLauncher.segmentSingular") : t("analysisLauncher.segmentPlural")} &times; {runCount} run = {totalPrompts} prompt
+                {queryCount} query &rarr; {queryCost} prompt ({totalPrompts} chiamate API: {queryCount} query &times; {modelsConfig.length} {modelsConfig.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} &times; {Math.max(segmentCount, 1)} {segmentCount === 1 ? t("analysisLauncher.segmentSingular") : t("analysisLauncher.segmentPlural")} &times; {runCount} run)
               </p>
 
               {profileLoaded && !isDemo && (
@@ -302,7 +302,7 @@ export function AnalysisLauncher({
             {/* Footer info */}
             <p className="text-sm text-muted-foreground text-center">
               <span className="text-foreground font-medium">{modelsConfig.length}</span> {modelsConfig.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} &middot;{" "}
-              <span className="text-foreground font-medium">{totalPrompts}</span> {t("analysisLauncher.totalPrompts")}
+              <span className="text-foreground font-medium">{queryCost}</span> {t("analysisLauncher.totalPrompts")}
             </p>
 
             {error && <p className="text-sm text-destructive">{error}</p>}
