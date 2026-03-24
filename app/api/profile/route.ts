@@ -1,6 +1,5 @@
 import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
-import { isProUser } from "@/lib/utils/is-pro";
 
 export async function GET() {
   const { supabase, user, error } = await requireAuth();
@@ -13,13 +12,7 @@ export async function GET() {
 
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
-  // Enrich plan from user_metadata.is_pro (same logic as dashboard layout)
-  const profile = data as any;
-  if (isProUser(profile, user.user_metadata)) {
-    profile.plan = profile.plan === "agency" ? "agency" : "pro";
-  }
-
-  return NextResponse.json(profile);
+  return NextResponse.json(data);
 }
 
 export async function PATCH(request: Request) {

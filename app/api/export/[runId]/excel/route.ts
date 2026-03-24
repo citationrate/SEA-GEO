@@ -22,7 +22,7 @@ export async function GET(
       .select("plan")
       .eq("id", user.id)
       .single();
-    isPro = isProUser(profile, user.user_metadata);
+    isPro = isProUser(profile);
   }
 
   // Fetch run

@@ -22,7 +22,7 @@ export default async function ComparePage({
     .eq("id", user.id)
     .single();
 
-  const isPro = isProUser(profile as any, user.user_metadata);
+  const isPro = isProUser(profile as any);
 
   // Paywall for non-Pro users
   if (!isPro) {

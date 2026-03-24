@@ -1,0 +1,22 @@
+-- Migration 025: Support for plan sync webhook from CitationRate
+--
+-- This migration documents the shared plan architecture.
+-- AVI receives plan updates from CitationRate via POST /api/webhooks/sync-plan.
+--
+-- CITATIONRATE SUPABASE (tzcxlchrcspqsayehrky) — run these manually:
+--
+-- ALTER TABLE profiles ADD COLUMN IF NOT EXISTS avi_queries_used integer DEFAULT 0;
+-- ALTER TABLE profiles ADD COLUMN IF NOT EXISTS audit_used integer DEFAULT 0;
+-- ALTER TABLE profiles ADD COLUMN IF NOT EXISTS billing_period_start timestamptz DEFAULT now();
+--
+-- Then configure a Database Webhook in CitationRate Supabase Dashboard:
+--   Table: profiles
+--   Event: UPDATE
+--   URL: https://avi.citationrate.com/api/webhooks/sync-plan
+--   Headers: x-webhook-secret: <WEBHOOK_SECRET from AVI .env>
+--
+-- SEAGEO1 SUPABASE (ubvkzstxviqwgufppiko) — no schema changes needed.
+-- profiles.plan is already the source of truth for AVI plan status.
+-- The webhook updates this column when CitationRate plan changes.
+
+SELECT 1; -- no-op migration, documentation only

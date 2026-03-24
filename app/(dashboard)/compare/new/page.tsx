@@ -20,7 +20,7 @@ export default async function NewCompetitivePage() {
     .eq("id", user.id)
     .single();
 
-  if (!isProUser(profile as any, user.user_metadata)) redirect("/compare?upgrade=1");
+  if (!isProUser(profile as any)) redirect("/compare?upgrade=1");
 
   // Get user projects
   const { data: projects } = await supabase

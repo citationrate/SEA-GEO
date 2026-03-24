@@ -18,7 +18,7 @@ export default async function DatasetsPage() {
     .eq("id", user.id)
     .single();
 
-  const isPro = isProUser(profile as any, user.user_metadata);
+  const isPro = isProUser(profile as any);
 
   // Also check plan limits table as fallback
   const planLimits = await getUserPlanLimits(user.id);
