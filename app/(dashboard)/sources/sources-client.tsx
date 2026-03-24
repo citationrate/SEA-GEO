@@ -181,7 +181,7 @@ export function SourcesClient({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((d) => (
-            <DomainCard key={d.domain} domain={d} onAnalyze={() => setDrawerDomain(d)} isPro={usage.isPro} />
+            <DomainCard key={d.domain} domain={d} onAnalyze={() => setDrawerDomain(d)} isPro={usage.isPro} isDemo={usage.isDemo} />
           ))}
         </div>
       )}
@@ -212,7 +212,7 @@ function StatCard({ value, label, highlight }: { value: string; label: string; h
 }
 
 /* ─── Domain Card ─── */
-function DomainCard({ domain: d, onAnalyze, isPro }: { domain: SourceDomain; onAnalyze: () => void; isPro: boolean }) {
+function DomainCard({ domain: d, onAnalyze, isPro, isDemo }: { domain: SourceDomain; onAnalyze: () => void; isPro: boolean; isDemo: boolean }) {
   const { t } = useTranslation();
   const cfg = TYPE_CONFIG[d.sourceType] ?? TYPE_CONFIG.other;
   const Icon = cfg.icon;
@@ -255,21 +255,23 @@ function DomainCard({ domain: d, onAnalyze, isPro }: { domain: SourceDomain; onA
         </p>
       )}
 
-      {/* Analyze button */}
-      {isPro ? (
-        <button
-          onClick={onAnalyze}
-          className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/70 transition-colors"
-        >
-          <Search className="w-3 h-3" /> {t("sources.analyzeUrl")}
-        </button>
-      ) : (
-        <span className="flex items-center gap-1.5 text-xs font-medium text-[#c4a882]">
-          <Lock className="w-3 h-3" /> {t("sources.analyzeUrl")}
-          <span className="inline-flex items-center gap-0.5 font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">
-            <Crown className="w-2.5 h-2.5" /> PRO
+      {/* Analyze button (hidden for demo) */}
+      {!isDemo && (
+        isPro ? (
+          <button
+            onClick={onAnalyze}
+            className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/70 transition-colors"
+          >
+            <Search className="w-3 h-3" /> {t("sources.analyzeUrl")}
+          </button>
+        ) : (
+          <span className="flex items-center gap-1.5 text-xs font-medium text-[#c4a882]">
+            <Lock className="w-3 h-3" /> {t("sources.analyzeUrl")}
+            <span className="inline-flex items-center gap-0.5 font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">
+              <Crown className="w-2.5 h-2.5" /> PRO
+            </span>
           </span>
-        </span>
+        )
       )}
     </div>
   );

@@ -165,8 +165,8 @@ export function CompetitorsClient({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Analyze button (Pro only) */}
-          {rows.length > 0 && (
+          {/* Analyze button (Pro only, hidden for demo) */}
+          {rows.length > 0 && !usage.isDemo && (
             <div className="relative">
               <button
                 data-tour="analyze-contexts-btn"

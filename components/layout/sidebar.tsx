@@ -11,7 +11,7 @@ import {
   Users, Link2, Tag, GitCompare, Settings,
   Database, ChevronRight, Plus,
   PanelLeftClose, PanelLeftOpen, MessageSquareText,
-  LayoutGrid,
+  ExternalLink,
 } from "lucide-react";
 import { useConsultation } from "@/lib/consultation-context";
 
@@ -24,6 +24,8 @@ interface SidebarProps {
 export function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname();
   const isPro = profile?.plan === "pro" || profile?.plan === "agency";
+  const isDemo = !profile?.plan || profile.plan === "demo" || profile.plan === "free";
+  const isBase = profile?.plan === "base";
   const [collapsed, setCollapsed] = useState(false);
   const { t } = useTranslation();
   const { openModal } = useConsultation();
@@ -163,6 +165,22 @@ export function Sidebar({ profile }: SidebarProps) {
         ))}
       </nav>
 
+      {/* Demo upgrade banner */}
+      {isDemo && !collapsed && (
+        <div className="mx-2 mb-2 flex-shrink-0 rounded-[2px] px-3 py-2.5" style={{ background: "linear-gradient(135deg, #C0C0C0, #E8E8E8)" }}>
+          <p className="text-[11px] font-medium leading-snug" style={{ color: "#333" }}>
+            {t("sidebar.demoBanner")}
+          </p>
+          <a
+            href="/settings"
+            className="inline-block mt-1.5 text-[11px] font-bold hover:opacity-80 transition-opacity"
+            style={{ color: "#1a1a1a" }}
+          >
+            {t("sidebar.upgradeBase")} &rarr;
+          </a>
+        </div>
+      )}
+
       {/* Consultation CTA */}
       <div className="px-2 pb-2 flex-shrink-0">
         <button
@@ -180,8 +198,8 @@ export function Sidebar({ profile }: SidebarProps) {
 
       {/* Switch tool */}
       <div className="px-2 pb-2 flex-shrink-0">
-        <Link
-          href="https://suite.citationrate.com/hub"
+        <a
+          href="https://suite.citationrate.com"
           className={cn(
             "flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm font-ui transition-colors mt-1",
             collapsed && "justify-center px-0",
@@ -191,9 +209,9 @@ export function Sidebar({ profile }: SidebarProps) {
           onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--c-sage)"; }}
           title={collapsed ? t("sidebar.switchTool") : undefined}
         >
-          <LayoutGrid size={16} className="shrink-0" />
+          <ExternalLink size={16} className="shrink-0" />
           {!collapsed && t("sidebar.switchTool")}
-        </Link>
+        </a>
       </div>
 
       {/* Profile → links to settings */}
@@ -214,9 +232,17 @@ export function Sidebar({ profile }: SidebarProps) {
               <p className="text-xs font-medium text-foreground truncate leading-tight font-sans">
                 {profile?.full_name ?? profile?.email ?? t("sidebar.user")}
               </p>
-              <p className="font-mono text-[0.75rem] text-muted-foreground uppercase tracking-wide">
-                {t("sidebar.plan")} {!profile?.plan || profile.plan === "free" || profile.plan === "demo" ? "Demo" : profile.plan === "base" ? "Base" : profile.plan === "pro" ? "Pro" : profile.plan === "agency" ? "Agency" : profile.plan}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <p className="font-mono text-[0.75rem] text-muted-foreground uppercase tracking-wide">
+                  {t("sidebar.plan")} {isDemo ? "Demo" : isBase ? "" : profile?.plan === "agency" ? "Agency" : isPro ? "" : profile?.plan}
+                </p>
+                {isBase && (
+                  <span className="font-mono text-[0.625rem] tracking-wide px-1 py-0.5 rounded-[2px]" style={{ background: "linear-gradient(135deg, #C0C0C0, #E8E8E8)", color: "#333" }}>BASE</span>
+                )}
+                {isPro && (
+                  <span className="font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">PRO</span>
+                )}
+              </div>
             </div>
           )}
         </Link>
