@@ -441,47 +441,51 @@ export default function NewProjectPage() {
           )}
         </div>
 
-        {/* Site analysis results */}
-        {siteAnalysis && (
+        {/* Site analysis results — titles follow detection language, not UI language */}
+        {siteAnalysis && (() => {
+          const labels = language === "en"
+            ? { analyzed: "We analyzed your website", service: "Detected service", audience: "Target audience", value: "Value proposition", tone: "Tone", geo: "Coverage", keywords: "Sector keywords" }
+            : { analyzed: "Abbiamo analizzato il tuo sito", service: "Servizio rilevato", audience: "Pubblico target", value: "Proposta di valore", tone: "Tono", geo: "Copertura", keywords: "Parole chiave settore" };
+          return (
           <div className="rounded-[2px] border border-primary/30 bg-primary/5 p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" />
-              <p className="text-sm font-semibold text-foreground">{t("projects.siteAnalyzed")}</p>
+              <p className="text-sm font-semibold text-foreground">{labels.analyzed}</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               {siteAnalysis.main_service && (
                 <div>
-                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{t("projects.detectedSector")}</p>
+                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{labels.service}</p>
                   <p className="text-foreground">{siteAnalysis.main_service}</p>
                 </div>
               )}
               {siteAnalysis.target_audience && (
                 <div>
-                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{t("projects.targetAudience")}</p>
+                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{labels.audience}</p>
                   <p className="text-foreground">{siteAnalysis.target_audience}</p>
                 </div>
               )}
               {siteAnalysis.value_proposition && (
                 <div className="sm:col-span-2">
-                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{t("projects.valueProposition")}</p>
+                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{labels.value}</p>
                   <p className="text-foreground">{siteAnalysis.value_proposition}</p>
                 </div>
               )}
               {siteAnalysis.tone && (
                 <div>
-                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{t("projects.tone")}</p>
+                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{labels.tone}</p>
                   <p className="text-foreground capitalize">{siteAnalysis.tone}</p>
                 </div>
               )}
               {siteAnalysis.geography && (
                 <div>
-                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{t("projects.geography")}</p>
+                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{labels.geo}</p>
                   <p className="text-foreground capitalize">{siteAnalysis.geography}</p>
                 </div>
               )}
               {siteAnalysis.sector_keywords?.length > 0 && (
                 <div className="sm:col-span-2">
-                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-1">{t("projects.sectorKeywords")}</p>
+                  <p className="text-muted-foreground uppercase tracking-wide font-semibold mb-1">{labels.keywords}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {siteAnalysis.sector_keywords.map((kw: string) => (
                       <span key={kw} className="px-2 py-0.5 rounded-full text-[0.6875rem] font-medium border border-primary/20 bg-primary/5 text-foreground">{kw}</span>
@@ -491,7 +495,8 @@ export default function NewProjectPage() {
               )}
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* Competitor */}
         <div className="space-y-1.5">

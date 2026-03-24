@@ -25,7 +25,7 @@ async function fetchPageText(pageUrl: string): Promise<{ title: string; descript
   try {
     const res = await fetch(pageUrl, {
       signal: controller.signal,
-      headers: { "User-Agent": "AVI-Bot/1.0 (AI Visibility Analysis)" },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; AVI/1.0; +https://avi.citationrate.com)" },
       redirect: "follow",
     });
     clearTimeout(timeout);
@@ -132,8 +132,8 @@ Extract (all text values MUST be in ${language === "it" ? "Italian" : "English"}
 3. value_proposition: What makes this brand unique? (1-2 sentences)
 4. sector_keywords: 5-10 keywords that describe the sector (array of strings)
 5. competitor_signals: Any competitors or similar brands mentioned on the site (array of company names, empty if none found)
-6. tone: One of: professional, friendly, luxury, budget, technical
-7. geography: One of: local, national, international
+6. tone: One of: ${language === "it" ? "professionale, amichevole, lusso, economico, tecnico" : "professional, friendly, luxury, budget, technical"}
+7. geography: One of: ${language === "it" ? "locale, nazionale, internazionale" : "local, national, international"}
 
 Return ONLY valid JSON:
 {"main_service": "...", "target_audience": "...", "value_proposition": "...", "sector_keywords": [...], "competitor_signals": [...], "tone": "...", "geography": "..."}`,
