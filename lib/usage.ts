@@ -104,14 +104,11 @@ export async function incrementComparisonsUsed(userId: string): Promise<void> {
 export async function getUserPlanLimits(userId: string) {
   const svc = createServiceClient();
 
-  const { data: profile, error: profileError } = await svc.from("profiles").select("plan").eq("id", userId).single();
-  console.log("[PLAN DEBUG SERVER] userId:", userId, "profile:", profile, "profileError:", profileError?.message);
+  const { data: profile } = await svc.from("profiles").select("plan").eq("id", userId).single();
   const planId = (profile as any)?.plan ?? "demo";
   const effectivePlanId = planId === "free" ? "demo" : planId === "agency" ? "pro" : planId;
-  console.log("[PLAN DEBUG SERVER] planId:", planId, "effectivePlanId:", effectivePlanId);
 
-  const { data: plan, error: planError } = await (svc.from("plans") as any).select("*").eq("id", effectivePlanId).single();
-  console.log("[PLAN DEBUG SERVER] plan:", plan?.id, "planError:", planError?.message);
+  const { data: plan } = await (svc.from("plans") as any).select("*").eq("id", effectivePlanId).single();
 
   const defaultPlan = {
     id: "demo",

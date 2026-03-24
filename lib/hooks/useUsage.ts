@@ -82,8 +82,9 @@ export function useUsage(): UsageData {
     async function load() {
       try {
         const authClient = createClient();
-        const { data: { user } } = await authClient.auth.getUser();
-        if (!user) { setLoading(false); return; }
+        const { data: { session } } = await authClient.auth.getSession();
+        if (!session?.user) { setLoading(false); return; }
+        const user = session.user;
 
         const supabase = createDataClient();
         // Get profile with plan_id
@@ -96,20 +97,11 @@ export function useUsage(): UsageData {
         const planId = (profile as any)?.plan ?? "demo";
         const effectivePlanId = planId === "free" ? "demo" : planId === "agency" ? "pro" : planId;
 
-        console.log("[PLAN DEBUG] user.id:", user.id);
-        console.log("[PLAN DEBUG] profile raw:", profile);
-        console.log("[PLAN DEBUG] profile.plan:", (profile as any)?.plan);
-        console.log("[PLAN DEBUG] planId:", planId);
-        console.log("[PLAN DEBUG] effectivePlanId:", effectivePlanId);
-
         // Get plan details
         const { data: planData, error: planError } = await (supabase.from("plans") as any)
           .select("*")
           .eq("id", effectivePlanId)
           .single();
-
-        console.log("[PLAN DEBUG] planData:", planData);
-        console.log("[PLAN DEBUG] planError:", planError);
 
         if (planData) {
           // Fallback for plans table rows missing new columns (migration not yet applied)

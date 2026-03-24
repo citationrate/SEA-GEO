@@ -15,12 +15,9 @@ export async function GET() {
 
   // Enrich plan from user_metadata.is_pro (same logic as dashboard layout)
   const profile = data as any;
-  console.log("[PLAN DEBUG PROFILE API] raw profile.plan:", profile?.plan, "user_metadata:", JSON.stringify(user.user_metadata));
-  console.log("[PLAN DEBUG PROFILE API] isProUser result:", isProUser(profile, user.user_metadata));
   if (isProUser(profile, user.user_metadata)) {
     profile.plan = profile.plan === "agency" ? "agency" : "pro";
   }
-  console.log("[PLAN DEBUG PROFILE API] final profile.plan:", profile?.plan);
 
   return NextResponse.json(profile);
 }
