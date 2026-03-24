@@ -237,8 +237,8 @@ export function AnalysisLauncher({
               </div>
             )}
 
-            {/* Dual usage counters */}
-            <div className="space-y-2 rounded-[2px] border border-border bg-muted/20 px-4 py-3">
+            {/* Usage counters with visual bars */}
+            <div className="space-y-3 rounded-[2px] border border-border bg-muted/20 px-4 py-3">
               <p className="text-sm text-muted-foreground">
                 {t("analysisLauncher.thisAnalysisWillUse")} <span className="text-foreground font-bold">{totalPrompts}</span> {t("analysisLauncher.promptsOnPlan")}
               </p>
@@ -247,24 +247,59 @@ export function AnalysisLauncher({
               </p>
 
               {profileLoaded && !isDemo && (
-                <div className="space-y-1.5 pt-2 border-t border-border mt-2">
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Globe className="w-3 h-3" />
-                    Con browsing: <span className="text-foreground font-medium">{usage.browsingPromptsUsed}/{usage.browsingPromptsLimit}</span> utilizzati
-                    {usage.extraBrowsingPrompts > 0 && <span className="text-primary">(+{usage.extraBrowsingPrompts} extra)</span>}
-                  </p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Cpu className="w-3 h-3" />
-                    Senza browsing: <span className="text-foreground font-medium">{usage.noBrowsingPromptsUsed}/{usage.noBrowsingPromptsLimit}</span> utilizzati
-                    {usage.extraNoBrowsingPrompts > 0 && <span className="text-primary">(+{usage.extraNoBrowsingPrompts} extra)</span>}
-                  </p>
+                <div className="space-y-2.5 pt-2 border-t border-border mt-2">
+                  {/* Browsing prompts bar */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground flex items-center gap-1.5">
+                        <Globe className="w-3 h-3" /> Browsing
+                      </span>
+                      <span className="text-foreground font-medium">
+                        {usage.browsingPromptsUsed}/{usage.browsingPromptsLimit}
+                        {usage.extraBrowsingPrompts > 0 && <span className="text-primary ml-1">(+{usage.extraBrowsingPrompts})</span>}
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{ width: `${usage.browsingPromptsLimit > 0 ? Math.min((usage.browsingPromptsUsed / usage.browsingPromptsLimit) * 100, 100) : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                  {/* No-browsing prompts bar */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground flex items-center gap-1.5">
+                        <Cpu className="w-3 h-3" /> No browsing
+                      </span>
+                      <span className="text-foreground font-medium">
+                        {usage.noBrowsingPromptsUsed}/{usage.noBrowsingPromptsLimit}
+                        {usage.extraNoBrowsingPrompts > 0 && <span className="text-primary ml-1">(+{usage.extraNoBrowsingPrompts})</span>}
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{ width: `${usage.noBrowsingPromptsLimit > 0 ? Math.min((usage.noBrowsingPromptsUsed / usage.noBrowsingPromptsLimit) * 100, 100) : 0}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
               {profileLoaded && isDemo && (
-                <p className="text-xs text-muted-foreground">
-                  {usage.noBrowsingPromptsUsed} / {usage.noBrowsingPromptsLimit} prompt demo utilizzati
-                </p>
+                <div className="space-y-1 pt-2 border-t border-border mt-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Prompt</span>
+                    <span className="text-foreground font-medium">{usage.noBrowsingPromptsUsed} / {usage.noBrowsingPromptsLimit}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${usage.noBrowsingPromptsLimit > 0 ? Math.min((usage.noBrowsingPromptsUsed / usage.noBrowsingPromptsLimit) * 100, 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
               )}
             </div>
 

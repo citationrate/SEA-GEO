@@ -3,6 +3,7 @@
 import { GitCompare, Plus, Clock, CheckCircle, XCircle, Loader2, Swords, Lock } from "lucide-react";
 import { ProjectSelector } from "@/components/project-selector";
 import { useTranslation } from "@/lib/i18n/context";
+import { useUsage } from "@/lib/hooks/useUsage";
 
 export function ComparePaywall() {
   const { t } = useTranslation();
@@ -35,6 +36,7 @@ interface CompareListProps {
 
 export function CompareList({ list, projectsList }: CompareListProps) {
   const { t, locale } = useTranslation();
+  const usage = useUsage();
 
   const projectMap = new Map(projectsList.map((p) => [p.id, p.name]));
 
@@ -65,6 +67,36 @@ export function CompareList({ list, projectsList }: CompareListProps) {
           </a>
         </div>
       </div>
+
+      {/* Usage counter */}
+      {!usage.loading && (
+        <div className="card px-4 py-3 flex items-center gap-4">
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">{t("compare.comparisonsUsed") || "Comparisons"}</span>
+              <span className="text-foreground font-medium">{usage.comparisonsUsed} / {usage.comparisonsLimit}</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${usage.comparisonsLimit > 0 ? Math.min((usage.comparisonsUsed / usage.comparisonsLimit) * 100, 100) : 0}%` }}
+              />
+            </div>
+          </div>
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Prompt (no browsing)</span>
+              <span className="text-foreground font-medium">{usage.noBrowsingPromptsUsed} / {usage.noBrowsingPromptsLimit}</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${usage.noBrowsingPromptsLimit > 0 ? Math.min((usage.noBrowsingPromptsUsed / usage.noBrowsingPromptsLimit) * 100, 100) : 0}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {list.length === 0 ? (
         <div className="card p-12 text-center">

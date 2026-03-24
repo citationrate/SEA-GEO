@@ -113,6 +113,24 @@ export function SourcesClient({
         <StatCard value={`${mediaPct}%`} label={t("sources.mediaStatLabel")} />
       </div>
 
+      {/* URL analyses counter (Pro) */}
+      {usage.isPro && !usage.loading && usage.urlAnalysesLimit > 0 && (
+        <div className="card px-4 py-2.5 max-w-xs">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">{t("sources.analyzeUrl")}</span>
+              <span className="text-foreground font-medium">{usage.urlAnalysesUsed} / {usage.urlAnalysesLimit}</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${Math.min((usage.urlAnalysesUsed / usage.urlAnalysesLimit) * 100, 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AI Insights */}
       {(loadingInsights || (insights && insights.length > 0)) && (
         <div className="space-y-2">
