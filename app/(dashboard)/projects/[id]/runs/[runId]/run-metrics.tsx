@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useMemo, Fragment } from "react";
-import { Globe, Tag, Users, ExternalLink, Eye, Hash, TrendingUp, TrendingDown, AlertTriangle, X, ChevronDown, ChevronRight } from "lucide-react";
+import { Globe, Tag, Users, ExternalLink, Eye, Lock, Hash, TrendingUp, TrendingDown, AlertTriangle, X, ChevronDown, ChevronRight } from "lucide-react";
 import { MarkdownResponse } from "@/components/ui/markdown-response";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
+import { useUsage } from "@/lib/hooks/useUsage";
 
 interface RunMetricsProps {
   prompts: any[];
@@ -83,6 +84,7 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
 
 export function RunMetrics({ prompts, analyses, sources, models, competitorMentions, brandAviScore, targetBrand, queries, competitorAviData, externalSelectedModel }: RunMetricsProps) {
   const { t } = useTranslation();
+  const usage = useUsage();
   const hasExternalModel = externalSelectedModel !== undefined;
   const [internalModel, setInternalModel] = useState<string | null>(null);
   const selectedModel = hasExternalModel ? externalSelectedModel : internalModel;
@@ -651,13 +653,17 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                         </td>
                         <td className="py-2">
                           {p.raw_response && (
-                            <button
-                              onClick={() => setModalPrompt({ prompt: p, analysis, query })}
-                              className="text-muted-foreground hover:text-primary transition-colors"
-                              title="Espandi risposta"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
+                            usage.isPro ? (
+                              <button
+                                onClick={() => setModalPrompt({ prompt: p, analysis, query })}
+                                className="text-muted-foreground hover:text-primary transition-colors"
+                                title="Espandi risposta"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <span title="Pro"><Lock className="w-4 h-4 text-muted-foreground/40" /></span>
+                            )
                           )}
                         </td>
                       </tr>
