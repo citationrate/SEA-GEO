@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Play, X, Loader2, Cpu, Globe, AlertTriangle, Lock } from "lucide-react";
+import { Play, X, Loader2, Cpu, Globe, AlertTriangle, Lock, Settings2 } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
@@ -242,9 +242,18 @@ export function AnalysisLauncher({
               <p className="text-sm text-muted-foreground">
                 {t("analysisLauncher.thisAnalysisWillUse")} <span className="text-foreground font-bold">{totalPrompts}</span> {t("analysisLauncher.promptsOnPlan")}
               </p>
-              <p className="text-xs text-muted-foreground">
-                {queryCount} query &times; {modelsConfig.length} {modelsConfig.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} &times; {Math.max(segmentCount, 1)} {segmentCount === 1 ? t("analysisLauncher.segmentSingular") : t("analysisLauncher.segmentPlural")} &times; {runCount} run = {totalPrompts} prompt
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  {queryCount} query &times; {modelsConfig.length} {modelsConfig.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} &times; {Math.max(segmentCount, 1)} {segmentCount === 1 ? t("analysisLauncher.segmentSingular") : t("analysisLauncher.segmentPlural")} &times; {runCount} run = {totalPrompts} prompt
+                </p>
+                <a
+                  href={`/projects/${projectId}/queries`}
+                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/70 transition-colors shrink-0"
+                >
+                  <Settings2 className="w-3 h-3" />
+                  {t("analysisLauncher.manageQueries") || "Manage queries"}
+                </a>
+              </div>
 
               {profileLoaded && !isDemo && (
                 <div className="space-y-2.5 pt-2 border-t border-border mt-2">
