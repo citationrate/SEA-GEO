@@ -588,15 +588,15 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                 <tr className="border-b border-border text-xs text-muted-foreground">
                   <th className="text-left py-2 pr-3 font-medium">#</th>
                   <th className="text-left py-2 pr-3 font-medium">Query</th>
-                  {hasFunnelData && <th className="text-left py-2 pr-3 font-medium">Tipo</th>}
-                  <th className="text-left py-2 pr-3 font-medium">Modello</th>
+                  {hasFunnelData && <th className="text-left py-2 pr-3 font-medium">{t("runMetrics.type") || "Type"}</th>}
+                  <th className="text-left py-2 pr-3 font-medium">{t("runMetrics.model") || "Model"}</th>
                   <th className="text-left py-2 pr-3 font-medium">Run</th>
                   <th className="text-left py-2 pr-3 font-medium">Brand</th>
                   <th className="text-left py-2 pr-3 font-medium">Rank</th>
                   <th className="text-left py-2 pr-3 font-medium">Sentiment</th>
                   <th className="text-left py-2 pr-3 font-medium">Competitors</th>
-                  <th className="text-left py-2 pr-3 font-medium">Stato</th>
-                  <th className="text-left py-2 font-medium">Azioni</th>
+                  <th className="text-left py-2 pr-3 font-medium">Status</th>
+                  <th className="text-left py-2 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
