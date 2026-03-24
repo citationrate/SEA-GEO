@@ -12,6 +12,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const isAuthRoute = path.startsWith("/login") || path.startsWith("/register") || path.startsWith("/forgot-password");
+  const isPublic = path === "/" || path.startsWith("/share/") || path.startsWith("/auth/");
+
+  // In production: auth routes redirect to suite — no auth call needed
+  if (COOKIE_DOMAIN && isAuthRoute) {
+    return NextResponse.redirect(SUITE_LOGIN_URL);
+  }
+
+  // Public routes don't need auth verification — let the page handle it
+  if (isPublic) {
+    return NextResponse.next();
+  }
+
+  // Auth routes in dev: serve directly (no getUser call needed — page handles redirect)
+  if (isAuthRoute) {
+    return NextResponse.next();
+  }
+
+  // --- Only protected routes below: call getUser() ---
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -36,30 +56,17 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const isAuthRoute = path.startsWith("/login") || path.startsWith("/register") || path.startsWith("/forgot-password");
-  const isPublic = path === "/" || path.startsWith("/share/") || path.startsWith("/auth/");
-
-  // In production: login/register pages redirect to suite (login lives there)
-  if (COOKIE_DOMAIN && isAuthRoute) {
-    return NextResponse.redirect(SUITE_LOGIN_URL);
-  }
-
-  if (!user && !isAuthRoute && !isPublic) {
-    // Not authenticated → redirect to CitationRate login
+  if (!user) {
+    // Not authenticated → redirect to login
     if (COOKIE_DOMAIN) {
       return NextResponse.redirect(SUITE_LOGIN_URL);
     }
-    // Dev: use local login page
     return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  if (user && isAuthRoute) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
 };
