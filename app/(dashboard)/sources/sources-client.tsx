@@ -181,7 +181,7 @@ export function SourcesClient({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((d) => (
-            <DomainCard key={d.domain} domain={d} onAnalyze={() => setDrawerDomain(d)} isPro={usage.isPro} isDemo={usage.isDemo} />
+            <DomainCard key={d.domain} domain={d} onAnalyze={() => setDrawerDomain(d)} isPro={usage.isPro} />
           ))}
         </div>
       )}
@@ -212,7 +212,7 @@ function StatCard({ value, label, highlight }: { value: string; label: string; h
 }
 
 /* ─── Domain Card ─── */
-function DomainCard({ domain: d, onAnalyze, isPro, isDemo }: { domain: SourceDomain; onAnalyze: () => void; isPro: boolean; isDemo: boolean }) {
+function DomainCard({ domain: d, onAnalyze, isPro }: { domain: SourceDomain; onAnalyze: () => void; isPro: boolean }) {
   const { t } = useTranslation();
   const cfg = TYPE_CONFIG[d.sourceType] ?? TYPE_CONFIG.other;
   const Icon = cfg.icon;
@@ -255,9 +255,8 @@ function DomainCard({ domain: d, onAnalyze, isPro, isDemo }: { domain: SourceDom
         </p>
       )}
 
-      {/* Analyze button (hidden for demo) */}
-      {!isDemo && (
-        isPro ? (
+      {/* Analyze button (Pro only — non-Pro users see PRO badge) */}
+      {isPro ? (
           <button
             onClick={onAnalyze}
             className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/70 transition-colors"
@@ -271,8 +270,7 @@ function DomainCard({ domain: d, onAnalyze, isPro, isDemo }: { domain: SourceDom
               <Crown className="w-2.5 h-2.5" /> PRO
             </span>
           </span>
-        )
-      )}
+        )}
     </div>
   );
 }
