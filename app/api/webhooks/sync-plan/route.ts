@@ -81,10 +81,45 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    // If billing period reset, clear usage counters for the new period
-    if (billingPeriodStart) {
-      const period = billingPeriodStart.slice(0, 7); // "YYYY-MM"
-      console.log("[sync-plan] billing reset for period:", period, "user:", userId);
+    // Reset usage counters for current period on plan change
+    const period = billingPeriodStart
+      ? billingPeriodStart.slice(0, 7)
+      : new Date().toISOString().slice(0, 7);
+
+    // Check if row exists for this period
+    const { data: existing } = await (supabase.from("usage_monthly") as any)
+      .select("id")
+      .eq("user_id", userId)
+      .eq("period", period)
+      .maybeSingle();
+
+    let usageError;
+    if (existing) {
+      ({ error: usageError } = await (supabase.from("usage_monthly") as any)
+        .update({
+          browsing_prompts_used: 0,
+          no_browsing_prompts_used: 0,
+          comparisons_used: 0,
+          prompts_used: 0,
+        })
+        .eq("user_id", userId)
+        .eq("period", period));
+    } else {
+      ({ error: usageError } = await (supabase.from("usage_monthly") as any)
+        .insert({
+          user_id: userId,
+          period,
+          browsing_prompts_used: 0,
+          no_browsing_prompts_used: 0,
+          comparisons_used: 0,
+          prompts_used: 0,
+        }));
+    }
+
+    if (usageError) {
+      console.error("[sync-plan] usage reset error:", usageError.message);
+    } else {
+      console.log("[sync-plan] usage reset for period:", period, "user:", userId);
     }
 
     console.log("[sync-plan] updated:", userId, "→", normalizedPlan);
