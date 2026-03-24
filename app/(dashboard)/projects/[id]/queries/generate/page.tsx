@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, ArrowRight, Sparkles, Loader2, Plus, X, Users,
   ChevronLeft, MessageCircleQuestion, Check, Eye,
-  ToggleLeft, ToggleRight, Trash2,
+  ToggleLeft, ToggleRight, Trash2, AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { type GenerationInputs, type GeneratedQuery, type Persona, type PersonaAttributes } from "@/lib/query-generator";
@@ -846,9 +846,18 @@ export default function GenerateQueriesPage() {
               />
             </div>
             {wouldExceed && (
-              <p className="text-xs text-destructive">
-                {t("generateQueries.exceededLimit")}
-              </p>
+              <div className="flex items-start gap-2 rounded-[2px] border border-destructive/30 bg-destructive/10 px-3 py-2.5">
+                <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                <div className="text-xs text-destructive space-y-1">
+                  <p className="font-semibold">Generazione bloccata — limite raggiunto</p>
+                  <p>Hai utilizzato {usedThisMonth} / {monthlyLimit} query. Riduci il numero o passa a un piano superiore.</p>
+                  {planId !== "pro" && (
+                    <a href="/settings" className="inline-flex items-center gap-1 text-[#c4a882] hover:underline font-medium">
+                      {planId === "demo" ? "Passa a Base o Pro →" : "Passa a Pro →"}
+                    </a>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 

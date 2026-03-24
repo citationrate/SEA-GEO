@@ -271,21 +271,20 @@ export function AnalysisLauncher({
               )}
             </div>
 
-            {/* Exceed warnings */}
+            {/* Exceed warnings — hard block for ALL plans */}
             {profileLoaded && wouldExceed && (
               <div className="flex items-start gap-2.5 rounded-[2px] border border-destructive/30 bg-destructive/10 px-4 py-3">
-                <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-                <div className="text-xs text-destructive space-y-1">
+                <Lock className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                <div className="text-xs text-destructive space-y-1.5">
+                  <p className="font-semibold">Lancio bloccato — prompt insufficienti</p>
                   <p>
-                    {isDemo
-                      ? `Questa analisi richiede ${queryCost} prompt ma te ne restano solo ${noBrowsingRemaining}. Riduci le query o passa a un piano a pagamento.`
-                      : effectiveBrowsing
-                        ? `Hai esaurito i prompt con browsing. Disattiva il browsing per continuare.`
-                        : t("analysisLauncher.notEnoughQueries")}
+                    {effectiveBrowsing
+                      ? `Questa analisi richiede ${queryCost} prompt con browsing ma te ne restano solo ${browsingRemaining}. Disattiva il browsing oppure riduci le query.`
+                      : `Questa analisi richiede ${queryCost} prompt ma te ne restano solo ${noBrowsingRemaining}. Riduci le query o passa a un piano superiore.`}
                   </p>
-                  {isDemo && (
+                  {!usage.isPro && (
                     <a href="/settings" className="inline-flex items-center gap-1 text-[#c4a882] hover:underline font-medium">
-                      Passa a Base o Pro →
+                      {isDemo ? "Passa a Base o Pro →" : "Passa a Pro →"}
                     </a>
                   )}
                 </div>
