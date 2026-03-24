@@ -82,8 +82,11 @@ export function useUsage(): UsageData {
     async function load() {
       try {
         const authClient = createClient();
-        const { data: { session } } = await authClient.auth.getSession();
-        if (!session?.user) { setLoading(false); return; }
+        const { data: { session }, error: sessionError } = await authClient.auth.getSession();
+        if (sessionError || !session?.user) {
+          setLoading(false);
+          return;
+        }
         const user = session.user;
 
         const supabase = createDataClient();
