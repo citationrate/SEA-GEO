@@ -155,6 +155,7 @@ export default function GenerateQueriesPage() {
   const [step, setStep] = useState<Step>(1);
   const [saving, setSaving] = useState(false);
   const [isPro, setIsPro] = useState(false);
+  const [planId, setPlanId] = useState<string>("demo");
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [existingQueryCount, setExistingQueryCount] = useState(0);
 
@@ -191,7 +192,9 @@ export default function GenerateQueriesPage() {
   // Fetch pro status & existing queries on mount
   useEffect(() => {
     fetch("/api/profile").then((r) => r.json()).then((p) => {
-      setIsPro(p?.plan === "pro" || p?.plan === "agency");
+      const plan = p?.plan ?? "demo";
+      setPlanId(plan === "free" ? "demo" : plan === "agency" ? "pro" : plan);
+      setIsPro(plan === "pro" || plan === "agency");
     }).catch(() => {}).finally(() => setProfileLoaded(true));
 
     fetch(`/api/queries?project_id=${projectId}`).then((r) => r.json()).then((qs) => {
@@ -199,7 +202,7 @@ export default function GenerateQueriesPage() {
     }).catch(() => {});
   }, [projectId]);
 
-  const monthlyLimit = isPro ? 500 : 100;
+  const monthlyLimit = planId === "pro" ? 500 : planId === "base" ? 100 : 40;
   const usedThisMonth = existingQueryCount;
 
   function buildInputs(): GenerationInputs {
@@ -830,7 +833,7 @@ export default function GenerateQueriesPage() {
                 {t("generateQueries.usedQueries")} <span className="text-foreground font-bold">{usedThisMonth}</span> / {monthlyLimit} {t("generateQueries.queriesThisMonth")}
               </span>
               <span className={`font-mono ${wouldExceed ? "text-destructive" : "text-muted-foreground"}`}>
-                {isPro ? t("generateQueries.planPro") : t("generateQueries.planBase")}
+                {planId === "pro" ? t("generateQueries.planPro") : planId === "base" ? t("generateQueries.planBase") : "DEMO"}
               </span>
             </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
