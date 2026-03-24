@@ -1,27 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient, createDataClient } from "@/lib/supabase/client";
-
-const getCurrentPeriod = () => new Date().toISOString().slice(0, 7);
-
-interface Plan {
-  id: string;
-  display_name?: string;
-  monthly_price?: number;
-  annual_price?: number;
-  annual_discount?: number;
-  browsing_prompts: number;
-  no_browsing_prompts: number;
-  max_models_per_project: number;
-  max_comparisons: number;
-  can_generate_queries: boolean;
-  can_access_dataset: boolean;
-  can_access_comparisons: boolean;
-}
 
 interface UsageData {
-  plan: Plan | null;
+  plan: null;
   planId: string;
   browsingPromptsUsed: number;
   browsingPromptsLimit: number;
@@ -54,149 +36,76 @@ interface UsageData {
   promptsRemaining: number;
 }
 
-const DEFAULT_PLAN: Plan = {
-  id: "demo",
-  display_name: "Demo Gratuita",
-  browsing_prompts: 0,
-  no_browsing_prompts: 40,
-  max_models_per_project: 2,
-  max_comparisons: 0,
-  can_generate_queries: false,
-  can_access_dataset: false,
-  can_access_comparisons: false,
+const DEFAULTS: UsageData = {
+  plan: null,
+  planId: "demo",
+  browsingPromptsUsed: 0, browsingPromptsLimit: 0, browsingPromptsRemaining: 0,
+  noBrowsingPromptsUsed: 0, noBrowsingPromptsLimit: 40, noBrowsingPromptsRemaining: 40,
+  comparisonsUsed: 0, comparisonsLimit: 0, comparisonsRemaining: 0,
+  extraBrowsingPrompts: 0, extraNoBrowsingPrompts: 0, extraComparisons: 0,
+  urlAnalysesUsed: 0, urlAnalysesLimit: 0, urlAnalysesRemaining: 0,
+  contextAnalysesUsed: 0, contextAnalysesLimit: 0, contextAnalysesRemaining: 0,
+  canGenerateQueries: false, canAccessDataset: false, canAccessComparisons: false,
+  maxModelsPerProject: 2,
+  isDemo: true, isPro: false, loading: true,
+  promptsUsed: 0, promptsLimit: 40, promptsRemaining: 40,
 };
 
 export function useUsage(): UsageData {
-  const [plan, setPlan] = useState<Plan | null>(null);
-  const [browsingPromptsUsed, setBrowsingPromptsUsed] = useState(0);
-  const [noBrowsingPromptsUsed, setNoBrowsingPromptsUsed] = useState(0);
-  const [comparisonsUsed, setComparisonsUsed] = useState(0);
-  const [extraBrowsingPrompts, setExtraBrowsingPrompts] = useState(0);
-  const [extraNoBrowsingPrompts, setExtraNoBrowsingPrompts] = useState(0);
-  const [extraComparisons, setExtraComparisons] = useState(0);
-  const [urlAnalysesUsed, setUrlAnalysesUsed] = useState(0);
-  const [contextAnalysesUsed, setContextAnalysesUsed] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<UsageData>(DEFAULTS);
 
   useEffect(() => {
     async function load() {
       try {
-        const authClient = createClient();
-        const { data: { session }, error: sessionError } = await authClient.auth.getSession();
-        if (sessionError || !session?.user) {
-          setLoading(false);
+        const res = await fetch("/api/usage");
+        if (!res.ok) {
+          setData((d) => ({ ...d, loading: false }));
           return;
         }
-        const user = session.user;
+        const json = await res.json();
 
-        const supabase = createDataClient();
-        // Get profile with plan_id
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("plan")
-          .eq("id", user.id)
-          .single();
+        const totalUsed = (json.browsingPromptsUsed ?? 0) + (json.noBrowsingPromptsUsed ?? 0);
+        const totalLimit = (json.browsingPromptsLimit ?? 0) + (json.noBrowsingPromptsLimit ?? 0);
 
-        const planId = (profile as any)?.plan ?? "demo";
-        const effectivePlanId = planId === "free" ? "demo" : planId === "agency" ? "pro" : planId;
-
-        // Get plan details
-        const { data: planData, error: planError } = await (supabase.from("plans") as any)
-          .select("*")
-          .eq("id", effectivePlanId)
-          .single();
-
-        if (planData) {
-          // Fallback for plans table rows missing new columns (migration not yet applied)
-          const p = planData as any;
-          const fallbacks: Record<string, { bp: number; nbp: number }> = {
-            demo: { bp: 0, nbp: 40 },
-            base: { bp: 30, nbp: 70 },
-            pro:  { bp: 90, nbp: 210 },
-          };
-          const fb = fallbacks[p.id] ?? fallbacks.demo;
-          const maxCompFallback = p.id === "pro" ? 10 : p.id === "base" ? 0 : 0;
-          setPlan({
-            ...p,
-            browsing_prompts: Number(p.browsing_prompts) || fb.bp,
-            no_browsing_prompts: Number(p.no_browsing_prompts) || fb.nbp,
-            max_comparisons: Number(p.max_comparisons) || maxCompFallback,
-          } as Plan);
-        } else {
-          setPlan(DEFAULT_PLAN);
-        }
-
-        // Get current month usage
-        const period = getCurrentPeriod();
-        const { data: usage } = await (supabase.from("usage_monthly") as any)
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("period", period)
-          .maybeSingle();
-
-        if (usage) {
-          setBrowsingPromptsUsed(Number(usage.browsing_prompts_used) || 0);
-          setNoBrowsingPromptsUsed(Number(usage.no_browsing_prompts_used) || 0);
-          setComparisonsUsed(Number(usage.comparisons_used) || 0);
-          setExtraBrowsingPrompts(Number(usage.extra_browsing_prompts) || 0);
-          setExtraNoBrowsingPrompts(Number(usage.extra_no_browsing_prompts) || 0);
-          setExtraComparisons(Number(usage.extra_comparisons) || 0);
-          setUrlAnalysesUsed(Number(usage.url_analyses_used) || 0);
-          setContextAnalysesUsed(Number(usage.context_analyses_used) || 0);
-        }
+        setData({
+          plan: null,
+          planId: json.planId ?? "demo",
+          browsingPromptsUsed: json.browsingPromptsUsed ?? 0,
+          browsingPromptsLimit: json.browsingPromptsLimit ?? 0,
+          browsingPromptsRemaining: json.browsingPromptsRemaining ?? 0,
+          noBrowsingPromptsUsed: json.noBrowsingPromptsUsed ?? 0,
+          noBrowsingPromptsLimit: json.noBrowsingPromptsLimit ?? 0,
+          noBrowsingPromptsRemaining: json.noBrowsingPromptsRemaining ?? 0,
+          comparisonsUsed: json.comparisonsUsed ?? 0,
+          comparisonsLimit: json.comparisonsLimit ?? 0,
+          comparisonsRemaining: json.comparisonsRemaining ?? 0,
+          extraBrowsingPrompts: json.extraBrowsingPrompts ?? 0,
+          extraNoBrowsingPrompts: json.extraNoBrowsingPrompts ?? 0,
+          extraComparisons: json.extraComparisons ?? 0,
+          urlAnalysesUsed: json.urlAnalysesUsed ?? 0,
+          urlAnalysesLimit: json.urlAnalysesLimit ?? 0,
+          urlAnalysesRemaining: json.urlAnalysesRemaining ?? 0,
+          contextAnalysesUsed: json.contextAnalysesUsed ?? 0,
+          contextAnalysesLimit: json.contextAnalysesLimit ?? 0,
+          contextAnalysesRemaining: json.contextAnalysesRemaining ?? 0,
+          canGenerateQueries: json.canGenerateQueries ?? false,
+          canAccessDataset: json.canAccessDataset ?? false,
+          canAccessComparisons: json.canAccessComparisons ?? false,
+          maxModelsPerProject: json.maxModelsPerProject ?? 2,
+          isDemo: json.isDemo ?? true,
+          isPro: json.isPro ?? false,
+          loading: false,
+          promptsUsed: totalUsed,
+          promptsLimit: totalLimit,
+          promptsRemaining: Math.max(0, totalLimit - totalUsed),
+        });
       } catch (err) {
         console.error("[useUsage] error:", err);
-      } finally {
-        setLoading(false);
+        setData((d) => ({ ...d, loading: false }));
       }
     }
     load();
   }, []);
 
-  const effectivePlan = plan ?? DEFAULT_PLAN;
-  const isDemo = effectivePlan.id === "demo";
-  const isPro = effectivePlan.id === "pro";
-
-  // Effective limits = plan base + extra purchased
-  const effectiveBrowsingLimit = effectivePlan.browsing_prompts + extraBrowsingPrompts;
-  const effectiveNoBrowsingLimit = effectivePlan.no_browsing_prompts + extraNoBrowsingPrompts;
-  const effectiveComparisonsLimit = effectivePlan.max_comparisons + extraComparisons;
-
-  // Legacy compat: total prompts = browsing + no_browsing
-  const totalUsed = browsingPromptsUsed + noBrowsingPromptsUsed;
-  const totalLimit = effectiveBrowsingLimit + effectiveNoBrowsingLimit;
-
-  return {
-    plan: effectivePlan,
-    planId: effectivePlan.id,
-    browsingPromptsUsed,
-    browsingPromptsLimit: effectiveBrowsingLimit,
-    browsingPromptsRemaining: Math.max(0, effectiveBrowsingLimit - browsingPromptsUsed),
-    noBrowsingPromptsUsed,
-    noBrowsingPromptsLimit: effectiveNoBrowsingLimit,
-    noBrowsingPromptsRemaining: Math.max(0, effectiveNoBrowsingLimit - noBrowsingPromptsUsed),
-    comparisonsUsed,
-    comparisonsLimit: effectiveComparisonsLimit,
-    comparisonsRemaining: Math.max(0, effectiveComparisonsLimit - comparisonsUsed),
-    extraBrowsingPrompts,
-    extraNoBrowsingPrompts,
-    extraComparisons,
-    urlAnalysesUsed,
-    urlAnalysesLimit: isPro ? 50 : 0,
-    urlAnalysesRemaining: isPro ? Math.max(0, 50 - urlAnalysesUsed) : 0,
-    contextAnalysesUsed,
-    contextAnalysesLimit: isPro ? 5 : 0,
-    contextAnalysesRemaining: isPro ? Math.max(0, 5 - contextAnalysesUsed) : 0,
-    canGenerateQueries: effectivePlan.can_generate_queries,
-    canAccessDataset: effectivePlan.can_access_dataset,
-    canAccessComparisons: effectivePlan.can_access_comparisons,
-    maxModelsPerProject: effectivePlan.max_models_per_project,
-    isDemo,
-    isPro,
-    loading,
-    // Legacy compat
-    promptsUsed: totalUsed,
-    promptsLimit: totalLimit,
-    promptsRemaining: Math.max(0, totalLimit - totalUsed),
-  };
+  return data;
 }
