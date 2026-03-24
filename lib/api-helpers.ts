@@ -10,18 +10,28 @@ async function ensureProfile(
   supabase: ReturnType<typeof createDataClient>,
   user: { id: string; email?: string; user_metadata?: Record<string, unknown> },
 ) {
-  const { data } = await (supabase.from("profiles") as any)
+  const { data, error: selectError } = await (supabase.from("profiles") as any)
     .select("id")
     .eq("id", user.id)
     .maybeSingle();
 
+  if (selectError) {
+    console.error("[ensureProfile] SELECT error:", selectError.message, selectError.code, "user:", user.id);
+  }
+
   if (!data) {
-    await (supabase.from("profiles") as any).insert({
+    console.log("[ensureProfile] No profile found, creating for user:", user.id, user.email);
+    const { error: insertError } = await (supabase.from("profiles") as any).insert({
       id: user.id,
       email: user.email ?? "",
       full_name: (user.user_metadata?.full_name as string) ?? null,
       plan: "demo",
     });
+    if (insertError) {
+      console.error("[ensureProfile] INSERT error:", insertError.message, insertError.code, insertError.details);
+    } else {
+      console.log("[ensureProfile] Profile created:", user.id);
+    }
   }
 }
 
