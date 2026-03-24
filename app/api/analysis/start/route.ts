@@ -62,9 +62,16 @@ export async function POST(request: Request) {
     const plan = await getUserPlanLimits(user.id);
     const usage = await getCurrentUsage(user.id);
     const promptCost = queries.length;
-    const userPlanId = plan.id ?? "demo";
+    const userPlanId = (plan as any).id ?? "demo";
     const isProPlan = userPlanId === "pro" || userPlanId === "agency";
     const isDemoPlan = userPlanId === "demo";
+
+    console.log("[analysis/start] plan check:", {
+      userId: user.id, planId: userPlanId, promptCost,
+      browsingPrompts: plan.browsing_prompts, noBrowsingPrompts: plan.no_browsing_prompts,
+      browsingUsed: usage.browsingPromptsUsed, noBrowsingUsed: usage.noBrowsingPromptsUsed,
+      extraBrowsing: usage.extraBrowsingPrompts, extraNoBrowsing: usage.extraNoBrowsingPrompts,
+    });
 
     // Demo plan enforcement: only fixed models, no browsing
     if (isDemoPlan) {
@@ -94,19 +101,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Il tuo piano supporta max ${plan.max_models_per_project} modelli per progetto.` }, { status: 403 });
     }
 
-    // Browsing counter logic (plan limit + extra purchased)
+    // Hard block: enforce prompt limits for ALL plans (server-side)
+    const totalBrowsingAvailable = Number(plan.browsing_prompts || 0) + Number(usage.extraBrowsingPrompts || 0);
+    const totalNoBrowsingAvailable = Number(plan.no_browsing_prompts || 0) + Number(usage.extraNoBrowsingPrompts || 0);
+
     if (browsing) {
-      const totalBrowsingAvailable = Number(plan.browsing_prompts) + usage.extraBrowsingPrompts;
-      if (usage.browsingPromptsUsed + promptCost > totalBrowsingAvailable) {
+      const remaining = totalBrowsingAvailable - Number(usage.browsingPromptsUsed || 0);
+      if (promptCost > remaining) {
+        console.log("[analysis/start] BLOCKED: browsing limit exceeded, cost:", promptCost, "remaining:", remaining);
         return NextResponse.json({
-          error: `Hai esaurito i prompt con browsing di questo mese. Puoi continuare senza browsing.`,
+          error: `Prompt insufficienti: questa analisi richiede ${promptCost} prompt con browsing ma te ne restano ${Math.max(0, remaining)}. Disattiva il browsing o riduci le query.`,
         }, { status: 403 });
       }
     } else {
-      const totalNoBrowsingAvailable = Number(plan.no_browsing_prompts) + usage.extraNoBrowsingPrompts;
-      if (usage.noBrowsingPromptsUsed + promptCost > totalNoBrowsingAvailable) {
+      const remaining = totalNoBrowsingAvailable - Number(usage.noBrowsingPromptsUsed || 0);
+      if (promptCost > remaining) {
+        console.log("[analysis/start] BLOCKED: no-browsing limit exceeded, cost:", promptCost, "remaining:", remaining);
         return NextResponse.json({
-          error: "Hai esaurito i prompt disponibili questo mese.",
+          error: `Prompt insufficienti: questa analisi richiede ${promptCost} prompt ma te ne restano ${Math.max(0, remaining)}. Riduci le query o passa a un piano superiore.`,
         }, { status: 403 });
       }
     }
