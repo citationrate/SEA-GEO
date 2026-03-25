@@ -37,6 +37,20 @@ export async function POST(request: Request) {
 
     const supabase = createServiceClient();
 
+    // Check if a profile already exists for this email (prevents duplicates
+    // when auth.users has multiple entries for the same email)
+    if (email) {
+      const { data: existing } = await (supabase.from("profiles") as any)
+        .select("id, email")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (existing && existing.id !== userId) {
+        console.warn(`[WEBHOOK] Profile already exists for email=${email} with id=${existing.id}, skipping creation for auth id=${userId}`);
+        return NextResponse.json({ ok: true, note: "profile already exists for email" });
+      }
+    }
+
     const { error: upsertError } = await (supabase.from("profiles") as any).upsert(
       {
         id: userId,
