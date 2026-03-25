@@ -196,6 +196,7 @@ async function computeAndSaveAVI(
 }
 
 /* ─── Competitor AVI computation from competitor_mentions ─── */
+/* Aligned with brand AVI methodology — same 6-parameter weighted formula */
 
 async function computeCompetitorAVI(
   supabase: SupabaseClient,
@@ -222,7 +223,6 @@ async function computeCompetitorAVI(
   }
 
   // Use response_analysis count as denominator (same as brand AVI)
-  // This ensures both calculations use the same base for averaging
   const { count: analysisCount } = await supabase
     .from("response_analysis")
     .select("*", { count: "exact", head: true })
@@ -239,57 +239,123 @@ async function computeCompetitorAVI(
     byCompetitor.get(name)!.push(m);
   }
 
+  // Get run numbers for consistency calculation
+  const { data: promptsData } = await supabase
+    .from("prompts_executed")
+    .select("id, run_number")
+    .eq("run_id", runId);
+  const promptRunMap = new Map((promptsData ?? []).map((p: any) => [p.id, p.run_number]));
+  const uniqueRuns = new Set((promptsData ?? []).map((p: any) => p.run_number));
+  const totalRuns = uniqueRuns.size || 1;
+
   const upsertRows: any[] = [];
   for (const [name, mentionRows] of Array.from(byCompetitor.entries())) {
     const count = mentionRows.length;
 
-    // Presence: mentions / denominator × 100 (same formula as brand)
+    // Check if new aligned metrics are available (competitor_tone column populated)
+    const hasAlignedMetrics = mentionRows.some((m: any) => m.competitor_tone != null && Number(m.competitor_tone) !== 0);
+
+    // --- Presence (30%): mentions / denominator (0 to 1) → × 100 ---
     const presence_score = (count / denominator) * 100;
 
-    // Rank score: SUM(rank > 0 ? MAX(0, 100-(rank-1)×20) : 0) / denominator
-    // Same formula as brand: averages over ALL prompts, 0 for non-mentioned
-    // IMPORTANT: Number() coercion for Supabase NUMERIC columns returned as strings
+    // --- Rank (25%): AVG(rank > 0 ? MAX(0, 100-(rank-1)×20) : 0) / denominator ---
     const rankSum = mentionRows.reduce((s: number, m: any) => {
-      const rank = m.rank != null ? Number(m.rank) : 0;
-      if (rank > 0) {
-        return s + Math.max(0, 100 - (rank - 1) * 20);
-      }
+      const rank = m.competitor_rank != null ? Number(m.competitor_rank) : (m.rank != null ? Number(m.rank) : 0);
+      if (rank > 0) return s + Math.max(0, 100 - (rank - 1) * 20);
       return s;
     }, 0);
     const rank_score = rankSum / denominator;
 
-    // Sentiment score: SUM((sentiment+1)×50) / denominator
-    // Same formula as brand: averages over ALL prompts, 0 for non-mentioned
-    const sentimentSum = mentionRows.reduce((s: number, m: any) => {
-      if (m.sentiment != null) {
-        const sentiment = Number(m.sentiment);
-        return s + (sentiment + 1) * 50;
+    if (hasAlignedMetrics) {
+      // ─── NEW aligned formula (6 parameters, same as brand AVI) ───
+
+      // --- Sentiment (20%): AVG((competitor_sentiment+1)×50) / denominator ---
+      const sentimentSum = mentionRows.reduce((s: number, m: any) => {
+        const sent = m.competitor_sentiment != null ? Number(m.competitor_sentiment) : 0;
+        return s + (sent + 1) * 50;
+      }, 0);
+      const sentiment_score = sentimentSum / denominator;
+
+      // --- Tone (10%): AVG(competitor_tone × 100) / denominator ---
+      const toneSum = mentionRows.reduce((s: number, m: any) => {
+        const tone = m.competitor_tone != null ? Number(m.competitor_tone) : 0;
+        return s + tone * 100;
+      }, 0);
+      const tone_score = toneSum / denominator;
+
+      // --- Recommendation (10%): AVG(competitor_recommendation × 100) / denominator ---
+      const recSum = mentionRows.reduce((s: number, m: any) => {
+        const rec = m.competitor_recommendation != null ? Number(m.competitor_recommendation) : 0;
+        return s + rec * 100;
+      }, 0);
+      const recommendation_score = recSum / denominator;
+
+      // --- Consistency (5%): 1 - stddev(presence per run) ---
+      const presencePerRun: number[] = [];
+      for (const runNum of Array.from(uniqueRuns)) {
+        const runMentions = mentionRows.filter((m: any) => promptRunMap.get(m.prompt_executed_id) === runNum);
+        const promptsInRun = (promptsData ?? []).filter((p: any) => p.run_number === runNum).length || 1;
+        presencePerRun.push(runMentions.length / promptsInRun);
       }
-      return s;
-    }, 0);
-    const sentiment_score = sentimentSum / denominator;
+      const meanPresence = presencePerRun.reduce((s, v) => s + v, 0) / presencePerRun.length;
+      const variancePresence = presencePerRun.reduce((s, v) => s + (v - meanPresence) ** 2, 0) / presencePerRun.length;
+      const consistency_score = (1 - Math.sqrt(variancePresence)) * 100;
 
-    // Consistency: mention_count / denominator × 100
-    const consistency = (count / denominator) * 100;
+      // AVI = presence×0.30 + rank×0.25 + sentiment×0.20 + tone×0.10 + recommendation×0.10 + consistency×0.05
+      const aviScore = Math.round(
+        (presence_score * 0.30 +
+        rank_score * 0.25 +
+        sentiment_score * 0.20 +
+        tone_score * 0.10 +
+        recommendation_score * 0.10 +
+        consistency_score * 0.05) * 10
+      ) / 10;
 
-    // AVI = presence×0.40 + rank×0.35 + sentiment×0.25
-    // Same rounding as brand: 1 decimal place
-    const aviScore = Math.round(
-      (presence_score * 0.40 + rank_score * 0.35 + sentiment_score * 0.25) * 10
-    ) / 10;
+      upsertRows.push({
+        project_id: projectId,
+        run_id: runId,
+        competitor_name: name,
+        avi_score: Math.max(0, Math.min(100, aviScore)),
+        prominence_score: Math.round(presence_score * 100) / 100,
+        rank_score: Math.round(rank_score * 100) / 100,
+        sentiment_score: Math.round(sentiment_score * 100) / 100,
+        tone_score: Math.round(tone_score * 100) / 100,
+        recommendation_score: Math.round(recommendation_score * 100) / 100,
+        consistency_score: Math.round(consistency_score * 100) / 100,
+        mention_count: count,
+        computed_at: new Date().toISOString(),
+      });
+    } else {
+      // ─── LEGACY fallback (old 3-parameter formula for pre-existing data) ───
 
-    upsertRows.push({
-      project_id: projectId,
-      run_id: runId,
-      competitor_name: name,
-      avi_score: Math.max(0, Math.min(100, aviScore)),
-      prominence_score: Math.round(presence_score * 100) / 100,
-      rank_score: Math.round(rank_score * 100) / 100,
-      sentiment_score: Math.round(sentiment_score * 100) / 100,
-      consistency_score: Math.round(consistency * 100) / 100,
-      mention_count: count,
-      computed_at: new Date().toISOString(),
-    });
+      const sentimentSum = mentionRows.reduce((s: number, m: any) => {
+        if (m.sentiment != null) {
+          const sentiment = Number(m.sentiment);
+          return s + (sentiment + 1) * 50;
+        }
+        return s;
+      }, 0);
+      const sentiment_score = sentimentSum / denominator;
+
+      const consistency = (count / denominator) * 100;
+
+      const aviScore = Math.round(
+        (presence_score * 0.40 + rank_score * 0.35 + sentiment_score * 0.25) * 10
+      ) / 10;
+
+      upsertRows.push({
+        project_id: projectId,
+        run_id: runId,
+        competitor_name: name,
+        avi_score: Math.max(0, Math.min(100, aviScore)),
+        prominence_score: Math.round(presence_score * 100) / 100,
+        rank_score: Math.round(rank_score * 100) / 100,
+        sentiment_score: Math.round(sentiment_score * 100) / 100,
+        consistency_score: Math.round(consistency * 100) / 100,
+        mention_count: count,
+        computed_at: new Date().toISOString(),
+      });
+    }
   }
 
   if (upsertRows.length > 0) {
@@ -451,6 +517,10 @@ async function executePrompt(
           sentiment: c.sentiment ?? null,
           recommendation: c.recommendation ?? null,
           competitor_type: c.type ?? "direct",
+          competitor_rank: c.rank ?? null,
+          competitor_sentiment: c.sentiment ?? 0,
+          competitor_tone: c.tone ?? 0,
+          competitor_recommendation: c.recommendation ?? 0,
         };
       })
       .filter(Boolean);

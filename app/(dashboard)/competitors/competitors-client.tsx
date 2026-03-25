@@ -324,7 +324,10 @@ export function CompetitorsClient({
             const top5 = sorted.slice(0, 5);
             return (
               <div className="card p-5 space-y-4">
-                <h2 className="font-display font-semibold text-foreground text-sm">Benchmark{selectedModel ? ` — ${selectedModel}` : ""}</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="font-display font-semibold text-foreground text-sm">Benchmark{selectedModel ? ` — ${selectedModel}` : ""}</h2>
+                  <span className="text-[10px] text-muted-foreground">{t("competitors.benchmarkNote")}</span>
+                </div>
                 <div className="space-y-2.5">
                   {/* Brand row */}
                   <div className="flex items-center gap-3">

@@ -16,6 +16,7 @@ export interface ExtractionResult {
     type: "direct" | "indirect" | "channel" | "aggregator";
     rank: number | null;
     sentiment: number | null;
+    tone: number | null;
     recommendation: number | null;
   }[];
   sources: {
@@ -448,9 +449,15 @@ Respond ONLY with valid JSON. No text before or after JSON.
 Required JSON schema:
 {
   "topics": string[],
-  "competitors_found": [{ "name": string, "type": "direct"|"indirect"|"channel"|"aggregator", "rank": number, "sentiment": number, "recommendation": number }],
+  "competitors_found": [{ "name": string, "type": "direct"|"indirect"|"channel"|"aggregator", "rank": number, "sentiment": number, "tone": number, "recommendation": number }],
   "sources": [{ "url": string|null, "domain": string, "label": string|null, "source_type": string, "is_brand_owned": boolean, "context": string }]
 }
+
+For each competitor in competitors_found:
+- rank: position of first mention (1 = first mentioned brand)
+- sentiment: overall sentiment toward this competitor (-1.0 to +1.0)
+- tone: language quality/positivity toward this competitor (0.0 to 1.0, where 0 = very negative, 0.5 = neutral, 1.0 = very positive)
+- recommendation: is this competitor recommended? (1.0 = strongly recommended, 0.5 = neutral mention, 0.0 = not recommended)
 
 COMPETITOR TYPES:
 - direct: same product/service, same market
@@ -520,7 +527,7 @@ ${cleanResponse}`;
           ? parsed.competitors_found.map((c: any) => {
               const raw = typeof c === "string" ? c : c.name;
               if (typeof c === "string") {
-                return { name: canonicalizeCompetitorName(extractBrandOnly(raw)), type: "direct" as const, rank: null, sentiment: null, recommendation: null };
+                return { name: canonicalizeCompetitorName(extractBrandOnly(raw)), type: "direct" as const, rank: null, sentiment: null, tone: null, recommendation: null };
               }
               const compTone = c.sentiment ?? 0;
               const compRec = c.recommendation ?? 0;
@@ -530,7 +537,8 @@ ${cleanResponse}`;
                 type: c.type ?? "direct",
                 rank: c.rank ?? null,
                 sentiment: compSentiment,
-                recommendation: c.recommendation ?? null,
+                tone: c.tone != null ? Math.max(0, Math.min(1, Number(c.tone))) : null,
+                recommendation: c.recommendation != null ? Math.max(0, Math.min(1, Number(c.recommendation))) : null,
               };
             })
           : [];
@@ -669,7 +677,7 @@ JSON schema:
   "recommendation_score": number,
   "brand_adjectives": string[],
   "topics": string[],
-  "competitors_found": [{ "name": string, "type": "direct"|"indirect"|"channel"|"aggregator", "rank": number, "sentiment": number, "recommendation": number }],
+  "competitors_found": [{ "name": string, "type": "direct"|"indirect"|"channel"|"aggregator", "rank": number, "sentiment": number, "tone": number, "recommendation": number }],
   "sources": [{ "url": string|null, "domain": string, "label": string|null, "source_type": string, "is_brand_owned": boolean, "context": string }]
 }
 
@@ -694,7 +702,7 @@ Field rules:
 - brand_adjectives: 2-3 key adjectives describing brand (in ${lang}). Empty if not mentioned.
 - recommendation_score: +1.0=explicitly recommended first, +0.5=positive mention, 0.0=none, -0.5=discouraged, -1.0=explicitly discouraged. If brand_mentioned=false → 0.0.
 - topics: main topics discussed (in ${lang})
-- competitors_found: name, type (direct|indirect|channel|aggregator), rank (1=first cited), sentiment (-1.0/+1.0), recommendation (+1/0/-1)
+- competitors_found: name, type (direct|indirect|channel|aggregator), rank (1=first cited), sentiment (-1.0/+1.0), tone (0.0 to 1.0: language positivity), recommendation (1.0=strongly recommended, 0.5=neutral, 0.0=not recommended)
 
 CRITICAL: If brand_mentioned=true, brand_rank/tone_score/recommendation_score are MANDATORY (cannot be null).
 
@@ -766,7 +774,7 @@ source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
         const mapped = competitorsRaw.map((c: any) => {
           const raw = typeof c === 'string' ? c : c.name;
           if (typeof c === 'string') {
-            return { name: canonicalizeCompetitorName(extractBrandOnly(raw)), type: "direct" as const, rank: null, sentiment: null, recommendation: null };
+            return { name: canonicalizeCompetitorName(extractBrandOnly(raw)), type: "direct" as const, rank: null, sentiment: null, tone: null, recommendation: null };
           }
           const compTone = c.sentiment ?? 0;
           const compRec = c.recommendation ?? 0;
@@ -776,7 +784,8 @@ source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
             type: c.type ?? "direct",
             rank: c.rank ?? null,
             sentiment: compSentiment,
-            recommendation: c.recommendation ?? null,
+            tone: c.tone != null ? Math.max(0, Math.min(1, Number(c.tone))) : null,
+            recommendation: c.recommendation != null ? Math.max(0, Math.min(1, Number(c.recommendation))) : null,
           };
         });
         // Deduplicate by brand name (keep first occurrence)
@@ -822,10 +831,10 @@ source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
       if (competitorsMatch) {
         partialCompetitors = JSON.parse(competitorsMatch[1]).map((c: any) => {
           const name = typeof c === "string" ? c : c.name;
-          if (typeof c === "string") return { name: canonicalizeCompetitorName(extractBrandOnly(name)), type: "direct" as const, rank: null, sentiment: null, recommendation: null };
+          if (typeof c === "string") return { name: canonicalizeCompetitorName(extractBrandOnly(name)), type: "direct" as const, rank: null, sentiment: null, tone: null, recommendation: null };
           const compTone = c.sentiment ?? 0;
           const compRec = c.recommendation ?? 0;
-          return { name: canonicalizeCompetitorName(extractBrandOnly(name)), type: c.type ?? "direct", rank: c.rank ?? null, sentiment: Math.max(-1, Math.min(1, (compTone * 0.6) + (compRec * 0.4))), recommendation: c.recommendation ?? null };
+          return { name: canonicalizeCompetitorName(extractBrandOnly(name)), type: c.type ?? "direct", rank: c.rank ?? null, sentiment: Math.max(-1, Math.min(1, (compTone * 0.6) + (compRec * 0.4))), tone: c.tone != null ? Math.max(0, Math.min(1, Number(c.tone))) : null, recommendation: c.recommendation != null ? Math.max(0, Math.min(1, Number(c.recommendation))) : null };
         });
       }
       if (sourcesMatch) {

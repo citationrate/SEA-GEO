@@ -643,7 +643,7 @@ export default function NewProjectPage() {
                             return (
                               <label key={model.id} onClick={() => !locked && selectModel(provider.id, model.id)}
                                 className={`flex items-center gap-2 p-2 rounded-[2px] transition-colors ${
-                                  locked ? "opacity-50 cursor-not-allowed" : isSelected ? "bg-primary/10 cursor-pointer" : "hover:bg-muted/30 cursor-pointer"
+                                  locked ? "opacity-70 cursor-not-allowed" : isSelected ? "bg-primary/10 cursor-pointer" : "hover:bg-muted/30 cursor-pointer"
                                 }`}
                                 title={locked ? "Disponibile dal piano Pro — €159/mese" : undefined}>
                                 <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
@@ -654,6 +654,7 @@ export default function NewProjectPage() {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5">
                                     <span className={`text-sm font-medium ${locked ? "text-muted-foreground" : isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
+                                    {locked && <span className="text-[10px] font-semibold uppercase tracking-wide bg-primary/15 text-primary px-1.5 py-0.5 rounded">Pro</span>}
                                   </div>
                                   <p className="text-xs text-muted-foreground">{model.description}</p>
                                 </div>
