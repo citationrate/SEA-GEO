@@ -207,7 +207,7 @@ export function Sidebar({ profile }: SidebarProps) {
       {/* Switch tool */}
       <div className="px-2 pb-2 flex-shrink-0">
         <a
-          href="https://suite.citationrate.com"
+          href="https://suite.citationrate.com/dashboard"
           className={cn(
             "flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm font-ui transition-colors mt-1",
             collapsed && "justify-center px-0",
