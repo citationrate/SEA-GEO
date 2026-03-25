@@ -319,8 +319,6 @@ async function computeCompetitorAVI(
         prominence_score: Math.round(presence_score * 100) / 100,
         rank_score: Math.round(rank_score * 100) / 100,
         sentiment_score: Math.round(sentiment_score * 100) / 100,
-        tone_score: Math.round(tone_score * 100) / 100,
-        recommendation_score: Math.round(recommendation_score * 100) / 100,
         consistency_score: Math.round(consistency_score * 100) / 100,
         mention_count: count,
         computed_at: new Date().toISOString(),
@@ -527,7 +525,14 @@ async function executePrompt(
     if (mentions.length > 0) {
       const { error: mentionErr } = await (supabase.from("competitor_mentions") as any)
         .insert(mentions);
-      if (mentionErr) console.error("[inngest] competitor_mentions insert error:", mentionErr.message);
+      if (mentionErr) {
+        // If insert fails (likely new columns don't exist yet), retry without them
+        console.warn("[inngest] competitor_mentions insert failed, retrying without new columns:", mentionErr.message);
+        const fallbackMentions = (mentions as any[]).map(({ competitor_rank, competitor_sentiment, competitor_tone, competitor_recommendation, ...rest }) => rest);
+        const { error: fallbackErr } = await (supabase.from("competitor_mentions") as any)
+          .insert(fallbackMentions);
+        if (fallbackErr) console.error("[inngest] competitor_mentions fallback insert error:", fallbackErr.message);
+      }
     }
   }
 
