@@ -309,4 +309,27 @@ html.custom-cursor * { cursor: none !important; }
   html.light [class*="card"] {
     box-shadow: var(--shadow-sm);
   }
+
+  /* Mobile: reduce card padding and disable hover lift */
+  @media (max-width: 767px) {
+    .card {
+      padding: 16px;
+    }
+    .card:hover {
+      transform: none;
+    }
+  }
+
+  /* Mobile: tables get horizontal scroll */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Mobile: minimum touch target for buttons and links in nav */
+  @media (max-width: 767px) {
+    button, a[role="button"] {
+      min-height: 44px;
+    }
+  }
 }

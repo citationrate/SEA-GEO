@@ -157,13 +157,13 @@ export function StatsRow({ stats }: { stats?: StatItem[] }) {
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-3 h-full">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3 h-full">
       {items.map(s => (
-        <div key={s.label} className="card p-4 flex flex-col justify-between">
-          <p className="font-mono text-[12px] uppercase tracking-[0.04em] text-cream-dim">{s.label}</p>
-          <div className="mt-2">
-            <p className="font-display text-2xl text-foreground" style={{ fontWeight: 300 }}>{s.value}</p>
-            <p className="font-mono text-[12px] text-cream-dim mt-0.5">{s.sub}</p>
+        <div key={s.label} className="card p-3 md:p-4 flex flex-col justify-between">
+          <p className="font-mono text-[10px] md:text-[12px] uppercase tracking-[0.04em] text-cream-dim">{s.label}</p>
+          <div className="mt-1.5 md:mt-2">
+            <p className="font-display text-xl md:text-2xl text-foreground" style={{ fontWeight: 300 }}>{s.value}</p>
+            <p className="font-mono text-[10px] md:text-[12px] text-cream-dim mt-0.5">{s.sub}</p>
           </div>
         </div>
       ))}

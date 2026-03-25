@@ -3,6 +3,7 @@ import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
 import { OnboardingTour } from "@/components/onboarding-tour";
+import { MobileNavProvider } from "@/components/layout/mobile-nav-context";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const auth = createServerClient();
@@ -27,15 +28,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="flex h-screen bg-ink overflow-hidden">
-      <Sidebar profile={profile as any} />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <TopBar />
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-          {children}
-        </main>
+    <MobileNavProvider>
+      <div className="flex h-screen bg-ink overflow-hidden">
+        <Sidebar profile={profile as any} />
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          <TopBar />
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+            {children}
+          </main>
+        </div>
+        <OnboardingTour onboardingCompleted={!!(profile as any)?.onboarding_completed} />
       </div>
-      <OnboardingTour onboardingCompleted={!!(profile as any)?.onboarding_completed} />
-    </div>
+    </MobileNavProvider>
   );
 }
