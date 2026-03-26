@@ -76,7 +76,8 @@ Respond ONLY with valid JSON.`,
     );
 
     return NextResponse.json(analysis);
-  } catch {
-    return NextResponse.json({ error: "Errore interno" }, { status: 500 });
+  } catch (err: any) {
+    console.error("[sources/analyze] error:", err?.message ?? err);
+    return NextResponse.json({ error: "Errore interno", detail: err?.message }, { status: 500 });
   }
 }
