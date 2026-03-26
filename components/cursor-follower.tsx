@@ -2,83 +2,68 @@
 
 import { useEffect, useRef, useState } from "react";
 
+const CURSOR_COLOR = "#7eb89a";
+const DOT_SIZE = 8;
+const RING_SIZE = 36;
+const LERP = 0.12;
+
 export function CursorFollower() {
-  const innerRef = useRef<HTMLDivElement>(null);
-  const outerRef = useRef<HTMLDivElement>(null);
+  const dotRef = useRef<HTMLDivElement>(null);
+  const ringRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
-  const [hovering, setHovering] = useState(false);
 
   useEffect(() => {
-    // Skip on touch devices
-    if ("ontouchstart" in window || navigator.maxTouchPoints > 0) return;
+    // Hide on touch / coarse-pointer devices
+    const mq = window.matchMedia("(hover: none), (pointer: coarse)");
+    if (mq.matches) return;
 
     setVisible(true);
     document.documentElement.classList.add("custom-cursor");
 
-    let mouseX = 0;
-    let mouseY = 0;
-    let outerX = 0;
-    let outerY = 0;
+    let mx = 0;
+    let my = 0;
+    let rx = 0;
+    let ry = 0;
     let rafId: number;
 
     function onMouseMove(e: MouseEvent) {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-
-      if (innerRef.current) {
-        innerRef.current.style.transform = `translate(${mouseX - 4}px, ${mouseY - 4}px)`;
+      mx = e.clientX;
+      my = e.clientY;
+      if (dotRef.current) {
+        dotRef.current.style.left = mx + "px";
+        dotRef.current.style.top = my + "px";
       }
     }
 
-    function animateOuter() {
-      outerX += (mouseX - outerX) * 0.12;
-      outerY += (mouseY - outerY) * 0.12;
-
-      if (outerRef.current) {
-        outerRef.current.style.transform = `translate(${outerX - 16}px, ${outerY - 16}px)`;
+    function animRing() {
+      rx += (mx - rx) * LERP;
+      ry += (my - ry) * LERP;
+      if (ringRef.current) {
+        ringRef.current.style.left = rx + "px";
+        ringRef.current.style.top = ry + "px";
       }
-
-      rafId = requestAnimationFrame(animateOuter);
+      rafId = requestAnimationFrame(animRing);
     }
 
     function onMouseLeave() {
-      if (innerRef.current) innerRef.current.style.opacity = "0";
-      if (outerRef.current) outerRef.current.style.opacity = "0";
+      if (dotRef.current) dotRef.current.style.opacity = "0";
+      if (ringRef.current) ringRef.current.style.opacity = "0";
     }
 
     function onMouseEnter() {
-      if (innerRef.current) innerRef.current.style.opacity = "1";
-      if (outerRef.current) outerRef.current.style.opacity = "1";
-    }
-
-    // Detect hover on interactive elements
-    function onMouseOver(e: MouseEvent) {
-      const target = e.target as HTMLElement;
-      if (target.closest("a, button, [role='button'], input, textarea, select, label[for], .cursor-pointer")) {
-        setHovering(true);
-      }
-    }
-
-    function onMouseOut(e: MouseEvent) {
-      const target = e.target as HTMLElement;
-      if (target.closest("a, button, [role='button'], input, textarea, select, label[for], .cursor-pointer")) {
-        setHovering(false);
-      }
+      if (dotRef.current) dotRef.current.style.opacity = "1";
+      if (ringRef.current) ringRef.current.style.opacity = "1";
     }
 
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseleave", onMouseLeave);
     document.addEventListener("mouseenter", onMouseEnter);
-    document.addEventListener("mouseover", onMouseOver);
-    document.addEventListener("mouseout", onMouseOut);
-    rafId = requestAnimationFrame(animateOuter);
+    rafId = requestAnimationFrame(animRing);
 
     return () => {
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseleave", onMouseLeave);
       document.removeEventListener("mouseenter", onMouseEnter);
-      document.removeEventListener("mouseover", onMouseOver);
-      document.removeEventListener("mouseout", onMouseOut);
       cancelAnimationFrame(rafId);
       document.documentElement.classList.remove("custom-cursor");
     };
@@ -88,38 +73,35 @@ export function CursorFollower() {
 
   return (
     <>
+      {/* Punto — segue istantaneamente */}
       <div
-        ref={innerRef}
+        ref={dotRef}
         style={{
           position: "fixed",
-          top: 0,
-          left: 0,
-          width: hovering ? 12 : 8,
-          height: hovering ? 12 : 8,
-          background: "#4ade80",
+          width: DOT_SIZE,
+          height: DOT_SIZE,
           borderRadius: "50%",
+          background: CURSOR_COLOR,
           pointerEvents: "none",
-          zIndex: 99999,
-          transition: "width 0.2s, height 0.2s, opacity 0.2s",
-          marginLeft: hovering ? -2 : 0,
-          marginTop: hovering ? -2 : 0,
+          transform: "translate(-50%, -50%)",
+          zIndex: 2147483647,
+          transition: "opacity 0.2s",
         }}
       />
+      {/* Anello — segue con inerzia (lerp 12%) */}
       <div
-        ref={outerRef}
+        ref={ringRef}
         style={{
           position: "fixed",
-          top: 0,
-          left: 0,
-          width: hovering ? 48 : 32,
-          height: hovering ? 48 : 32,
-          border: `1.5px solid rgba(74, 222, 128, ${hovering ? 0.6 : 0.4})`,
+          width: RING_SIZE,
+          height: RING_SIZE,
           borderRadius: "50%",
+          border: `1px solid ${CURSOR_COLOR}`,
+          background: "transparent",
           pointerEvents: "none",
-          zIndex: 99998,
-          transition: "width 0.2s, height 0.2s, border-color 0.2s",
-          marginLeft: hovering ? -8 : 0,
-          marginTop: hovering ? -8 : 0,
+          transform: "translate(-50%, -50%)",
+          zIndex: 2147483646,
+          transition: "opacity 0.2s",
         }}
       />
     </>
