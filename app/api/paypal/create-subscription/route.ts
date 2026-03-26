@@ -41,8 +41,7 @@ export async function POST(request: Request) {
       approvalUrl: result.approvalUrl,
     });
   } catch (err: any) {
-    const msg = err?.message ?? String(err);
-    console.error("[paypal/create-subscription] error:", msg);
-    return NextResponse.json({ error: "Errore nella creazione dell'abbonamento", detail: msg }, { status: 500 });
+    console.error("[paypal/create-subscription] error:", err?.message ?? err);
+    return NextResponse.json({ error: "Errore nella creazione dell'abbonamento" }, { status: 500 });
   }
 }
