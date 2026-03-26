@@ -223,7 +223,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {r.status === "completed" && <ExportButtons runId={params.runId} />}
+            {r.status === "completed" && <ExportButtons runId={params.runId} projectId={params.id} />}
             {r.status === "completed" && (
               <ShareButton runId={params.runId} initialToken={(r as any).share_token} />
             )}

@@ -556,8 +556,11 @@ export const translations: Record<Locale, Record<string, any>> = {
       revokeLink: "Revoca link",
     },
     exportData: {
+      export: "Esporta",
       exportExcel: "Esporta Excel",
       exportPdf: "Esporta PDF",
+      exportProjectPdf: "PDF progetto (tutte le analisi)",
+      exportProjectExcel: "Excel progetto (tutte le analisi)",
     },
     projectDetail: {
       newAnalysis: "Nuova Analisi",
@@ -1376,8 +1379,11 @@ export const translations: Record<Locale, Record<string, any>> = {
       revokeLink: "Revoke link",
     },
     exportData: {
+      export: "Export",
       exportExcel: "Export Excel",
       exportPdf: "Export PDF",
+      exportProjectPdf: "Project PDF (all analyses)",
+      exportProjectExcel: "Project Excel (all analyses)",
     },
     projectDetail: {
       newAnalysis: "New Analysis",
@@ -2155,7 +2161,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       citedInContexts: "Cité dans des contextes de :", contextFor: "Contexte pour",
     },
     share: { share: "Partager", shareReport: "Partager le rapport", shareDesc: "Toute personne ayant le lien pourra voir le rapport.", copied: "Copi\u00e9", copy: "Copier", revoking: "R\u00e9vocation...", revokeLink: "R\u00e9voquer le lien" },
-    exportData: { exportExcel: "Exporter Excel", exportPdf: "Exporter PDF" },
+    exportData: { export: "Exporter", exportExcel: "Exporter Excel", exportPdf: "Exporter PDF", exportProjectPdf: "PDF projet (toutes les analyses)", exportProjectExcel: "Excel projet (toutes les analyses)" },
     projectDetail: {
       newAnalysis: "Nouvelle analyse", editProject: "Modifier", aiModels: "Mod\u00e8les IA :",
       lastAnalysis: "Derni\u00e8re analyse", failedAnalysis: "La derni\u00e8re analyse a \u00e9chou\u00e9.",
@@ -2874,7 +2880,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       citedInContexts: "Zitiert in Kontexten von:", contextFor: "Kontext f\u00fcr",
     },
     share: { share: "Teilen", shareReport: "Bericht teilen", shareDesc: "Jeder mit dem Link kann den Bericht sehen.", copied: "Kopiert", copy: "Kopieren", revoking: "Widerrufen...", revokeLink: "Link widerrufen" },
-    exportData: { exportExcel: "Excel exportieren", exportPdf: "PDF exportieren" },
+    exportData: { export: "Exportieren", exportExcel: "Excel exportieren", exportPdf: "PDF exportieren", exportProjectPdf: "Projekt-PDF (alle Analysen)", exportProjectExcel: "Projekt-Excel (alle Analysen)" },
     projectDetail: {
       newAnalysis: "Neue Analyse", editProject: "Bearbeiten", aiModels: "KI-Modelle:",
       lastAnalysis: "Letzte Analyse", failedAnalysis: "Die letzte Analyse ist fehlgeschlagen.",
@@ -3592,7 +3598,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       citedInContexts: "Citado en contextos de:", contextFor: "Contexto para",
     },
     share: { share: "Compartir", shareReport: "Compartir informe", shareDesc: "Cualquier persona con el enlace podr\u00e1 ver el informe.", copied: "Copiado", copy: "Copiar", revoking: "Revocando...", revokeLink: "Revocar enlace" },
-    exportData: { exportExcel: "Exportar Excel", exportPdf: "Exportar PDF" },
+    exportData: { export: "Exportar", exportExcel: "Exportar Excel", exportPdf: "Exportar PDF", exportProjectPdf: "PDF proyecto (todos los análisis)", exportProjectExcel: "Excel proyecto (todos los análisis)" },
     projectDetail: {
       newAnalysis: "Nuevo an\u00e1lisis", editProject: "Editar", aiModels: "Modelos IA:",
       lastAnalysis: "\u00daltimo an\u00e1lisis", failedAnalysis: "El \u00faltimo an\u00e1lisis fall\u00f3.",
