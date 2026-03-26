@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import {
   LayoutDashboard, Users, FolderOpen, Activity,
-  Swords, Trophy, Server, ScrollText, Settings, Shield,
+  Swords, Trophy, Server, ScrollText, Settings, Shield, Ticket,
 } from "lucide-react";
 
 const NAV = [
@@ -35,6 +35,7 @@ const NAV = [
   {
     group: "Config",
     items: [
+      { label: "Voucher", href: "/admin/voucher", icon: Ticket },
       { label: "Settings", href: "/admin/settings", icon: Settings },
     ],
   },
