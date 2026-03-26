@@ -2,13 +2,15 @@
  * PayPal API helper — subscriptions and one-time orders.
  *
  * Uses PayPal REST API v2.
- * Sandbox vs Production is controlled by NODE_ENV:
- *   - production → https://api-m.paypal.com
- *   - anything else → https://api-m.sandbox.paypal.com
+ * Sandbox vs Production controlled by PAYPAL_MODE env var:
+ *   - "live" → https://api-m.paypal.com
+ *   - anything else (default) → https://api-m.sandbox.paypal.com
+ *
+ * Set PAYPAL_MODE=live on Vercel when switching to production credentials.
  */
 
 const PAYPAL_BASE_URL =
-  process.env.NODE_ENV === "production"
+  process.env.PAYPAL_MODE === "live"
     ? "https://api-m.paypal.com"
     : "https://api-m.sandbox.paypal.com";
 
