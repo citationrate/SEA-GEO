@@ -234,41 +234,46 @@ export async function verifyWebhookSignature(
   headers: Record<string, string>,
   body: string,
 ): Promise<boolean> {
-  const webhookId = process.env.PAYPAL_WEBHOOK_ID;
-  if (!webhookId) {
-    console.error("[paypal] Missing PAYPAL_WEBHOOK_ID");
-    return false;
-  }
+  try {
+    const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+    if (!webhookId) {
+      console.error("[paypal] Missing PAYPAL_WEBHOOK_ID");
+      return false;
+    }
 
-  const token = await getAccessToken();
+    const token = await getAccessToken();
 
-  const res = await fetch(
-    `${PAYPAL_BASE_URL}/v1/notifications/verify-webhook-signature`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+    const res = await fetch(
+      `${PAYPAL_BASE_URL}/v1/notifications/verify-webhook-signature`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          auth_algo: headers["paypal-auth-algo"],
+          cert_url: headers["paypal-cert-url"],
+          transmission_id: headers["paypal-transmission-id"],
+          transmission_sig: headers["paypal-transmission-sig"],
+          transmission_time: headers["paypal-transmission-time"],
+          webhook_id: webhookId,
+          webhook_event: JSON.parse(body),
+        }),
       },
-      body: JSON.stringify({
-        auth_algo: headers["paypal-auth-algo"],
-        cert_url: headers["paypal-cert-url"],
-        transmission_id: headers["paypal-transmission-id"],
-        transmission_sig: headers["paypal-transmission-sig"],
-        transmission_time: headers["paypal-transmission-time"],
-        webhook_id: webhookId,
-        webhook_event: JSON.parse(body),
-      }),
-    },
-  );
+    );
 
-  if (!res.ok) {
-    console.error("[paypal] Webhook verification request failed:", res.status);
+    if (!res.ok) {
+      console.error("[paypal] Webhook verification request failed:", res.status);
+      return false;
+    }
+
+    const data = await res.json();
+    return data.verification_status === "SUCCESS";
+  } catch (err) {
+    console.error("[paypal] Webhook verification error:", err);
     return false;
   }
-
-  const data = await res.json();
-  return data.verification_status === "SUCCESS";
 }
 
 /* ─── Plan Mapping ─── */
