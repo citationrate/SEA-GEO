@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useConsultation } from "@/lib/consultation-context";
 import { useMobileNav } from "./mobile-nav-context";
+import { useHasUnreadNews } from "@/components/ai-news-panel";
 
 const PRO_ROUTES = new Set(["/compare", "/datasets"]);
 
@@ -32,6 +33,7 @@ export function Sidebar({ profile }: SidebarProps) {
   const { t } = useTranslation();
   const { openModal } = useConsultation();
   const { isOpen: mobileOpen, close: closeMobile } = useMobileNav();
+  const hasUnread = useHasUnreadNews();
 
   // Close mobile nav on route change
   useEffect(() => { closeMobile(); }, [pathname, closeMobile]);
@@ -135,13 +137,21 @@ export function Sidebar({ profile }: SidebarProps) {
                       style={isActive(item.href) && !locked ? { background: "rgba(126,184,154,0.06)" } : undefined}
                       title={collapsed && !mobileOpen ? item.label : undefined}
                     >
-                      <item.icon className={cn(
-                        "w-[15px] h-[15px] flex-shrink-0",
-                        locked ? "text-muted-foreground/40" : isActive(item.href) ? "text-primary" : "text-muted-foreground"
-                      )} />
+                      <span className="relative flex-shrink-0">
+                        <item.icon className={cn(
+                          "w-[15px] h-[15px]",
+                          locked ? "text-muted-foreground/40" : isActive(item.href) ? "text-primary" : "text-muted-foreground"
+                        )} />
+                        {item.href === "/notizie" && hasUnread && collapsed && !mobileOpen && (
+                          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#D97706]" />
+                        )}
+                      </span>
                       {(!collapsed || mobileOpen) && (
                         <>
                           <span className="flex-1">{item.label}</span>
+                          {item.href === "/notizie" && hasUnread && (
+                            <span className="w-2 h-2 rounded-full bg-[#D97706] animate-pulse" />
+                          )}
                           {item.href === "/projects" && !locked && (
                             <Link
                               href="/projects/new"

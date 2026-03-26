@@ -1,44 +1,69 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, ExternalLink } from "lucide-react";
 
 /* ─── Types ─── */
+
+interface AiProvider {
+  id: string;
+  name: string;
+  color: string;
+  logo: string;
+  itemCount: number;
+}
 
 interface AiUpdate {
   id: string;
   provider: string;
   providerName: string;
+  providerColor: string;
   text: string;
   date: string;
   severity: "high" | "medium" | "low" | "info";
   severityLabel?: string;
-}
-
-interface AiUpdatesMeta {
-  lastUpdated: string;
+  source?: string;
 }
 
 interface AiUpdatesData {
-  _meta: AiUpdatesMeta;
-  providers: { id: string; name: string; itemCount: number }[];
+  _meta: {
+    version: string;
+    lastUpdated: string;
+    nextUpdate: string;
+    totalItems: number;
+  };
+  globalStatus: {
+    level: string;
+    label: string;
+    color: string;
+  };
+  providers: AiProvider[];
   updates: AiUpdate[];
 }
 
-/* ─── Constants ─── */
+/* ─── Config ─── */
 
 const STORAGE_KEY = "aisw_last_seen";
 const JSON_URL =
-  process.env.NEXT_PUBLIC_AI_UPDATES_JSON_URL || "/ai-updates.json";
+  "https://raw.githubusercontent.com/dalboscoserena-19/ai-status-plugin/main/ai-updates.json";
+const MAX_ITEMS = 10;
+const VISIBLE_PROVIDERS = ["anthropic", "openai", "google", "perplexity", "copilot"];
 
-const SEVERITY = {
+const SEVERITY: Record<string, { label: string; dot: string; bg: string; border: string; text: string }> = {
   high:   { label: "Critico",       dot: "#DC2626", bg: "rgba(220,38,38,0.08)",  border: "rgba(220,38,38,0.25)", text: "#DC2626" },
   medium: { label: "Comportamento", dot: "#D97706", bg: "rgba(217,119,6,0.08)",  border: "rgba(217,119,6,0.25)", text: "#D97706" },
-  low:    { label: "Miglioramento", dot: "#2563EB", bg: "rgba(37,99,235,0.08)",  border: "rgba(37,99,235,0.25)", text: "#2563EB" },
+  low:    { label: "Miglioramento", dot: "#3B82F6", bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.25)", text: "#3B82F6" },
   info:   { label: "Info",          dot: "#6B7280", bg: "rgba(107,114,128,0.08)", border: "rgba(107,114,128,0.25)", text: "#6B7280" },
 };
 
-/* ─── Helpers ─── */
+const STATUS_STYLE: Record<string, { bg: string; border: string; text: string }> = {
+  high:   { bg: "rgba(220,38,38,0.06)", border: "rgba(220,38,38,0.20)", text: "#DC2626" },
+  medium: { bg: "rgba(217,119,6,0.06)", border: "rgba(217,119,6,0.20)", text: "#D97706" },
+  low:    { bg: "rgba(5,150,105,0.06)", border: "rgba(5,150,105,0.20)", text: "#059669" },
+  ok:     { bg: "rgba(107,114,128,0.06)", border: "rgba(107,114,128,0.20)", text: "#6B7280" },
+};
+
+/* ─── localStorage ─── */
 
 function getLastSeen(): string {
   try { return localStorage.getItem(STORAGE_KEY) || ""; } catch { return ""; }
@@ -62,7 +87,7 @@ export function AiNewsPanel() {
       const json: AiUpdatesData = await res.json();
       setData(json);
 
-      // Mark as read
+      // Mark as seen
       if (json._meta?.lastUpdated) {
         setLastSeen(json._meta.lastUpdated);
       }
@@ -92,11 +117,19 @@ export function AiNewsPanel() {
     );
   }
 
-  const providers = data.providers || [];
-  const updates = data.updates?.filter((u) => {
-    if (filter === "all") return true;
-    return u.provider === filter;
-  }) || [];
+  const providers = (data.providers || []).filter((p) =>
+    VISIBLE_PROVIDERS.includes(p.id),
+  );
+
+  const allUpdates = (data.updates || []).filter((u) =>
+    VISIBLE_PROVIDERS.includes(u.provider),
+  );
+
+  const filtered = filter === "all"
+    ? allUpdates
+    : allUpdates.filter((u) => u.provider === filter);
+
+  const visible = filtered.slice(0, MAX_ITEMS);
 
   const lastUpdated = data._meta?.lastUpdated
     ? new Date(data._meta.lastUpdated).toLocaleDateString("it-IT", {
@@ -108,19 +141,38 @@ export function AiNewsPanel() {
       })
     : "—";
 
+  const gs = data.globalStatus;
+  const gsStyle = STATUS_STYLE[gs?.level] || STATUS_STYLE.ok;
+
   return (
     <div className="space-y-5">
-      {/* Header meta */}
+      {/* Global status banner */}
+      {gs && (
+        <div
+          className="rounded-[2px] px-4 py-3 flex items-center gap-3"
+          style={{ background: gsStyle.bg, border: `1px solid ${gsStyle.border}` }}
+        >
+          <div
+            className="w-2.5 h-2.5 rounded-full shrink-0"
+            style={{ background: gs.color }}
+          />
+          <p className="text-sm font-medium" style={{ color: gsStyle.text }}>
+            {gs.label}
+          </p>
+        </div>
+      )}
+
+      {/* Meta row */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground font-mono uppercase tracking-wide">
           Ultimo aggiornamento: {lastUpdated}
         </p>
         <p className="text-xs text-muted-foreground">
-          {updates.length} aggiornament{updates.length === 1 ? "o" : "i"}
+          {allUpdates.length} aggiornament{allUpdates.length === 1 ? "o" : "i"}
         </p>
       </div>
 
-      {/* Filters */}
+      {/* Provider filters */}
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilter("all")}
@@ -136,25 +188,37 @@ export function AiNewsPanel() {
           <button
             key={p.id}
             onClick={() => setFilter(p.id)}
-            className={`px-3 py-1.5 rounded-[2px] text-xs font-mono uppercase tracking-wide transition-colors border ${
+            className={`px-3 py-1.5 rounded-[2px] text-xs font-mono tracking-wide transition-colors border flex items-center gap-1.5 ${
               filter === p.id
                 ? "bg-primary text-primary-foreground border-primary"
                 : "border-border text-muted-foreground hover:text-foreground hover:bg-surface-2"
             }`}
           >
-            {p.name.split(" ")[0]}
+            <span>{p.logo}</span>
+            <span className="uppercase">{p.name.split(" ")[0]}</span>
+            {p.itemCount > 0 && (
+              <span
+                className="text-[0.6rem] font-semibold px-1 rounded-[2px]"
+                style={{
+                  background: filter === p.id ? "rgba(255,255,255,0.2)" : "rgba(126,184,154,0.12)",
+                  color: filter === p.id ? "inherit" : "var(--primary)",
+                }}
+              >
+                {p.itemCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {/* Items */}
-      {updates.length === 0 ? (
+      {visible.length === 0 ? (
         <div className="text-center py-12 text-sm text-muted-foreground">
           Nessun aggiornamento trovato.
         </div>
       ) : (
-        <div className="space-y-0 border border-border rounded-[2px] overflow-hidden">
-          {updates.map((item, i) => {
+        <div className="border border-border rounded-[2px] overflow-hidden divide-y divide-border">
+          {visible.map((item, i) => {
             const sev = SEVERITY[item.severity] || SEVERITY.info;
             const date = new Date(item.date).toLocaleDateString("it-IT", {
               day: "2-digit",
@@ -165,19 +229,20 @@ export function AiNewsPanel() {
             return (
               <div
                 key={item.id || i}
-                className="flex gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-2/50 transition-colors"
+                className="flex gap-3 px-4 py-3.5 hover:bg-surface-2/50 transition-colors"
               >
-                {/* Severity dot */}
+                {/* Provider color dot */}
                 <div
                   className="w-2 h-2 rounded-full mt-1.5 shrink-0"
-                  style={{ background: sev.dot }}
+                  style={{ background: item.providerColor || sev.dot }}
                 />
 
-                <div className="flex-1 min-w-0 space-y-1.5">
+                <div className="flex-1 min-w-0 space-y-2">
                   <p className="text-sm text-foreground leading-relaxed">
                     {item.text}
                   </p>
                   <div className="flex items-center gap-2 flex-wrap">
+                    {/* Severity badge */}
                     <span
                       className="text-[0.625rem] font-semibold px-1.5 py-0.5 rounded-[2px]"
                       style={{
@@ -186,17 +251,39 @@ export function AiNewsPanel() {
                         border: `1px solid ${sev.border}`,
                       }}
                     >
-                      {sev.label}
+                      {item.severityLabel || sev.label}
                     </span>
+
+                    {/* Provider + date */}
                     <span className="text-xs text-muted-foreground font-mono">
                       {item.providerName} · {date}
                     </span>
+
+                    {/* Source link */}
+                    {item.source && (
+                      <a
+                        href={item.source}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span className="font-mono">fonte</span>
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      {/* Truncation notice */}
+      {filtered.length > MAX_ITEMS && (
+        <p className="text-center text-xs text-muted-foreground">
+          Mostrati {MAX_ITEMS} di {filtered.length} aggiornamenti
+        </p>
       )}
 
       {/* Footer */}
@@ -207,13 +294,27 @@ export function AiNewsPanel() {
   );
 }
 
-/* ─── Unread check — exported for sidebar badge ─── */
+/* ─── Unread check — exported for sidebar dot ─── */
 
-export function hasUnreadNews(): boolean {
-  if (typeof window === "undefined") return false;
-  const lastSeen = getLastSeen();
-  if (!lastSeen) return true; // never opened → assume unread
-  // We can't check against server data synchronously,
-  // so this is a conservative check from last visit
-  return false;
+export function useHasUnreadNews() {
+  const [unread, setUnread] = useState(false);
+
+  useEffect(() => {
+    const lastSeen = getLastSeen();
+    if (!lastSeen) {
+      setUnread(true);
+      return;
+    }
+
+    fetch(JSON_URL + "?t=" + Date.now())
+      .then((r) => r.json())
+      .then((json: AiUpdatesData) => {
+        if (json._meta?.lastUpdated) {
+          setUnread(new Date(json._meta.lastUpdated) > new Date(lastSeen));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  return unread;
 }
