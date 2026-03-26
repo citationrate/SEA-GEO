@@ -66,7 +66,7 @@ export function UserDetailClient({ user, projects, runs, stats, modelCounts, avi
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="card p-4 text-center"><p className="font-display font-bold text-lg text-foreground">{stats.totalProjects}</p><p className="text-xs text-muted-foreground">Progetti</p></div>
         <div className="card p-4 text-center"><p className="font-display font-bold text-lg text-foreground">{stats.totalRuns}</p><p className="text-xs text-muted-foreground">Analisi</p></div>
         <div className="card p-4 text-center"><p className="font-display font-bold text-lg text-primary">{stats.avgAvi ?? "—"}</p><p className="text-xs text-muted-foreground">AVI medio</p></div>

@@ -107,7 +107,7 @@ export function SourcesClient({
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard value={String(domains.length)} label={t("sources.uniqueDomains")} />
         <StatCard value={String(totalCitations)} label={t("sources.totalCitations")} />
         <StatCard value={`${mediaPct}%`} label={t("sources.mediaStatLabel")} />

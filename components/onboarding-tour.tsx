@@ -501,17 +501,19 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
       {/* Tooltip — fixed bottom-right, never moves */}
       {!navigating && (
         <div
-          className="fixed animate-fade-in"
+          className="fixed animate-fade-in sm:!left-auto"
           style={{
             zIndex: 110,
-            bottom: 32,
-            right: 32,
-            width: tooltipW,
+            bottom: 16,
+            right: 16,
+            left: 16,
+            width: "auto",
+            maxWidth: 440,
             pointerEvents: "auto",
           }}
         >
           <div
-            className="rounded-lg p-5 space-y-3 shadow-2xl min-w-[380px] max-w-[440px]"
+            className="rounded-lg p-4 sm:p-5 space-y-3 shadow-2xl max-w-[440px]"
             style={{
               background: "#111416",
               border: "1px solid rgba(126,184,154,0.2)",

@@ -169,7 +169,7 @@ export function NewCompetitiveForm({
       </div>
 
       {/* Brand A / Brand B */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">{t("competitiveForm.yourBrand")}</label>
           <div className="input-base bg-muted/50 text-muted-foreground cursor-not-allowed">

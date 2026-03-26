@@ -363,7 +363,7 @@ export function CompetitiveResults({
             );
           })()}
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Win Rate */}
             <div className="card p-5 space-y-3">
               <div className="flex items-center gap-2">

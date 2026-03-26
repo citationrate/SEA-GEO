@@ -153,7 +153,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               <p className="font-display font-bold text-3xl text-primary">{(lastAvi as any).avi_score}</p>
             </div>
             <div className="h-12 w-px bg-border" />
-            <div className="grid grid-cols-3 gap-4 flex-1">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 flex-1">
               {[
                 { labelKey: "dashboard.presence", value: (lastAvi as any).presence_score },
                 { labelKey: "dashboard.position", value: (lastAvi as any).rank_score },

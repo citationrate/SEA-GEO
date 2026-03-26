@@ -140,7 +140,7 @@ export default function SharedReportPage() {
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="bg-[#111416] border border-gray-800 rounded-lg p-4 text-center">
             <p className="text-2xl font-bold text-cyan-400">{mentionRate}%</p>
             <p className="text-xs text-gray-400 mt-1">Menzioni Brand</p>

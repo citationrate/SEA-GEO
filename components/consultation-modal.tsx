@@ -231,7 +231,7 @@ export function ConsultationModal() {
           {/* SECTION 5 — Gestione */}
           <Section title={t("consultation.sectionManagement")}>
             {hasErr("gestione") && <p className="text-xs text-destructive mb-1">{t("consultation.selectOption")}</p>}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {GESTIONE.map((g) => (
                 <RadioCard key={g.value} selected={gestione === g.value} onClick={() => setGestione(g.value)} label={g.label} error={hasErr("gestione")} />
               ))}
@@ -257,7 +257,7 @@ export function ConsultationModal() {
           {/* SECTION 7 — Disponibilità */}
           <Section title={t("consultation.sectionAvailability")}>
             {hasErr("disponibilita") && <p className="text-xs text-destructive mb-1">{t("consultation.selectTimeSlot")}</p>}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {DISPONIBILITA.map((d) => (
                 <button
                   key={d.value}
