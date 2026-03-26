@@ -1,6 +1,7 @@
 import { requireAuth } from "@/lib/api-helpers";
 import { cancelSubscription } from "@/lib/paypal";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
+import { createServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
 
 export async function POST() {
@@ -27,7 +28,7 @@ export async function POST() {
     // Cancel on PayPal
     await cancelSubscription(profile.paypal_subscription_id);
 
-    // Update CitationRate profiles — the existing Supabase webhook will sync to AVI
+    // Update CitationRate profiles
     await (cr.from("profiles") as any)
       .update({
         subscription_status: "cancelled",
@@ -35,9 +36,17 @@ export async function POST() {
       })
       .eq("id", user.id);
 
+    // Also update seageo1 directly (don't wait for webhook sync)
+    const svc = createServiceClient();
+    await (svc.from("profiles") as any)
+      .update({ plan: "demo" })
+      .eq("id", user.id);
+
+    console.log("[cancel-subscription] Cancelled:", user.id, "sub:", profile.paypal_subscription_id);
+
     return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("[paypal/cancel-subscription] error:", err);
-    return NextResponse.json({ error: "Errore nella cancellazione" }, { status: 500 });
+  } catch (err: any) {
+    console.error("[paypal/cancel-subscription] error:", err?.message ?? err);
+    return NextResponse.json({ error: "Errore nella cancellazione", detail: err?.message }, { status: 500 });
   }
 }
