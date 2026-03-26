@@ -11,7 +11,7 @@ import {
   Users, Link2, Tag, GitCompare, Settings,
   Database, ChevronRight, Plus,
   PanelLeftClose, PanelLeftOpen, MessageSquareText,
-  ExternalLink, X,
+  ExternalLink, X, Newspaper,
 } from "lucide-react";
 import { useConsultation } from "@/lib/consultation-context";
 import { useMobileNav } from "./mobile-nav-context";
@@ -64,6 +64,7 @@ export function Sidebar({ profile }: SidebarProps) {
     {
       group: t("sidebar.system"),
       items: [
+        { href: "/notizie",     icon: Newspaper,       label: "Notizie AI" },
         { href: "/settings",    icon: Settings,        label: t("sidebar.settings") },
       ],
     },
