@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Loader2, ExternalLink } from "lucide-react";
+import { Loader2, ExternalLink, Globe } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 /* ─── Types ─── */
 
@@ -49,13 +50,6 @@ const JSON_URL =
 const MAX_ITEMS = 10;
 const VISIBLE_PROVIDERS = ["anthropic", "openai", "google", "perplexity", "copilot"];
 
-const SEVERITY: Record<string, { label: string; dot: string; bg: string; border: string; text: string }> = {
-  high:   { label: "Critico",       dot: "#DC2626", bg: "rgba(220,38,38,0.08)",  border: "rgba(220,38,38,0.25)", text: "#DC2626" },
-  medium: { label: "Comportamento", dot: "#D97706", bg: "rgba(217,119,6,0.08)",  border: "rgba(217,119,6,0.25)", text: "#D97706" },
-  low:    { label: "Miglioramento", dot: "#3B82F6", bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.25)", text: "#3B82F6" },
-  info:   { label: "Info",          dot: "#6B7280", bg: "rgba(107,114,128,0.08)", border: "rgba(107,114,128,0.25)", text: "#6B7280" },
-};
-
 const STATUS_STYLE: Record<string, { bg: string; border: string; text: string }> = {
   high:   { bg: "rgba(220,38,38,0.06)", border: "rgba(220,38,38,0.20)", text: "#DC2626" },
   medium: { bg: "rgba(217,119,6,0.06)", border: "rgba(217,119,6,0.20)", text: "#D97706" },
@@ -72,13 +66,32 @@ function setLastSeen(ts: string) {
   try { localStorage.setItem(STORAGE_KEY, ts); } catch { /* noop */ }
 }
 
+/* ─── Severity colors (language-independent) ─── */
+
+const SEV_STYLE: Record<string, { dot: string; bg: string; border: string; text: string }> = {
+  high:   { dot: "#DC2626", bg: "rgba(220,38,38,0.08)",  border: "rgba(220,38,38,0.25)", text: "#DC2626" },
+  medium: { dot: "#D97706", bg: "rgba(217,119,6,0.08)",  border: "rgba(217,119,6,0.25)", text: "#D97706" },
+  low:    { dot: "#3B82F6", bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.25)", text: "#3B82F6" },
+  info:   { dot: "#6B7280", bg: "rgba(107,114,128,0.08)", border: "rgba(107,114,128,0.25)", text: "#6B7280" },
+};
+
 /* ─── Component ─── */
 
 export function AiNewsPanel() {
+  const { t, locale } = useTranslation();
   const [data, setData] = useState<AiUpdatesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
+
+  const sevLabel: Record<string, string> = {
+    high: t("aiNews.severityHigh"),
+    medium: t("aiNews.severityMedium"),
+    low: t("aiNews.severityLow"),
+    info: t("aiNews.severityInfo"),
+  };
+
+  const dateLocale = locale === "it" ? "it-IT" : locale === "en" ? "en-GB" : locale === "fr" ? "fr-FR" : locale === "de" ? "de-DE" : "es-ES";
 
   const fetchData = useCallback(async () => {
     try {
@@ -87,17 +100,16 @@ export function AiNewsPanel() {
       const json: AiUpdatesData = await res.json();
       setData(json);
 
-      // Mark as seen
       if (json._meta?.lastUpdated) {
         setLastSeen(json._meta.lastUpdated);
       }
     } catch (err) {
-      setError("Impossibile caricare gli aggiornamenti AI.");
+      setError(t("aiNews.noResults"));
       console.warn("[ai-news] fetch error:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -112,7 +124,7 @@ export function AiNewsPanel() {
   if (error || !data) {
     return (
       <div className="text-center py-16 text-sm text-muted-foreground">
-        {error || "Nessun dato disponibile."}
+        {error || t("aiNews.noResults")}
       </div>
     );
   }
@@ -132,7 +144,7 @@ export function AiNewsPanel() {
   const visible = filtered.slice(0, MAX_ITEMS);
 
   const lastUpdated = data._meta?.lastUpdated
-    ? new Date(data._meta.lastUpdated).toLocaleDateString("it-IT", {
+    ? new Date(data._meta.lastUpdated).toLocaleDateString(dateLocale, {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -146,6 +158,14 @@ export function AiNewsPanel() {
 
   return (
     <div className="space-y-5">
+      {/* English notice */}
+      <div className="flex items-center gap-2.5 rounded-[2px] px-4 py-3 bg-muted/30 border border-border">
+        <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          {t("aiNews.englishNotice")}
+        </p>
+      </div>
+
       {/* Global status banner */}
       {gs && (
         <div
@@ -165,10 +185,10 @@ export function AiNewsPanel() {
       {/* Meta row */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground font-mono uppercase tracking-wide">
-          Ultimo aggiornamento: {lastUpdated}
+          {t("aiNews.lastUpdate")}: {lastUpdated}
         </p>
         <p className="text-xs text-muted-foreground">
-          {allUpdates.length} aggiornament{allUpdates.length === 1 ? "o" : "i"}
+          {allUpdates.length} {allUpdates.length === 1 ? t("aiNews.updateCount") : t("aiNews.updatesCount")}
         </p>
       </div>
 
@@ -182,7 +202,7 @@ export function AiNewsPanel() {
               : "border-border text-muted-foreground hover:text-foreground hover:bg-surface-2"
           }`}
         >
-          Tutti
+          {t("aiNews.filterAll")}
         </button>
         {providers.map((p) => (
           <button
@@ -214,13 +234,13 @@ export function AiNewsPanel() {
       {/* Items */}
       {visible.length === 0 ? (
         <div className="text-center py-12 text-sm text-muted-foreground">
-          Nessun aggiornamento trovato.
+          {t("aiNews.noResults")}
         </div>
       ) : (
         <div className="border border-border rounded-[2px] overflow-hidden divide-y divide-border">
           {visible.map((item, i) => {
-            const sev = SEVERITY[item.severity] || SEVERITY.info;
-            const date = new Date(item.date).toLocaleDateString("it-IT", {
+            const sev = SEV_STYLE[item.severity] || SEV_STYLE.info;
+            const date = new Date(item.date).toLocaleDateString(dateLocale, {
               day: "2-digit",
               month: "short",
               year: "numeric",
@@ -242,7 +262,7 @@ export function AiNewsPanel() {
                     {item.text}
                   </p>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {/* Severity badge */}
+                    {/* Severity badge — translated */}
                     <span
                       className="text-[0.625rem] font-semibold px-1.5 py-0.5 rounded-[2px]"
                       style={{
@@ -251,7 +271,7 @@ export function AiNewsPanel() {
                         border: `1px solid ${sev.border}`,
                       }}
                     >
-                      {item.severityLabel || sev.label}
+                      {sevLabel[item.severity] || sevLabel.info}
                     </span>
 
                     {/* Provider + date */}
@@ -268,7 +288,7 @@ export function AiNewsPanel() {
                         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
                       >
                         <ExternalLink className="w-3 h-3" />
-                        <span className="font-mono">fonte</span>
+                        <span className="font-mono">{t("aiNews.source")}</span>
                       </a>
                     )}
                   </div>
@@ -282,13 +302,13 @@ export function AiNewsPanel() {
       {/* Truncation notice */}
       {filtered.length > MAX_ITEMS && (
         <p className="text-center text-xs text-muted-foreground">
-          Mostrati {MAX_ITEMS} di {filtered.length} aggiornamenti
+          {t("aiNews.showingOf").replace("{shown}", String(MAX_ITEMS)).replace("{total}", String(filtered.length))}
         </p>
       )}
 
       {/* Footer */}
       <p className="text-center text-xs text-muted-foreground font-mono">
-        Aggiornato automaticamente dai changelog ufficiali
+        {t("aiNews.footer")}
       </p>
     </div>
   );
