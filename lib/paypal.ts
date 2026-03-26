@@ -176,17 +176,13 @@ export async function createOrder(
           custom_id: userId,
         },
       ],
-      payment_source: {
-        paypal: {
-          experience_context: {
-            brand_name: "CitationRate AVI",
-            locale: "it-IT",
-            shipping_preference: "NO_SHIPPING",
-            user_action: "PAY_NOW",
-            return_url: `${appUrl}/payment/success?type=package`,
-            cancel_url: `${appUrl}/payment/cancel`,
-          },
-        },
+      application_context: {
+        brand_name: "CitationRate AVI",
+        locale: "it-IT",
+        shipping_preference: "NO_SHIPPING",
+        user_action: "PAY_NOW",
+        return_url: `${appUrl}/payment/success?type=package`,
+        cancel_url: `${appUrl}/payment/cancel`,
       },
     }),
   });
@@ -198,7 +194,7 @@ export async function createOrder(
 
   const order = await res.json();
   const approvalLink = order.links?.find(
-    (l: { rel: string }) => l.rel === "payer-action",
+    (l: { rel: string }) => l.rel === "approve",
   );
 
   return {
