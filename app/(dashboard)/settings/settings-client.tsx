@@ -78,11 +78,16 @@ export function SettingsClient({
   const isBase = plan === "base";
   const isDemo = !plan || plan === "demo" || plan === "free";
 
+  // Subscription
+  const [subscribing, setSubscribing] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [subscriptionMsg, setSubscriptionMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
   // Packages
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [purchaseMsg, setPurchaseMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  // TODO: Stripe integration — currently purchases are simulated
   const PACKAGES: PackageDef[] = isBase ? [
     { id: "base_100", name: "100 Query Extra", description: "+100 query senza browsing", price: 19, plan_required: "base", browsing_prompts: 0, no_browsing_prompts: 100, comparisons: 0, max_per_month: 1 },
     { id: "base_300", name: "300 Query Extra", description: "+300 query senza browsing", price: 49, plan_required: "base", browsing_prompts: 0, no_browsing_prompts: 300, comparisons: 0, max_per_month: 1 },
@@ -94,25 +99,66 @@ export function SettingsClient({
     { id: "pro_comp_10", name: "10 Confronti Extra", description: "+10 analisi competitive", price: 25, plan_required: "pro", browsing_prompts: 0, no_browsing_prompts: 0, comparisons: 10, max_per_month: null },
   ] : [];
 
+  async function handleSubscribe(planId: string) {
+    setSubscribing(true);
+    setSubscriptionMsg(null);
+    try {
+      const res = await fetch("/api/paypal/create-subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.approvalUrl) {
+        window.location.href = data.approvalUrl;
+      } else {
+        setSubscriptionMsg({ ok: false, text: data.error || "Errore nella creazione dell'abbonamento" });
+        setSubscribing(false);
+      }
+    } catch {
+      setSubscriptionMsg({ ok: false, text: "Errore di rete" });
+      setSubscribing(false);
+    }
+  }
+
+  async function handleCancelSubscription() {
+    setCancelling(true);
+    setSubscriptionMsg(null);
+    try {
+      const res = await fetch("/api/paypal/cancel-subscription", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setSubscriptionMsg({ ok: true, text: "Abbonamento cancellato. Tornerai al piano Demo." });
+        setShowCancelConfirm(false);
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        setSubscriptionMsg({ ok: false, text: data.error || "Errore nella cancellazione" });
+      }
+    } catch {
+      setSubscriptionMsg({ ok: false, text: "Errore di rete" });
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   async function purchasePackage(pkgId: string) {
     setPurchasingId(pkgId);
     setPurchaseMsg(null);
     try {
-      const res = await fetch("/api/packages/purchase", {
+      const res = await fetch("/api/paypal/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ package_id: pkgId }),
+        body: JSON.stringify({ packageId: pkgId }),
       });
       const data = await res.json();
-      if (res.ok) {
-        setPurchaseMsg({ ok: true, text: t("settings.packageSuccess") });
-        setTimeout(() => window.location.reload(), 1500);
+      if (res.ok && data.approvalUrl) {
+        window.location.href = data.approvalUrl;
       } else {
         setPurchaseMsg({ ok: false, text: data.error || t("settings.packageError") });
+        setPurchasingId(null);
       }
     } catch {
       setPurchaseMsg({ ok: false, text: t("settings.packageError") });
-    } finally {
       setPurchasingId(null);
     }
   }
@@ -295,8 +341,13 @@ export function SettingsClient({
             </ul>
             {isBase && <p className="text-xs text-primary font-semibold">Piano attuale</p>}
             {isDemo && (
-              <button className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-[2px] text-xs font-semibold opacity-50 cursor-not-allowed" disabled>
-                Upgrade a Base (coming soon)
+              <button
+                onClick={() => handleSubscribe(billingPeriod === "annual" ? (process.env.NEXT_PUBLIC_PAYPAL_PLAN_BASE_ANNUAL ?? "") : (process.env.NEXT_PUBLIC_PAYPAL_PLAN_BASE_MONTHLY ?? ""))}
+                disabled={subscribing}
+                className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-[2px] text-xs font-semibold hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {subscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                Abbonati a Base
               </button>
             )}
           </div>
@@ -328,12 +379,57 @@ export function SettingsClient({
             </ul>
             {isPro && <p className="text-xs text-primary font-semibold">Piano attuale</p>}
             {!isPro && (
-              <button className="w-full px-3 py-2 bg-[#d4a817] text-background rounded-[2px] text-xs font-semibold opacity-50 cursor-not-allowed" disabled>
-                Upgrade a Pro (coming soon)
+              <button
+                onClick={() => handleSubscribe(billingPeriod === "annual" ? (process.env.NEXT_PUBLIC_PAYPAL_PLAN_PRO_ANNUAL ?? "") : (process.env.NEXT_PUBLIC_PAYPAL_PLAN_PRO_MONTHLY ?? ""))}
+                disabled={subscribing}
+                className="w-full px-3 py-2 bg-[#d4a817] text-background rounded-[2px] text-xs font-semibold hover:bg-[#d4a817]/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {subscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                Abbonati a Pro
               </button>
             )}
           </div>
         </div>
+
+        {/* Subscription management */}
+        {(isBase || isPro) && (
+          <div className="pt-4 border-t border-border space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Gestisci il tuo abbonamento
+              </p>
+              {!showCancelConfirm ? (
+                <button
+                  onClick={() => setShowCancelConfirm(true)}
+                  className="px-4 py-2 border border-destructive/30 text-destructive rounded-[2px] text-xs font-medium hover:bg-destructive/10 transition-colors"
+                >
+                  Annulla abbonamento
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowCancelConfirm(false)}
+                    className="px-3 py-2 border border-border text-foreground rounded-[2px] text-xs hover:bg-muted/30 transition-colors"
+                  >
+                    Indietro
+                  </button>
+                  <button
+                    onClick={handleCancelSubscription}
+                    disabled={cancelling}
+                    className="px-3 py-2 bg-destructive text-white rounded-[2px] text-xs font-medium hover:bg-destructive/80 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {cancelling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                    Conferma cancellazione
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {subscriptionMsg && (
+          <p className={`text-sm ${subscriptionMsg.ok ? "text-primary" : "text-destructive"}`}>{subscriptionMsg.text}</p>
+        )}
       </div>
 
       {/* 2b. Utilizzo mensile */}
@@ -457,7 +553,6 @@ export function SettingsClient({
                     <span className="text-[0.625rem] font-mono text-muted-foreground uppercase tracking-wide">max {pkg.max_per_month}/mese</span>
                   )}
                 </div>
-                {/* TODO: Replace with Stripe checkout */}
                 <button
                   onClick={() => purchasePackage(pkg.id)}
                   disabled={purchasingId !== null}
