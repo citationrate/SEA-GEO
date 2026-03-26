@@ -86,6 +86,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     avi: Math.round(a.avi_score * 10) / 10,
     presence: Math.round(a.presence_score),
     sentiment: Math.round(a.sentiment_score),
+    computed_at: a.computed_at,
   }));
 
   const tofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "tofu");

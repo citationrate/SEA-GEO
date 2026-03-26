@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import {
   LineChart, Line, BarChart, Bar, Cell, LabelList,
   XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
@@ -208,11 +209,64 @@ function shortModelName(model: string): string {
   return model;
 }
 
+type TimeRange = "1m" | "3m" | "6m" | "1y" | "all";
+
+const TIME_RANGES: { key: TimeRange; label: string }[] = [
+  { key: "1m",  label: "1M" },
+  { key: "3m",  label: "3M" },
+  { key: "6m",  label: "6M" },
+  { key: "1y",  label: "1A" },
+  { key: "all", label: "Tutto" },
+];
+
+function getTimeRangeCutoff(range: TimeRange): Date | null {
+  if (range === "all") return null;
+  const now = new Date();
+  switch (range) {
+    case "1m": now.setMonth(now.getMonth() - 1); break;
+    case "3m": now.setMonth(now.getMonth() - 3); break;
+    case "6m": now.setMonth(now.getMonth() - 6); break;
+    case "1y": now.setFullYear(now.getFullYear() - 1); break;
+  }
+  return now;
+}
+
 export function AVITrend({ data, models }: { data?: TrendDataPoint[]; models?: string[] }) {
   const { t } = useTranslation();
   const trendData = data ?? [];
   const modelKeys = (models ?? []).filter((m) => trendData.some((d) => d[m] != null));
   const showModels = modelKeys.length > 1;
+
+  const allSeries = [
+    { key: "avi",        label: "AVI",                    color: "#7eb89a" },
+    { key: "prominence", label: t("dashboard.presence"),   color: "#e8956d" },
+    { key: "sentiment",  label: "Sentiment",               color: "#7eb3d4" },
+    ...(showModels ? modelKeys.map((m) => ({ key: m, label: shortModelName(m), color: getModelColor(m) })) : []),
+  ];
+
+  const [active, setActive] = useState<Set<string>>(() => new Set(allSeries.map((s) => s.key)));
+  const [timeRange, setTimeRange] = useState<TimeRange>("all");
+
+  const filteredData = useMemo(() => {
+    const cutoff = getTimeRangeCutoff(timeRange);
+    if (!cutoff) return trendData;
+    return trendData.filter((d) => {
+      if (!d.computed_at) return true;
+      return new Date(d.computed_at) >= cutoff;
+    });
+  }, [trendData, timeRange]);
+
+  function toggle(key: string) {
+    setActive((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        if (next.size > 1) next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }
 
   if (trendData.length === 0) {
     return (
@@ -225,52 +279,86 @@ export function AVITrend({ data, models }: { data?: TrendDataPoint[]; models?: s
     );
   }
 
-  const legendItems = [
-    { label: "AVI",      color: "#7eb89a" },
-    { label: t("dashboard.presence"), color: "#e8956d" },
-    { label: "Sentiment",color: "#7eb3d4" },
-    ...(showModels ? modelKeys.map((m) => ({ label: shortModelName(m), color: getModelColor(m) })) : []),
-  ];
-
   return (
     <div className="card p-5">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
         <div>
           <h3 className="font-display text-sm text-foreground" style={{ fontWeight: 300 }}>{t("dashboard.aviOverTime")}</h3>
           <p className="font-mono text-[12px] text-cream-dim mt-0.5">{t("dashboard.visibilityScore")}</p>
         </div>
-        <div className="flex items-center gap-4 font-mono text-[12px] text-cream-dim flex-wrap">
-          {legendItems.map(l => (
-            <span key={l.label} className="flex items-center gap-1.5">
-              <span className="w-4 h-0.5 rounded-sm inline-block" style={{ background: l.color }} />
-              {l.label}
-            </span>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Time range filter */}
+          <div className="flex items-center bg-muted/30 rounded-[2px] p-0.5 mr-1">
+            {TIME_RANGES.map((r) => (
+              <button
+                key={r.key}
+                onClick={() => setTimeRange(r.key)}
+                className={`px-2 py-1 text-[11px] font-mono rounded-[2px] transition-colors ${
+                  timeRange === r.key
+                    ? "bg-primary text-primary-foreground"
+                    : "text-cream-dim hover:text-foreground"
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          {/* Series toggles */}
+          {allSeries.map((s) => {
+            const on = active.has(s.key);
+            return (
+              <button
+                key={s.key}
+                onClick={() => toggle(s.key)}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-[2px] font-mono text-[11px] transition-all border cursor-pointer"
+                style={{
+                  borderColor: on ? s.color : "var(--line)",
+                  background: on ? `${s.color}10` : "transparent",
+                  color: on ? s.color : "var(--cream-dim)",
+                  opacity: on ? 1 : 0.4,
+                }}
+              >
+                <span
+                  className="w-3.5 h-0.5 rounded-sm inline-block"
+                  style={{ background: s.color, opacity: on ? 1 : 0.3 }}
+                />
+                {s.label}
+              </button>
+            );
+          })}
         </div>
       </div>
       <ResponsiveContainer width="100%" height={170}>
-        <LineChart data={trendData}>
+        <LineChart data={filteredData}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false}/>
           <XAxis dataKey="run" tick={{ fontSize: 11, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false}/>
           <YAxis domain={[0,100]} tick={{ fontSize: 11, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false}/>
           <Tooltip contentStyle={TOOLTIP_STYLE}/>
-          <Line type="monotone" dataKey="avi"        stroke="#7eb89a" strokeWidth={3} dot={{ r: 5, fill: "#7eb89a" }} connectNulls activeDot={{ r: 7 }}/>
-          <Line type="monotone" dataKey="prominence" stroke="#e8956d" strokeWidth={1.5} dot={{ r: 3, fill: "#e8956d" }} connectNulls activeDot={{ r: 5 }}/>
-          <Line type="monotone" dataKey="sentiment"  stroke="#7eb3d4" strokeWidth={1.5} dot={{ r: 3, fill: "#7eb3d4" }} connectNulls activeDot={{ r: 5 }}/>
-          {showModels && modelKeys.map((m) => (
-            <Line
-              key={m}
-              type="monotone"
-              dataKey={m}
-              name={shortModelName(m)}
-              stroke={getModelColor(m)}
-              strokeWidth={1.5}
-              strokeDasharray="4 3"
-              dot={{ r: 3, fill: getModelColor(m) }}
-              connectNulls
-              activeDot={{ r: 5 }}
-            />
-          ))}
+          {active.has("avi") && (
+            <Line type="monotone" dataKey="avi" stroke="#7eb89a" strokeWidth={3} dot={{ r: 5, fill: "#7eb89a" }} connectNulls activeDot={{ r: 7 }}/>
+          )}
+          {active.has("prominence") && (
+            <Line type="monotone" dataKey="prominence" stroke="#e8956d" strokeWidth={1.5} dot={{ r: 3, fill: "#e8956d" }} connectNulls activeDot={{ r: 5 }}/>
+          )}
+          {active.has("sentiment") && (
+            <Line type="monotone" dataKey="sentiment" stroke="#7eb3d4" strokeWidth={1.5} dot={{ r: 3, fill: "#7eb3d4" }} connectNulls activeDot={{ r: 5 }}/>
+          )}
+          {showModels && modelKeys.map((m) =>
+            active.has(m) ? (
+              <Line
+                key={m}
+                type="monotone"
+                dataKey={m}
+                name={shortModelName(m)}
+                stroke={getModelColor(m)}
+                strokeWidth={1.5}
+                strokeDasharray="4 3"
+                dot={{ r: 3, fill: getModelColor(m) }}
+                connectNulls
+                activeDot={{ r: 5 }}
+              />
+            ) : null,
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>

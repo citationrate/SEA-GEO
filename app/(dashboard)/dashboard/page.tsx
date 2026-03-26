@@ -147,6 +147,7 @@ export default async function DashboardPage({
       avi: a.avi_score != null ? Math.round(a.avi_score * 10) / 10 : null,
       prominence: a.presence_score != null ? Math.round(a.presence_score) : null,
       sentiment: a.sentiment_score != null ? Math.round(a.sentiment_score) : null,
+      computed_at: a.computed_at,
     };
   });
   // Build recent runs
