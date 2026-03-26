@@ -3,8 +3,16 @@ import { createSubscription } from "@/lib/paypal";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+const PLAN_IDS: Record<string, string | undefined> = {
+  "base-monthly": process.env.PAYPAL_PLAN_BASE_MONTHLY,
+  "base-annual":  process.env.PAYPAL_PLAN_BASE_ANNUAL,
+  "pro-monthly":  process.env.PAYPAL_PLAN_PRO_MONTHLY,
+  "pro-annual":   process.env.PAYPAL_PLAN_PRO_ANNUAL,
+};
+
 const schema = z.object({
-  planId: z.string().min(1),
+  plan: z.enum(["base", "pro"]),
+  billingCycle: z.enum(["monthly", "annual"]),
 });
 
 export async function POST(request: Request) {
@@ -15,10 +23,16 @@ export async function POST(request: Request) {
     const body = await request.json();
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "planId richiesto" }, { status: 400 });
+      return NextResponse.json({ error: "Parametri non validi: plan (base|pro) e billingCycle (monthly|annual) richiesti" }, { status: 400 });
     }
 
-    const { planId } = parsed.data;
+    const { plan, billingCycle } = parsed.data;
+    const planId = PLAN_IDS[`${plan}-${billingCycle}`];
+
+    if (!planId) {
+      console.error("[paypal/create-subscription] Missing plan ID for:", `${plan}-${billingCycle}`);
+      return NextResponse.json({ error: "Piano non configurato" }, { status: 500 });
+    }
 
     const result = await createSubscription(planId, user.id, user.email ?? "");
 

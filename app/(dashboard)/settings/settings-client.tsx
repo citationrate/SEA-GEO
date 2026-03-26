@@ -99,14 +99,14 @@ export function SettingsClient({
     { id: "pro_comp_10", name: "10 Confronti Extra", description: "+10 analisi competitive", price: 25, plan_required: "pro", browsing_prompts: 0, no_browsing_prompts: 0, comparisons: 10, max_per_month: null },
   ] : [];
 
-  async function handleSubscribe(planId: string) {
+  async function handleSubscribe(plan: "base" | "pro") {
     setSubscribing(true);
     setSubscriptionMsg(null);
     try {
       const res = await fetch("/api/paypal/create-subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ plan, billingCycle: billingPeriod }),
       });
       const data = await res.json();
       if (res.ok && data.approvalUrl) {
@@ -342,7 +342,7 @@ export function SettingsClient({
             {isBase && <p className="text-xs text-primary font-semibold">Piano attuale</p>}
             {isDemo && (
               <button
-                onClick={() => handleSubscribe(billingPeriod === "annual" ? (process.env.NEXT_PUBLIC_PAYPAL_PLAN_BASE_ANNUAL ?? "") : (process.env.NEXT_PUBLIC_PAYPAL_PLAN_BASE_MONTHLY ?? ""))}
+                onClick={() => handleSubscribe("base")}
                 disabled={subscribing}
                 className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-[2px] text-xs font-semibold hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
@@ -380,7 +380,7 @@ export function SettingsClient({
             {isPro && <p className="text-xs text-primary font-semibold">Piano attuale</p>}
             {!isPro && (
               <button
-                onClick={() => handleSubscribe(billingPeriod === "annual" ? (process.env.NEXT_PUBLIC_PAYPAL_PLAN_PRO_ANNUAL ?? "") : (process.env.NEXT_PUBLIC_PAYPAL_PLAN_PRO_MONTHLY ?? ""))}
+                onClick={() => handleSubscribe("pro")}
                 disabled={subscribing}
                 className="w-full px-3 py-2 bg-[#d4a817] text-background rounded-[2px] text-xs font-semibold hover:bg-[#d4a817]/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
