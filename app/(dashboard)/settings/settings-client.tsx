@@ -255,52 +255,35 @@ export function SettingsClient({
         </div>
       </div>
 
-      {/* 2. Piano Abbonamento — Feature Comparison */}
+      {/* 2. Piano Abbonamento — Plan Cards */}
       <div className="card p-6 space-y-5">
-        <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-primary" />
             <h2 className="font-display font-semibold text-foreground">{t("settings.subscription")}</h2>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Current plan badge */}
-            {isPro ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-[2px] bg-primary/10 border border-primary/30 text-primary">
-                <Check className="w-3.5 h-3.5" /> Pro
-              </span>
-            ) : isBase ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-[2px] bg-primary/10 border border-primary/30 text-primary">
-                <Check className="w-3.5 h-3.5" /> Base
-              </span>
-            ) : (
-              <span className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-[2px] bg-muted/30 border border-border text-muted-foreground">
-                Demo
-              </span>
-            )}
-
-            {/* Monthly / Annual toggle */}
-            <div className="flex items-center gap-1 bg-muted/30 rounded-[2px] p-0.5">
-              <button
-                onClick={() => setBillingPeriod("monthly")}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-[2px] transition-colors ${billingPeriod === "monthly" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                Mensile
-              </button>
-              <button
-                onClick={() => setBillingPeriod("annual")}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-[2px] transition-colors ${billingPeriod === "annual" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                Annuale
-              </button>
-            </div>
+          {/* Monthly / Annual toggle */}
+          <div className="flex items-center gap-1 bg-muted/30 rounded-[2px] p-0.5">
+            <button
+              onClick={() => setBillingPeriod("monthly")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-[2px] transition-colors ${billingPeriod === "monthly" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Mensile
+            </button>
+            <button
+              onClick={() => setBillingPeriod("annual")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-[2px] transition-colors ${billingPeriod === "annual" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Annuale
+            </button>
           </div>
         </div>
 
-        {/* Plan cards — price header + CTA */}
+        {/* 2 Plan Cards side by side */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Base Card */}
-          <div className={`rounded-[2px] p-5 space-y-4 border ${isBase ? "border-primary/30 bg-primary/5" : "border-border bg-muted/20"}`}>
+          {/* Base */}
+          <div className={`rounded-[2px] p-4 space-y-3 border ${isBase ? "border-primary/30 bg-primary/5" : "border-border bg-muted/20"}`}>
             <div>
               <p className="font-semibold text-foreground text-sm">Base</p>
               {billingPeriod === "monthly" ? (
@@ -312,9 +295,19 @@ export function SettingsClient({
                 </div>
               )}
             </div>
-            {isBase ? (
-              <p className="text-xs text-primary font-semibold">Piano attuale</p>
-            ) : !isPro ? (
+            <ul className="space-y-1.5 text-xs">
+              <li className="text-foreground font-medium">1 progetto &middot; 2 analisi/mese</li>
+              <li className="text-foreground flex items-center gap-1"><Globe className="w-3 h-3" /> 100 query/analisi &middot; 1 modello AI</li>
+              <li className="text-foreground">1 run per analisi (Veloce)</li>
+              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Web Browsing attivo</li>
+              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Generazione query AI</li>
+              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Competitor discovery + AVI</li>
+              <li className="text-muted-foreground/50 flex items-center gap-1"><span className="w-3 h-3 text-center">&mdash;</span> Confronto competitivo</li>
+              <li className="text-muted-foreground/50 flex items-center gap-1"><span className="w-3 h-3 text-center">&mdash;</span> Dataset risposte raw</li>
+              <li className="text-muted-foreground/50 flex items-center gap-1"><span className="w-3 h-3 text-center">&mdash;</span> Export PDF / Excel</li>
+            </ul>
+            {isBase && <p className="text-xs text-primary font-semibold">Piano attuale</p>}
+            {isDemo && (
               <button
                 onClick={() => handleSubscribe("base")}
                 disabled={subscribing}
@@ -323,11 +316,11 @@ export function SettingsClient({
                 {subscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                 Abbonati a Base
               </button>
-            ) : null}
+            )}
           </div>
 
-          {/* Pro Card */}
-          <div className={`rounded-[2px] p-5 space-y-4 border-2 relative ${isPro ? "border-primary bg-primary/5" : "border-[#d4a817]/50 bg-[#d4a817]/5"}`}>
+          {/* Pro */}
+          <div className={`rounded-[2px] p-4 space-y-3 border-2 relative ${isPro ? "border-primary bg-primary/5" : "border-[#d4a817]/50 bg-[#d4a817]/5"}`}>
             <span className="absolute -top-3 left-1/2 -translate-x-1/2 font-sans text-[0.6875rem] font-semibold tracking-wide text-[#d4a817] bg-background border border-[#d4a817]/40 px-3 py-1 rounded-full whitespace-nowrap shadow-sm">
               Consigliato
             </span>
@@ -342,9 +335,19 @@ export function SettingsClient({
                 </div>
               )}
             </div>
-            {isPro ? (
-              <p className="text-xs text-primary font-semibold">Piano attuale</p>
-            ) : (
+            <ul className="space-y-1.5 text-xs">
+              <li className="text-foreground font-medium">5 progetti &middot; 10 analisi/mese</li>
+              <li className="text-foreground flex items-center gap-1"><Globe className="w-3 h-3" /> 300 query/analisi &middot; fino a 3 modelli</li>
+              <li className="text-foreground">3 run per analisi (Preciso + Stability)</li>
+              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Web Browsing attivo</li>
+              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Generazione query AI + Personas B2B/B2C</li>
+              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Competitor discovery + AVI + Contesti AI</li>
+              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Confronto competitivo (X vs Y)</li>
+              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Dataset completo + filtri avanzati</li>
+              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Export PDF / Excel + link condivisibile</li>
+            </ul>
+            {isPro && <p className="text-xs text-primary font-semibold">Piano attuale</p>}
+            {!isPro && (
               <button
                 onClick={() => handleSubscribe("pro")}
                 disabled={subscribing}
@@ -355,136 +358,6 @@ export function SettingsClient({
               </button>
             )}
           </div>
-        </div>
-
-        {/* Feature comparison table */}
-        <div className="border border-border rounded-[2px] overflow-hidden text-xs">
-          {/* Table header */}
-          <div className="grid grid-cols-[1fr_80px_80px] bg-muted/30 border-b border-border">
-            <div className="px-4 py-2.5 font-mono text-[0.625rem] uppercase tracking-widest text-muted-foreground">Feature</div>
-            <div className="px-3 py-2.5 text-center font-mono text-[0.625rem] uppercase tracking-widest text-muted-foreground">Base</div>
-            <div className="px-3 py-2.5 text-center font-mono text-[0.625rem] uppercase tracking-widest text-[#d4a817]">Pro</div>
-          </div>
-
-          {/* Section: Analisi AVI */}
-          <div className="px-4 py-2 bg-muted/10 border-b border-border">
-            <p className="font-mono text-[0.625rem] uppercase tracking-widest text-primary font-semibold">Analisi AVI</p>
-          </div>
-          {([
-            ["Progetti", "1", "5"],
-            ["Analisi / mese", "2", "10"],
-            ["Query per analisi", "100", "300"],
-            ["Modelli AI", "1", "fino a 3"],
-            ["Run per analisi", "1 (Veloce)", "3 (Preciso)"],
-            ["Web Browsing", true, true],
-            ["Stability Score", false, true],
-          ] as [string, string | boolean, string | boolean][]).map(([label, base, pro], i) => (
-            <div key={i} className="grid grid-cols-[1fr_80px_80px] border-b border-border last:border-b-0 hover:bg-surface-2/30 transition-colors">
-              <div className="px-4 py-2 text-foreground">{label}</div>
-              <div className="px-3 py-2 text-center">{typeof base === "boolean" ? (base ? <Check className="w-3.5 h-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground/40">&mdash;</span>) : <span className="font-mono text-foreground">{base}</span>}</div>
-              <div className="px-3 py-2 text-center">{typeof pro === "boolean" ? (pro ? <Check className="w-3.5 h-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground/40">&mdash;</span>) : <span className="font-mono text-foreground">{pro}</span>}</div>
-            </div>
-          ))}
-
-          {/* Section: Risultati & Metriche */}
-          <div className="px-4 py-2 bg-muted/10 border-b border-border">
-            <p className="font-mono text-[0.625rem] uppercase tracking-widest text-primary font-semibold">Risultati & Metriche</p>
-          </div>
-          {([
-            ["Dashboard AVI + AVIRing", true, true],
-            ["AVI nel tempo (trend)", true, true],
-            ["Componenti AVI (Prominence / Rank / Sentiment)", true, true],
-            ["Benchmark competitor", true, true],
-            ["Prompt eseguiti (riepilogo)", true, true],
-          ] as [string, boolean, boolean][]).map(([label, base, pro], i) => (
-            <div key={i} className="grid grid-cols-[1fr_80px_80px] border-b border-border last:border-b-0 hover:bg-surface-2/30 transition-colors">
-              <div className="px-4 py-2 text-foreground">{label}</div>
-              <div className="px-3 py-2 text-center">{base ? <Check className="w-3.5 h-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground/40">&mdash;</span>}</div>
-              <div className="px-3 py-2 text-center">{pro ? <Check className="w-3.5 h-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground/40">&mdash;</span>}</div>
-            </div>
-          ))}
-
-          {/* Section: Competitor */}
-          <div className="px-4 py-2 bg-muted/10 border-b border-border">
-            <p className="font-mono text-[0.625rem] uppercase tracking-widest text-primary font-semibold">Competitor</p>
-          </div>
-          {([
-            ["Competitor scoperti dall'AI", true, true],
-            ["Aggiunta competitor manuale", true, true],
-            ["AVI score competitor", true, true],
-            ["Classificazione tipo", true, true],
-            ["Analizza Contesti con AI", false, true],
-          ] as [string, boolean, boolean][]).map(([label, base, pro], i) => (
-            <div key={i} className="grid grid-cols-[1fr_80px_80px] border-b border-border last:border-b-0 hover:bg-surface-2/30 transition-colors">
-              <div className="px-4 py-2 text-foreground">{label}</div>
-              <div className="px-3 py-2 text-center">{base ? <Check className="w-3.5 h-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground/40">&mdash;</span>}</div>
-              <div className="px-3 py-2 text-center">{pro ? <Check className="w-3.5 h-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground/40">&mdash;</span>}</div>
-            </div>
-          ))}
-
-          {/* Section: Dataset */}
-          <div className="px-4 py-2 bg-muted/10 border-b border-border">
-            <p className="font-mono text-[0.625rem] uppercase tracking-widest text-primary font-semibold">Dataset</p>
-          </div>
-          {([
-            ["Accesso risposte raw", false, true],
-            ["Filtro per run / modello / query", false, true],
-            ["Vista per segmento / persona", false, true],
-          ] as [string, boolean, boolean][]).map(([label, base, pro], i) => (
-            <div key={i} className="grid grid-cols-[1fr_80px_80px] border-b border-border last:border-b-0 hover:bg-surface-2/30 transition-colors">
-              <div className="px-4 py-2 text-foreground">{label}</div>
-              <div className="px-3 py-2 text-center">{base ? <Check className="w-3.5 h-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground/40">&mdash;</span>}</div>
-              <div className="px-3 py-2 text-center">{pro ? <Check className="w-3.5 h-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground/40">&mdash;</span>}</div>
-            </div>
-          ))}
-
-          {/* Section: Confronto Competitivo */}
-          <div className="px-4 py-2 bg-muted/10 border-b border-border">
-            <p className="font-mono text-[0.625rem] uppercase tracking-widest text-primary font-semibold">Confronto Competitivo</p>
-          </div>
-          {([
-            ["Wizard X vs Y su driver specifico", false, true],
-            ["18 prompt automatici (3 pattern × 2 modelli × 3 run)", false, true],
-            ["KPI: Win Rate / First Mention / CompScore", false, true],
-            ["Key Arguments aggregati", false, true],
-          ] as [string, boolean, boolean][]).map(([label, base, pro], i) => (
-            <div key={i} className="grid grid-cols-[1fr_80px_80px] border-b border-border last:border-b-0 hover:bg-surface-2/30 transition-colors">
-              <div className="px-4 py-2 text-foreground">{label}</div>
-              <div className="px-3 py-2 text-center">{base ? <Check className="w-3.5 h-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground/40">&mdash;</span>}</div>
-              <div className="px-3 py-2 text-center">{pro ? <Check className="w-3.5 h-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground/40">&mdash;</span>}</div>
-            </div>
-          ))}
-
-          {/* Section: Generazione Query */}
-          <div className="px-4 py-2 bg-muted/10 border-b border-border">
-            <p className="font-mono text-[0.625rem] uppercase tracking-widest text-primary font-semibold">Generazione Query</p>
-          </div>
-          {([
-            ["Wizard genera query (TOFU + MOFU)", true, true],
-            ["Personas B2B/B2C opt-in", false, true],
-          ] as [string, boolean, boolean][]).map(([label, base, pro], i) => (
-            <div key={i} className="grid grid-cols-[1fr_80px_80px] border-b border-border last:border-b-0 hover:bg-surface-2/30 transition-colors">
-              <div className="px-4 py-2 text-foreground">{label}</div>
-              <div className="px-3 py-2 text-center">{base ? <Check className="w-3.5 h-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground/40">&mdash;</span>}</div>
-              <div className="px-3 py-2 text-center">{pro ? <Check className="w-3.5 h-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground/40">&mdash;</span>}</div>
-            </div>
-          ))}
-
-          {/* Section: Export & Report */}
-          <div className="px-4 py-2 bg-muted/10 border-b border-border">
-            <p className="font-mono text-[0.625rem] uppercase tracking-widest text-primary font-semibold">Export & Report</p>
-          </div>
-          {([
-            ["Export Excel (.xlsx)", false, true],
-            ["Export PDF", false, true],
-            ["Report condivisibile con link pubblico", false, true],
-          ] as [string, boolean, boolean][]).map(([label, base, pro], i) => (
-            <div key={i} className="grid grid-cols-[1fr_80px_80px] border-b border-border last:border-b-0 hover:bg-surface-2/30 transition-colors">
-              <div className="px-4 py-2 text-foreground">{label}</div>
-              <div className="px-3 py-2 text-center">{base ? <Check className="w-3.5 h-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground/40">&mdash;</span>}</div>
-              <div className="px-3 py-2 text-center">{pro ? <Check className="w-3.5 h-3.5 text-primary mx-auto" /> : <span className="text-muted-foreground/40">&mdash;</span>}</div>
-            </div>
-          ))}
         </div>
 
         {/* Subscription management */}
