@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface TrendPoint {
   version: string;
@@ -49,12 +50,12 @@ function shortModelName(model: string): string {
 
 type TimeRange = "1m" | "3m" | "6m" | "1y" | "all";
 
-const TIME_RANGES: { key: TimeRange; label: string }[] = [
-  { key: "1m",  label: "1M" },
-  { key: "3m",  label: "3M" },
-  { key: "6m",  label: "6M" },
-  { key: "1y",  label: "1A" },
-  { key: "all", label: "Tutto" },
+const TIME_RANGE_KEYS: { key: TimeRange; tKey: string }[] = [
+  { key: "1m",  tKey: "dashboard.time1m" },
+  { key: "3m",  tKey: "dashboard.time3m" },
+  { key: "6m",  tKey: "dashboard.time6m" },
+  { key: "1y",  tKey: "dashboard.time1y" },
+  { key: "all", tKey: "dashboard.timeAll" },
 ];
 
 function getTimeRangeCutoff(range: TimeRange): Date | null {
@@ -70,6 +71,7 @@ function getTimeRangeCutoff(range: TimeRange): Date | null {
 }
 
 export function ProjectAVITrend({ data, models }: { data: TrendPoint[]; models?: string[] }) {
+  const { t } = useTranslation();
   const modelKeys = (models ?? []).filter((m) => data.some((d) => d[m] != null));
   const showModels = modelKeys.length > 1;
 
@@ -109,7 +111,7 @@ export function ProjectAVITrend({ data, models }: { data: TrendPoint[]; models?:
         <div className="flex items-center gap-2 flex-wrap">
           {/* Time range filter */}
           <div className="flex items-center bg-muted/30 rounded-[2px] p-0.5 mr-2">
-            {TIME_RANGES.map((r) => (
+            {TIME_RANGE_KEYS.map((r) => (
               <button
                 key={r.key}
                 onClick={() => setTimeRange(r.key)}
@@ -119,7 +121,7 @@ export function ProjectAVITrend({ data, models }: { data: TrendPoint[]; models?:
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {r.label}
+                {t(r.tKey)}
               </button>
             ))}
           </div>
