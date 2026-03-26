@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     const completion = await openai.chat.completions.create({
       model: "gpt-5.4-mini",
       temperature: 0.3,
-      max_tokens: 500,
+      max_completion_tokens: 500,
       messages: [{
         role: "user",
         content: `Analyze this AI citation profile for the brand "${brand}":

@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     const completion = await openai.chat.completions.create({
       model: "gpt-5.4-mini",
       temperature: 0.3,
-      max_tokens: 600,
+      max_completion_tokens: 600,
       messages: [{
         role: "user",
         content: `The domain "${domain}" is cited ${citations} times in AI responses analyzed for the brand "${brand}".
