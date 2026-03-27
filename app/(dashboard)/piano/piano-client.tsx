@@ -5,6 +5,7 @@ import {
   CreditCard, Search, Globe, GitCompare, Link2, MessageSquareText,
   Check, X, ArrowDown, Loader2, Zap, Crown, AlertTriangle, Sparkles,
 } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface PianoClientProps {
   plan: string;
@@ -29,24 +30,26 @@ const LIMITS: Record<string, { totalPrompts: number; browsing: number; compariso
   agency: { totalPrompts: 300, browsing: 90, comparisons: 10, urlAnalyses: 50, contextAnalyses: 5 },
 };
 
-const PLAN_META: Record<string, { label: string; desc: string; gradient: string; border: string; text: string; bg: string }> = {
-  demo: { label: "Demo", desc: "Piano gratuito di prova — 40 prompt totali", gradient: "linear-gradient(135deg, #6b7280, #9ca3af)", border: "rgba(107,114,128,0.3)", text: "#9ca3af", bg: "rgba(107,114,128,0.06)" },
-  free: { label: "Demo", desc: "Piano gratuito di prova — 40 prompt totali", gradient: "linear-gradient(135deg, #6b7280, #9ca3af)", border: "rgba(107,114,128,0.3)", text: "#9ca3af", bg: "rgba(107,114,128,0.06)" },
-  base: { label: "Base", desc: "100 prompt/mese, 6 modelli AI, browsing attivo", gradient: "linear-gradient(135deg, #3b82f6, #60a5fa)", border: "rgba(59,130,246,0.3)", text: "#60a5fa", bg: "rgba(59,130,246,0.06)" },
-  pro:  { label: "Pro", desc: "300 prompt/mese, tutti i modelli, confronti e analisi avanzate", gradient: "linear-gradient(135deg, #d4a817, #f59e0b)", border: "rgba(212,168,23,0.3)", text: "#d4a817", bg: "rgba(212,168,23,0.06)" },
-  agency: { label: "Pro", desc: "300 prompt/mese, tutti i modelli, confronti e analisi avanzate", gradient: "linear-gradient(135deg, #d4a817, #f59e0b)", border: "rgba(212,168,23,0.3)", text: "#d4a817", bg: "rgba(212,168,23,0.06)" },
+const PLAN_STYLE: Record<string, { label: string; descKey: string; gradient: string; border: string; text: string; bg: string }> = {
+  demo: { label: "Demo", descKey: "piano.demoDesc", gradient: "linear-gradient(135deg, #6b7280, #9ca3af)", border: "rgba(107,114,128,0.3)", text: "#9ca3af", bg: "rgba(107,114,128,0.06)" },
+  free: { label: "Demo", descKey: "piano.demoDesc", gradient: "linear-gradient(135deg, #6b7280, #9ca3af)", border: "rgba(107,114,128,0.3)", text: "#9ca3af", bg: "rgba(107,114,128,0.06)" },
+  base: { label: "Base", descKey: "piano.baseDesc", gradient: "linear-gradient(135deg, #3b82f6, #60a5fa)", border: "rgba(59,130,246,0.3)", text: "#60a5fa", bg: "rgba(59,130,246,0.06)" },
+  pro:  { label: "Pro", descKey: "piano.proDesc", gradient: "linear-gradient(135deg, #d4a817, #f59e0b)", border: "rgba(212,168,23,0.3)", text: "#d4a817", bg: "rgba(212,168,23,0.06)" },
+  agency: { label: "Pro", descKey: "piano.proDesc", gradient: "linear-gradient(135deg, #d4a817, #f59e0b)", border: "rgba(212,168,23,0.3)", text: "#d4a817", bg: "rgba(212,168,23,0.06)" },
 };
 
-const FEATURES = [
-  { label: "Prompt/mese",              demo: "40 totali",      base: "100",            pro: "300" },
-  { label: "Browsing in tempo reale",  demo: false,            base: "30 prompt",      pro: "90 prompt" },
-  { label: "Modelli AI",               demo: "2 fissi",        base: "6 selezionabili", pro: "Tutti + Pro" },
-  { label: "Max modelli/progetto",     demo: "2",              base: "3",              pro: "5" },
-  { label: "Generazione query AI",     demo: true,             base: true,             pro: true },
-  { label: "Confronti competitivi",    demo: false,            base: false,            pro: "10/mese" },
-  { label: "Analisi URL",              demo: false,            base: false,            pro: "50/mese" },
-  { label: "Analisi Contesti AI",      demo: false,            base: false,            pro: "5/mese" },
-];
+function getFeatures(t: (k: string) => string) {
+  return [
+    { label: t("piano.promptsMonth"),           demo: "40",              base: "100",            pro: "300" },
+    { label: t("piano.realtimeBrowsing"),       demo: false,             base: `30 ${t("piano.prompt")}`, pro: `90 ${t("piano.prompt")}` },
+    { label: t("piano.aiModels"),               demo: `2 ${t("piano.fixed")}`, base: `6 ${t("piano.selectable")}`, pro: t("piano.allPlusPro") },
+    { label: t("piano.maxModelsProject"),       demo: "2",               base: "3",              pro: "5" },
+    { label: t("piano.aiQueryGen"),             demo: true,              base: true,             pro: true },
+    { label: t("piano.competitiveComparisons"), demo: false,             base: false,            pro: `10${t("piano.perMonth")}` },
+    { label: t("piano.urlAnalyses"),            demo: false,             base: false,            pro: `50${t("piano.perMonth")}` },
+    { label: t("piano.aiContextAnalyses"),      demo: false,             base: false,            pro: `5${t("piano.perMonth")}` },
+  ];
+}
 
 const BASE_PACKAGES = [
   { label: "100 Query Extra", desc: "+100 prompt per le tue analisi", price: 19, priceEnv: "STRIPE_PRICE_QUERIES_BASE_100", note: null, type: "query" as const },
@@ -83,9 +86,11 @@ export function PianoClient({
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [subscribing, setSubscribing] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const limits = LIMITS[plan] || LIMITS.demo;
-  const meta = PLAN_META[plan] || PLAN_META.demo;
+  const style = PLAN_STYLE[plan] || PLAN_STYLE.demo;
+  const meta = { ...style, desc: t(style.descKey) };
   const isActive = subscriptionStatus === "active";
   const isDemo = plan === "demo" || plan === "free";
   const isBase = plan === "base";
@@ -159,20 +164,20 @@ export function PianoClient({
             </div>
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-display font-bold text-foreground">{meta.label}</h1>
+                <h1 className="text-3xl font-display font-bold text-foreground">{style.label}</h1>
                 {!isDemo && (
                   <span
                     className="text-xs px-2.5 py-1 rounded-full font-semibold"
                     style={{ background: "rgba(16,185,129,0.15)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)" }}
                   >
-                    Attivo
+                    {t("piano.active")}
                   </span>
                 )}
               </div>
               <p className="text-sm text-muted-foreground mt-1">{meta.desc}</p>
               {subscriptionPeriod && isActive && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Abbonamento {subscriptionPeriod === "yearly" ? "annuale" : "mensile"}
+                  {subscriptionPeriod === "yearly" ? t("piano.annualSub") : t("piano.monthlySub")}
                 </p>
               )}
             </div>
@@ -182,29 +187,29 @@ export function PianoClient({
             className="flex items-center gap-2 px-5 py-2.5 rounded-[3px] text-sm font-semibold transition-all hover:scale-[1.02] shrink-0"
             style={{ background: meta.gradient, color: "#fff", boxShadow: `0 4px 14px ${meta.border}` }}
           >
-            Cambia piano <ArrowDown className="w-4 h-4" />
+            {t("piano.changePlan")} <ArrowDown className="w-4 h-4" />
           </a>
         </div>
       </div>
 
       {/* ════════════════ 2. USAGE GRID ════════════════ */}
       <div>
-        <h2 className="text-lg font-display font-semibold text-foreground mb-4">I tuoi utilizzi</h2>
+        <h2 className="text-lg font-display font-semibold text-foreground mb-4">{t("piano.yourUsage")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* All plans: prompt totali */}
-          <UsageCard icon={<Search className="w-5 h-5" />} label="Prompt utilizzati" used={totalUsed} max={totalLimit} extra={extraBrowsing + extraNoBrowsing > 0 ? `+${extraBrowsing + extraNoBrowsing} extra` : undefined} />
+          <UsageCard icon={<Search className="w-5 h-5" />} label={t("piano.promptsUsed")} used={totalUsed} max={totalLimit} extra={extraBrowsing + extraNoBrowsing > 0 ? `+${extraBrowsing + extraNoBrowsing} extra` : undefined} />
 
           {/* Base+Pro: browsing */}
           {!isDemo && (
-            <UsageCard icon={<Globe className="w-5 h-5" />} label="Con browsing" used={browsingUsed} max={browsingLimit} extra={extraBrowsing > 0 ? `+${extraBrowsing} extra` : undefined} />
+            <UsageCard icon={<Globe className="w-5 h-5" />} label={t("piano.withBrowsing")} used={browsingUsed} max={browsingLimit} extra={extraBrowsing > 0 ? `+${extraBrowsing} extra` : undefined} />
           )}
 
           {/* Pro: confronti, URL, contesti */}
           {isPro && (
             <>
-              <UsageCard icon={<GitCompare className="w-5 h-5" />} label="Confronti competitivi" used={comparisonsUsed} max={comparisonsLimit} extra={extraComparisons > 0 ? `+${extraComparisons} extra` : undefined} />
-              <UsageCard icon={<Link2 className="w-5 h-5" />} label="Analisi URL" used={0} max={50} />
-              <UsageCard icon={<MessageSquareText className="w-5 h-5" />} label="Analisi Contesti AI" used={0} max={5} />
+              <UsageCard icon={<GitCompare className="w-5 h-5" />} label={t("piano.comparisons")} used={comparisonsUsed} max={comparisonsLimit} extra={extraComparisons > 0 ? `+${extraComparisons} extra` : undefined} />
+              <UsageCard icon={<Link2 className="w-5 h-5" />} label={t("piano.urlAnalysis")} used={0} max={50} />
+              <UsageCard icon={<MessageSquareText className="w-5 h-5" />} label={t("piano.contextAnalysis")} used={0} max={5} />
             </>
           )}
 
@@ -212,8 +217,8 @@ export function PianoClient({
           {isDemo && (
             <div className="rounded-[4px] border border-dashed border-[#d4a817]/30 p-5 flex flex-col items-center justify-center text-center gap-2" style={{ background: "rgba(212,168,23,0.03)" }}>
               <Sparkles className="w-5 h-5 text-[#d4a817]" />
-              <p className="text-sm text-muted-foreground">Sblocca più prompt e funzionalità</p>
-              <a href="#piani" className="text-xs font-semibold text-[#d4a817] hover:text-[#d4a817]/80 transition-colors">Vedi i piani &darr;</a>
+              <p className="text-sm text-muted-foreground">{t("piano.unlockMore")}</p>
+              <a href="#piani" className="text-xs font-semibold text-[#d4a817] hover:text-[#d4a817]/80 transition-colors">{t("piano.viewPlans")} &darr;</a>
             </div>
           )}
         </div>
@@ -222,20 +227,20 @@ export function PianoClient({
       {/* ════════════════ 3. PLAN CARDS ════════════════ */}
       <div id="piani" className="scroll-mt-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
-          <h2 className="text-lg font-display font-semibold text-foreground">Confronta i piani</h2>
+          <h2 className="text-lg font-display font-semibold text-foreground">{t("piano.comparePlans")}</h2>
           {/* Pill toggle */}
           <div className="flex items-center bg-surface-2 rounded-full p-1 border border-border">
             <button
               onClick={() => setAnnual(false)}
               className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${!annual ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             >
-              Mensile
+              {t("piano.monthly")}
             </button>
             <button
               onClick={() => setAnnual(true)}
               className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${annual ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             >
-              Annuale <span className="text-primary/80 ml-0.5">{annual ? "" : "(-8%)"}</span>
+              {t("piano.annual")} <span className="text-primary/80 ml-0.5">{annual ? "" : "(-8%)"}</span>
             </button>
           </div>
         </div>
@@ -244,44 +249,47 @@ export function PianoClient({
           {/* Demo */}
           <PlanCard
             name="Demo"
-            price="Gratuito"
+            price={t("piano.free")}
             priceNote={null}
             color="#6b7280"
             gradient="linear-gradient(135deg, #6b7280, #9ca3af)"
             icon={<CreditCard className="w-5 h-5 text-white" />}
             isCurrent={isDemo}
             isRecommended={false}
-            features={FEATURES.map(f => ({ label: f.label, value: f.demo }))}
+            features={getFeatures(t).map(f => ({ label: f.label, value: f.demo }))}
             onSubscribe={null}
             subscribing={false}
+            labels={{ recommended: t("piano.recommended"), activePlan: t("piano.activePlan"), subscribe: t("piano.subscribe") }}
           />
           {/* Base */}
           <PlanCard
             name="Base"
             price={annual ? "€649" : "€59"}
-            priceNote={annual ? "/anno" : "/mese"}
+            priceNote={annual ? t("piano.perYear") : t("piano.perMonth")}
             color="#3b82f6"
             gradient="linear-gradient(135deg, #3b82f6, #60a5fa)"
             icon={<Zap className="w-5 h-5 text-white" />}
             isCurrent={isBase}
             isRecommended={false}
-            features={FEATURES.map(f => ({ label: f.label, value: f.base }))}
+            features={getFeatures(t).map(f => ({ label: f.label, value: f.base }))}
             onSubscribe={!isBase && !isPro ? () => handleSubscribe(annual ? "STRIPE_PRICE_BASE_YEARLY" : "STRIPE_PRICE_BASE_MONTHLY") : null}
             subscribing={subscribing === (annual ? "STRIPE_PRICE_BASE_YEARLY" : "STRIPE_PRICE_BASE_MONTHLY")}
+            labels={{ recommended: t("piano.recommended"), activePlan: t("piano.activePlan"), subscribe: t("piano.subscribe") }}
           />
           {/* Pro */}
           <PlanCard
             name="Pro"
             price={annual ? "€1.719" : "€159"}
-            priceNote={annual ? "/anno" : "/mese"}
+            priceNote={annual ? t("piano.perYear") : t("piano.perMonth")}
             color="#d4a817"
             gradient="linear-gradient(135deg, #d4a817, #f59e0b)"
             icon={<Crown className="w-5 h-5 text-white" />}
             isCurrent={isPro}
             isRecommended={true}
-            features={FEATURES.map(f => ({ label: f.label, value: f.pro }))}
+            features={getFeatures(t).map(f => ({ label: f.label, value: f.pro }))}
             onSubscribe={!isPro ? () => handleSubscribe(annual ? "STRIPE_PRICE_PRO_YEARLY" : "STRIPE_PRICE_PRO_MONTHLY") : null}
             subscribing={subscribing === (annual ? "STRIPE_PRICE_PRO_YEARLY" : "STRIPE_PRICE_PRO_MONTHLY")}
+            labels={{ recommended: t("piano.recommended"), activePlan: t("piano.activePlan"), subscribe: t("piano.subscribe") }}
           />
         </div>
       </div>
@@ -289,8 +297,8 @@ export function PianoClient({
       {/* ════════════════ 4. PACKAGES ════════════════ */}
       {packages.length > 0 && (
         <div>
-          <h2 className="text-lg font-display font-semibold text-foreground mb-1">Pacchetti aggiuntivi</h2>
-          <p className="text-sm text-muted-foreground mb-5">Espandi le tue capacità con crediti extra</p>
+          <h2 className="text-lg font-display font-semibold text-foreground mb-1">{t("piano.extraPackages")}</h2>
+          <p className="text-sm text-muted-foreground mb-5">{t("piano.extraPackagesDesc")}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {packages.map((pkg) => (
               <div
@@ -320,7 +328,7 @@ export function PianoClient({
                   disabled={purchasingId !== null}
                   className="mt-4 w-full py-2.5 rounded-[3px] text-sm font-semibold border border-primary/40 text-primary hover:bg-primary hover:text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {purchasingId === pkg.priceEnv ? <Loader2 className="w-4 h-4 animate-spin" /> : "Acquista"}
+                  {purchasingId === pkg.priceEnv ? <Loader2 className="w-4 h-4 animate-spin" /> : t("piano.buy")}
                 </button>
               </div>
             ))}
@@ -335,15 +343,15 @@ export function PianoClient({
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 text-destructive/60" />
               <div>
-                <p className="text-sm font-medium text-foreground">Vuoi cancellare il tuo abbonamento?</p>
-                <p className="text-xs text-muted-foreground">Rimarrà attivo fino alla fine del periodo corrente</p>
+                <p className="text-sm font-medium text-foreground">{t("piano.cancelQuestion")}</p>
+                <p className="text-xs text-muted-foreground">{t("piano.cancelDesc")}</p>
               </div>
             </div>
             <button
               onClick={() => setShowCancelModal(true)}
               className="px-4 py-2 rounded-[3px] border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors shrink-0"
             >
-              Cancella abbonamento
+              {t("piano.cancelSubscription")}
             </button>
           </div>
         </div>
@@ -355,18 +363,18 @@ export function PianoClient({
           <div className="bg-ink border border-destructive/30 rounded-[4px] p-6 w-[420px] space-y-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-destructive" />
-              <h3 className="text-lg font-semibold text-foreground">Cancella abbonamento</h3>
+              <h3 className="text-lg font-semibold text-foreground">{t("piano.cancelSubscription")}</h3>
             </div>
             <p className="text-sm text-muted-foreground">
-              Sei sicuro? Il tuo abbonamento rimarrà attivo fino alla fine del periodo di fatturazione corrente, dopodiché tornerai al piano Demo.
+              {t("piano.cancelModalDesc")}
             </p>
             <div className="flex gap-3 justify-end pt-2">
               <button onClick={() => setShowCancelModal(false)} className="text-sm px-4 py-2 rounded-[3px] border border-border text-muted-foreground hover:text-foreground transition-colors">
-                Indietro
+                {t("piano.back")}
               </button>
               <button onClick={handleCancel} disabled={canceling} className="text-sm px-4 py-2 rounded-[3px] bg-destructive text-white hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center gap-2">
                 {canceling && <Loader2 className="w-4 h-4 animate-spin" />}
-                Conferma cancellazione
+                {t("piano.cancelConfirm")}
               </button>
             </div>
           </div>
@@ -412,11 +420,12 @@ function UsageCard({ icon, label, used, max, extra }: {
   );
 }
 
-function PlanCard({ name, price, priceNote, color, gradient, icon, isCurrent, isRecommended, features, onSubscribe, subscribing }: {
+function PlanCard({ name, price, priceNote, color, gradient, icon, isCurrent, isRecommended, features, onSubscribe, subscribing, labels }: {
   name: string; price: string; priceNote: string | null; color: string; gradient: string; icon: React.ReactNode;
   isCurrent: boolean; isRecommended: boolean;
   features: { label: string; value: boolean | string }[];
   onSubscribe: (() => void) | null; subscribing: boolean;
+  labels: { recommended: string; activePlan: string; subscribe: string };
 }) {
   return (
     <div
@@ -430,7 +439,7 @@ function PlanCard({ name, price, priceNote, color, gradient, icon, isCurrent, is
       {/* Recommended badge */}
       {isRecommended && (
         <div className="absolute top-0 right-0 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-wider text-white rounded-bl-[4px]" style={{ background: gradient }}>
-          Consigliato
+          {labels.recommended}
         </div>
       )}
 
@@ -473,7 +482,7 @@ function PlanCard({ name, price, priceNote, color, gradient, icon, isCurrent, is
             className="w-full py-2.5 rounded-[3px] text-center text-sm font-semibold"
             style={{ background: `${color}15`, color, border: `1px solid ${color}30` }}
           >
-            Piano attivo
+            {labels.activePlan}
           </div>
         ) : onSubscribe ? (
           <button
@@ -482,11 +491,11 @@ function PlanCard({ name, price, priceNote, color, gradient, icon, isCurrent, is
             className="w-full py-2.5 rounded-[3px] text-sm font-semibold text-white transition-all hover:scale-[1.01] hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
             style={{ background: gradient, boxShadow: `0 4px 14px ${color}30` }}
           >
-            {subscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Abbonati"}
+            {subscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : labels.subscribe}
           </button>
         ) : (
           <button disabled className="w-full py-2.5 rounded-[3px] text-sm font-medium text-muted-foreground border border-border opacity-50 cursor-not-allowed">
-            Piano attivo
+            {labels.activePlan}
           </button>
         )}
       </div>

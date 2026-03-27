@@ -66,7 +66,7 @@ export function Sidebar({ profile }: SidebarProps) {
     {
       group: t("sidebar.system"),
       items: [
-        { href: "/piano",       icon: isDemo ? Sparkles : CreditCard, label: `Piano · ${isDemo ? "Demo" : isBase ? "Base" : isPro ? "Pro" : (profile?.plan ?? "Demo")}`, highlight: isDemo },
+        { href: "/piano",       icon: isDemo ? Sparkles : CreditCard, label: `${t("sidebar.piano")} · ${isDemo ? "Demo" : isBase ? "Base" : isPro ? "Pro" : (profile?.plan ?? "Demo")}`, highlight: isDemo },
         { href: "/notizie",     icon: Newspaper,       label: t("sidebar.aiNews") },
         { href: "/settings",    icon: Settings,        label: t("sidebar.settings") },
       ],
