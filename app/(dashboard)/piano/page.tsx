@@ -12,14 +12,19 @@ export default async function PianoPage() {
 
   const supabase = createDataClient();
 
-  // Profile
-  const { data: profile } = await (supabase.from("profiles") as any)
-    .select("plan, subscription_status, subscription_period, stripe_subscription_id, paypal_subscription_id")
+  // Profile — read from seageo1
+  const { data: profile, error: profileErr } = await (supabase.from("profiles") as any)
+    .select("*")
     .eq("id", user.id)
     .single();
 
+  if (profileErr) {
+    console.error("[piano] Profile fetch error:", profileErr.message);
+  }
+
   const p = (profile ?? {}) as any;
   const plan = p.plan ?? "demo";
+  console.log("[piano] User plan from seageo1:", plan, "user:", user.id);
 
   // Usage
   const usage = await getCurrentUsage(user.id);
