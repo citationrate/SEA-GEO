@@ -11,6 +11,7 @@ const bodySchema = z.object({
   brand: z.string().min(1),
   lang: z.string().optional(),
   project_id: z.string().uuid().optional(),
+  cache_only: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -22,9 +23,9 @@ export async function POST(request: Request) {
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { domain, contexts, citations, brand, lang, project_id } = parsed.data;
+    const { domain, contexts, citations, brand, lang, project_id, cache_only } = parsed.data;
 
-    // Check if we already have a cached analysis for this domain + user
+    // Check cached analysis
     if (project_id) {
       const { data: cached } = await (supabase!.from("sources") as any)
         .select("url_analysis")
@@ -35,8 +36,13 @@ export async function POST(request: Request) {
         .maybeSingle();
 
       if (cached?.url_analysis) {
-        return NextResponse.json(cached.url_analysis);
+        return NextResponse.json({ ...cached.url_analysis, cached: true });
       }
+    }
+
+    // If cache_only, don't run AI — just return empty
+    if (cache_only) {
+      return NextResponse.json({ cached: false });
     }
 
     // Pro plan check + usage limit
@@ -88,10 +94,13 @@ Respond ONLY with valid JSON.`,
 
     // Save analysis to sources table for this domain
     if (project_id) {
-      await (supabase!.from("sources") as any)
+      const { error: saveErr } = await (supabase!.from("sources") as any)
         .update({ url_analysis: analysis })
         .eq("domain", domain)
         .eq("project_id", project_id);
+      if (saveErr) {
+        console.error("[sources/analyze] save error:", saveErr.message);
+      }
     }
 
     // Increment usage counter ONLY on success

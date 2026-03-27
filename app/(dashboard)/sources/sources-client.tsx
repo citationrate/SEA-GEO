@@ -322,10 +322,9 @@ function AnalyzeDrawer({
   const cfg = TYPE_CONFIG[d.sourceType] ?? TYPE_CONFIG.other;
   const Icon = cfg.icon;
 
-  // Auto-load cached analysis on mount
+  // Check cache only on mount — does NOT trigger AI analysis
   useEffect(() => {
     if (!projectId || checkedCache) return;
-    setLoading(true);
     fetch("/api/sources/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -336,14 +335,15 @@ function AnalyzeDrawer({
         brand,
         lang: locale,
         project_id: projectId,
+        cache_only: true,
       }),
     })
-      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+      .then((r) => r.ok ? r.json() : null)
       .then((data) => {
-        if (data.why_cited || data.authority) setAnalysis(data);
+        if (data?.why_cited || data?.authority) setAnalysis(data);
       })
-      .catch(() => { /* no cached data, user can click analyze */ })
-      .finally(() => { setLoading(false); setCheckedCache(true); });
+      .catch(() => {})
+      .finally(() => setCheckedCache(true));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
