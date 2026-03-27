@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, User, Crown, Loader2, Check, Save, CheckCircle, XCircle, Clock } from "lucide-react";
+import { ArrowLeft, User, Crown, Loader2, Check, Save, CheckCircle, XCircle, Clock, AlertTriangle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
 
@@ -20,6 +20,9 @@ export function UserDetailClient({ user, projects, runs, stats, modelCounts, avi
   const [tab, setTab] = useState<"overview" | "avi">("overview");
   const [plan, setPlan] = useState(user.plan);
   const [saving, setSaving] = useState(false);
+  const [showDeleteUser, setShowDeleteUser] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletingUser, setDeletingUser] = useState(false);
 
   async function savePlan() {
     setSaving(true);
@@ -96,6 +99,88 @@ export function UserDetailClient({ user, projects, runs, stats, modelCounts, avi
               </button>
             </div>
           </div>
+
+          {/* Delete user */}
+          <div className="card p-5 space-y-3 border-destructive/20">
+            <h2 className="text-sm font-semibold text-destructive flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" /> Zona pericolosa
+            </h2>
+            <div className="flex items-center justify-between bg-destructive/5 rounded-[2px] px-4 py-3 border border-destructive/20">
+              <div>
+                <p className="text-sm text-foreground font-medium">Elimina account utente</p>
+                <p className="text-xs text-muted-foreground">Rimuove tutti i dati dell&apos;utente (GDPR hard delete)</p>
+              </div>
+              <button
+                onClick={() => setShowDeleteUser(true)}
+                className="px-4 py-2 bg-destructive text-white rounded-[2px] text-sm font-medium hover:bg-destructive/80 transition-colors shrink-0"
+              >
+                Elimina account
+              </button>
+            </div>
+          </div>
+
+          {/* Delete user modal */}
+          {showDeleteUser && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowDeleteUser(false)}>
+              <div className="bg-ink border border-destructive/30 rounded-[3px] p-6 w-[420px] space-y-4" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                  <h3 className="text-lg font-medium text-foreground">Elimina account utente</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Stai per eliminare permanentemente l&apos;account di <strong className="text-foreground">{user.email}</strong> e tutti i dati associati. Questa azione non può essere annullata.
+                </p>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">
+                    Scrivi <strong className="text-foreground">ELIMINA</strong> per confermare
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="ELIMINA"
+                    className="w-full px-3 py-2 text-sm rounded-[2px] border border-border bg-ink text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-destructive"
+                  />
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => { setShowDeleteUser(false); setDeleteConfirmText(""); }}
+                    className="text-sm px-4 py-2 rounded-[2px] border border-border text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setDeletingUser(true);
+                      try {
+                        const res = await fetch("/api/admin/delete-user", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ user_id: user.id }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          toast.success("Account eliminato");
+                          router.push("/admin/utenti");
+                        } else {
+                          toast.error(data.error || "Errore nell'eliminazione");
+                        }
+                      } catch {
+                        toast.error("Errore di rete");
+                      } finally {
+                        setDeletingUser(false);
+                      }
+                    }}
+                    disabled={deleteConfirmText !== "ELIMINA" || deletingUser}
+                    className="text-sm px-4 py-2 rounded-[2px] bg-destructive text-white hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {deletingUser && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Elimina definitivamente
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Projects */}
           <div className="card p-5 space-y-3">

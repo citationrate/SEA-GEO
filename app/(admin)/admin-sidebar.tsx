@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import {
   LayoutDashboard, Users, FolderOpen, Activity,
-  Swords, Trophy, Server, ScrollText, Settings, Shield, Ticket,
+  Swords, Trophy, Server, ScrollText, Settings, Shield, Ticket, CreditCard,
 } from "lucide-react";
 
 const NAV = [
@@ -23,6 +23,12 @@ const NAV = [
       { label: "Analisi Runs", href: "/admin/analisi", icon: Activity },
       { label: "Confronti AI", href: "/admin/confronti", icon: Swords },
       { label: "Competitor", href: "/admin/competitor", icon: Trophy },
+    ],
+  },
+  {
+    group: "Billing",
+    items: [
+      { label: "Abbonamenti", href: "/admin/abbonamenti", icon: CreditCard },
     ],
   },
   {
