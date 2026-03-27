@@ -23,6 +23,8 @@ export function UserDetailClient({ user, projects, runs, stats, modelCounts, avi
   const [showDeleteUser, setShowDeleteUser] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deletingUser, setDeletingUser] = useState(false);
+  const [showResetDemo, setShowResetDemo] = useState(false);
+  const [resettingDemo, setResettingDemo] = useState(false);
 
   async function savePlan() {
     setSaving(true);
@@ -99,6 +101,80 @@ export function UserDetailClient({ user, projects, runs, stats, modelCounts, avi
               </button>
             </div>
           </div>
+
+          {/* Reset demo account */}
+          <div className="card p-5 space-y-3">
+            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-[#f59e0b]" /> Reset Demo
+            </h2>
+            <div className="flex items-center justify-between bg-[#f59e0b]/5 rounded-[2px] px-4 py-3 border border-[#f59e0b]/20">
+              <div>
+                <p className="text-sm text-foreground font-medium">Reset account demo</p>
+                <p className="text-xs text-muted-foreground">Cancella tutti i dati e riporta il piano a Pro</p>
+              </div>
+              <button
+                onClick={() => setShowResetDemo(true)}
+                className="px-4 py-2 bg-[#f59e0b] text-white rounded-[2px] text-sm font-medium hover:bg-[#f59e0b]/80 transition-colors shrink-0"
+              >
+                Reset Demo
+              </button>
+            </div>
+          </div>
+
+          {/* Reset demo modal */}
+          {showResetDemo && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowResetDemo(false)}>
+              <div className="bg-ink border border-[#f59e0b]/30 rounded-[3px] p-6 w-[420px] space-y-4" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-[#f59e0b]" />
+                  <h3 className="text-lg font-medium text-foreground">Reset account demo</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Sei sicuro di voler resettare questo account demo? Verranno eliminati tutti i progetti, analisi, competitor e dati associati. Il piano verrà reimpostato a <strong className="text-foreground">Pro</strong>.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  L&apos;account di <strong className="text-foreground">{user.email}</strong> rimarrà attivo.
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => setShowResetDemo(false)}
+                    className="text-sm px-4 py-2 rounded-[2px] border border-border text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setResettingDemo(true);
+                      try {
+                        const res = await fetch("/api/admin/reset-demo", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ user_id: user.id }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          toast.success("Account demo resettato con successo");
+                          setShowResetDemo(false);
+                          router.refresh();
+                        } else {
+                          toast.error(data.error || "Errore nel reset");
+                        }
+                      } catch {
+                        toast.error("Errore di rete");
+                      } finally {
+                        setResettingDemo(false);
+                      }
+                    }}
+                    disabled={resettingDemo}
+                    className="text-sm px-4 py-2 rounded-[2px] bg-[#f59e0b] text-white hover:bg-[#f59e0b]/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {resettingDemo && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Conferma reset
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Delete user */}
           <div className="card p-5 space-y-3 border-destructive/20">
