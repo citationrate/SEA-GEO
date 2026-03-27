@@ -11,7 +11,7 @@ import {
   Users, Link2, Tag, GitCompare, Settings,
   Database, ChevronRight, Plus,
   PanelLeftClose, PanelLeftOpen, MessageSquareText,
-  ExternalLink, X, Newspaper, CreditCard,
+  ExternalLink, X, Newspaper, CreditCard, Sparkles,
 } from "lucide-react";
 import { useConsultation } from "@/lib/consultation-context";
 import { useMobileNav } from "./mobile-nav-context";
@@ -66,7 +66,7 @@ export function Sidebar({ profile }: SidebarProps) {
     {
       group: t("sidebar.system"),
       items: [
-        { href: "/piano",       icon: CreditCard,      label: `Piano · ${isDemo ? "Free" : isBase ? "Base" : isPro ? "Pro" : (profile?.plan ?? "Free")}` },
+        { href: "/piano",       icon: isDemo ? Sparkles : CreditCard, label: `Piano · ${isDemo ? "Demo" : isBase ? "Base" : isPro ? "Pro" : (profile?.plan ?? "Demo")}`, highlight: isDemo },
         { href: "/notizie",     icon: Newspaper,       label: t("sidebar.aiNews") },
         { href: "/settings",    icon: Settings,        label: t("sidebar.settings") },
       ],
@@ -117,9 +117,10 @@ export function Sidebar({ profile }: SidebarProps) {
               </p>
             )}
             <ul className="space-y-0.5">
-              {items.map((item) => {
+              {items.map((item: any) => {
                 const needsPro = PRO_ROUTES.has(item.href);
                 const locked = needsPro && !isPro;
+                const isHighlight = item.highlight && !isActive(item.href);
 
                 return (
                   <li key={item.href}>
@@ -133,15 +134,21 @@ export function Sidebar({ profile }: SidebarProps) {
                           ? "text-muted-foreground/50 cursor-default"
                           : isActive(item.href)
                             ? "text-primary font-medium"
-                            : "text-muted-foreground hover:text-foreground hover:bg-surface-2"
+                            : isHighlight
+                              ? "text-[#d4a817] hover:bg-[#d4a817]/5"
+                              : "text-muted-foreground hover:text-foreground hover:bg-surface-2"
                       )}
-                      style={isActive(item.href) && !locked ? { background: "rgba(126,184,154,0.06)" } : undefined}
+                      style={
+                        isActive(item.href) && !locked ? { background: "rgba(126,184,154,0.06)" }
+                        : isHighlight ? { background: "rgba(212,168,23,0.04)" }
+                        : undefined
+                      }
                       title={collapsed && !mobileOpen ? item.label : undefined}
                     >
                       <span className="relative flex-shrink-0">
                         <item.icon className={cn(
                           "w-[15px] h-[15px]",
-                          locked ? "text-muted-foreground/40" : isActive(item.href) ? "text-primary" : "text-muted-foreground"
+                          locked ? "text-muted-foreground/40" : isHighlight ? "text-[#d4a817]" : isActive(item.href) ? "text-primary" : "text-muted-foreground"
                         )} />
                         {item.href === "/notizie" && hasUnread && collapsed && !mobileOpen && (
                           <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#D97706]" />
@@ -194,7 +201,7 @@ export function Sidebar({ profile }: SidebarProps) {
             {t("sidebar.demoBanner")}
           </p>
           <a
-            href="/settings"
+            href="/piano"
             onClick={closeMobile}
             className="inline-block mt-1.5 text-[11px] font-bold hover:opacity-80 transition-opacity"
             style={{ color: "#1a1a1a" }}

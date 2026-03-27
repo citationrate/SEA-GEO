@@ -21,8 +21,8 @@ export function ComparePaywall() {
         <h2 className="font-display font-semibold text-xl text-foreground">{t("compare.proFeature")}</h2>
         <p className="text-muted-foreground text-sm max-w-md mx-auto">{t("compare.proDescription")}</p>
         <p className="text-muted-foreground text-sm">Disponibile dal piano Pro — €159/mese</p>
-        <a href="/settings" className="inline-flex items-center gap-2 bg-[#c4a882] text-background font-semibold text-sm px-6 py-2.5 rounded-[2px] hover:bg-[#c4a882]/85 transition-colors mt-2">
-          {t("settings.upgradePro")}
+        <a href="/piano#piani" className="inline-flex items-center gap-2 bg-[#c4a882] text-background font-semibold text-sm px-6 py-2.5 rounded-[2px] hover:bg-[#c4a882]/85 transition-colors mt-2">
+          Scopri il piano Pro &rarr;
         </a>
       </div>
     </div>

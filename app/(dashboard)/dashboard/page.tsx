@@ -1,6 +1,7 @@
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
 import { resolveProjectId } from "@/lib/utils/resolve-project";
+import { DemoBanner } from "@/components/dashboard/demo-banner";
 
 import { DashboardClient } from "./dashboard-client";
 
@@ -16,6 +17,13 @@ export default async function DashboardPage({
   if (!user) return <DashboardClient aviScore={null} aviTrend={null} stats={[]} trendData={[]} recentRuns={[]} competitorBarData={[]} projects={[]} />;
 
   const supabase = createDataClient();
+
+  // Get user plan
+  const { data: userProfile } = await (supabase.from("profiles") as any)
+    .select("plan")
+    .eq("id", user.id)
+    .single();
+  const userPlan = (userProfile as any)?.plan ?? "demo";
 
   // Get all projects for this user
   const { data: projects } = await supabase
@@ -212,6 +220,8 @@ export default async function DashboardPage({
   }
 
   return (
+    <>
+    <DemoBanner plan={userPlan} />
     <DashboardClient
       aviScore={aviScore}
       aviTrend={aviTrend}
@@ -228,5 +238,6 @@ export default async function DashboardPage({
       projectSegmentCount={projectSegmentCount}
       projectModelsConfig={projectModelsConfig}
     />
+    </>
   );
 }
