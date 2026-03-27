@@ -209,6 +209,8 @@ ${truncated}`;
     let saveErrors = 0;
     const upsertPayload = results.map(r => ({
       id: r.id,
+      name: r.name,
+      project_id,
       theme_analysis: r.analysis,
     }));
     if (upsertPayload.length > 0) {
