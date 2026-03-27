@@ -1,8 +1,0 @@
-<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Left sage comma/quote -->
-  <circle cx="13" cy="10" r="8" fill="#7ab89a"/>
-  <path d="M5 13 C4 19 2 24 0 29 C4 27 9 22 13 17 Z" fill="#7ab89a"/>
-  <!-- Right dark green comma/quote -->
-  <circle cx="26" cy="13" r="7" fill="#3d6b52"/>
-  <path d="M19 16 C18 21 16 26 13 31 C17 29 22 24 25 19 Z" fill="#3d6b52"/>
-</svg>
