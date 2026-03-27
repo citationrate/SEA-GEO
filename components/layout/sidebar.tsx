@@ -11,7 +11,7 @@ import {
   Users, Link2, Tag, GitCompare, Settings,
   Database, ChevronRight, Plus,
   PanelLeftClose, PanelLeftOpen, MessageSquareText,
-  ExternalLink, X, Newspaper,
+  ExternalLink, X, Newspaper, CreditCard,
 } from "lucide-react";
 import { useConsultation } from "@/lib/consultation-context";
 import { useMobileNav } from "./mobile-nav-context";
@@ -66,6 +66,7 @@ export function Sidebar({ profile }: SidebarProps) {
     {
       group: t("sidebar.system"),
       items: [
+        { href: "/piano",       icon: CreditCard,      label: `Piano · ${isDemo ? "Free" : isBase ? "Base" : isPro ? "Pro" : (profile?.plan ?? "Free")}` },
         { href: "/notizie",     icon: Newspaper,       label: t("sidebar.aiNews") },
         { href: "/settings",    icon: Settings,        label: t("sidebar.settings") },
       ],

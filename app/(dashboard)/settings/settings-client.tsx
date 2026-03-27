@@ -2,34 +2,9 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { User, CreditCard, Ticket, Bell, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2, Globe, Cpu, Package } from "lucide-react";
+import { User, Ticket, Bell, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { RestartTourButton } from "./restart-tour-button";
-
-interface UsageData {
-  browsingPromptsUsed: number;
-  browsingPromptsLimit: number;
-  noBrowsingPromptsUsed: number;
-  noBrowsingPromptsLimit: number;
-  comparisonsUsed: number;
-  comparisonsLimit: number;
-  maxModels: number;
-  extraBrowsingPrompts: number;
-  extraNoBrowsingPrompts: number;
-  extraComparisons: number;
-}
-
-interface PackageDef {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  plan_required: string;
-  browsing_prompts: number;
-  no_browsing_prompts: number;
-  comparisons: number;
-  max_per_month: number | null;
-}
 
 interface SettingsClientProps {
   userId: string;
@@ -37,7 +12,6 @@ interface SettingsClientProps {
   fullName: string;
   plan: string;
   notifyAnalysisComplete: boolean;
-  usage: UsageData;
 }
 
 async function patchProfile(data: Record<string, unknown>) {
@@ -55,16 +29,14 @@ export function SettingsClient({
   fullName: initialName,
   plan,
   notifyAnalysisComplete: initialNotifyAnalysis,
-  usage,
 }: SettingsClientProps) {
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const router = useRouter();
 
   const [fullName, setFullName] = useState(initialName);
   const [savingName, setSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
   const [notifyAnalysis, setNotifyAnalysis] = useState(initialNotifyAnalysis);
-  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
 
   // Voucher
   const [voucher, setVoucher] = useState("");
@@ -73,95 +45,6 @@ export function SettingsClient({
 
   const [loggingOut, setLoggingOut] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
-
-  const isPro = plan === "pro" || plan === "agency";
-  const isBase = plan === "base";
-  const isDemo = !plan || plan === "demo" || plan === "free";
-
-  // Subscription
-  const [subscribing, setSubscribing] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [subscriptionMsg, setSubscriptionMsg] = useState<{ ok: boolean; text: string } | null>(null);
-
-  // Packages
-  const [purchasingId, setPurchasingId] = useState<string | null>(null);
-  const [purchaseMsg, setPurchaseMsg] = useState<{ ok: boolean; text: string } | null>(null);
-
-  const PACKAGES: PackageDef[] = isBase ? [
-    { id: "base_100", name: "100 Query Extra", description: "+100 query senza browsing", price: 19, plan_required: "base", browsing_prompts: 0, no_browsing_prompts: 100, comparisons: 0, max_per_month: 1 },
-    { id: "base_300", name: "300 Query Extra", description: "+300 query senza browsing", price: 49, plan_required: "base", browsing_prompts: 0, no_browsing_prompts: 300, comparisons: 0, max_per_month: 1 },
-  ] : isPro ? [
-    { id: "pro_100", name: "100 Query Extra", description: "+100 query (browsing incluso)", price: 29, plan_required: "pro", browsing_prompts: 30, no_browsing_prompts: 70, comparisons: 0, max_per_month: null },
-    { id: "pro_300", name: "300 Query Extra", description: "+300 query (browsing incluso)", price: 89, plan_required: "pro", browsing_prompts: 90, no_browsing_prompts: 210, comparisons: 0, max_per_month: null },
-    { id: "pro_comp_3", name: "3 Confronti Extra", description: "+3 analisi competitive", price: 15, plan_required: "pro", browsing_prompts: 0, no_browsing_prompts: 0, comparisons: 3, max_per_month: null },
-    { id: "pro_comp_5", name: "5 Confronti Extra", description: "+5 analisi competitive", price: 19, plan_required: "pro", browsing_prompts: 0, no_browsing_prompts: 0, comparisons: 5, max_per_month: null },
-    { id: "pro_comp_10", name: "10 Confronti Extra", description: "+10 analisi competitive", price: 25, plan_required: "pro", browsing_prompts: 0, no_browsing_prompts: 0, comparisons: 10, max_per_month: null },
-  ] : [];
-
-  async function handleSubscribe(plan: "base" | "pro") {
-    setSubscribing(true);
-    setSubscriptionMsg(null);
-    try {
-      const res = await fetch("/api/paypal/create-subscription", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, billingCycle: billingPeriod }),
-      });
-      const data = await res.json();
-      if (res.ok && data.approvalUrl) {
-        window.location.href = data.approvalUrl;
-      } else {
-        setSubscriptionMsg({ ok: false, text: data.error || "Errore nella creazione dell'abbonamento" });
-        setSubscribing(false);
-      }
-    } catch {
-      setSubscriptionMsg({ ok: false, text: "Errore di rete" });
-      setSubscribing(false);
-    }
-  }
-
-  async function handleCancelSubscription() {
-    setCancelling(true);
-    setSubscriptionMsg(null);
-    try {
-      const res = await fetch("/api/paypal/cancel-subscription", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        setSubscriptionMsg({ ok: true, text: "Abbonamento cancellato. Tornerai al piano Demo." });
-        setShowCancelConfirm(false);
-        setTimeout(() => window.location.reload(), 2000);
-      } else {
-        setSubscriptionMsg({ ok: false, text: data.error || "Errore nella cancellazione" });
-      }
-    } catch {
-      setSubscriptionMsg({ ok: false, text: "Errore di rete" });
-    } finally {
-      setCancelling(false);
-    }
-  }
-
-  async function purchasePackage(pkgId: string) {
-    setPurchasingId(pkgId);
-    setPurchaseMsg(null);
-    try {
-      const res = await fetch("/api/paypal/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packageId: pkgId }),
-      });
-      const data = await res.json();
-      if (res.ok && data.approvalUrl) {
-        window.location.href = data.approvalUrl;
-      } else {
-        setPurchaseMsg({ ok: false, text: data.error || t("settings.packageError") });
-        setPurchasingId(null);
-      }
-    } catch {
-      setPurchaseMsg({ ok: false, text: t("settings.packageError") });
-      setPurchasingId(null);
-    }
-  }
 
   const saveName = useCallback(async () => {
     setSavingName(true);
@@ -255,299 +138,7 @@ export function SettingsClient({
         </div>
       </div>
 
-      {/* 2. Piano Abbonamento — Plan Cards */}
-      <div className="card p-6 space-y-5">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-primary" />
-            <h2 className="font-display font-semibold text-foreground">{t("settings.subscription")}</h2>
-          </div>
-
-          {/* Monthly / Annual toggle */}
-          <div className="flex items-center gap-1 bg-muted/30 rounded-[2px] p-0.5">
-            <button
-              onClick={() => setBillingPeriod("monthly")}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-[2px] transition-colors ${billingPeriod === "monthly" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Mensile
-            </button>
-            <button
-              onClick={() => setBillingPeriod("annual")}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-[2px] transition-colors ${billingPeriod === "annual" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Annuale
-            </button>
-          </div>
-        </div>
-
-        {/* 2 Plan Cards side by side */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Base */}
-          <div className={`rounded-[2px] p-4 space-y-3 border ${isBase ? "border-primary/30 bg-primary/5" : "border-border bg-muted/20"}`}>
-            <div>
-              <p className="font-semibold text-foreground text-sm">Base</p>
-              {billingPeriod === "monthly" ? (
-                <p className="text-2xl font-display font-bold text-foreground mt-1">&euro;59<span className="text-sm font-normal text-muted-foreground">/mese</span></p>
-              ) : (
-                <div className="mt-1">
-                  <p className="text-2xl font-display font-bold text-foreground">&euro;54<span className="text-sm font-normal text-muted-foreground">/mese</span></p>
-                  <p className="text-xs text-primary mt-0.5">&euro;649/anno &middot; Risparmia &euro;59</p>
-                </div>
-              )}
-            </div>
-            <ul className="space-y-1.5 text-xs">
-              <li className="text-foreground font-medium">1 progetto &middot; 2 analisi/mese</li>
-              <li className="text-foreground flex items-center gap-1"><Globe className="w-3 h-3" /> 100 query/analisi &middot; 1 modello AI</li>
-              <li className="text-foreground">1 run per analisi (Veloce)</li>
-              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Web Browsing attivo</li>
-              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Generazione query AI</li>
-              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Competitor discovery + AVI</li>
-              <li className="text-muted-foreground/50 flex items-center gap-1"><span className="w-3 h-3 text-center">&mdash;</span> Confronto competitivo</li>
-              <li className="text-muted-foreground/50 flex items-center gap-1"><span className="w-3 h-3 text-center">&mdash;</span> Dataset risposte raw</li>
-              <li className="text-muted-foreground/50 flex items-center gap-1"><span className="w-3 h-3 text-center">&mdash;</span> Export PDF / Excel</li>
-            </ul>
-            {isBase && <p className="text-xs text-primary font-semibold">Piano attuale</p>}
-            {isDemo && (
-              <button
-                onClick={() => handleSubscribe("base")}
-                disabled={subscribing}
-                className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-[2px] text-xs font-semibold hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-              >
-                {subscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                Abbonati a Base
-              </button>
-            )}
-          </div>
-
-          {/* Pro */}
-          <div className={`rounded-[2px] p-4 space-y-3 border-2 relative ${isPro ? "border-primary bg-primary/5" : "border-[#d4a817]/50 bg-[#d4a817]/5"}`}>
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 font-sans text-[0.6875rem] font-semibold tracking-wide text-[#d4a817] bg-background border border-[#d4a817]/40 px-3 py-1 rounded-full whitespace-nowrap shadow-sm">
-              Consigliato
-            </span>
-            <div>
-              <p className="font-semibold text-foreground text-sm">Pro</p>
-              {billingPeriod === "monthly" ? (
-                <p className="text-2xl font-display font-bold text-foreground mt-1">&euro;159<span className="text-sm font-normal text-muted-foreground">/mese</span></p>
-              ) : (
-                <div className="mt-1">
-                  <p className="text-2xl font-display font-bold text-foreground">&euro;143<span className="text-sm font-normal text-muted-foreground">/mese</span></p>
-                  <p className="text-xs text-primary mt-0.5">&euro;1.719/anno &middot; Risparmia &euro;189</p>
-                </div>
-              )}
-            </div>
-            <ul className="space-y-1.5 text-xs">
-              <li className="text-foreground font-medium">5 progetti &middot; 10 analisi/mese</li>
-              <li className="text-foreground flex items-center gap-1"><Globe className="w-3 h-3" /> 300 query/analisi &middot; fino a 3 modelli</li>
-              <li className="text-foreground">3 run per analisi (Preciso + Stability)</li>
-              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Web Browsing attivo</li>
-              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Generazione query AI + Personas B2B/B2C</li>
-              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Competitor discovery + AVI + Contesti AI</li>
-              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Confronto competitivo (X vs Y)</li>
-              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Dataset completo + filtri avanzati</li>
-              <li className="text-foreground flex items-center gap-1"><Check className="w-3 h-3 text-primary" /> Export PDF / Excel + link condivisibile</li>
-            </ul>
-            {isPro && <p className="text-xs text-primary font-semibold">Piano attuale</p>}
-            {!isPro && (
-              <button
-                onClick={() => handleSubscribe("pro")}
-                disabled={subscribing}
-                className="w-full px-3 py-2 bg-[#d4a817] text-background rounded-[2px] text-xs font-semibold hover:bg-[#d4a817]/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-              >
-                {subscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                Abbonati a Pro
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Subscription management */}
-        {(isBase || isPro) && (
-          <div className="pt-4 border-t border-border space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                Gestisci il tuo abbonamento
-              </p>
-              {!showCancelConfirm ? (
-                <button
-                  onClick={() => setShowCancelConfirm(true)}
-                  className="px-4 py-2 border border-destructive/30 text-destructive rounded-[2px] text-xs font-medium hover:bg-destructive/10 transition-colors"
-                >
-                  Annulla abbonamento
-                </button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowCancelConfirm(false)}
-                    className="px-3 py-2 border border-border text-foreground rounded-[2px] text-xs hover:bg-muted/30 transition-colors"
-                  >
-                    Indietro
-                  </button>
-                  <button
-                    onClick={handleCancelSubscription}
-                    disabled={cancelling}
-                    className="px-3 py-2 bg-destructive text-white rounded-[2px] text-xs font-medium hover:bg-destructive/80 transition-colors disabled:opacity-50 flex items-center gap-1.5"
-                  >
-                    {cancelling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                    Conferma cancellazione
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {subscriptionMsg && (
-          <p className={`text-sm ${subscriptionMsg.ok ? "text-primary" : "text-destructive"}`}>{subscriptionMsg.text}</p>
-        )}
-      </div>
-
-      {/* 2b. Utilizzo mensile */}
-      <div className="card p-6 space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <CreditCard className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-semibold text-foreground">{t("settings.monthlyUsage")}</h2>
-        </div>
-
-        {/* Browsing prompts usage */}
-        {!isDemo && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" /> Prompt con browsing</span>
-              <span className="text-foreground font-medium">
-                {usage.browsingPromptsUsed} / {usage.browsingPromptsLimit + usage.extraBrowsingPrompts}
-                {usage.extraBrowsingPrompts > 0 && <span className="text-primary ml-1">(+{usage.extraBrowsingPrompts} extra)</span>}
-              </span>
-            </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${(usage.browsingPromptsLimit + usage.extraBrowsingPrompts) > 0 ? Math.min(100, (usage.browsingPromptsUsed / (usage.browsingPromptsLimit + usage.extraBrowsingPrompts)) * 100) : 0}%`,
-                  background: usage.browsingPromptsUsed >= (usage.browsingPromptsLimit + usage.extraBrowsingPrompts) ? "var(--destructive)" : "var(--primary)",
-                }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {(usage.browsingPromptsLimit + usage.extraBrowsingPrompts) - usage.browsingPromptsUsed > 0
-                ? `${(usage.browsingPromptsLimit + usage.extraBrowsingPrompts) - usage.browsingPromptsUsed} disponibili`
-                : "Limite raggiunto"}
-            </p>
-          </div>
-        )}
-
-        {/* No-browsing prompts usage */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground flex items-center gap-1.5">
-              <Cpu className="w-3.5 h-3.5" />
-              {isDemo ? "Prompt demo" : "Prompt senza browsing"}
-            </span>
-            <span className="text-foreground font-medium">
-              {usage.noBrowsingPromptsUsed} / {usage.noBrowsingPromptsLimit + usage.extraNoBrowsingPrompts}
-              {usage.extraNoBrowsingPrompts > 0 && <span className="text-primary ml-1">(+{usage.extraNoBrowsingPrompts} extra)</span>}
-            </span>
-          </div>
-          <div className="h-2 rounded-full bg-muted overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${(usage.noBrowsingPromptsLimit + usage.extraNoBrowsingPrompts) > 0 ? Math.min(100, (usage.noBrowsingPromptsUsed / (usage.noBrowsingPromptsLimit + usage.extraNoBrowsingPrompts)) * 100) : 0}%`,
-                background: usage.noBrowsingPromptsUsed >= (usage.noBrowsingPromptsLimit + usage.extraNoBrowsingPrompts) ? "var(--destructive)" : "var(--primary)",
-              }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {(usage.noBrowsingPromptsLimit + usage.extraNoBrowsingPrompts) - usage.noBrowsingPromptsUsed > 0
-              ? `${(usage.noBrowsingPromptsLimit + usage.extraNoBrowsingPrompts) - usage.noBrowsingPromptsUsed} disponibili`
-              : "Limite raggiunto"}
-          </p>
-        </div>
-
-        {/* Comparisons usage (only for Pro) */}
-        {isPro && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{t("settings.compareDetections")}</span>
-              <span className="text-foreground font-medium">
-                {usage.comparisonsUsed} / {usage.comparisonsLimit + usage.extraComparisons}
-                {usage.extraComparisons > 0 && <span className="text-primary ml-1">(+{usage.extraComparisons} extra)</span>}
-              </span>
-            </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${(usage.comparisonsLimit + usage.extraComparisons) > 0 ? Math.min(100, (usage.comparisonsUsed / (usage.comparisonsLimit + usage.extraComparisons)) * 100) : 0}%`,
-                  background: usage.comparisonsUsed >= (usage.comparisonsLimit + usage.extraComparisons) ? "var(--destructive)" : "var(--primary)",
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Models per project */}
-        <div className="flex items-center justify-between text-sm pt-2 border-t border-border">
-          <span className="text-muted-foreground">{t("settings.maxModels").replace("{n}", String(usage.maxModels))}</span>
-          <span className="text-foreground font-medium">Max {usage.maxModels}</span>
-        </div>
-
-        {/* Reset date */}
-        <p className="text-xs text-muted-foreground">
-          {t("settings.renewsOn")} 1 {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toLocaleDateString(locale === "it" ? "it-IT" : locale === "en" ? "en-US" : locale === "fr" ? "fr-FR" : locale === "de" ? "de-DE" : "es-ES", { month: "long" })}
-        </p>
-      </div>
-
-      {/* 2c. Pacchetti extra — only for Base and Pro */}
-      {PACKAGES.length > 0 && (
-        <div className="card p-6 space-y-5">
-          <div className="flex items-center gap-2 mb-2">
-            <Package className="w-5 h-5 text-primary" />
-            <h2 className="font-display font-semibold text-foreground">{t("settings.extraPackages")}</h2>
-          </div>
-          <p className="text-sm text-muted-foreground">{t("settings.extraPackagesDesc")}</p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {PACKAGES.map((pkg) => (
-              <div
-                key={pkg.id}
-                className="rounded-[2px] border border-border bg-muted/20 p-4 space-y-3 flex flex-col"
-              >
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-foreground">{pkg.name}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{pkg.description}</p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-lg font-display font-bold text-foreground">&euro;{pkg.price}</p>
-                  {pkg.max_per_month !== null && (
-                    <span className="text-[0.625rem] font-mono text-muted-foreground uppercase tracking-wide">max {pkg.max_per_month}/mese</span>
-                  )}
-                </div>
-                <button
-                  onClick={() => purchasePackage(pkg.id)}
-                  disabled={purchasingId !== null}
-                  className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-[2px] text-xs font-semibold hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                >
-                  {purchasingId === pkg.id ? (
-                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("common.loading")}</>
-                  ) : (
-                    <>{t("settings.buyPackage")}</>
-                  )}
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {purchaseMsg && (
-            <p className={`text-sm ${purchaseMsg.ok ? "text-primary" : "text-destructive"}`}>{purchaseMsg.text}</p>
-          )}
-
-          {isDemo && (
-            <p className="text-xs text-muted-foreground italic">{t("settings.upgradeForPackages")}</p>
-          )}
-        </div>
-      )}
-
-      {/* 3. Voucher */}
+      {/* 2. Voucher */}
       <div className="card p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <Ticket className="w-5 h-5 text-primary" />
