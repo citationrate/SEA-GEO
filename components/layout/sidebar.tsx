@@ -135,12 +135,12 @@ export function Sidebar({ profile }: SidebarProps) {
                           : isActive(item.href)
                             ? "text-primary font-medium"
                             : isHighlight
-                              ? "text-[#d4a817] hover:bg-[#d4a817]/5"
+                              ? "text-[#c4a882] hover:bg-[#c4a882]/5"
                               : "text-muted-foreground hover:text-foreground hover:bg-surface-2"
                       )}
                       style={
                         isActive(item.href) && !locked ? { background: "rgba(126,184,154,0.06)" }
-                        : isHighlight ? { background: "rgba(212,168,23,0.04)" }
+                        : isHighlight ? { background: "rgba(196,168,130,0.04)" }
                         : undefined
                       }
                       title={collapsed && !mobileOpen ? item.label : undefined}
@@ -148,7 +148,7 @@ export function Sidebar({ profile }: SidebarProps) {
                       <span className="relative flex-shrink-0">
                         <item.icon className={cn(
                           "w-[15px] h-[15px]",
-                          locked ? "text-muted-foreground/40" : isHighlight ? "text-[#d4a817]" : isActive(item.href) ? "text-primary" : "text-muted-foreground"
+                          locked ? "text-muted-foreground/40" : isHighlight ? "text-[#c4a882]" : isActive(item.href) ? "text-primary" : "text-muted-foreground"
                         )} />
                         {item.href === "/notizie" && hasUnread && collapsed && !mobileOpen && (
                           <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#D97706]" />

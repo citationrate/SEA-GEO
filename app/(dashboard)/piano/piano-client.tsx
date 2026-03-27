@@ -34,8 +34,8 @@ const PLAN_STYLE: Record<string, { label: string; descKey: string; gradient: str
   demo: { label: "Demo", descKey: "piano.demoDesc", gradient: "linear-gradient(135deg, #6b7280, #9ca3af)", border: "rgba(107,114,128,0.3)", text: "#9ca3af", bg: "rgba(107,114,128,0.06)" },
   free: { label: "Demo", descKey: "piano.demoDesc", gradient: "linear-gradient(135deg, #6b7280, #9ca3af)", border: "rgba(107,114,128,0.3)", text: "#9ca3af", bg: "rgba(107,114,128,0.06)" },
   base: { label: "Base", descKey: "piano.baseDesc", gradient: "linear-gradient(135deg, #3b82f6, #60a5fa)", border: "rgba(59,130,246,0.3)", text: "#60a5fa", bg: "rgba(59,130,246,0.06)" },
-  pro:  { label: "Pro", descKey: "piano.proDesc", gradient: "linear-gradient(135deg, #d4a817, #f59e0b)", border: "rgba(212,168,23,0.3)", text: "#d4a817", bg: "rgba(212,168,23,0.06)" },
-  agency: { label: "Pro", descKey: "piano.proDesc", gradient: "linear-gradient(135deg, #d4a817, #f59e0b)", border: "rgba(212,168,23,0.3)", text: "#d4a817", bg: "rgba(212,168,23,0.06)" },
+  pro:  { label: "Pro", descKey: "piano.proDesc", gradient: "linear-gradient(135deg, #c4a882, #d4b896)", border: "rgba(196,168,130,0.3)", text: "#c4a882", bg: "rgba(196,168,130,0.06)" },
+  agency: { label: "Pro", descKey: "piano.proDesc", gradient: "linear-gradient(135deg, #c4a882, #d4b896)", border: "rgba(196,168,130,0.3)", text: "#c4a882", bg: "rgba(196,168,130,0.06)" },
 };
 
 function getFeatures(t: (k: string) => string) {
@@ -164,7 +164,7 @@ export function PianoClient({
             </div>
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-display font-bold text-foreground">{style.label}</h1>
+                <h1 className="text-3xl font-display font-bold" style={{ color: style.text }}>{style.label}</h1>
                 {!isDemo && (
                   <span
                     className="text-xs px-2.5 py-1 rounded-full font-semibold"
@@ -215,10 +215,10 @@ export function PianoClient({
 
           {/* Demo: single prompt card looks lonely, add an upgrade nudge */}
           {isDemo && (
-            <div className="rounded-[4px] border border-dashed border-[#d4a817]/30 p-5 flex flex-col items-center justify-center text-center gap-2" style={{ background: "rgba(212,168,23,0.03)" }}>
-              <Sparkles className="w-5 h-5 text-[#d4a817]" />
+            <div className="rounded-[4px] border border-dashed border-[#c4a882]/30 p-5 flex flex-col items-center justify-center text-center gap-2" style={{ background: "rgba(196,168,130,0.03)" }}>
+              <Sparkles className="w-5 h-5 text-[#c4a882]" />
               <p className="text-sm text-muted-foreground">{t("piano.unlockMore")}</p>
-              <a href="#piani" className="text-xs font-semibold text-[#d4a817] hover:text-[#d4a817]/80 transition-colors">{t("piano.viewPlans")} &darr;</a>
+              <a href="#piani" className="text-xs font-semibold text-[#c4a882] hover:text-[#c4a882]/80 transition-colors">{t("piano.viewPlans")} &darr;</a>
             </div>
           )}
         </div>
@@ -281,8 +281,8 @@ export function PianoClient({
             name="Pro"
             price={annual ? "€1.719" : "€159"}
             priceNote={annual ? t("piano.perYear") : t("piano.perMonth")}
-            color="#d4a817"
-            gradient="linear-gradient(135deg, #d4a817, #f59e0b)"
+            color="#c4a882"
+            gradient="linear-gradient(135deg, #c4a882, #d4b896)"
             icon={<Crown className="w-5 h-5 text-white" />}
             isCurrent={isPro}
             isRecommended={true}
@@ -308,8 +308,8 @@ export function PianoClient({
               >
                 <div>
                   <div className="flex items-center gap-2.5 mb-3">
-                    <div className="w-8 h-8 rounded-[3px] flex items-center justify-center" style={{ background: pkg.type === "query" ? "rgba(59,130,246,0.12)" : "rgba(212,168,23,0.12)" }}>
-                      {pkg.type === "query" ? <Zap className="w-4 h-4 text-[#3b82f6]" /> : <GitCompare className="w-4 h-4 text-[#d4a817]" />}
+                    <div className="w-8 h-8 rounded-[3px] flex items-center justify-center" style={{ background: pkg.type === "query" ? "rgba(59,130,246,0.12)" : "rgba(196,168,130,0.12)" }}>
+                      {pkg.type === "query" ? <Zap className="w-4 h-4 text-[#3b82f6]" /> : <GitCompare className="w-4 h-4 text-[#c4a882]" />}
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-foreground">{pkg.label}</p>
