@@ -35,13 +35,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <TopBar />
           <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
             {children}
-            <footer className="mt-12 pb-4 flex items-center justify-center gap-4 text-xs text-muted-foreground/60">
-              <a href="https://www.iubenda.com/privacy-policy/17948648" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Privacy Policy</a>
-              <span>·</span>
-              <a href="https://www.iubenda.com/privacy-policy/17948648/cookie-policy" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Cookie Policy</a>
-              <span>·</span>
-              <a href="https://www.iubenda.com/termini-e-condizioni/17948648" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">Termini di Servizio</a>
-            </footer>
           </main>
         </div>
         <OnboardingTour onboardingCompleted={!!(profile as any)?.onboarding_completed} />
