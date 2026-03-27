@@ -219,10 +219,11 @@ ${truncated}`;
       if (batchErr) {
         console.error(`[competitors/analyze] batch upsert error:`, batchErr.message);
         saveErrors = upsertPayload.length;
+        return NextResponse.json({ error: `Errore nel salvataggio: ${batchErr.message}` }, { status: 500 });
       }
     }
 
-    // Increment usage counter
+    // Increment usage counter ONLY on success
     await incrementContextAnalysesUsed(user.id).catch((err) =>
       console.error("[competitors/analyze] usage increment error:", err)
     );
