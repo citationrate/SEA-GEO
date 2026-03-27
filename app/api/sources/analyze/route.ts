@@ -10,6 +10,7 @@ const bodySchema = z.object({
   citations: z.number(),
   brand: z.string().min(1),
   lang: z.string().optional(),
+  project_id: z.string().uuid().optional(),
 });
 
 export async function POST(request: Request) {
@@ -20,6 +21,23 @@ export async function POST(request: Request) {
     const body = await request.json();
     const parsed = bodySchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
+
+    const { domain, contexts, citations, brand, lang, project_id } = parsed.data;
+
+    // Check if we already have a cached analysis for this domain + user
+    if (project_id) {
+      const { data: cached } = await (supabase!.from("sources") as any)
+        .select("url_analysis")
+        .eq("domain", domain)
+        .eq("project_id", project_id)
+        .not("url_analysis", "is", null)
+        .limit(1)
+        .maybeSingle();
+
+      if (cached?.url_analysis) {
+        return NextResponse.json(cached.url_analysis);
+      }
+    }
 
     // Pro plan check + usage limit
     const plan = await getUserPlanLimits(user.id);
@@ -33,8 +51,6 @@ export async function POST(request: Request) {
     if (usage.urlAnalysesUsed >= maxUrlAnalyses) {
       return NextResponse.json({ error: `Hai raggiunto il limite di ${maxUrlAnalyses} analisi URL questo mese.`, code: "LIMIT_REACHED" }, { status: 403 });
     }
-
-    const { domain, contexts, citations, brand, lang } = parsed.data;
 
     const contextList = contexts.slice(0, 10).map((c, i) => `${i + 1}. ${c}`).join("\n");
 
@@ -70,7 +86,15 @@ Respond ONLY with valid JSON.`,
       try { analysis = JSON.parse(jsonMatch[0]); } catch { /* use default */ }
     }
 
-    // Increment usage counter
+    // Save analysis to sources table for this domain
+    if (project_id) {
+      await (supabase!.from("sources") as any)
+        .update({ url_analysis: analysis })
+        .eq("domain", domain)
+        .eq("project_id", project_id);
+    }
+
+    // Increment usage counter ONLY on success
     await incrementUrlAnalysesUsed(user.id).catch((err) =>
       console.error("[sources/analyze] usage increment error:", err)
     );

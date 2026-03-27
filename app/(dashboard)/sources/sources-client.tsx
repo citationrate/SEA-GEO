@@ -51,11 +51,13 @@ export function SourcesClient({
   totalCitations,
   mediaPct,
   brand,
+  projectId,
 }: {
   domains: SourceDomain[];
   totalCitations: number;
   mediaPct: number;
   brand: string;
+  projectId: string | null;
 }) {
   const { t, locale } = useTranslation();
   const usage = useUsage();
@@ -209,6 +211,7 @@ export function SourcesClient({
         <AnalyzeDrawer
           domain={drawerDomain}
           brand={brand}
+          projectId={projectId}
           onClose={() => setDrawerDomain(null)}
           isPro={usage.isPro}
           urlAnalysesRemaining={usage.urlAnalysesRemaining}
@@ -297,6 +300,7 @@ function DomainCard({ domain: d, onAnalyze, isPro }: { domain: SourceDomain; onA
 function AnalyzeDrawer({
   domain: d,
   brand,
+  projectId,
   onClose,
   isPro,
   urlAnalysesRemaining,
@@ -304,6 +308,7 @@ function AnalyzeDrawer({
 }: {
   domain: SourceDomain;
   brand: string;
+  projectId: string | null;
   onClose: () => void;
   isPro: boolean;
   urlAnalysesRemaining: number;
@@ -313,8 +318,34 @@ function AnalyzeDrawer({
   const [analysis, setAnalysis] = useState<DomainAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [checkedCache, setCheckedCache] = useState(false);
   const cfg = TYPE_CONFIG[d.sourceType] ?? TYPE_CONFIG.other;
   const Icon = cfg.icon;
+
+  // Auto-load cached analysis on mount
+  useEffect(() => {
+    if (!projectId || checkedCache) return;
+    setLoading(true);
+    fetch("/api/sources/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        domain: d.domain,
+        contexts: d.contexts,
+        citations: d.citations,
+        brand,
+        lang: locale,
+        project_id: projectId,
+      }),
+    })
+      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+      .then((data) => {
+        if (data.why_cited || data.authority) setAnalysis(data);
+      })
+      .catch(() => { /* no cached data, user can click analyze */ })
+      .finally(() => { setLoading(false); setCheckedCache(true); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function runAnalysis() {
     setLoading(true);
@@ -328,11 +359,15 @@ function AnalyzeDrawer({
         citations: d.citations,
         brand,
         lang: locale,
+        project_id: projectId,
       }),
     })
-      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+      .then((r) => {
+        if (!r.ok) return r.json().then((data: any) => { throw new Error(data.error || t("sources.analysisError")); });
+        return r.json();
+      })
       .then((data) => setAnalysis(data))
-      .catch(() => setError(t("sources.analysisError")))
+      .catch((err) => setError(err.message || t("sources.analysisError")))
       .finally(() => setLoading(false));
   }
 

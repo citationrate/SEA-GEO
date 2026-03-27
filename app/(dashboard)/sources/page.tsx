@@ -145,6 +145,7 @@ export default async function SourcesPage({
         totalCitations={totalCitations}
         mediaPct={mediaPct}
         brand={brand}
+        projectId={selectedId ?? projectIds[0] ?? null}
       />
     </div>
   );
