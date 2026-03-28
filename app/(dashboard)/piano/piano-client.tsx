@@ -182,13 +182,15 @@ export function PianoClient({
               )}
             </div>
           </div>
-          <a
-            href="#piani"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-[3px] text-sm font-semibold transition-all hover:scale-[1.02] shrink-0"
-            style={{ background: meta.gradient, color: "#fff", boxShadow: `0 4px 14px ${meta.border}` }}
-          >
-            {t("piano.changePlan")} <ArrowDown className="w-4 h-4" />
-          </a>
+          {plan !== "pro" && plan !== "agency" && (
+            <a
+              href="#piani"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-[3px] text-sm font-semibold transition-all hover:scale-[1.02] shrink-0"
+              style={{ background: meta.gradient, color: "#fff", boxShadow: `0 4px 14px ${meta.border}` }}
+            >
+              {t("piano.changePlan")} <ArrowDown className="w-4 h-4" />
+            </a>
+          )}
         </div>
       </div>
 

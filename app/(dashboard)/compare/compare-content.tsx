@@ -83,18 +83,6 @@ export function CompareList({ list, projectsList }: CompareListProps) {
               />
             </div>
           </div>
-          <div className="flex-1 space-y-1">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Prompt (no browsing)</span>
-              <span className="text-foreground font-medium">{usage.noBrowsingPromptsUsed} / {usage.noBrowsingPromptsLimit}</span>
-            </div>
-            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${usage.noBrowsingPromptsLimit > 0 ? Math.min((usage.noBrowsingPromptsUsed / usage.noBrowsingPromptsLimit) * 100, 100) : 0}%` }}
-              />
-            </div>
-          </div>
         </div>
       )}
 
