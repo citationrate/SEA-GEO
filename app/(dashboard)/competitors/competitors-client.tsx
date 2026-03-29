@@ -129,16 +129,14 @@ export function CompetitorsClient({
     setAnalyzing(true);
     setAnalyzeError("");
     try {
-      for (const pid of projectIds) {
-        const res = await fetch("/api/competitors/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ project_id: pid }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || t("common.error"));
-        }
+      const res = await fetch("/api/competitors/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: projectIds.length === 1 ? projectIds[0] : projectIds }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || t("common.error"));
       }
       router.refresh();
     } catch (err) {

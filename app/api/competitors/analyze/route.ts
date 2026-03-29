@@ -5,7 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getUserPlanLimits, getCurrentUsage, incrementContextAnalysesUsed } from "@/lib/usage";
 
 const bodySchema = z.object({
-  project_id: z.string().uuid(),
+  project_id: z.union([z.string().uuid(), z.array(z.string().uuid())]),
 });
 
 export async function POST(request: Request) {
@@ -19,7 +19,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Dati non validi", details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { project_id } = parsed.data;
+    const rawProjectId = parsed.data.project_id;
+    const projectIdsArray = Array.isArray(rawProjectId) ? rawProjectId : [rawProjectId];
 
     // Pro plan check + usage limit
     const plan = await getUserPlanLimits(user.id);
@@ -34,36 +35,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Hai raggiunto il limite di ${maxContextAnalyses} analisi contesti questo mese.`, code: "LIMIT_REACHED" }, { status: 403 });
     }
 
-    // Verify project ownership
-    const { data: project } = await supabase
+    // Verify project ownership for all projects
+    const { data: projects } = await supabase
       .from("projects")
       .select("id, language")
-      .eq("id", project_id)
+      .in("id", projectIdsArray)
       .eq("user_id", user.id)
-      .is("deleted_at", null)
-      .single();
-    if (!project) {
+      .is("deleted_at", null);
+    if (!projects?.length) {
       return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
     }
+    const verifiedProjectIds = (projects as any[]).map((p: any) => p.id);
 
-    const projectLang = (project as any).language ?? "it";
+    const projectLang = (projects as any[])[0]?.language ?? "it";
     const langLabel = projectLang === "en" ? "English" : projectLang === "fr" ? "French" : projectLang === "de" ? "German" : projectLang === "es" ? "Spanish" : "Italian";
 
-    // Get all competitors for this project
+    // Get all competitors for these projects
     const { data: competitors } = await supabase
       .from("competitors")
       .select("*")
-      .eq("project_id", project_id);
+      .in("project_id", verifiedProjectIds);
 
     if (!competitors?.length) {
       return NextResponse.json({ error: "Nessun competitor trovato" }, { status: 400 });
     }
 
-    // Get all active runs for this project
+    // Get all active runs for these projects
     const { data: runs } = await supabase
       .from("analysis_runs")
       .select("id")
-      .eq("project_id", project_id)
+      .in("project_id", verifiedProjectIds)
       .is("deleted_at", null);
     const runIds = (runs ?? []).map((r: any) => r.id);
 
@@ -110,13 +111,13 @@ export async function POST(request: Request) {
 
     // Analyze each competitor with Claude Haiku
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const results: { id: string; name: string; analysis: any }[] = [];
+    const results: { id: string; name: string; project_id: string; analysis: any }[] = [];
 
     for (const comp of competitors as any[]) {
       const key = comp.name.toLowerCase().trim();
       const texts = compTexts.get(key);
       if (!texts?.length) {
-        results.push({ id: comp.id, name: comp.name, analysis: { macro_themes: [], positioning_summary: projectLang === "en" ? "No context available for analysis." : "Nessun contesto disponibile per l'analisi." } });
+        results.push({ id: comp.id, name: comp.name, project_id: comp.project_id, analysis: { macro_themes: [], positioning_summary: projectLang === "en" ? "No context available for analysis." : "Nessun contesto disponibile per l'analisi." } });
         continue;
       }
 
@@ -194,12 +195,13 @@ ${truncated}`;
           }
         }
 
-        results.push({ id: comp.id, name: comp.name, analysis });
+        results.push({ id: comp.id, name: comp.name, project_id: comp.project_id, analysis });
       } catch (err) {
         console.error(`[competitors/analyze] OpenAI error for "${comp.name}":`, err instanceof Error ? err.message : err);
         results.push({
           id: comp.id,
           name: comp.name,
+          project_id: comp.project_id,
           analysis: { macro_themes: [], positioning_summary: `Errore: ${err instanceof Error ? err.message : "errore sconosciuto"}` },
         });
       }
@@ -210,7 +212,7 @@ ${truncated}`;
     const upsertPayload = results.map(r => ({
       id: r.id,
       name: r.name,
-      project_id,
+      project_id: r.project_id,
       theme_analysis: r.analysis,
     }));
     if (upsertPayload.length > 0) {
