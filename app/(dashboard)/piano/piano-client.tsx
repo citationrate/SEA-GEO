@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   CreditCard, Search, Globe, GitCompare, Link2, MessageSquareText,
   Check, X, ArrowDown, Loader2, Zap, Crown, AlertTriangle, Sparkles,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
+import { useUsage } from "@/lib/hooks/useUsage";
 
 interface PianoClientProps {
   plan: string;
@@ -88,6 +89,8 @@ export function PianoClient({
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const { t } = useTranslation();
 
+  const usage = useUsage();
+
   const limits = LIMITS[plan] || LIMITS.demo;
   const style = PLAN_STYLE[plan] || PLAN_STYLE.demo;
   const meta = { ...style, desc: t(style.descKey) };
@@ -96,10 +99,20 @@ export function PianoClient({
   const isBase = plan === "base";
   const isPro = plan === "pro" || plan === "agency";
 
-  const totalUsed = browsingUsed + noBrowsingUsed;
-  const totalLimit = limits.totalPrompts + extraBrowsing + extraNoBrowsing;
-  const browsingLimit = limits.browsing + extraBrowsing;
-  const comparisonsLimit = limits.comparisons + extraComparisons;
+  // Use live data from useUsage when loaded, fallback to server props
+  const liveBrowsingUsed = usage.loading ? browsingUsed : usage.browsingPromptsUsed;
+  const liveNoBrowsingUsed = usage.loading ? noBrowsingUsed : usage.noBrowsingPromptsUsed;
+  const liveComparisonsUsed = usage.loading ? comparisonsUsed : usage.comparisonsUsed;
+  const liveExtraBrowsing = usage.loading ? extraBrowsing : usage.extraBrowsingPrompts;
+  const liveExtraNoBrowsing = usage.loading ? extraNoBrowsing : usage.extraNoBrowsingPrompts;
+  const liveExtraComparisons = usage.loading ? extraComparisons : usage.extraComparisons;
+  const liveUrlAnalysesUsed = usage.loading ? 0 : usage.urlAnalysesUsed;
+  const liveContextAnalysesUsed = usage.loading ? 0 : usage.contextAnalysesUsed;
+
+  const totalUsed = liveBrowsingUsed + liveNoBrowsingUsed;
+  const totalLimit = limits.totalPrompts + liveExtraBrowsing + liveExtraNoBrowsing;
+  const browsingLimit = limits.browsing + liveExtraBrowsing;
+  const comparisonsLimit = limits.comparisons + liveExtraComparisons;
   const packages = isBase ? BASE_PACKAGES : isPro ? PRO_PACKAGES : [];
 
   async function handleSubscribe(priceEnv: string) {
@@ -199,19 +212,19 @@ export function PianoClient({
         <h2 className="text-lg font-display font-semibold text-foreground mb-4">{t("piano.yourUsage")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* All plans: prompt totali */}
-          <UsageCard icon={<Search className="w-5 h-5" />} label={t("piano.promptsUsed")} used={totalUsed} max={totalLimit} extra={extraBrowsing + extraNoBrowsing > 0 ? `+${extraBrowsing + extraNoBrowsing} extra` : undefined} />
+          <UsageCard icon={<Search className="w-5 h-5" />} label={t("piano.promptsUsed")} used={totalUsed} max={totalLimit} extra={liveExtraBrowsing + liveExtraNoBrowsing > 0 ? `+${liveExtraBrowsing + liveExtraNoBrowsing} extra` : undefined} />
 
           {/* Base+Pro: browsing */}
           {!isDemo && (
-            <UsageCard icon={<Globe className="w-5 h-5" />} label={t("piano.withBrowsing")} used={browsingUsed} max={browsingLimit} extra={extraBrowsing > 0 ? `+${extraBrowsing} extra` : undefined} />
+            <UsageCard icon={<Globe className="w-5 h-5" />} label={t("piano.withBrowsing")} used={liveBrowsingUsed} max={browsingLimit} extra={liveExtraBrowsing > 0 ? `+${liveExtraBrowsing} extra` : undefined} />
           )}
 
           {/* Pro: confronti, URL, contesti */}
           {isPro && (
             <>
-              <UsageCard icon={<GitCompare className="w-5 h-5" />} label={t("piano.comparisons")} used={comparisonsUsed} max={comparisonsLimit} extra={extraComparisons > 0 ? `+${extraComparisons} extra` : undefined} />
-              <UsageCard icon={<Link2 className="w-5 h-5" />} label={t("piano.urlAnalysis")} used={0} max={50} />
-              <UsageCard icon={<MessageSquareText className="w-5 h-5" />} label={t("piano.contextAnalysis")} used={0} max={5} />
+              <UsageCard icon={<GitCompare className="w-5 h-5" />} label={t("piano.comparisons")} used={liveComparisonsUsed} max={comparisonsLimit} extra={liveExtraComparisons > 0 ? `+${liveExtraComparisons} extra` : undefined} />
+              <UsageCard icon={<Link2 className="w-5 h-5" />} label={t("piano.urlAnalysis")} used={liveUrlAnalysesUsed} max={50} />
+              <UsageCard icon={<MessageSquareText className="w-5 h-5" />} label={t("piano.contextAnalysis")} used={liveContextAnalysesUsed} max={5} />
             </>
           )}
 
@@ -242,7 +255,7 @@ export function PianoClient({
               onClick={() => setAnnual(true)}
               className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${annual ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             >
-              {t("piano.annual")} <span className="text-primary/80 ml-0.5">{annual ? "" : "(-8%)"}</span>
+              {t("piano.annual")}
             </button>
           </div>
         </div>
@@ -268,6 +281,7 @@ export function PianoClient({
             name="Base"
             price={annual ? "€649" : "€59"}
             priceNote={annual ? t("piano.perYear") : t("piano.perMonth")}
+            annualDetails={annual ? { monthlyEquiv: "€54,08" } : undefined}
             color="#3b82f6"
             gradient="linear-gradient(135deg, #3b82f6, #60a5fa)"
             icon={<Zap className="w-5 h-5 text-white" />}
@@ -277,12 +291,14 @@ export function PianoClient({
             onSubscribe={!isBase && !isPro ? () => handleSubscribe(annual ? "STRIPE_PRICE_BASE_YEARLY" : "STRIPE_PRICE_BASE_MONTHLY") : null}
             subscribing={subscribing === (annual ? "STRIPE_PRICE_BASE_YEARLY" : "STRIPE_PRICE_BASE_MONTHLY")}
             labels={{ recommended: t("piano.recommended"), activePlan: t("piano.activePlan"), subscribe: t("piano.subscribe") }}
+            t={t}
           />
           {/* Pro */}
           <PlanCard
             name="Pro"
             price={annual ? "€1.719" : "€159"}
             priceNote={annual ? t("piano.perYear") : t("piano.perMonth")}
+            annualDetails={annual ? { monthlyEquiv: "€143,25" } : undefined}
             color="#c4a882"
             gradient="linear-gradient(135deg, #c4a882, #d4b896)"
             icon={<Crown className="w-5 h-5 text-white" />}
@@ -292,6 +308,7 @@ export function PianoClient({
             onSubscribe={!isPro ? () => handleSubscribe(annual ? "STRIPE_PRICE_PRO_YEARLY" : "STRIPE_PRICE_PRO_MONTHLY") : null}
             subscribing={subscribing === (annual ? "STRIPE_PRICE_PRO_YEARLY" : "STRIPE_PRICE_PRO_MONTHLY")}
             labels={{ recommended: t("piano.recommended"), activePlan: t("piano.activePlan"), subscribe: t("piano.subscribe") }}
+            t={t}
           />
         </div>
       </div>
@@ -422,12 +439,15 @@ function UsageCard({ icon, label, used, max, extra }: {
   );
 }
 
-function PlanCard({ name, price, priceNote, color, gradient, icon, isCurrent, isRecommended, features, onSubscribe, subscribing, labels }: {
-  name: string; price: string; priceNote: string | null; color: string; gradient: string; icon: React.ReactNode;
+function PlanCard({ name, price, priceNote, annualDetails, color, gradient, icon, isCurrent, isRecommended, features, onSubscribe, subscribing, labels, t }: {
+  name: string; price: string; priceNote: string | null;
+  annualDetails?: { monthlyEquiv: string };
+  color: string; gradient: string; icon: React.ReactNode;
   isCurrent: boolean; isRecommended: boolean;
   features: { label: string; value: boolean | string }[];
   onSubscribe: (() => void) | null; subscribing: boolean;
   labels: { recommended: string; activePlan: string; subscribe: string };
+  t?: (k: string) => string;
 }) {
   return (
     <div
@@ -457,6 +477,11 @@ function PlanCard({ name, price, priceNote, color, gradient, icon, isCurrent, is
           <span className="text-3xl font-display font-bold text-foreground">{price}</span>
           {priceNote && <span className="text-sm text-muted-foreground">{priceNote}</span>}
         </div>
+        {annualDetails && (
+          <p className="mt-1 text-sm text-muted-foreground">
+            {annualDetails.monthlyEquiv}{t ? t("piano.perMonth") : "/mese"}
+          </p>
+        )}
       </div>
 
       {/* Features */}

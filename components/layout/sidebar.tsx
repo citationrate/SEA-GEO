@@ -66,7 +66,7 @@ export function Sidebar({ profile }: SidebarProps) {
     {
       group: t("sidebar.system"),
       items: [
-        { href: "/piano",       icon: isDemo ? Sparkles : CreditCard, label: `${t("sidebar.piano")} · ${isDemo ? "Demo" : isBase ? "Base" : isPro ? "Pro" : (profile?.plan ?? "Demo")}`, highlight: isDemo },
+        { href: "/piano",       icon: isDemo ? Sparkles : CreditCard, label: `${t("sidebar.piano")} · ${isDemo ? "Demo" : isBase ? "Base" : isPro ? "Pro" : (profile?.plan ?? "Demo")}`, highlight: false, planColor: isBase ? "#60a5fa" : isPro ? "#c4a882" : undefined },
         { href: "/notizie",     icon: Newspaper,       label: t("sidebar.aiNews") },
         { href: "/settings",    icon: Settings,        label: t("sidebar.settings") },
       ],
@@ -121,6 +121,7 @@ export function Sidebar({ profile }: SidebarProps) {
                 const needsPro = PRO_ROUTES.has(item.href);
                 const locked = needsPro && !isPro;
                 const isHighlight = item.highlight && !isActive(item.href);
+                const hasPlanColor = item.planColor && !isActive(item.href) && !locked;
 
                 return (
                   <li key={item.href}>
@@ -135,21 +136,27 @@ export function Sidebar({ profile }: SidebarProps) {
                           : isActive(item.href)
                             ? "text-primary font-medium"
                             : isHighlight
-                              ? "text-[#c4a882] hover:bg-[#c4a882]/5"
-                              : "text-muted-foreground hover:text-foreground hover:bg-surface-2"
+                              ? "hover:bg-[#c4a882]/5"
+                              : hasPlanColor
+                                ? "hover:opacity-80 hover:bg-surface-2"
+                                : "text-muted-foreground hover:text-foreground hover:bg-surface-2"
                       )}
                       style={
                         isActive(item.href) && !locked ? { background: "rgba(126,184,154,0.06)" }
-                        : isHighlight ? { background: "rgba(196,168,130,0.04)" }
+                        : isHighlight ? { color: item.planColor, background: "rgba(196,168,130,0.04)" }
+                        : hasPlanColor ? { color: item.planColor }
                         : undefined
                       }
                       title={collapsed && !mobileOpen ? item.label : undefined}
                     >
                       <span className="relative flex-shrink-0">
-                        <item.icon className={cn(
-                          "w-[15px] h-[15px]",
-                          locked ? "text-muted-foreground/40" : isHighlight ? "text-[#c4a882]" : isActive(item.href) ? "text-primary" : "text-muted-foreground"
-                        )} />
+                        <item.icon
+                          className={cn(
+                            "w-[15px] h-[15px]",
+                            locked ? "text-muted-foreground/40" : isActive(item.href) ? "text-primary" : (!hasPlanColor && !isHighlight) ? "text-muted-foreground" : undefined
+                          )}
+                          style={hasPlanColor || isHighlight ? { color: item.planColor } : undefined}
+                        />
                         {item.href === "/notizie" && hasUnread && collapsed && !mobileOpen && (
                           <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#D97706]" />
                         )}
