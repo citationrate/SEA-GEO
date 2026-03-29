@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Globe, X, Loader2, ExternalLink, Search,
   Lightbulb, Newspaper, Star, ShoppingCart,
@@ -65,8 +65,18 @@ export function SourcesClient({
   const [drawerDomain, setDrawerDomain] = useState<SourceDomain | null>(null);
   const [insights, setInsights] = useState<Insight[] | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
+  const [localUrlUsed, setLocalUrlUsed] = useState<number | null>(null);
 
   const filtered = filter ? domains.filter((d) => d.sourceType === filter) : domains;
+
+  // Effective URL analyses used: local override or from useUsage
+  const effectiveUrlUsed = localUrlUsed ?? usage.urlAnalysesUsed;
+  const effectiveUrlRemaining = Math.max(0, usage.urlAnalysesLimit - effectiveUrlUsed);
+
+  // Callback when a URL analysis completes — immediately update counter
+  const onAnalysisComplete = useCallback(() => {
+    setLocalUrlUsed((prev) => (prev ?? usage.urlAnalysesUsed) + 1);
+  }, [usage.urlAnalysesUsed]);
 
   // Load insights on mount if we have domains
   useEffect(() => {
@@ -83,6 +93,7 @@ export function SourcesClient({
         })),
         brand,
         lang: locale,
+        projectId,
       }),
     })
       .then((r) => r.json())
@@ -121,12 +132,12 @@ export function SourcesClient({
           <div className="space-y-1">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">{t("sources.analyzeUrl")}</span>
-              <span className="text-foreground font-medium">{usage.urlAnalysesUsed} / {usage.urlAnalysesLimit}</span>
+              <span className="text-foreground font-medium">{effectiveUrlUsed} / {usage.urlAnalysesLimit}</span>
             </div>
             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
               <div
                 className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${Math.min((usage.urlAnalysesUsed / usage.urlAnalysesLimit) * 100, 100)}%` }}
+                style={{ width: `${Math.min((effectiveUrlUsed / usage.urlAnalysesLimit) * 100, 100)}%` }}
               />
             </div>
           </div>
@@ -214,8 +225,9 @@ export function SourcesClient({
           projectId={projectId}
           onClose={() => setDrawerDomain(null)}
           isPro={usage.isPro}
-          urlAnalysesRemaining={usage.urlAnalysesRemaining}
+          urlAnalysesRemaining={effectiveUrlRemaining}
           urlAnalysesLimit={usage.urlAnalysesLimit}
+          onAnalysisComplete={onAnalysisComplete}
         />
       )}
     </div>
@@ -305,6 +317,7 @@ function AnalyzeDrawer({
   isPro,
   urlAnalysesRemaining,
   urlAnalysesLimit,
+  onAnalysisComplete,
 }: {
   domain: SourceDomain;
   brand: string;
@@ -313,6 +326,7 @@ function AnalyzeDrawer({
   isPro: boolean;
   urlAnalysesRemaining: number;
   urlAnalysesLimit: number;
+  onAnalysisComplete?: () => void;
 }) {
   const { t, locale } = useTranslation();
   const [analysis, setAnalysis] = useState<DomainAnalysis | null>(null);
@@ -366,7 +380,7 @@ function AnalyzeDrawer({
         if (!r.ok) return r.json().then((data: any) => { throw new Error(data.error || t("sources.analysisError")); });
         return r.json();
       })
-      .then((data) => setAnalysis(data))
+      .then((data) => { setAnalysis(data); onAnalysisComplete?.(); })
       .catch((err) => setError(err.message || t("sources.analysisError")))
       .finally(() => setLoading(false));
   }
