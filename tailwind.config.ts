@@ -13,13 +13,11 @@ module.exports = {
         surface:           "var(--surface)",
         "surface-2":       "var(--surface-2)",
         border:            "var(--border)",
-        "border-light":    "var(--border-light)",
         muted:             "var(--muted)",
         "muted-foreground": "var(--muted-foreground)",
         primary: {
           DEFAULT:    "var(--primary)",
           hover:      "var(--primary-hover)",
-          glow:       "var(--primary-glow)",
           foreground: "var(--background)",
         },
         accent: {
@@ -31,12 +29,9 @@ module.exports = {
         destructive: "var(--destructive)",
         success:     "var(--success)",
         warning:     "var(--warning)",
-        /* Legacy aliases */
         ink:         "var(--background)",
-        "ink-2":     "var(--surface)",
         "ink-3":     "var(--surface-2)",
         sage:        "var(--primary)",
-        "sage-dim":  "var(--primary-hover)",
       },
       fontFamily: {
         display: ["var(--font-display)"],
@@ -53,14 +48,6 @@ module.exports = {
           from: { opacity: "0", transform: "translateY(6px)" },
           to:   { opacity: "1", transform: "translateY(0)" },
         },
-        "fade-in-fast": {
-          from: { opacity: "0" },
-          to:   { opacity: "1" },
-        },
-        shimmer: {
-          from: { backgroundPosition: "200% 0" },
-          to:   { backgroundPosition: "-200% 0" },
-        },
         "slide-in-right": {
           from: { transform: "translateX(100%)" },
           to:   { transform: "translateX(0)" },
@@ -68,8 +55,6 @@ module.exports = {
       },
       animation: {
         "fade-in":        "fade-in 0.35s ease-out",
-        "fade-in-fast":   "fade-in-fast 0.2s ease-out",
-        shimmer:          "shimmer 1.8s linear infinite",
         "slide-in-right": "slide-in-right 0.25s ease-out",
       },
     },

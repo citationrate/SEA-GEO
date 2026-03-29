@@ -1,1 +1,0 @@
-export { AVITrend } from "./index";

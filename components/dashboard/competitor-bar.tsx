@@ -1,1 +1,0 @@
-export { CompetitorBar } from "./index";
