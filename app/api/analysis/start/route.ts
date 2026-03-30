@@ -68,6 +68,12 @@ export async function POST(request: Request) {
     const isProPlan = userPlanId === "pro" || userPlanId === "agency";
     const isDemoPlan = userPlanId === "demo";
 
+    console.log("[analysis/start] plan check:", {
+      userId: user.id, planId: userPlanId, promptCost,
+      browsingPrompts: plan.browsing_prompts, noBrowsingPrompts: plan.no_browsing_prompts,
+      browsingUsed: usage.browsingPromptsUsed, noBrowsingUsed: usage.noBrowsingPromptsUsed,
+      extraBrowsing: usage.extraBrowsingPrompts, extraNoBrowsing: usage.extraNoBrowsingPrompts,
+    });
 
     // Demo plan enforcement: only fixed models, no browsing
     if (isDemoPlan) {

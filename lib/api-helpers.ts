@@ -97,6 +97,7 @@ async function ensureProfile(
   }
 
   // No profile at all — create new one
+  console.log("[ensureProfile] No profile found, creating for user:", user.id, user.email);
   const { error: insertError } = await (supabase.from("profiles") as any).insert({
     id: user.id,
     email: user.email ?? "",

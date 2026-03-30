@@ -24,6 +24,7 @@ export default async function DatasetsPage() {
   const planLimits = await getUserPlanLimits(user.id);
   const hasDatasetAccess = isPro || planLimits.can_access_dataset;
 
+  console.log(`[datasets] user=${user.id} plan=${profile?.plan} isPro=${isPro} can_access_dataset=${planLimits.can_access_dataset}`);
 
   if (!hasDatasetAccess) {
     return <DatasetsPaywall />;

@@ -24,6 +24,7 @@ export default async function PianoPage() {
 
   const p = (profile ?? {}) as any;
   const plan = p.plan ?? "demo";
+  console.log("[piano] User plan from seageo1:", plan, "user:", user.id);
 
   // Usage
   const usage = await getCurrentUsage(user.id);

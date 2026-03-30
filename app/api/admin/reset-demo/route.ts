@@ -206,6 +206,7 @@ export async function POST(request: Request) {
     }
 
     const failures = log.filter((s) => !s.ok);
+    console.log(`[reset-demo] Completed for ${userId}:`, JSON.stringify(log));
 
     return NextResponse.json({ success: true, steps: log.length, failures: failures.length });
   } catch (err: any) {
