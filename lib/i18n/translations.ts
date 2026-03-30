@@ -121,6 +121,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       invoiceDate: "Data",
       paid: "Pagata",
       download: "Scarica",
+      noInvoices: "Nessuna fattura disponibile.",
     },
     aiNews: {
       title: "AI News",
@@ -1019,6 +1020,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       invoiceDate: "Date",
       paid: "Paid",
       download: "Download",
+      noInvoices: "No invoices available.",
     },
     aiNews: {
       title: "AI News",
@@ -1915,6 +1917,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       invoiceDate: "Date",
       paid: "Payée",
       download: "Télécharger",
+      noInvoices: "Aucune facture disponible.",
     },
     aiNews: {
       title: "AI News",
@@ -2711,6 +2714,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       invoiceDate: "Datum",
       paid: "Bezahlt",
       download: "Herunterladen",
+      noInvoices: "Keine Rechnungen verfügbar.",
     },
     aiNews: {
       title: "AI News",
@@ -3502,6 +3506,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       invoiceDate: "Fecha",
       paid: "Pagada",
       download: "Descargar",
+      noInvoices: "No hay facturas disponibles.",
     },
     aiNews: {
       title: "AI News",

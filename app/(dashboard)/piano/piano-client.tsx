@@ -680,14 +680,15 @@ function InvoiceHistory() {
     </div>
   );
 
-  if (invoices.length === 0) return null;
-
   return (
     <div className="rounded-[4px] border border-border p-6 space-y-4" style={{ background: "var(--surface)" }}>
       <div className="flex items-center gap-2">
         <Receipt className="w-5 h-5 text-primary" />
         <h2 className="font-display font-semibold text-foreground">{t("piano.invoiceHistory")}</h2>
       </div>
+      {invoices.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t("piano.noInvoices")}</p>
+      ) : (
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -731,6 +732,7 @@ function InvoiceHistory() {
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }
