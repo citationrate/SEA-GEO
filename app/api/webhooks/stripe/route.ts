@@ -140,7 +140,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     if (error) console.error("[stripe-webhook] package_purchases insert error:", error);
 
     // Update usage_monthly — add extra queries/comparisons
-    const isCompare = details.package_type.startsWith("confronti");
+    const pt = details.package_type;
+    const isCompare = pt.startsWith("confronti");
+    const isPro = pt.startsWith("queries_pro");
+    const isBase = pt.startsWith("queries_base");
     const period = new Date().toISOString().slice(0, 7); // YYYY-MM
 
     const { data: existing } = await (svc.from("usage_monthly") as any)
@@ -149,9 +152,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       .eq("period", period)
       .maybeSingle();
 
-    const extraBrowsing = (Number(existing?.extra_browsing_prompts) || 0) + (isCompare ? 0 : details.queries_added);
-    const extraNoBrowsing = (Number(existing?.extra_no_browsing_prompts) || 0);
-    const extraComparisons = (Number(existing?.extra_comparisons) || 0) + (isCompare ? details.queries_added : 0);
+    // Pro packages: all queries go to browsing. Base packages: all go to no-browsing.
+    const addBrowsing = isPro ? details.queries_added : 0;
+    const addNoBrowsing = isBase ? details.queries_added : 0;
+    const addComparisons = isCompare ? details.queries_added : 0;
+
+    const extraBrowsing = (Number(existing?.extra_browsing_prompts) || 0) + addBrowsing;
+    const extraNoBrowsing = (Number(existing?.extra_no_browsing_prompts) || 0) + addNoBrowsing;
+    const extraComparisons = (Number(existing?.extra_comparisons) || 0) + addComparisons;
 
     if (existing) {
       await (svc.from("usage_monthly") as any)
