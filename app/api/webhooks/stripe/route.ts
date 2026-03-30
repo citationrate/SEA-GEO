@@ -114,8 +114,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
     console.log(`[stripe-webhook] Activated ${mapping.plan}/${mapping.period} for user ${userId}`);
   } else if (session.mode === "payment") {
+    console.log("[stripe-webhook] one-time payment session:", session.id, "metadata:", JSON.stringify(session.metadata));
     const lineItems = await getStripe().checkout.sessions.listLineItems(session.id);
     const priceId = lineItems.data[0]?.price?.id;
+    console.log("[stripe-webhook] package priceId:", priceId);
     if (!priceId || !isPackagePrice(priceId)) {
       console.error("[stripe-webhook] Unknown package price:", priceId);
       return;
@@ -123,8 +125,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
     const details = packageDetailsFromPriceId(priceId);
     if (!details) return;
+    console.log("[stripe-webhook] package details:", JSON.stringify(details));
 
     const svc = getSeageo1Client();
+
+    // Record purchase
     const { error } = await (svc.from("package_purchases") as any).insert({
       user_id: userId,
       stripe_payment_intent_id: session.payment_intent as string,
@@ -132,9 +137,33 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       package_type: details.package_type,
       status: "completed",
     });
-
     if (error) console.error("[stripe-webhook] package_purchases insert error:", error);
-    else console.log(`[stripe-webhook] Added package ${details.package_type} for user ${userId}`);
+
+    // Update usage_monthly — add extra queries/comparisons
+    const isCompare = details.package_type.startsWith("confronti");
+    const period = new Date().toISOString().slice(0, 7); // YYYY-MM
+
+    const { data: existing } = await (svc.from("usage_monthly") as any)
+      .select("extra_browsing_prompts, extra_no_browsing_prompts, extra_comparisons")
+      .eq("user_id", userId)
+      .eq("period", period)
+      .maybeSingle();
+
+    const extraBrowsing = (Number(existing?.extra_browsing_prompts) || 0) + (isCompare ? 0 : details.queries_added);
+    const extraNoBrowsing = (Number(existing?.extra_no_browsing_prompts) || 0);
+    const extraComparisons = (Number(existing?.extra_comparisons) || 0) + (isCompare ? details.queries_added : 0);
+
+    if (existing) {
+      await (svc.from("usage_monthly") as any)
+        .update({ extra_browsing_prompts: extraBrowsing, extra_no_browsing_prompts: extraNoBrowsing, extra_comparisons: extraComparisons })
+        .eq("user_id", userId)
+        .eq("period", period);
+    } else {
+      await (svc.from("usage_monthly") as any)
+        .insert({ user_id: userId, period, browsing_prompts_used: 0, no_browsing_prompts_used: 0, prompts_used: 0, comparisons_used: 0, extra_browsing_prompts: extraBrowsing, extra_no_browsing_prompts: extraNoBrowsing, extra_comparisons: extraComparisons });
+    }
+
+    console.log(`[stripe-webhook] Added package ${details.package_type} (+${details.queries_added}) for user ${userId}, period ${period}`);
   }
 }
 
