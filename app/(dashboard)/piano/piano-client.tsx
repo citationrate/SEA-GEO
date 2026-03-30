@@ -411,7 +411,7 @@ export function PianoClient({
       {!isDemo && <InvoiceHistory />}
 
       {/* ════════════════ 7. CANCEL ════════════════ */}
-      {hasActiveSubscription && (
+      {!isDemo && (
         <div className="rounded-[4px] border border-destructive/20 p-5" style={{ background: "rgba(239,68,68,0.03)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
