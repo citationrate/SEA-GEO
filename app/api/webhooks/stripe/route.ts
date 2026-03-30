@@ -65,22 +65,25 @@ export async function POST(request: Request) {
 /* ─── Event handlers ─── */
 
 async function updateProfiles(userId: string, data: Record<string, unknown>) {
-  // Update on CitationRate
+  console.log("[stripe-webhook] updateProfiles userId:", userId, "data:", JSON.stringify(data));
+
+  // Update on CitationRate (has all columns: plan, subscription_status, stripe_subscription_id, etc.)
   const cr = getCitationRateClient();
   const { error: crErr } = await cr.from("profiles").update(data as any).eq("id", userId);
   if (crErr) console.error("[stripe-webhook] CitationRate update error:", crErr);
+  else console.log("[stripe-webhook] CitationRate profile updated OK");
 
-  // Also update on seageo1
+  // Also update plan on seageo1 (only has 'plan' column — no subscription_status etc.)
   const svc = getSeageo1Client();
-  const seageoData: Record<string, unknown> = {};
-  if ("plan" in data) seageoData.plan = data.plan;
-  if ("subscription_status" in data) seageoData.subscription_status = data.subscription_status;
-  if (Object.keys(seageoData).length > 0) {
-    await (svc.from("profiles") as any).update(seageoData).eq("id", userId);
+  if ("plan" in data) {
+    const { error: sgErr } = await (svc.from("profiles") as any).update({ plan: data.plan }).eq("id", userId);
+    if (sgErr) console.error("[stripe-webhook] seageo1 update error:", sgErr);
+    else console.log("[stripe-webhook] seageo1 plan updated to:", data.plan);
   }
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  console.log("[stripe-webhook] checkout.session.completed, session:", session.id, "mode:", session.mode);
   const userId = session.metadata?.user_id;
   if (!userId) {
     console.error("[stripe-webhook] No user_id in checkout metadata");
@@ -92,7 +95,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const customerId = session.customer as string;
     const sub = await getStripe().subscriptions.retrieve(subscriptionId);
     const priceId = sub.items.data[0]?.price.id;
+    console.log("[stripe-webhook] subscription priceId:", priceId, "envPro:", process.env.STRIPE_PRICE_PRO_MONTHLY);
     const mapping = priceId ? planFromPriceId(priceId) : null;
+    console.log("[stripe-webhook] mapping:", JSON.stringify(mapping));
 
     if (!mapping) {
       console.error("[stripe-webhook] Unknown price ID:", priceId);
