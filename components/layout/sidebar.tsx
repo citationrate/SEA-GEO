@@ -218,7 +218,7 @@ export function Sidebar({ profile }: SidebarProps) {
         </div>
       )}
 
-      {/* Consultation CTA */}
+      {/* Consultation CTA — bottom of sidebar */}
       <div className="px-2 pb-2 flex-shrink-0">
         <button
           onClick={() => { openModal(); closeMobile(); }}
@@ -231,24 +231,6 @@ export function Sidebar({ profile }: SidebarProps) {
           <MessageSquareText className="w-4 h-4 shrink-0" />
           {(!collapsed || mobileOpen) && <span className="text-xs font-semibold">{t("sidebar.requestConsultation")}</span>}
         </button>
-      </div>
-
-      {/* Switch tool */}
-      <div className="px-2 pb-2 flex-shrink-0">
-        <a
-          href="https://suite.citationrate.com/dashboard"
-          className={cn(
-            "flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm font-ui transition-colors mt-1",
-            collapsed && !mobileOpen && "justify-center px-0",
-          )}
-          style={{ color: "var(--c-sage)", borderRadius: "2px" }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--c-sage-bg)"; e.currentTarget.style.color = "var(--c-cream)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--c-sage)"; }}
-          title={collapsed && !mobileOpen ? t("sidebar.switchTool") : undefined}
-        >
-          <ExternalLink size={16} className="shrink-0" />
-          {(!collapsed || mobileOpen) && t("sidebar.switchTool")}
-        </a>
       </div>
 
       {/* Profile → links to settings */}

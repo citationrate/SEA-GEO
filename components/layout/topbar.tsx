@@ -2,11 +2,13 @@
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSelector } from "@/components/language-selector";
-import { Menu } from "lucide-react";
+import { Menu, ExternalLink } from "lucide-react";
 import { useMobileNav } from "./mobile-nav-context";
+import { useTranslation } from "@/lib/i18n/context";
 
 export function TopBar() {
   const { toggle } = useMobileNav();
+  const { t } = useTranslation();
 
   return (
     <header
@@ -23,6 +25,16 @@ export function TopBar() {
       </button>
 
       <div className="flex items-center gap-3">
+        <a
+          href="https://suite.citationrate.com/dashboard"
+          className="hidden md:flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-[2px] transition-colors"
+          style={{ color: "var(--c-sage)" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--c-sage-bg)"; e.currentTarget.style.color = "var(--c-cream)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--c-sage)"; }}
+        >
+          <ExternalLink className="w-3.5 h-3.5" />
+          {t("sidebar.switchTool")}
+        </a>
         <LanguageSelector />
         <ThemeToggle />
       </div>
