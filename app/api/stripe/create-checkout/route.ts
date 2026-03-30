@@ -18,7 +18,12 @@ export async function POST(request: Request) {
     const parsed = schema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 400 });
 
-    const { priceId, mode } = parsed.data;
+    const rawPriceId = parsed.data.priceId;
+    const mode = parsed.data.mode;
+    // Client sends env var names (e.g. "STRIPE_PRICE_BASE_MONTHLY") — resolve to actual Stripe price IDs
+    const priceId = rawPriceId.startsWith("STRIPE_PRICE_")
+      ? (process.env[rawPriceId] || rawPriceId)
+      : rawPriceId;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://avi.citationrate.com";
     const successUrl = `${appUrl}/piano?success=true`;
     const cancelUrl = `${appUrl}/piano?cancelled=true`;
