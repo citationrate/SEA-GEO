@@ -248,7 +248,7 @@ export function AnalysisLauncher({
             {!isDemo && hasWallet && (
               <div className="space-y-2">
                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                  <Wallet className="w-3.5 h-3.5" /> Sorgente query
+                  <Wallet className="w-3.5 h-3.5" /> {t("piano.querySource")}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -260,9 +260,9 @@ export function AnalysisLauncher({
                         : "border border-border hover:border-border/80"
                     }`}
                   >
-                    <p className="text-sm font-medium text-foreground">Piano mensile</p>
+                    <p className="text-sm font-medium text-foreground">{t("piano.querySourcePlan")}</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {effectiveBrowsing ? `${browsingRemaining} browsing` : `${noBrowsingRemaining} no-browsing`} rimanenti
+                      {effectiveBrowsing ? `${browsingRemaining} browsing` : `${noBrowsingRemaining} no-browsing`} {t("piano.remaining")}
                     </p>
                   </button>
                   <button
@@ -275,10 +275,10 @@ export function AnalysisLauncher({
                     }`}
                   >
                     <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                      <Wallet className="w-3.5 h-3.5 text-[#c4a882]" /> Wallet extra
+                      <Wallet className="w-3.5 h-3.5 text-[#c4a882]" /> {t("piano.querySourceWallet")}
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {effectiveBrowsing ? `${walletBrowsingAvail} browsing` : `${walletNoBrowsingAvail} no-browsing`} disponibili
+                      {effectiveBrowsing ? `${walletBrowsingAvail} browsing` : `${walletNoBrowsingAvail} no-browsing`} {t("piano.available")}
                     </p>
                   </button>
                 </div>

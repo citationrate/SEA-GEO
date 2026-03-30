@@ -243,41 +243,41 @@ export function PianoClient({
       {(usage.wallet.browsingQueries > 0 || usage.wallet.noBrowsingQueries > 0 || usage.wallet.confronti > 0) && (
         <div>
           <h2 className="text-lg font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-[#c4a882]" /> Query Wallet
+            <Wallet className="w-5 h-5 text-[#c4a882]" /> {t("piano.walletTitle")}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {usage.wallet.browsingQueries > 0 && (
               <div className="rounded-[4px] border border-[#c4a882]/30 p-5 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 text-[#c4a882]" />
-                  <span className="text-sm font-medium text-foreground">Browsing</span>
+                  <span className="text-sm font-medium text-foreground">{t("piano.walletBrowsing")}</span>
                 </div>
                 <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.browsingQueries}</p>
-                <p className="text-xs text-muted-foreground">query disponibili</p>
+                <p className="text-xs text-muted-foreground">{t("piano.walletQueryAvailable")}</p>
               </div>
             )}
             {usage.wallet.noBrowsingQueries > 0 && (
               <div className="rounded-[4px] border border-[#c4a882]/30 p-5 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
                 <div className="flex items-center gap-2">
                   <Search className="w-4 h-4 text-[#c4a882]" />
-                  <span className="text-sm font-medium text-foreground">No-browsing</span>
+                  <span className="text-sm font-medium text-foreground">{t("piano.walletNoBrowsing")}</span>
                 </div>
                 <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.noBrowsingQueries}</p>
-                <p className="text-xs text-muted-foreground">query disponibili</p>
+                <p className="text-xs text-muted-foreground">{t("piano.walletQueryAvailable")}</p>
               </div>
             )}
             {usage.wallet.confronti > 0 && (
               <div className="rounded-[4px] border border-[#c4a882]/30 p-5 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
                 <div className="flex items-center gap-2">
                   <GitCompare className="w-4 h-4 text-[#c4a882]" />
-                  <span className="text-sm font-medium text-foreground">Confronti</span>
+                  <span className="text-sm font-medium text-foreground">{t("piano.walletConfronti")}</span>
                 </div>
                 <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.confronti}</p>
-                <p className="text-xs text-muted-foreground">disponibili</p>
+                <p className="text-xs text-muted-foreground">{t("piano.walletAvailable")}</p>
               </div>
             )}
           </div>
-          <p className="text-xs text-muted-foreground mt-2">Le query nel wallet non scadono mai.</p>
+          <p className="text-xs text-muted-foreground mt-2">{t("piano.walletNeverExpires")}</p>
         </div>
       )}
 
