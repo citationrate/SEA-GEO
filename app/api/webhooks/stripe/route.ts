@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getStripe, planFromPriceId, isPackagePrice, packageDetailsFromPriceId } from "@/lib/stripe/client";
 import { createClient } from "@supabase/supabase-js";
 import { createServiceClient } from "@/lib/supabase/service";
+import { addToWallet } from "@/lib/usage";
 import type Stripe from "stripe";
 
 /* ─── Supabase clients ─── */
@@ -139,39 +140,20 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     });
     if (error) console.error("[stripe-webhook] package_purchases insert error:", error);
 
-    // Update usage_monthly — add extra queries/comparisons
+    // Add to query wallet (never expires)
     const pt = details.package_type;
     const isCompare = pt.startsWith("confronti");
     const isPro = pt.startsWith("queries_pro");
     const isBase = pt.startsWith("queries_base");
-    const period = new Date().toISOString().slice(0, 7); // YYYY-MM
 
-    const { data: existing } = await (svc.from("usage_monthly") as any)
-      .select("extra_browsing_prompts, extra_no_browsing_prompts, extra_comparisons")
-      .eq("user_id", userId)
-      .eq("period", period)
-      .maybeSingle();
+    await addToWallet(
+      userId,
+      isPro ? details.queries_added : 0,
+      isBase ? details.queries_added : 0,
+      isCompare ? details.queries_added : 0,
+    );
 
-    // Pro packages: all queries go to browsing. Base packages: all go to no-browsing.
-    const addBrowsing = isPro ? details.queries_added : 0;
-    const addNoBrowsing = isBase ? details.queries_added : 0;
-    const addComparisons = isCompare ? details.queries_added : 0;
-
-    const extraBrowsing = (Number(existing?.extra_browsing_prompts) || 0) + addBrowsing;
-    const extraNoBrowsing = (Number(existing?.extra_no_browsing_prompts) || 0) + addNoBrowsing;
-    const extraComparisons = (Number(existing?.extra_comparisons) || 0) + addComparisons;
-
-    if (existing) {
-      await (svc.from("usage_monthly") as any)
-        .update({ extra_browsing_prompts: extraBrowsing, extra_no_browsing_prompts: extraNoBrowsing, extra_comparisons: extraComparisons })
-        .eq("user_id", userId)
-        .eq("period", period);
-    } else {
-      await (svc.from("usage_monthly") as any)
-        .insert({ user_id: userId, period, browsing_prompts_used: 0, no_browsing_prompts_used: 0, prompts_used: 0, comparisons_used: 0, extra_browsing_prompts: extraBrowsing, extra_no_browsing_prompts: extraNoBrowsing, extra_comparisons: extraComparisons });
-    }
-
-    console.log(`[stripe-webhook] Added package ${details.package_type} (+${details.queries_added}) for user ${userId}, period ${period}`);
+    console.log(`[stripe-webhook] Added to wallet: ${details.package_type} (+${details.queries_added}) for user ${userId}`);
   }
 }
 

@@ -1,6 +1,6 @@
 import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
-import { getUserPlanLimits, getCurrentUsage } from "@/lib/usage";
+import { getUserPlanLimits, getCurrentUsage, getWallet } from "@/lib/usage";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
 
 export async function GET() {
@@ -16,9 +16,10 @@ export async function GET() {
 
     const planId = getEffectivePlanId((profile as any)?.plan);
 
-    // Get plan limits and current usage
+    // Get plan limits, current usage, and wallet
     const plan = await getUserPlanLimits(user.id);
     const usage = await getCurrentUsage(user.id);
+    const wallet = await getWallet(user.id);
 
     const effectiveBrowsingLimit = Number(plan.browsing_prompts || 0) + Number(usage.extraBrowsingPrompts || 0);
     const effectiveNoBrowsingLimit = Number(plan.no_browsing_prompts || 0) + Number(usage.extraNoBrowsingPrompts || 0);
@@ -53,6 +54,11 @@ export async function GET() {
       canAccessDataset: plan.can_access_dataset ?? false,
       canAccessComparisons: plan.can_access_comparisons ?? false,
       maxModelsPerProject: Number(plan.max_models_per_project || (isDemo ? 2 : isPro ? 5 : 3)),
+      wallet: {
+        browsingQueries: wallet.browsingQueries,
+        noBrowsingQueries: wallet.noBrowsingQueries,
+        confronti: wallet.confronti,
+      },
     });
   } catch (err) {
     console.error("[/api/usage] error:", err);

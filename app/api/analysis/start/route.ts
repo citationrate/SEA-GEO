@@ -3,12 +3,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS, DEMO_MODEL_IDS } from "@/lib/engine/models";
 import { inngest } from "@/lib/inngest";
-import { getUserPlanLimits, getCurrentUsage, incrementBrowsingPromptsUsed, incrementNoBrowsingPromptsUsed } from "@/lib/usage";
+import { getUserPlanLimits, getCurrentUsage, getWallet, consumeWalletQueries, incrementBrowsingPromptsUsed, incrementNoBrowsingPromptsUsed } from "@/lib/usage";
 
 const startSchema = z.object({
   project_id: z.string().uuid(),
   run_count: z.number().int().min(1).max(3).default(1),
   browsing: z.boolean().default(true),
+  query_source: z.enum(["plan", "wallet"]).default("plan"),
 });
 
 export async function POST(request: Request) {
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
     const parsed = startSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { project_id, run_count, browsing: requestedBrowsing } = parsed.data;
+    const { project_id, run_count, browsing: requestedBrowsing, query_source } = parsed.data;
 
     // Auto-fail stale running runs (older than 30 minutes)
     await (supabase.from("analysis_runs") as any)
@@ -104,24 +105,32 @@ export async function POST(request: Request) {
     }
 
     // Hard block: enforce prompt limits for ALL plans (server-side)
-    const totalBrowsingAvailable = Number(plan.browsing_prompts || 0) + Number(usage.extraBrowsingPrompts || 0);
-    const totalNoBrowsingAvailable = Number(plan.no_browsing_prompts || 0) + Number(usage.extraNoBrowsingPrompts || 0);
-
-    if (browsing) {
-      const remaining = totalBrowsingAvailable - Number(usage.browsingPromptsUsed || 0);
-      if (promptCost > remaining) {
-        console.log("[analysis/start] BLOCKED: browsing limit exceeded, cost:", promptCost, "remaining:", remaining);
+    if (query_source === "wallet") {
+      const wallet = await getWallet(user.id);
+      const walletAvail = browsing ? wallet.browsingQueries : wallet.noBrowsingQueries;
+      if (promptCost > walletAvail) {
         return NextResponse.json({
-          error: `Prompt insufficienti: questa analisi richiede ${promptCost} prompt con browsing ma te ne restano ${Math.max(0, remaining)}. Disattiva il browsing o riduci le query.`,
+          error: `Wallet insufficiente: questa analisi richiede ${promptCost} prompt ma nel wallet ne hai ${walletAvail}. Usa il piano mensile o acquista query extra.`,
         }, { status: 403 });
       }
     } else {
-      const remaining = totalNoBrowsingAvailable - Number(usage.noBrowsingPromptsUsed || 0);
-      if (promptCost > remaining) {
-        console.log("[analysis/start] BLOCKED: no-browsing limit exceeded, cost:", promptCost, "remaining:", remaining);
-        return NextResponse.json({
-          error: `Prompt insufficienti: questa analisi richiede ${promptCost} prompt ma te ne restano ${Math.max(0, remaining)}. Riduci le query o passa a un piano superiore.`,
-        }, { status: 403 });
+      const totalBrowsingAvailable = Number(plan.browsing_prompts || 0) + Number(usage.extraBrowsingPrompts || 0);
+      const totalNoBrowsingAvailable = Number(plan.no_browsing_prompts || 0) + Number(usage.extraNoBrowsingPrompts || 0);
+
+      if (browsing) {
+        const remaining = totalBrowsingAvailable - Number(usage.browsingPromptsUsed || 0);
+        if (promptCost > remaining) {
+          return NextResponse.json({
+            error: `Prompt insufficienti: questa analisi richiede ${promptCost} prompt con browsing ma te ne restano ${Math.max(0, remaining)}. Disattiva il browsing o riduci le query.`,
+          }, { status: 403 });
+        }
+      } else {
+        const remaining = totalNoBrowsingAvailable - Number(usage.noBrowsingPromptsUsed || 0);
+        if (promptCost > remaining) {
+          return NextResponse.json({
+            error: `Prompt insufficienti: questa analisi richiede ${promptCost} prompt ma te ne restano ${Math.max(0, remaining)}. Riduci le query o passa a un piano superiore.`,
+          }, { status: 403 });
+        }
       }
     }
 
@@ -164,8 +173,12 @@ export async function POST(request: Request) {
       },
     });
 
-    // Increment the appropriate usage counter
-    if (browsing) {
+    // Consume from the appropriate source
+    if (query_source === "wallet") {
+      await consumeWalletQueries(user.id, browsing ? promptCost : 0, browsing ? 0 : promptCost).catch((err) =>
+        console.error("[analysis/start] wallet consume error:", err)
+      );
+    } else if (browsing) {
       await incrementBrowsingPromptsUsed(user.id, promptCost).catch((err) =>
         console.error("[analysis/start] browsing usage increment error:", err)
       );

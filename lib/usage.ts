@@ -192,6 +192,67 @@ export async function incrementUrlAnalysesUsed(userId: string): Promise<void> {
   }
 }
 
+/* ─── Query Wallet ─── */
+
+export async function getWallet(userId: string) {
+  const svc = createServiceClient();
+  const { data } = await (svc.from("query_wallet") as any)
+    .select("browsing_queries, no_browsing_queries, confronti")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return {
+    browsingQueries: Number(data?.browsing_queries) || 0,
+    noBrowsingQueries: Number(data?.no_browsing_queries) || 0,
+    confronti: Number(data?.confronti) || 0,
+  };
+}
+
+export async function consumeWalletQueries(
+  userId: string,
+  browsing: number,
+  noBrowsing: number,
+): Promise<void> {
+  const svc = createServiceClient();
+  const { data: existing } = await (svc.from("query_wallet") as any)
+    .select("browsing_queries, no_browsing_queries")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!existing) return;
+  await (svc.from("query_wallet") as any)
+    .update({
+      browsing_queries: Math.max(0, (Number(existing.browsing_queries) || 0) - browsing),
+      no_browsing_queries: Math.max(0, (Number(existing.no_browsing_queries) || 0) - noBrowsing),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId);
+}
+
+export async function addToWallet(
+  userId: string,
+  browsingQueries: number,
+  noBrowsingQueries: number,
+  confronti: number,
+): Promise<void> {
+  const svc = createServiceClient();
+  const { data: existing } = await (svc.from("query_wallet") as any)
+    .select("browsing_queries, no_browsing_queries, confronti")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (existing) {
+    await (svc.from("query_wallet") as any)
+      .update({
+        browsing_queries: (Number(existing.browsing_queries) || 0) + browsingQueries,
+        no_browsing_queries: (Number(existing.no_browsing_queries) || 0) + noBrowsingQueries,
+        confronti: (Number(existing.confronti) || 0) + confronti,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId);
+  } else {
+    await (svc.from("query_wallet") as any)
+      .insert({ user_id: userId, browsing_queries: browsingQueries, no_browsing_queries: noBrowsingQueries, confronti });
+  }
+}
+
 /**
  * Increment context_analyses_used for a user in the current month.
  */

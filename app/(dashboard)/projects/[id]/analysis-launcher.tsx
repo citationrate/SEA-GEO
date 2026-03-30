@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Play, X, Loader2, Cpu, Globe, AlertTriangle, Lock, Settings2 } from "lucide-react";
+import { Play, X, Loader2, Cpu, Globe, AlertTriangle, Lock, Settings2, Wallet } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
@@ -38,6 +38,7 @@ export function AnalysisLauncher({
   }, []);
   const [runCount, setRunCount] = useState(1);
   const [browsing, setBrowsing] = useState(true);
+  const [querySource, setQuerySource] = useState<"plan" | "wallet">("plan");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -53,13 +54,19 @@ export function AnalysisLauncher({
     return modelsConfig.length * queryCount * Math.max(segmentCount, 1) * runCount;
   }, [modelsConfig.length, queryCount, segmentCount, runCount]);
 
-  // Check against the appropriate counter
+  // Wallet availability
+  const hasWallet = usage.wallet.browsingQueries > 0 || usage.wallet.noBrowsingQueries > 0;
+
+  // Check against the appropriate counter based on query source
   const browsingRemaining = usage.browsingPromptsRemaining;
   const noBrowsingRemaining = usage.noBrowsingPromptsRemaining;
 
-  const wouldExceed = effectiveBrowsing
-    ? totalPrompts > browsingRemaining
-    : totalPrompts > noBrowsingRemaining;
+  const walletBrowsingAvail = usage.wallet.browsingQueries;
+  const walletNoBrowsingAvail = usage.wallet.noBrowsingQueries;
+
+  const wouldExceed = querySource === "wallet"
+    ? (effectiveBrowsing ? totalPrompts > walletBrowsingAvail : totalPrompts > walletNoBrowsingAvail)
+    : (effectiveBrowsing ? totalPrompts > browsingRemaining : totalPrompts > noBrowsingRemaining);
   const modelsExceed = modelsConfig.length > usage.maxModelsPerProject;
 
   // Auto-disable browsing when browsing counter exhausted
@@ -80,7 +87,7 @@ export function AnalysisLauncher({
       const res = await fetch("/api/analysis/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, run_count: runCount, browsing: effectiveBrowsing }),
+        body: JSON.stringify({ project_id: projectId, run_count: runCount, browsing: effectiveBrowsing, query_source: querySource }),
       });
 
       if (!res.ok) {
@@ -234,6 +241,47 @@ export function AnalysisLauncher({
                     </p>
                   </div>
                 </button>
+              </div>
+            )}
+
+            {/* Query source selector — only shown if wallet has credits */}
+            {!isDemo && hasWallet && (
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                  <Wallet className="w-3.5 h-3.5" /> Sorgente query
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setQuerySource("plan")}
+                    disabled={loading}
+                    className={`px-3 py-2.5 rounded-sm transition-all text-left ${
+                      querySource === "plan"
+                        ? "border-2 border-sage bg-[rgba(126,184,154,0.12)]"
+                        : "border border-border hover:border-border/80"
+                    }`}
+                  >
+                    <p className="text-sm font-medium text-foreground">Piano mensile</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {effectiveBrowsing ? `${browsingRemaining} browsing` : `${noBrowsingRemaining} no-browsing`} rimanenti
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => setQuerySource("wallet")}
+                    disabled={loading}
+                    className={`px-3 py-2.5 rounded-sm transition-all text-left ${
+                      querySource === "wallet"
+                        ? "border-2 border-[#c4a882] bg-[rgba(196,168,130,0.12)]"
+                        : "border border-border hover:border-border/80"
+                    }`}
+                  >
+                    <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                      <Wallet className="w-3.5 h-3.5 text-[#c4a882]" /> Wallet extra
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {effectiveBrowsing ? `${walletBrowsingAvail} browsing` : `${walletNoBrowsingAvail} no-browsing`} disponibili
+                    </p>
+                  </button>
+                </div>
               </div>
             )}
 

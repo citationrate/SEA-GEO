@@ -30,6 +30,7 @@ interface UsageData {
   isDemo: boolean;
   isPro: boolean;
   loading: boolean;
+  wallet: { browsingQueries: number; noBrowsingQueries: number; confronti: number };
   // Legacy compat
   promptsUsed: number;
   promptsLimit: number;
@@ -47,6 +48,7 @@ const DEFAULTS: UsageData = {
   contextAnalysesUsed: 0, contextAnalysesLimit: 0, contextAnalysesRemaining: 0,
   canGenerateQueries: false, canAccessDataset: false, canAccessComparisons: false,
   maxModelsPerProject: 2,
+  wallet: { browsingQueries: 0, noBrowsingQueries: 0, confronti: 0 },
   isDemo: true, isPro: false, loading: true,
   promptsUsed: 0, promptsLimit: 40, promptsRemaining: 40,
 };
@@ -93,6 +95,11 @@ export function useUsage(): UsageData {
           canAccessComparisons: json.canAccessComparisons ?? false,
           maxModelsPerProject: json.maxModelsPerProject ?? 2,
           isDemo: json.isDemo ?? true,
+          wallet: {
+            browsingQueries: json.wallet?.browsingQueries ?? 0,
+            noBrowsingQueries: json.wallet?.noBrowsingQueries ?? 0,
+            confronti: json.wallet?.confronti ?? 0,
+          },
           isPro: json.isPro ?? false,
           loading: false,
           promptsUsed: totalUsed,
