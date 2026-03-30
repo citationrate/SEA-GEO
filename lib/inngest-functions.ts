@@ -460,13 +460,6 @@ async function executePrompt(
     console.warn(`[executePrompt] EXTRACTION WARNING: model=${task.model} brand="${task.targetBrand}" text=${rawText.length}chars but brand_mentioned=false, competitors=0. First 300 chars: ${rawText.slice(0, 300)}`);
   }
 
-  // DEBUG: persist extraction errors to DB for diagnosis
-  if (extraction._extractionError) {
-    await (supabase.from("prompts_executed") as any)
-      .update({ error: extraction._extractionError })
-      .eq("id", promptRecord.id);
-  }
-
   // Save response_analysis (normalize competitor names consistently + institutional filter)
   const normalizedCompNames = extraction.competitors_found
     .map(c => {

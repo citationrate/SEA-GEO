@@ -11,8 +11,6 @@ export interface ExtractionResult {
   recommendation_score: number | null;
   brand_adjectives: string[];
   topics: string[];
-  /** Debug: extraction error message (if Haiku call failed) */
-  _extractionError?: string;
   competitors_found: {
     name: string;
     type: "direct" | "indirect" | "channel" | "aggregator";
@@ -412,9 +410,7 @@ async function extractCompetitorsTopicsSources(
   brandType?: string,
   language?: string,
   brandDomain?: string | null,
-): Promise<Pick<ExtractionResult, "topics" | "competitors_found" | "sources"> & { _extractionError?: string }> {
-  console.log("[extractor] ANTHROPIC_API_KEY present:", !!process.env.ANTHROPIC_API_KEY);
-  console.log("[extractor] ANTHROPIC_API_KEY prefix:", process.env.ANTHROPIC_API_KEY?.substring(0, 10));
+): Promise<Pick<ExtractionResult, "topics" | "competitors_found" | "sources">> {
   // Clean control characters and Perplexity-style citation markers [1], [2], etc.
   // that can confuse Haiku into including them in competitor names
   const cleanResponse = response
@@ -497,17 +493,14 @@ Analyze this response:
 ${cleanResponse}`;
 
   try {
-    console.log("[extractor] calling Haiku for competitors/topics extraction...");
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 2000,
       messages: [{ role: "user", content: prompt }],
     });
-    console.log("[extractor] Haiku competitors call succeeded, stop_reason:", message.stop_reason);
 
     const raw = message.content[0]?.type === "text" ? message.content[0].text : "{}";
-    console.log("[extractor] Haiku raw (first 500):", raw.slice(0, 500));
     const stripped = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
 
     let parsed;
@@ -527,12 +520,8 @@ ${cleanResponse}`;
         parsed = { competitors_found: [], topics: [], sources: [] };
       }
     }
-    const debugTopics = Array.isArray(parsed.topics) ? parsed.topics : [];
-    const debugCompCount = Array.isArray(parsed.competitors_found) ? parsed.competitors_found.length : 0;
-    console.log(`[extractor] parsed topics=${debugTopics.length} competitors=${debugCompCount}`);
     return {
-      topics: debugTopics,
-      _extractionError: debugTopics.length === 0 && debugCompCount === 0 ? `HAIKU_EMPTY_PARSE: raw_len=${raw.length} raw_start="${raw.slice(0, 200)}" stop=${message.stop_reason}` : undefined,
+      topics: Array.isArray(parsed.topics) ? parsed.topics : [],
       competitors_found: (() => {
         const mapped = Array.isArray(parsed.competitors_found)
           ? parsed.competitors_found.map((c: any) => {
@@ -577,10 +566,8 @@ ${cleanResponse}`;
       ),
     };
   } catch (e) {
-    const errMsg = e instanceof Error ? e.message : String(e);
-    console.error("[extractor] partial extraction failed:", errMsg);
-    console.error("[extractor] error stack:", e instanceof Error ? e.stack : "no stack");
-    return { topics: [], competitors_found: [], sources: [], _extractionError: `HAIKU_COMPETITORS_FAIL: ${errMsg}` };
+    console.error("[extractor] partial extraction failed:", e);
+    return { topics: [], competitors_found: [], sources: [] };
   }
 }
 
@@ -614,7 +601,6 @@ export async function extractFromResponse(
       topics: partialResult.topics,
       competitors_found: partialResult.competitors_found,
       sources: partialResult.sources,
-      _extractionError: (partialResult as any)._extractionError,
     };
   }
 
