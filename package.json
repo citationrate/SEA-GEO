@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "deploy": "vercel --prod && curl -X PUT https://avi.citationrate.com/api/inngest"
+    "deploy": "npx vercel --prod && curl -X PUT https://avi.citationrate.com/api/inngest"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
