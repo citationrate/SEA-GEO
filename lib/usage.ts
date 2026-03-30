@@ -227,6 +227,24 @@ export async function consumeWalletQueries(
     .eq("user_id", userId);
 }
 
+export async function consumeWalletConfronti(
+  userId: string,
+  count: number,
+): Promise<void> {
+  const svc = createServiceClient();
+  const { data: existing } = await (svc.from("query_wallet") as any)
+    .select("confronti")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!existing) return;
+  await (svc.from("query_wallet") as any)
+    .update({
+      confronti: Math.max(0, (Number(existing.confronti) || 0) - count),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId);
+}
+
 export async function addToWallet(
   userId: string,
   browsingQueries: number,

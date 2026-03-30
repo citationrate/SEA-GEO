@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Play, Sparkles, RefreshCw } from "lucide-react";
+import { Loader2, Play, Sparkles, RefreshCw, Wallet } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { COMPARISON_MODEL_IDS, PROVIDER_GROUPS } from "@/lib/engine/models";
 import { useUsage } from "@/lib/hooks/useUsage";
@@ -57,11 +57,15 @@ export function NewCompetitiveForm({
   const [generatedQueries, setGeneratedQueries] = useState<{ pattern: string; text: string }[] | null>(null);
   const [generatingQueries, setGeneratingQueries] = useState(false);
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set(COMPARISON_MODEL_IDS));
+  const [querySource, setQuerySource] = useState<"plan" | "wallet">("plan");
 
   const selectedProject = projects.find((p) => p.id === projectId);
   const effectiveDriver = driver === "Altro" ? customDriver : driver;
 
-  const comparisonsExhausted = !usage.loading && usage.comparisonsLimit > 0 && usage.comparisonsRemaining <= 0;
+  const hasWalletConfronti = usage.wallet.confronti > 0;
+  const comparisonsExhausted = querySource === "wallet"
+    ? !hasWalletConfronti
+    : (!usage.loading && usage.comparisonsLimit > 0 && usage.comparisonsRemaining <= 0);
 
   // Next month reset date (1st of next month)
   const resetDate = new Date();
@@ -126,6 +130,7 @@ export function NewCompetitiveForm({
           brand_b: brandB.trim(),
           driver: effectiveDriver.trim(),
           models: Array.from(selectedModels),
+          query_source: querySource,
         }),
       });
 
@@ -327,6 +332,39 @@ export function NewCompetitiveForm({
           <span className="text-foreground font-bold">{selectedModels.size}</span> {t("competitiveForm.modelWord")} {t("competitiveForm.selectedSummary")} · {RUNS_PER_QUERY} {t("competitiveForm.runsPerQuery")}
         </p>
       </div>
+
+      {/* Query source selector — shown when wallet has confronti */}
+      {hasWalletConfronti && (
+        <div className="space-y-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+            <Wallet className="w-3.5 h-3.5" /> {t("piano.querySource")}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setQuerySource("plan")}
+              className={`px-3 py-2.5 rounded-sm transition-all text-left ${
+                querySource === "plan" ? "border-2 border-sage bg-[rgba(126,184,154,0.12)]" : "border border-border hover:border-border/80"
+              }`}
+            >
+              <p className="text-sm font-medium text-foreground">{t("piano.querySourcePlan")}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">{usage.comparisonsRemaining} {t("piano.walletConfronti").toLowerCase()} {t("piano.remaining")}</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setQuerySource("wallet")}
+              className={`px-3 py-2.5 rounded-sm transition-all text-left ${
+                querySource === "wallet" ? "border-2 border-[#c4a882] bg-[rgba(196,168,130,0.12)]" : "border border-border hover:border-border/80"
+              }`}
+            >
+              <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                <Wallet className="w-3.5 h-3.5 text-[#c4a882]" /> {t("piano.querySourceWallet")}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">{usage.wallet.confronti} {t("piano.walletConfronti").toLowerCase()} {t("piano.available")}</p>
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 

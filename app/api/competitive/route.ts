@@ -3,13 +3,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { inngest } from "@/lib/inngest";
 import { COMPARISON_MODEL_IDS } from "@/lib/engine/models";
-import { getUserPlanLimits, getCurrentUsage, incrementComparisonsUsed, incrementNoBrowsingPromptsUsed } from "@/lib/usage";
+import { getUserPlanLimits, getCurrentUsage, getWallet, consumeWalletConfronti, incrementComparisonsUsed, incrementNoBrowsingPromptsUsed } from "@/lib/usage";
 
 const startSchema = z.object({
   project_id: z.string().uuid(),
   brand_b: z.string().min(1),
   driver: z.string().min(1),
   models: z.array(z.string()).min(1).optional(),
+  query_source: z.enum(["plan", "wallet"]).default("plan"),
 });
 
 export async function POST(request: Request) {
@@ -22,27 +23,36 @@ export async function POST(request: Request) {
     const parsed = startSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { project_id, brand_b, driver, models: requestedModels } = parsed.data;
+    const { project_id, brand_b, driver, models: requestedModels, query_source } = parsed.data;
 
     // Plan limits check
     const plan = await getUserPlanLimits(user.id);
-    if (!plan.can_access_comparisons) {
-      return NextResponse.json({ error: "I confronti AI sono disponibili dal piano Pro." }, { status: 403 });
-    }
     const usage = await getCurrentUsage(user.id);
-    const totalComparisonsAvailable = plan.max_comparisons + usage.extraComparisons;
-    if (usage.comparisonsUsed >= totalComparisonsAvailable) {
-      return NextResponse.json({ error: `Hai raggiunto il limite di ${totalComparisonsAvailable} confronti mensili.` }, { status: 403 });
-    }
+    const wallet = await getWallet(user.id);
 
-    // Comparison prompts count against no_browsing_prompts_used
-    // Typical comparison: 3 queries × 5 models × 3 runs = ~45 prompts, but cost = 3 queries
-    const comparisonPromptCost = 3; // 3 default queries
-    const totalNoBrowsingAvailable = Number(plan.no_browsing_prompts) + usage.extraNoBrowsingPrompts;
-    if (usage.noBrowsingPromptsUsed + comparisonPromptCost > totalNoBrowsingAvailable) {
-      return NextResponse.json({
-        error: "Non hai abbastanza prompt senza browsing disponibili per questo confronto.",
-      }, { status: 403 });
+    if (query_source === "wallet") {
+      // Wallet: check confronti credits
+      if (wallet.confronti < 1) {
+        return NextResponse.json({ error: "Nessun confronto disponibile nel wallet. Acquista un pacchetto confronti." }, { status: 403 });
+      }
+    } else {
+      // Plan: check plan access + monthly limit
+      if (!plan.can_access_comparisons) {
+        return NextResponse.json({ error: "I confronti AI sono disponibili dal piano Pro." }, { status: 403 });
+      }
+      const totalComparisonsAvailable = plan.max_comparisons + usage.extraComparisons;
+      if (usage.comparisonsUsed >= totalComparisonsAvailable) {
+        return NextResponse.json({ error: `Hai raggiunto il limite di ${totalComparisonsAvailable} confronti mensili.` }, { status: 403 });
+      }
+
+      // Comparison prompts count against no_browsing_prompts_used
+      const comparisonPromptCost = 3;
+      const totalNoBrowsingAvailable = Number(plan.no_browsing_prompts) + usage.extraNoBrowsingPrompts;
+      if (usage.noBrowsingPromptsUsed + comparisonPromptCost > totalNoBrowsingAvailable) {
+        return NextResponse.json({
+          error: "Non hai abbastanza prompt senza browsing disponibili per questo confronto.",
+        }, { status: 403 });
+      }
     }
 
     // Get project brand
@@ -96,13 +106,19 @@ export async function POST(request: Request) {
       },
     });
 
-    // Increment usage counters
-    await incrementComparisonsUsed(user.id).catch((err) =>
-      console.error("[competitive] comparisons usage increment error:", err)
-    );
-    await incrementNoBrowsingPromptsUsed(user.id, comparisonPromptCost).catch((err) =>
-      console.error("[competitive] no-browsing usage increment error:", err)
-    );
+    // Consume from correct source
+    if (query_source === "wallet") {
+      await consumeWalletConfronti(user.id, 1).catch((err) =>
+        console.error("[competitive] wallet confronti consume error:", err)
+      );
+    } else {
+      await incrementComparisonsUsed(user.id).catch((err) =>
+        console.error("[competitive] comparisons usage increment error:", err)
+      );
+      await incrementNoBrowsingPromptsUsed(user.id, 3).catch((err) =>
+        console.error("[competitive] no-browsing usage increment error:", err)
+      );
+    }
 
     return NextResponse.json({ id: analysis.id }, { status: 201 });
   } catch (err) {
