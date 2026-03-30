@@ -411,6 +411,8 @@ async function extractCompetitorsTopicsSources(
   language?: string,
   brandDomain?: string | null,
 ): Promise<Pick<ExtractionResult, "topics" | "competitors_found" | "sources">> {
+  console.log("[extractor] ANTHROPIC_API_KEY present:", !!process.env.ANTHROPIC_API_KEY);
+  console.log("[extractor] ANTHROPIC_API_KEY prefix:", process.env.ANTHROPIC_API_KEY?.substring(0, 10));
   // Clean control characters and Perplexity-style citation markers [1], [2], etc.
   // that can confuse Haiku into including them in competitor names
   const cleanResponse = response
@@ -493,12 +495,14 @@ Analyze this response:
 ${cleanResponse}`;
 
   try {
+    console.log("[extractor] calling Haiku for competitors/topics extraction...");
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 2000,
       messages: [{ role: "user", content: prompt }],
     });
+    console.log("[extractor] Haiku competitors call succeeded, stop_reason:", message.stop_reason);
 
     const raw = message.content[0]?.type === "text" ? message.content[0].text : "{}";
     const stripped = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
@@ -566,7 +570,9 @@ ${cleanResponse}`;
       ),
     };
   } catch (e) {
-    console.error("[extractor] partial extraction failed:", e);
+    console.error("[extractor] partial extraction failed:", JSON.stringify(e));
+    console.error("[extractor] error details:", e instanceof Error ? e.message : String(e));
+    console.error("[extractor] error stack:", e instanceof Error ? e.stack : "no stack");
     return { topics: [], competitors_found: [], sources: [] };
   }
 }
