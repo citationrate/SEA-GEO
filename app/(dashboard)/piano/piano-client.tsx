@@ -399,7 +399,7 @@ export function PianoClient({
       )}
 
       {/* ════════════════ 5. SUBSCRIPTION DETAILS ════════════════ */}
-      {hasActiveSubscription && (
+      {!isDemo && (
         <SubscriptionDetails
           plan={plan}
           subscriptionPeriod={subscriptionPeriod}
@@ -408,7 +408,7 @@ export function PianoClient({
       )}
 
       {/* ════════════════ 6. INVOICE HISTORY ════════════════ */}
-      {hasActiveSubscription && <InvoiceHistory />}
+      {!isDemo && <InvoiceHistory />}
 
       {/* ════════════════ 7. CANCEL ════════════════ */}
       {hasActiveSubscription && (
