@@ -11,6 +11,8 @@ export interface ExtractionResult {
   recommendation_score: number | null;
   brand_adjectives: string[];
   topics: string[];
+  /** Debug: extraction error message (if Haiku call failed) */
+  _extractionError?: string;
   competitors_found: {
     name: string;
     type: "direct" | "indirect" | "channel" | "aggregator";
@@ -410,7 +412,7 @@ async function extractCompetitorsTopicsSources(
   brandType?: string,
   language?: string,
   brandDomain?: string | null,
-): Promise<Pick<ExtractionResult, "topics" | "competitors_found" | "sources">> {
+): Promise<Pick<ExtractionResult, "topics" | "competitors_found" | "sources"> & { _extractionError?: string }> {
   console.log("[extractor] ANTHROPIC_API_KEY present:", !!process.env.ANTHROPIC_API_KEY);
   console.log("[extractor] ANTHROPIC_API_KEY prefix:", process.env.ANTHROPIC_API_KEY?.substring(0, 10));
   // Clean control characters and Perplexity-style citation markers [1], [2], etc.
@@ -570,10 +572,10 @@ ${cleanResponse}`;
       ),
     };
   } catch (e) {
-    console.error("[extractor] partial extraction failed:", JSON.stringify(e));
-    console.error("[extractor] error details:", e instanceof Error ? e.message : String(e));
+    const errMsg = e instanceof Error ? e.message : String(e);
+    console.error("[extractor] partial extraction failed:", errMsg);
     console.error("[extractor] error stack:", e instanceof Error ? e.stack : "no stack");
-    return { topics: [], competitors_found: [], sources: [] };
+    return { topics: [], competitors_found: [], sources: [], _extractionError: `HAIKU_COMPETITORS_FAIL: ${errMsg}` };
   }
 }
 
@@ -607,6 +609,7 @@ export async function extractFromResponse(
       topics: partialResult.topics,
       competitors_found: partialResult.competitors_found,
       sources: partialResult.sources,
+      _extractionError: (partialResult as any)._extractionError,
     };
   }
 
