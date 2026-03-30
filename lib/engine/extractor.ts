@@ -507,6 +507,7 @@ ${cleanResponse}`;
     console.log("[extractor] Haiku competitors call succeeded, stop_reason:", message.stop_reason);
 
     const raw = message.content[0]?.type === "text" ? message.content[0].text : "{}";
+    console.log("[extractor] Haiku raw (first 500):", raw.slice(0, 500));
     const stripped = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
 
     let parsed;
@@ -526,8 +527,12 @@ ${cleanResponse}`;
         parsed = { competitors_found: [], topics: [], sources: [] };
       }
     }
+    const debugTopics = Array.isArray(parsed.topics) ? parsed.topics : [];
+    const debugCompCount = Array.isArray(parsed.competitors_found) ? parsed.competitors_found.length : 0;
+    console.log(`[extractor] parsed topics=${debugTopics.length} competitors=${debugCompCount}`);
     return {
-      topics: Array.isArray(parsed.topics) ? parsed.topics : [],
+      topics: debugTopics,
+      _extractionError: debugTopics.length === 0 && debugCompCount === 0 ? `HAIKU_EMPTY_PARSE: raw_len=${raw.length} raw_start="${raw.slice(0, 200)}" stop=${message.stop_reason}` : undefined,
       competitors_found: (() => {
         const mapped = Array.isArray(parsed.competitors_found)
           ? parsed.competitors_found.map((c: any) => {
