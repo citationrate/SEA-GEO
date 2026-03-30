@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   CreditCard, Search, Globe, GitCompare, Link2, MessageSquareText,
   Check, X, ArrowDown, Loader2, Zap, Crown, AlertTriangle, Sparkles, Wallet,
+  Receipt, ExternalLink, FileDown, Settings2,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
@@ -397,7 +398,19 @@ export function PianoClient({
         </div>
       )}
 
-      {/* ════════════════ 5. CANCEL ════════════════ */}
+      {/* ════════════════ 5. SUBSCRIPTION DETAILS ════════════════ */}
+      {hasActiveSubscription && (
+        <SubscriptionDetails
+          plan={plan}
+          subscriptionPeriod={subscriptionPeriod}
+          subscriptionStatus={subscriptionStatus}
+        />
+      )}
+
+      {/* ════════════════ 6. INVOICE HISTORY ════════════════ */}
+      {hasActiveSubscription && <InvoiceHistory />}
+
+      {/* ════════════════ 7. CANCEL ════════════════ */}
       {hasActiveSubscription && (
         <div className="rounded-[4px] border border-destructive/20 p-5" style={{ background: "rgba(239,68,68,0.03)" }}>
           <div className="flex items-center justify-between">
@@ -567,6 +580,156 @@ function PlanCard({ name, price, priceNote, annualDetails, color, gradient, icon
             {labels.activePlan}
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Subscription Details ─── */
+
+function SubscriptionDetails({ plan, subscriptionPeriod, subscriptionStatus }: {
+  plan: string; subscriptionPeriod: string | null; subscriptionStatus: string;
+}) {
+  const { t } = useTranslation();
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  const planLabel = plan === "pro" || plan === "agency" ? "Pro" : plan === "base" ? "Base" : plan;
+  const periodLabel = subscriptionPeriod === "yearly" ? t("piano.annual") : t("piano.monthly");
+
+  const prices: Record<string, Record<string, string>> = {
+    base: { monthly: "€59", yearly: "€649" },
+    pro: { monthly: "€159", yearly: "€1.719" },
+    agency: { monthly: "€159", yearly: "€1.719" },
+  };
+  const amount = prices[plan]?.[subscriptionPeriod ?? "monthly"] ?? "—";
+
+  async function openPortal() {
+    setPortalLoading(true);
+    try {
+      const res = await fetch("/api/stripe/portal", { method: "POST" });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else alert(data.error || "Errore");
+    } catch { alert("Errore di rete"); }
+    finally { setPortalLoading(false); }
+  }
+
+  return (
+    <div className="rounded-[4px] border border-border p-6 space-y-4" style={{ background: "var(--surface)" }}>
+      <div className="flex items-center gap-2">
+        <CreditCard className="w-5 h-5 text-primary" />
+        <h2 className="font-display font-semibold text-foreground">{t("piano.subscriptionTitle")}</h2>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.activePlan")}</p>
+          <p className="text-sm font-semibold text-foreground mt-1">{planLabel}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.period")}</p>
+          <p className="text-sm font-semibold text-foreground mt-1">{periodLabel}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.amount")}</p>
+          <p className="text-sm font-semibold text-foreground mt-1">{amount}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.status")}</p>
+          <p className="text-sm font-semibold text-foreground mt-1 capitalize">{subscriptionStatus}</p>
+        </div>
+      </div>
+      <button
+        onClick={openPortal}
+        disabled={portalLoading}
+        className="flex items-center gap-2 px-4 py-2 rounded-[3px] border border-primary/40 text-primary text-sm font-semibold hover:bg-primary hover:text-white transition-all disabled:opacity-50"
+      >
+        {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Settings2 className="w-4 h-4" />}
+        {t("piano.managePayment")}
+      </button>
+    </div>
+  );
+}
+
+/* ─── Invoice History ─── */
+
+interface Invoice {
+  id: string;
+  date: string | null;
+  amount: number;
+  currency: string;
+  status: string;
+  pdf_url: string | null;
+}
+
+function InvoiceHistory() {
+  const { t } = useTranslation();
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/stripe/invoices")
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setInvoices(data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return (
+    <div className="rounded-[4px] border border-border p-6 flex items-center gap-2 text-muted-foreground text-sm">
+      <Loader2 className="w-4 h-4 animate-spin" /> {t("common.loading")}
+    </div>
+  );
+
+  if (invoices.length === 0) return null;
+
+  return (
+    <div className="rounded-[4px] border border-border p-6 space-y-4" style={{ background: "var(--surface)" }}>
+      <div className="flex items-center gap-2">
+        <Receipt className="w-5 h-5 text-primary" />
+        <h2 className="font-display font-semibold text-foreground">{t("piano.invoiceHistory")}</h2>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs text-muted-foreground uppercase tracking-wide border-b border-border">
+              <th className="text-left py-2 pr-4">{t("piano.invoiceDate")}</th>
+              <th className="text-left py-2 pr-4">{t("piano.amount")}</th>
+              <th className="text-left py-2 pr-4">{t("piano.status")}</th>
+              <th className="text-right py-2">PDF</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invoices.map((inv) => (
+              <tr key={inv.id} className="border-b border-border/50">
+                <td className="py-2.5 pr-4 text-foreground">
+                  {inv.date ? new Date(inv.date).toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                </td>
+                <td className="py-2.5 pr-4 text-foreground font-medium">
+                  €{inv.amount.toFixed(2)}
+                </td>
+                <td className="py-2.5 pr-4">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    inv.status === "paid" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                  }`}>
+                    {inv.status === "paid" ? t("piano.paid") : inv.status}
+                  </span>
+                </td>
+                <td className="py-2.5 text-right">
+                  {inv.pdf_url && (
+                    <a
+                      href={inv.pdf_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:text-primary/70 text-xs font-medium"
+                    >
+                      <FileDown className="w-3.5 h-3.5" /> {t("piano.download")}
+                    </a>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
