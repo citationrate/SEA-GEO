@@ -2,6 +2,7 @@ import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
+import { createClient } from "@supabase/supabase-js";
 
 const schema = z.object({ code: z.string().min(1) });
 
@@ -37,11 +38,26 @@ export async function POST(request: Request) {
     const period = new Date().toISOString().slice(0, 7);
     const messages: string[] = [];
 
-    // ── Plan upgrade ──
+    // ── Plan upgrade (syncs to BOTH seageo1 and CitationRate) ──
     if ((type === "plan_upgrade" || type === "combo") && voucher.plan) {
+      // Update seageo1
       await (svc.from("profiles") as any)
         .update({ plan: voucher.plan })
         .eq("id", user.id);
+
+      // Also update CitationRate so plan is synced across both platforms
+      try {
+        const crUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const crKey = process.env.CITATIONRATE_SERVICE_ROLE_KEY;
+        if (crUrl && crKey) {
+          const cr = createClient(crUrl, crKey);
+          await cr.from("profiles").update({ plan: voucher.plan } as any).eq("id", user.id);
+          console.log("[voucher] CitationRate plan synced to:", voucher.plan);
+        }
+      } catch (err) {
+        console.error("[voucher] CitationRate sync failed:", err instanceof Error ? err.message : err);
+      }
+
       messages.push(`Piano ${voucher.plan.charAt(0).toUpperCase() + voucher.plan.slice(1)} attivato`);
     }
 
