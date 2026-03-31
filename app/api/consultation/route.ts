@@ -62,12 +62,32 @@ export async function POST(request: Request) {
 <p style="color:#888;font-size:12px">Inviato da AI Visibility Index Consultation Form</p>
 `;
 
+    const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@aicitationrate.com";
+    const fromAddress = `AI Visibility Index <${fromEmail}>`;
+
+    // Send to team
     await resend.emails.send({
-      from: "AI Visibility Index <noreply@ai.citationrate.com>",
-      to: process.env.CONSULTATION_EMAIL || "info@seageo.it",
-      subject: `Nuova richiesta di consulenza AI Visibility Index — ${d.nome} — ${d.azienda}`,
+      from: fromAddress,
+      to: process.env.CONSULTATION_EMAIL || "info@citationrate.com",
+      subject: `Nuova richiesta di consulenza — ${d.nome} (${d.azienda})`,
       html: htmlBody,
       replyTo: d.email,
+    });
+
+    // Send confirmation to user
+    await resend.emails.send({
+      from: fromAddress,
+      to: d.email,
+      subject: "Abbiamo ricevuto la tua richiesta di consulenza",
+      html: `
+<p>Ciao ${esc(d.nome)},</p>
+<p>abbiamo ricevuto la tua richiesta di consulenza. Il nostro team ti contatterà entro <strong>24 ore lavorative</strong>.</p>
+<p>Nel frattempo, puoi continuare a usare la piattaforma per monitorare la tua visibilità AI.</p>
+<br/>
+<p>A presto,<br/>Il team di AI Visibility Index</p>
+<hr/>
+<p style="color:#888;font-size:12px">Questa è una email automatica — per rispondere scrivi a info@citationrate.com</p>
+`,
     });
 
     return NextResponse.json({ ok: true }, { status: 200 });
