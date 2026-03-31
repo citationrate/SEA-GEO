@@ -128,32 +128,38 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     if (!details) return;
     console.log("[stripe-webhook] package details:", JSON.stringify(details));
 
-    const svc = getSeageo1Client();
+    if (details.platform === "citationrate") {
+      // ── CitationRate packages: update CitationRate DB ──
+      await handleCitationRatePackage(userId, session.payment_intent as string, details);
+    } else {
+      // ── AVI packages: update seageo1 wallet ──
+      const svc = getSeageo1Client();
 
-    // Record purchase
-    const { error } = await (svc.from("package_purchases") as any).insert({
-      user_id: userId,
-      stripe_payment_intent_id: session.payment_intent as string,
-      queries_added: details.queries_added,
-      package_type: details.package_type,
-      status: "completed",
-    });
-    if (error) console.error("[stripe-webhook] package_purchases insert error:", error);
+      // Record purchase
+      const { error } = await (svc.from("package_purchases") as any).insert({
+        user_id: userId,
+        stripe_payment_intent_id: session.payment_intent as string,
+        queries_added: details.queries_added,
+        package_type: details.package_type,
+        status: "completed",
+      });
+      if (error) console.error("[stripe-webhook] package_purchases insert error:", error);
 
-    // Add to query wallet (never expires)
-    const pt = details.package_type;
-    const isCompare = pt.startsWith("confronti");
-    const isPro = pt.startsWith("queries_pro");
-    const isBase = pt.startsWith("queries_base");
+      // Add to query wallet (never expires)
+      const pt = details.package_type;
+      const isCompare = pt.startsWith("confronti");
+      const isPro = pt.startsWith("queries_pro");
+      const isBase = pt.startsWith("queries_base");
 
-    await addToWallet(
-      userId,
-      isPro ? details.queries_added : 0,
-      isBase ? details.queries_added : 0,
-      isCompare ? details.queries_added : 0,
-    );
+      await addToWallet(
+        userId,
+        isPro ? details.queries_added : 0,
+        isBase ? details.queries_added : 0,
+        isCompare ? details.queries_added : 0,
+      );
 
-    console.log(`[stripe-webhook] Added to wallet: ${details.package_type} (+${details.queries_added}) for user ${userId}`);
+      console.log(`[stripe-webhook] Added to wallet: ${details.package_type} (+${details.queries_added}) for user ${userId}`);
+    }
   }
 }
 
@@ -207,4 +213,33 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 
   await updateProfiles(userId, { subscription_status: "past_due" });
   console.log(`[stripe-webhook] Payment failed, set past_due for user ${userId}`);
+}
+
+/* ─── CitationRate package fulfillment ─── */
+
+async function handleCitationRatePackage(
+  userId: string,
+  paymentIntentId: string,
+  details: { queries_added: number; package_type: string; platform: string },
+) {
+  const cr = getCitationRateClient();
+
+  if (details.package_type === "cr_extra_unlock") {
+    // Unlock 56 parameters for the next audit
+    await cr.from("profiles").update({
+      full_params_unlocked: true,
+    } as any).eq("id", userId);
+    console.log(`[stripe-webhook] CitationRate: unlocked 56 params for user ${userId}`);
+  } else {
+    // Extra audits (cr_extra_5 or cr_extra_10)
+    // Read current extra_audits, then add
+    const { data: profile } = await cr.from("profiles").select("extra_audits").eq("id", userId).single();
+    const current = Number((profile as any)?.extra_audits) || 0;
+    await cr.from("profiles").update({
+      extra_audits: current + details.queries_added,
+    } as any).eq("id", userId);
+    console.log(`[stripe-webhook] CitationRate: added ${details.queries_added} extra audits for user ${userId} (now ${current + details.queries_added})`);
+  }
+
+  console.log(`[stripe-webhook] CitationRate package fulfilled: ${details.package_type} for user ${userId}`);
 }
