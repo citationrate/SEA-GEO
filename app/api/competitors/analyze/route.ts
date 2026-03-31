@@ -25,8 +25,7 @@ export async function POST(request: Request) {
     // Pro plan check + usage limit
     const plan = await getUserPlanLimits(user.id);
     const planId = plan.id ?? "demo";
-    const effectivePlan = planId === "agency" ? "pro" : planId;
-    if (effectivePlan !== "pro") {
+    if (planId !== "pro") {
       return NextResponse.json({ error: "Questa funzione è disponibile dal piano Pro.", code: "PRO_REQUIRED" }, { status: 403 });
     }
     const usage = await getCurrentUsage(user.id);

@@ -50,7 +50,7 @@ export default async function AdminOverviewPage() {
   const { data: allProfiles } = await svc.from("profiles").select("plan");
   const planCounts: Record<string, number> = {};
   for (const p of (allProfiles ?? []) as any[]) {
-    const plan = p.plan || "free";
+    const plan = p.plan || "demo";
     planCounts[plan] = (planCounts[plan] ?? 0) + 1;
   }
   const planDistribution = Object.entries(planCounts).map(([plan, count]) => ({ plan, count }));

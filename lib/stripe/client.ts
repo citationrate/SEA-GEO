@@ -17,11 +17,11 @@ export function getStripe(): Stripe {
 /* ─── Price → Plan mapping ─── */
 
 export function planFromPriceId(priceId: string) {
-  const map: Record<string, { plan: "pro" | "agency"; period: "monthly" | "yearly" }> = {
-    [process.env.STRIPE_PRICE_BASE_MONTHLY || ""]: { plan: "pro", period: "monthly" },
-    [process.env.STRIPE_PRICE_BASE_YEARLY || ""]: { plan: "pro", period: "yearly" },
-    [process.env.STRIPE_PRICE_PRO_MONTHLY || ""]: { plan: "agency", period: "monthly" },
-    [process.env.STRIPE_PRICE_PRO_YEARLY || ""]: { plan: "agency", period: "yearly" },
+  const map: Record<string, { plan: "base" | "pro"; period: "monthly" | "yearly" }> = {
+    [process.env.STRIPE_PRICE_BASE_MONTHLY || ""]: { plan: "base", period: "monthly" },
+    [process.env.STRIPE_PRICE_BASE_YEARLY || ""]: { plan: "base", period: "yearly" },
+    [process.env.STRIPE_PRICE_PRO_MONTHLY || ""]: { plan: "pro", period: "monthly" },
+    [process.env.STRIPE_PRICE_PRO_YEARLY || ""]: { plan: "pro", period: "yearly" },
   };
   return map[priceId] ?? null;
 }

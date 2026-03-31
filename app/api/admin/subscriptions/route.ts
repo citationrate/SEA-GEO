@@ -40,7 +40,7 @@ export async function GET() {
 const actionSchema = z.object({
   user_id: z.string().uuid(),
   action: z.enum(["activate", "deactivate", "cancel_stripe"]),
-  plan: z.enum(["pro", "agency"]).optional(),
+  plan: z.enum(["base", "pro"]).optional(),
   period: z.enum(["monthly", "yearly"]).optional(),
 });
 
@@ -71,11 +71,11 @@ export async function POST(request: Request) {
       }
       case "deactivate": {
         await cr.from("profiles").update({
-          plan: "free",
+          plan: "demo",
           subscription_status: "inactive",
           subscription_period: null,
         } as any).eq("id", user_id);
-        await (supabase!.from("profiles") as any).update({ plan: "free" }).eq("id", user_id);
+        await (supabase!.from("profiles") as any).update({ plan: "demo" }).eq("id", user_id);
         break;
       }
       case "cancel_stripe": {

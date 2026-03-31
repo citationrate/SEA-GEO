@@ -45,7 +45,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
 
       {/* Filters */}
       <div className="flex gap-2">
-        {["all", "demo", "base", "pro", "agency"].map((p) => (
+        {["all", "demo", "base", "pro"].map((p) => (
           <button key={p} onClick={() => setPlanFilter(p)} className={`text-xs px-3 py-1.5 rounded-[2px] border transition-colors ${planFilter === p ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
             {p === "all" ? "Tutti" : p === "demo" ? "Demo" : p === "base" ? "Base" : p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
@@ -73,10 +73,10 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                 </td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-[2px] border ${
-                    u.plan === "pro" || u.plan === "agency" ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted border-border text-muted-foreground"
+                    u.plan === "pro" ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted border-border text-muted-foreground"
                   }`}>
-                    {(u.plan === "pro" || u.plan === "agency") && <Crown className="w-3 h-3" />}
-                    {u.plan === "free" || u.plan === "demo" ? "Demo" : u.plan === "base" ? "Base" : u.plan}
+                    {u.plan === "pro" && <Crown className="w-3 h-3" />}
+                    {u.plan === "demo" ? "Demo" : u.plan === "base" ? "Base" : u.plan === "pro" ? "Pro" : u.plan}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-foreground">{u.projects}</td>

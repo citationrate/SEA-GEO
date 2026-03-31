@@ -175,7 +175,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     await updateProfiles(userId, { subscription_status: "past_due" });
   } else if (subscription.status === "canceled" || subscription.status === "unpaid") {
     await updateProfiles(userId, {
-      plan: "free",
+      plan: "demo",
       subscription_status: "inactive",
       subscription_period: null,
       stripe_subscription_id: null,
@@ -188,7 +188,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   if (!userId) return;
 
   await updateProfiles(userId, {
-    plan: "free",
+    plan: "demo",
     subscription_status: "inactive",
     subscription_period: null,
     stripe_subscription_id: null,

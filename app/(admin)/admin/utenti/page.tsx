@@ -35,7 +35,7 @@ export default async function AdminUsersPage() {
     id: p.id,
     email: p.email ?? "",
     full_name: p.full_name ?? "",
-    plan: p.plan ?? "free",
+    plan: p.plan ?? "demo",
     projects: projCountMap.get(p.id) ?? 0,
     analyses: runCountMap.get(p.id) ?? 0,
     updated_at: p.updated_at,

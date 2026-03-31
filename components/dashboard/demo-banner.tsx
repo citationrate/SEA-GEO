@@ -13,7 +13,7 @@ export function DemoBanner({ plan }: { plan: string }) {
     setDismissed(localStorage.getItem(STORAGE_KEY) === "true");
   }, []);
 
-  const isDemo = !plan || plan === "demo" || plan === "free";
+  const isDemo = !plan || plan === "demo";
   if (!isDemo || dismissed) return null;
 
   return (

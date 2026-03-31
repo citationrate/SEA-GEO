@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     const segmentCount = Math.max((segments?.length ?? 0), 1);
     const promptCost = queries.length * validModels.length * segmentCount * run_count;
     const userPlanId = (plan as any).id ?? "demo";
-    const isProPlan = userPlanId === "pro" || userPlanId === "agency";
+    const isProPlan = userPlanId === "pro";
     const isDemoPlan = userPlanId === "demo";
 
     console.log("[analysis/start] plan check:", {

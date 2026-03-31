@@ -193,8 +193,8 @@ export default function GenerateQueriesPage() {
   useEffect(() => {
     fetch("/api/profile").then((r) => r.json()).then((p) => {
       const plan = p?.plan ?? "demo";
-      setPlanId(plan === "free" ? "demo" : plan === "agency" ? "pro" : plan);
-      setIsPro(plan === "pro" || plan === "agency");
+      setPlanId(plan === "demo" ? "demo" : plan === "base" ? "base" : plan === "pro" ? "pro" : "demo");
+      setIsPro(plan === "pro");
     }).catch(() => {}).finally(() => setProfileLoaded(true));
 
     fetch(`/api/queries?project_id=${projectId}`).then((r) => r.json()).then((qs) => {

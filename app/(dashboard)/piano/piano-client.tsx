@@ -26,18 +26,14 @@ interface PianoClientProps {
 
 const LIMITS: Record<string, { totalPrompts: number; browsing: number; comparisons: number; urlAnalyses: number; contextAnalyses: number }> = {
   demo:   { totalPrompts: 40, browsing: 0, comparisons: 0, urlAnalyses: 0, contextAnalyses: 0 },
-  free:   { totalPrompts: 40, browsing: 0, comparisons: 0, urlAnalyses: 0, contextAnalyses: 0 },
   base:   { totalPrompts: 100, browsing: 30, comparisons: 0, urlAnalyses: 0, contextAnalyses: 0 },
   pro:    { totalPrompts: 300, browsing: 90, comparisons: 10, urlAnalyses: 50, contextAnalyses: 5 },
-  agency: { totalPrompts: 300, browsing: 90, comparisons: 10, urlAnalyses: 50, contextAnalyses: 5 },
 };
 
 const PLAN_STYLE: Record<string, { label: string; descKey: string; gradient: string; border: string; text: string; bg: string }> = {
   demo: { label: "Demo", descKey: "piano.demoDesc", gradient: "linear-gradient(135deg, #6b7280, #9ca3af)", border: "rgba(107,114,128,0.3)", text: "#9ca3af", bg: "rgba(107,114,128,0.06)" },
-  free: { label: "Demo", descKey: "piano.demoDesc", gradient: "linear-gradient(135deg, #6b7280, #9ca3af)", border: "rgba(107,114,128,0.3)", text: "#9ca3af", bg: "rgba(107,114,128,0.06)" },
   base: { label: "Base", descKey: "piano.baseDesc", gradient: "linear-gradient(135deg, #3b82f6, #60a5fa)", border: "rgba(59,130,246,0.3)", text: "#60a5fa", bg: "rgba(59,130,246,0.06)" },
   pro:  { label: "Pro", descKey: "piano.proDesc", gradient: "linear-gradient(135deg, #c4a882, #d4b896)", border: "rgba(196,168,130,0.3)", text: "#c4a882", bg: "rgba(196,168,130,0.06)" },
-  agency: { label: "Pro", descKey: "piano.proDesc", gradient: "linear-gradient(135deg, #c4a882, #d4b896)", border: "rgba(196,168,130,0.3)", text: "#c4a882", bg: "rgba(196,168,130,0.06)" },
 };
 
 function getFeatures(t: (k: string) => string) {
@@ -96,9 +92,9 @@ export function PianoClient({
   const style = PLAN_STYLE[plan] || PLAN_STYLE.demo;
   const meta = { ...style, desc: t(style.descKey) };
   const isActive = subscriptionStatus === "active";
-  const isDemo = plan === "demo" || plan === "free";
+  const isDemo = plan === "demo";
   const isBase = plan === "base";
-  const isPro = plan === "pro" || plan === "agency";
+  const isPro = plan === "pro";
 
   // Use live data from useUsage when loaded, fallback to server props
   const liveBrowsingUsed = usage.loading ? browsingUsed : usage.browsingPromptsUsed;
@@ -196,7 +192,7 @@ export function PianoClient({
               )}
             </div>
           </div>
-          {plan !== "pro" && plan !== "agency" && (
+          {plan !== "pro" && (
             <a
               href="#piani"
               className="flex items-center gap-2 px-5 py-2.5 rounded-[3px] text-sm font-semibold transition-all hover:scale-[1.02] shrink-0"
@@ -593,13 +589,12 @@ function SubscriptionDetails({ plan, subscriptionPeriod, subscriptionStatus }: {
   const { t } = useTranslation();
   const [portalLoading, setPortalLoading] = useState(false);
 
-  const planLabel = plan === "pro" || plan === "agency" ? "Pro" : plan === "base" ? "Base" : plan;
+  const planLabel = plan === "pro" ? "Pro" : plan === "base" ? "Base" : plan;
   const periodLabel = subscriptionPeriod === "yearly" ? t("piano.annual") : t("piano.monthly");
 
   const prices: Record<string, Record<string, string>> = {
     base: { monthly: "€59", yearly: "€649" },
     pro: { monthly: "€159", yearly: "€1.719" },
-    agency: { monthly: "€159", yearly: "€1.719" },
   };
   const amount = prices[plan]?.[subscriptionPeriod ?? "monthly"] ?? "—";
 

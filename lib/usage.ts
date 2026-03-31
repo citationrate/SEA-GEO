@@ -106,7 +106,7 @@ export async function getUserPlanLimits(userId: string) {
 
   const { data: profile } = await svc.from("profiles").select("plan").eq("id", userId).single();
   const planId = (profile as any)?.plan ?? "demo";
-  const effectivePlanId = planId === "free" ? "demo" : planId === "agency" ? "pro" : planId;
+  const effectivePlanId = planId === "demo" ? "demo" : planId === "base" ? "base" : planId === "pro" ? "pro" : "demo";
 
   const { data: plan } = await (svc.from("plans") as any).select("*").eq("id", effectivePlanId).single();
 

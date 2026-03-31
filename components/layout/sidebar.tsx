@@ -27,8 +27,8 @@ export function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
-  const isPro = profile?.plan === "pro" || profile?.plan === "agency";
-  const isDemo = !profile?.plan || profile.plan === "demo" || profile.plan === "free";
+  const isPro = profile?.plan === "pro";
+  const isDemo = !profile?.plan || profile.plan === "demo";
   const isBase = profile?.plan === "base";
   const [collapsed, setCollapsed] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -257,7 +257,7 @@ export function Sidebar({ profile }: SidebarProps) {
                 </p>
                 <div className="flex items-center gap-1.5">
                   <p className="font-mono text-[0.75rem] text-muted-foreground uppercase tracking-wide">
-                    {t("sidebar.plan")} {isDemo ? "Demo" : isBase ? "" : profile?.plan === "agency" ? "Agency" : isPro ? "" : profile?.plan}
+                    {t("sidebar.plan")} {isDemo ? "Demo" : isBase ? "" : isPro ? "" : profile?.plan}
                   </p>
                   {isBase && (
                     <span className="font-mono text-[0.625rem] tracking-wide px-1 py-0.5 rounded-[2px]" style={{ background: "linear-gradient(135deg, #C0C0C0, #E8E8E8)", color: "#333" }}>BASE</span>

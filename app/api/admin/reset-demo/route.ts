@@ -184,7 +184,7 @@ export async function POST(request: Request) {
     try {
       const cr = getCitationRateClient();
       await cr.from("profiles").update({
-        plan: "free",
+        plan: "demo",
         subscription_status: "inactive",
         subscription_period: null,
         stripe_subscription_id: null,
@@ -198,7 +198,7 @@ export async function POST(request: Request) {
     // Also reset plan on seageo1 profiles
     try {
       await (svc.from("profiles") as any).update({
-        plan: "free",
+        plan: "demo",
       }).eq("id", userId);
       log.push({ step: "reset_seageo1_profile", ok: true });
     } catch (err: any) {

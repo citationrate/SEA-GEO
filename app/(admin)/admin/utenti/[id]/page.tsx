@@ -60,7 +60,7 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
         id: p.id,
         email: p.email ?? "",
         full_name: p.full_name ?? "",
-        plan: p.plan ?? "free",
+        plan: p.plan ?? "demo",
         created_at: p.created_at,
         is_admin: p.is_admin ?? false,
       }}

@@ -37,9 +37,7 @@ export async function POST(request: Request) {
     // Validate user plan matches package requirement
     const plan = await getUserPlanLimits(user.id);
     const userPlanId = plan.id ?? "demo";
-    const effectiveUserPlan = userPlanId === "agency" ? "pro" : userPlanId;
-
-    if (pkg.plan_required && effectiveUserPlan !== pkg.plan_required) {
+    if (pkg.plan_required && userPlanId !== pkg.plan_required) {
       return NextResponse.json({
         error: `Questo pacchetto richiede il piano ${pkg.plan_required}.`,
       }, { status: 403 });

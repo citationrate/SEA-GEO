@@ -8,7 +8,7 @@ export type SourceType    = "brand_owned" | "competitor" | "media" | "review" | 
 export type SegmentName   = string;
 export type AnalysisStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 export type AIModel       = "gpt-4o" | "gpt-4o-mini" | "gpt-5.4-mini" | "o1-mini" | "o3-mini" | "o3" | "claude-haiku-4-5-20251001" | "claude-sonnet-4-5" | "claude-opus-4-5" | "claude-sonnet-4-6" | "claude-opus-4-6" | "gemini-2.5-flash" | "gemini-2.5-pro" | "gemini-3.1-pro" | "grok-2" | "grok-3";
-export type UserPlan      = "demo" | "free" | "base" | "pro" | "agency";
+export type UserPlan      = "demo" | "base" | "pro";
 
 export interface Database {
   public: {

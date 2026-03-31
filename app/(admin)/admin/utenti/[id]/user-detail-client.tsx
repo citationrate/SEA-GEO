@@ -63,10 +63,10 @@ export function UserDetailClient({ user, projects, runs, stats, modelCounts, avi
           <p className="text-xs text-muted-foreground mt-0.5">Registrato: {new Date(user.created_at).toLocaleDateString("it-IT")}</p>
         </div>
         <span className={`inline-flex items-center gap-1 text-sm font-semibold px-3 py-1.5 rounded-[2px] border ${
-          plan === "pro" || plan === "agency" ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted border-border text-muted-foreground"
+          plan === "pro" ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted border-border text-muted-foreground"
         }`}>
-          {(plan === "pro" || plan === "agency") && <Crown className="w-4 h-4" />}
-          {plan === "free" || plan === "demo" ? "Demo" : plan === "base" ? "Base" : plan}
+          {plan === "pro" && <Crown className="w-4 h-4" />}
+          {plan === "demo" ? "Demo" : plan === "base" ? "Base" : plan === "pro" ? "Pro" : plan}
         </span>
       </div>
 
@@ -90,9 +90,9 @@ export function UserDetailClient({ user, projects, runs, stats, modelCounts, avi
           <div className="card p-5 space-y-3">
             <h2 className="text-sm font-semibold text-foreground">Modifica piano</h2>
             <div className="flex items-center gap-3">
-              {["demo", "base", "pro", "agency"].map((p) => (
+              {["demo", "base", "pro"].map((p) => (
                 <button key={p} onClick={() => setPlan(p)} className={`px-4 py-2 rounded-[2px] border text-sm font-medium transition-colors ${plan === p ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
-                  {p === "demo" ? "Demo" : p === "base" ? "Base" : p === "pro" ? "Pro" : "Agency"}
+                  {p === "demo" ? "Demo" : p === "base" ? "Base" : "Pro"}
                 </button>
               ))}
               <button onClick={savePlan} disabled={saving || plan === user.plan} className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold disabled:opacity-50 transition-colors">

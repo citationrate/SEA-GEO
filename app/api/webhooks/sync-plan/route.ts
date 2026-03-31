@@ -56,6 +56,7 @@ export async function POST(request: Request) {
     }
 
     // Normalize CitationRate plan → AVI plan_id
+    // Keep legacy mappings for safety during transition
     const PLAN_MAP: Record<string, string> = {
       demo: "demo",
       free: "demo",
