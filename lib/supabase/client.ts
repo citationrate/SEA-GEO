@@ -30,8 +30,11 @@ export function createClient() {
   );
 
   // Redirect to suite login on sign-out or missing session — prevents infinite refresh loops
+  // Skip on /auth/ pages (handoff in progress) and public pages
   _authClient.auth.onAuthStateChange((event, session) => {
     if (event === "TOKEN_REFRESHED") return;
+    const path = window.location.pathname;
+    if (path.startsWith("/auth/") || path.startsWith("/share/") || path === "/") return;
     if (event === "SIGNED_OUT" || (!session && event === "INITIAL_SESSION")) {
       window.location.href = SUITE_LOGIN_URL;
     }
