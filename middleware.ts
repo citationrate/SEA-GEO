@@ -60,8 +60,10 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  console.log("[MW]", path, "| getUser:", user ? `OK (${user.id})` : `FAILED (${authError?.message ?? "no user"})`);
+  // Use getSession() — reads JWT from cookie without API call (faster, no rate limits)
+  const { data: { session }, error: authError } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
+  console.log("[MW]", path, "| session:", user ? `OK (${user.id})` : `FAILED (${authError?.message ?? "no session"})`);
 
   if (!user) {
     // Not authenticated → redirect to login
