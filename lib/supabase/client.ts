@@ -21,6 +21,7 @@ export function createClient() {
         ? { cookieOptions: { domain: COOKIE_DOMAIN, path: "/", sameSite: "lax" as const, secure: true } }
         : undefined),
       auth: {
+        storageKey: "auth",
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true,

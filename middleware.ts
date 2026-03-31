@@ -44,6 +44,8 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
     {
+      // Match CitationRate's cookie name (sb-auth-auth-token) so cross-subdomain auth works
+      auth: { storageKey: "auth" },
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (toSet: { name: string; value: string; options?: object }[]) => {
