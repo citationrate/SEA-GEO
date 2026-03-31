@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { useTranslation } from "@/lib/i18n/context";
 import {
@@ -11,7 +11,7 @@ import {
   Users, Link2, Tag, GitCompare, Settings,
   Database, ChevronRight, Plus,
   PanelLeftClose, PanelLeftOpen, MessageSquareText,
-  ExternalLink, X, Newspaper, CreditCard, Sparkles,
+  ExternalLink, X, Newspaper, CreditCard, Sparkles, LogOut,
 } from "lucide-react";
 import { useConsultation } from "@/lib/consultation-context";
 import { useMobileNav } from "./mobile-nav-context";
@@ -25,6 +25,8 @@ interface SidebarProps {
 
 export function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
   const isPro = profile?.plan === "pro" || profile?.plan === "agency";
   const isDemo = !profile?.plan || profile.plan === "demo" || profile.plan === "free";
   const isBase = profile?.plan === "base";
@@ -266,6 +268,23 @@ export function Sidebar({ profile }: SidebarProps) {
             </div>
           )}
         </Link>
+        {/* Logout button */}
+        <button
+          onClick={async () => {
+            setLoggingOut(true);
+            await fetch("/api/auth/logout", { method: "POST" });
+            router.push("/login");
+          }}
+          disabled={loggingOut}
+          className={cn(
+            "w-full flex items-center gap-2.5 px-2 py-1.5 mt-1 rounded-[2px] text-xs text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors disabled:opacity-50",
+            collapsed && !mobileOpen && "justify-center px-0",
+          )}
+          title={collapsed && !mobileOpen ? "Esci" : undefined}
+        >
+          <LogOut className="w-3.5 h-3.5 flex-shrink-0" />
+          {(!collapsed || mobileOpen) && <span>{loggingOut ? "Uscita…" : "Esci"}</span>}
+        </button>
       </div>
     </>
   );
