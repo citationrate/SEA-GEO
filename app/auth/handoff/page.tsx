@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 
 function HandoffInner() {
   const router = useRouter();
@@ -18,26 +18,25 @@ function HandoffInner() {
       return;
     }
 
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { auth: { storageKey: "auth" } }
-    );
+    // Use the same singleton client the whole app uses
+    const supabase = createClient();
 
     supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-      .then(({ error: err }) => {
-        if (err) {
-          console.error("[handoff] setSession error:", err.message);
+      .then(({ data, error: err }) => {
+        if (err || !data.session) {
+          console.error("[handoff] setSession failed:", err?.message);
           setError("Sessione non valida. Riprova il login.");
           return;
         }
-        router.replace("/dashboard");
+        console.log("[handoff] Session set OK, redirecting to dashboard");
+        // Use window.location for a full page load (not client-side navigation)
+        window.location.href = "/dashboard";
       });
   }, [params, router]);
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--background)" }}>
         <div className="text-center space-y-3">
           <p className="text-sm text-destructive">{error}</p>
           <a href="https://suite.citationrate.com" className="text-sm text-primary underline">Torna a CitationRate</a>
@@ -47,7 +46,7 @@ function HandoffInner() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--background)" }}>
       <div className="text-center space-y-2">
         <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
         <p className="text-sm text-muted-foreground">Accesso in corso...</p>
@@ -59,7 +58,7 @@ function HandoffInner() {
 export default function AuthHandoff() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--background)" }}>
         <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     }>
