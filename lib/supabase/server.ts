@@ -21,6 +21,7 @@ export function createServerClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
     {
       auth: { storageKey: "auth" },
+      cookieEncoding: "base64url",
       cookies: {
         getAll: () => cookieStore.getAll(),
         setAll: (toSet: { name: string; value: string; options?: Record<string, unknown> }[]) => {
@@ -40,6 +41,7 @@ export function createAuthServiceClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
     {
       auth: { storageKey: "auth" },
+      cookieEncoding: "base64url",
       cookies: {
         getAll: () => cookieStore.getAll(),
         setAll: () => {},
