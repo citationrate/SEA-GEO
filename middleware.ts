@@ -47,38 +47,43 @@ function getSessionFromCookies(request: NextRequest): { userId: string; expired:
 
   if (!raw) return null;
 
-  // The cookie value is base64-encoded JSON: { access_token, refresh_token, ... }
-  // Or it could be the JWT directly. Try both.
-  try {
-    // Try as base64-encoded JSON first
-    const decoded = Buffer.from(raw, "base64").toString();
-    const session = JSON.parse(decoded);
-    if (session.access_token) {
-      const jwt = decodeJwtPayload(session.access_token);
-      if (jwt?.sub) {
-        const expired = jwt.exp ? jwt.exp * 1000 < Date.now() : false;
-        return { userId: jwt.sub, expired };
-      }
-    }
-  } catch {
-    // Not base64 JSON — try parsing as raw JSON
+  // Strip "base64-" prefix if present (Supabase SSR 0.9+ format)
+  let cookieValue = raw;
+  if (cookieValue.startsWith("base64-")) {
+    cookieValue = cookieValue.slice(7);
+  }
+
+  // Try all possible formats
+  const attempts = [
+    // 1. base64-encoded JSON with access_token
+    () => {
+      const decoded = Buffer.from(cookieValue, "base64").toString();
+      return JSON.parse(decoded);
+    },
+    // 2. Raw JSON
+    () => JSON.parse(cookieValue),
+    // 3. URL-decoded then JSON
+    () => JSON.parse(decodeURIComponent(cookieValue)),
+  ];
+
+  for (const attempt of attempts) {
     try {
-      const session = JSON.parse(raw);
-      if (session.access_token) {
+      const session = attempt();
+      if (session?.access_token) {
         const jwt = decodeJwtPayload(session.access_token);
         if (jwt?.sub) {
           const expired = jwt.exp ? jwt.exp * 1000 < Date.now() : false;
           return { userId: jwt.sub, expired };
         }
       }
-    } catch {
-      // Try as direct JWT
-      const jwt = decodeJwtPayload(raw);
-      if (jwt?.sub) {
-        const expired = jwt.exp ? jwt.exp * 1000 < Date.now() : false;
-        return { userId: jwt.sub, expired };
-      }
-    }
+    } catch { /* try next */ }
+  }
+
+  // Last resort: cookie value itself might be a JWT
+  const jwt = decodeJwtPayload(cookieValue);
+  if (jwt?.sub) {
+    const expired = jwt.exp ? jwt.exp * 1000 < Date.now() : false;
+    return { userId: jwt.sub, expired };
   }
 
   return null;
