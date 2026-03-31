@@ -318,7 +318,11 @@ function buildSystemPrompt(
     ? `\nContesto specifico dall'utente:\n${userContextParts.join("\n")}\n\nUSA ATTIVAMENTE questi dettagli per generare query più mirate. Le query MOFU devono riflettere i bisogni reali dei clienti, i punti di forza e le obiezioni.\n`
     : "";
 
-  return `Sei un esperto di AI Search Optimization. Il tuo compito è generare query realistiche che utenti reali farebbero a ChatGPT, Gemini o Perplexity quando cercano informazioni nel settore di ${project.target_brand}.
+  const today = new Date().toLocaleDateString("it-IT", { year: "numeric", month: "long", day: "numeric" });
+
+  return `Oggi è ${today}. Genera query basate sui trend di mercato attuali e sul comportamento dei consumatori nel ${new Date().getFullYear()}.
+
+Sei un esperto di AI Search Optimization. Il tuo compito è generare query realistiche che utenti reali farebbero a ChatGPT, Gemini o Perplexity quando cercano informazioni nel settore di ${project.target_brand}.
 
 Contesto brand:
 - Brand: ${project.target_brand}
@@ -394,7 +398,11 @@ function buildFollowUpPrompt(
   const langMap: Record<string, string> = { it: "italiano", en: "English", fr: "français", de: "Deutsch", es: "español" };
   const lang = interfaceLang ? (langMap[interfaceLang] ?? "English") : (project.language === "it" ? "italiano" : "English");
 
-  return `Sei un esperto di AI Search Optimization. Devi generare ${missing} query aggiuntive per il settore di "${project.target_brand}" (settore: ${project.sector ?? "non specificato"}).
+  const today = new Date().toLocaleDateString("it-IT", { year: "numeric", month: "long", day: "numeric" });
+
+  return `Oggi è ${today}. Genera query basate sui trend di mercato attuali e sul comportamento dei consumatori nel ${new Date().getFullYear()}.
+
+Sei un esperto di AI Search Optimization. Devi generare ${missing} query aggiuntive per il settore di "${project.target_brand}" (settore: ${project.sector ?? "non specificato"}).
 
 OBIETTIVO: Le query devono far emergere COMPETITOR COMMERCIALI — aziende, studi, agenzie, servizi che un cliente potrebbe scegliere. NON enti pubblici, sindacati, patronati, autorità regolatorie o associazioni consumatori.
 Chiedi sempre CHI FORNISCE il servizio, non informazioni generiche sul servizio.
