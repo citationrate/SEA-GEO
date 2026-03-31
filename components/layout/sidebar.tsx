@@ -237,54 +237,53 @@ export function Sidebar({ profile }: SidebarProps) {
 
       {/* Profile → links to settings */}
       <div className="border-t border-border p-3 flex-shrink-0">
-        <Link
-          href="/settings"
-          onClick={closeMobile}
-          className={cn(
-            "flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] hover:bg-surface-2 transition-colors",
-            collapsed && !mobileOpen && "justify-center px-0",
-          )}
-          title={collapsed && !mobileOpen ? (profile?.full_name ?? profile?.email ?? t("sidebar.user")) : undefined}
-        >
-          <div className="w-6 h-6 rounded-[2px] flex items-center justify-center flex-shrink-0 text-primary font-mono text-xs" style={{ background: "var(--primary-glow)" }}>
-            {(profile?.full_name?.[0] ?? profile?.email?.[0] ?? "U").toUpperCase()}
-          </div>
-          {(!collapsed || mobileOpen) && (
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-foreground truncate leading-tight font-sans">
-                {profile?.full_name ?? profile?.email ?? t("sidebar.user")}
-              </p>
-              <div className="flex items-center gap-1.5">
-                <p className="font-mono text-[0.75rem] text-muted-foreground uppercase tracking-wide">
-                  {t("sidebar.plan")} {isDemo ? "Demo" : isBase ? "" : profile?.plan === "agency" ? "Agency" : isPro ? "" : profile?.plan}
-                </p>
-                {isBase && (
-                  <span className="font-mono text-[0.625rem] tracking-wide px-1 py-0.5 rounded-[2px]" style={{ background: "linear-gradient(135deg, #C0C0C0, #E8E8E8)", color: "#333" }}>BASE</span>
-                )}
-                {isPro && (
-                  <span className="font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">PRO</span>
-                )}
-              </div>
+        <div className={cn(
+          "flex items-center gap-2.5 px-2 py-1.5",
+          collapsed && !mobileOpen && "justify-center px-0",
+        )}>
+          <Link
+            href="/settings"
+            onClick={closeMobile}
+            className="flex items-center gap-2.5 min-w-0 flex-1 rounded-[2px] hover:opacity-80 transition-opacity"
+            title={collapsed && !mobileOpen ? (profile?.full_name ?? profile?.email ?? t("sidebar.user")) : undefined}
+          >
+            <div className="w-6 h-6 rounded-[2px] flex items-center justify-center flex-shrink-0 text-primary font-mono text-xs" style={{ background: "var(--primary-glow)" }}>
+              {(profile?.full_name?.[0] ?? profile?.email?.[0] ?? "U").toUpperCase()}
             </div>
+            {(!collapsed || mobileOpen) && (
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-foreground truncate leading-tight font-sans">
+                  {profile?.full_name ?? profile?.email ?? t("sidebar.user")}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="font-mono text-[0.75rem] text-muted-foreground uppercase tracking-wide">
+                    {t("sidebar.plan")} {isDemo ? "Demo" : isBase ? "" : profile?.plan === "agency" ? "Agency" : isPro ? "" : profile?.plan}
+                  </p>
+                  {isBase && (
+                    <span className="font-mono text-[0.625rem] tracking-wide px-1 py-0.5 rounded-[2px]" style={{ background: "linear-gradient(135deg, #C0C0C0, #E8E8E8)", color: "#333" }}>BASE</span>
+                  )}
+                  {isPro && (
+                    <span className="font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">PRO</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </Link>
+          {(!collapsed || mobileOpen) && (
+            <button
+              onClick={async () => {
+                setLoggingOut(true);
+                await fetch("/api/auth/logout", { method: "POST" });
+                router.push("/login");
+              }}
+              disabled={loggingOut}
+              className="flex-shrink-0 p-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors disabled:opacity-50"
+              title="Esci"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           )}
-        </Link>
-        {/* Logout button */}
-        <button
-          onClick={async () => {
-            setLoggingOut(true);
-            await fetch("/api/auth/logout", { method: "POST" });
-            router.push("/login");
-          }}
-          disabled={loggingOut}
-          className={cn(
-            "w-full flex items-center gap-2.5 px-2 py-1.5 mt-1 rounded-[2px] text-xs text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors disabled:opacity-50",
-            collapsed && !mobileOpen && "justify-center px-0",
-          )}
-          title={collapsed && !mobileOpen ? "Esci" : undefined}
-        >
-          <LogOut className="w-3.5 h-3.5 flex-shrink-0" />
-          {(!collapsed || mobileOpen) && <span>{loggingOut ? "Uscita…" : "Esci"}</span>}
-        </button>
+        </div>
       </div>
     </>
   );
