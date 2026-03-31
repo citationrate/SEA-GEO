@@ -18,12 +18,16 @@ export async function POST(request: Request) {
     const { code } = parsed.data;
     const svc = createServiceClient();
 
+    console.log("[voucher] Looking up code:", code.toUpperCase(), "user:", user.id);
+
     // Look up voucher in DB
     const { data: voucher, error: vErr } = await (svc.from("vouchers") as any)
       .select("*")
       .eq("code", code.toUpperCase())
       .eq("is_used", false)
       .single();
+
+    console.log("[voucher] lookup result:", JSON.stringify({ voucher: voucher?.id, type: voucher?.type, plan: voucher?.plan, error: vErr?.message }));
 
     if (vErr || !voucher) {
       return NextResponse.json({ error: "Codice voucher non valido o già utilizzato." }, { status: 400 });
