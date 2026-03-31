@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
   CreditCard, Search, Globe, GitCompare, Link2, MessageSquareText,
-  Check, X, ArrowDown, Loader2, Zap, Crown, AlertTriangle, Sparkles, Wallet,
-  Receipt, ExternalLink, FileDown, Settings2,
+  Check, X, Loader2, Zap, Crown, AlertTriangle, Sparkles, Wallet,
+  Receipt, FileDown, Settings2, Download, Coins, CheckCircle2, AlertCircle,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
@@ -30,10 +30,10 @@ const LIMITS: Record<string, { totalPrompts: number; browsing: number; compariso
   pro:    { totalPrompts: 300, browsing: 90, comparisons: 10, urlAnalyses: 50, contextAnalyses: 5 },
 };
 
-const PLAN_STYLE: Record<string, { label: string; descKey: string; gradient: string; border: string; text: string; bg: string }> = {
-  demo: { label: "Demo", descKey: "piano.demoDesc", gradient: "linear-gradient(135deg, #6b7280, #9ca3af)", border: "rgba(107,114,128,0.3)", text: "#9ca3af", bg: "rgba(107,114,128,0.06)" },
-  base: { label: "Base", descKey: "piano.baseDesc", gradient: "linear-gradient(135deg, #3b82f6, #60a5fa)", border: "rgba(59,130,246,0.3)", text: "#60a5fa", bg: "rgba(59,130,246,0.06)" },
-  pro:  { label: "Pro", descKey: "piano.proDesc", gradient: "linear-gradient(135deg, #c4a882, #d4b896)", border: "rgba(196,168,130,0.3)", text: "#c4a882", bg: "rgba(196,168,130,0.06)" },
+const PLAN_META: Record<string, { label: string; color: string }> = {
+  demo: { label: "Demo", color: "var(--muted-foreground)" },
+  base: { label: "Base", color: "#60a5fa" },
+  pro:  { label: "Pro", color: "#c4a882" },
 };
 
 function getFeatures(t: (k: string) => string) {
@@ -89,14 +89,12 @@ export function PianoClient({
   const usage = useUsage();
 
   const limits = LIMITS[plan] || LIMITS.demo;
-  const style = PLAN_STYLE[plan] || PLAN_STYLE.demo;
-  const meta = { ...style, desc: t(style.descKey) };
+  const planMeta = PLAN_META[plan] || PLAN_META.demo;
   const isActive = subscriptionStatus === "active";
   const isDemo = plan === "demo";
   const isBase = plan === "base";
   const isPro = plan === "pro";
 
-  // Use live data from useUsage when loaded, fallback to server props
   const liveBrowsingUsed = usage.loading ? browsingUsed : usage.browsingPromptsUsed;
   const liveNoBrowsingUsed = usage.loading ? noBrowsingUsed : usage.noBrowsingPromptsUsed;
   const liveComparisonsUsed = usage.loading ? comparisonsUsed : usage.comparisonsUsed;
@@ -153,218 +151,144 @@ export function PianoClient({
     finally { setCanceling(false); setShowCancelModal(false); }
   }
 
+  const features = getFeatures(t);
+
   return (
-    <div className="space-y-10 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
 
-      {/* ════════════════ 1. HERO CARD ════════════════ */}
-      <div
-        className="rounded-[4px] p-8 relative overflow-hidden"
-        style={{ background: meta.bg, border: `1px solid ${meta.border}` }}
-      >
-        {/* Decorative gradient orb */}
-        <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full opacity-[0.07] blur-3xl" style={{ background: meta.gradient }} />
-
-        <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div
-              className="w-14 h-14 rounded-[3px] flex items-center justify-center shadow-lg"
-              style={{ background: meta.gradient }}
-            >
-              {isPro ? <Crown className="w-7 h-7 text-white" /> : isBase ? <Zap className="w-7 h-7 text-white" /> : <CreditCard className="w-7 h-7 text-white" />}
+      {/* ════════════════ 1. PIANO ABBONAMENTO ════════════════ */}
+      <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+        <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(196,168,130,0.12)" }}>
+              <Coins className="w-4 h-4 text-[#c4a882]" />
             </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-display font-bold" style={{ color: style.text }}>{style.label}</h1>
-                {!isDemo && (
-                  <span
-                    className="text-xs px-2.5 py-1 rounded-full font-semibold"
-                    style={{ background: "rgba(16,185,129,0.15)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)" }}
-                  >
-                    {t("piano.active")}
-                  </span>
-                )}
+            <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.comparePlans")}</h2>
+          </div>
+          {/* Toggle Mensile / Annuale */}
+          <div className="flex items-center rounded-[4px] p-0.5" style={{ background: "var(--background)" }}>
+            <button
+              onClick={() => setAnnual(false)}
+              className="text-xs font-medium px-3 py-1.5 rounded-[3px] transition-all"
+              style={{
+                background: !annual ? "var(--primary)" : "transparent",
+                color: !annual ? "white" : "var(--muted-foreground)",
+              }}
+            >{t("piano.monthly")}</button>
+            <button
+              onClick={() => setAnnual(true)}
+              className="text-xs font-medium px-3 py-1.5 rounded-[3px] transition-all"
+              style={{
+                background: annual ? "var(--primary)" : "transparent",
+                color: annual ? "white" : "var(--muted-foreground)",
+              }}
+            >{t("piano.annual")}</button>
+          </div>
+        </div>
+        <div className="p-5">
+          {/* Current plan badge */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-5 rounded-[4px] border border-border" style={{ background: "var(--background)" }}>
+            <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+            <span className="text-xs font-medium text-primary">{planMeta.label} {t("piano.active")}</span>
+          </div>
+
+          {/* Plan cards grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Demo */}
+            <div className="p-5 flex flex-col rounded-[2px]" style={{ border: isDemo ? "2px solid var(--primary)" : "1px solid var(--border)" }}>
+              <p className="font-display text-sm font-semibold text-foreground mb-1">Demo</p>
+              <p className="font-display text-2xl font-bold text-foreground mb-4">{t("piano.free")}</p>
+              <div className="space-y-2 text-xs text-muted-foreground flex-1">
+                {features.map((f) => (
+                  <div key={f.label} className="flex items-center gap-2">
+                    {f.demo === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0" /> : <Check className="w-3 h-3 text-muted-foreground shrink-0" />}
+                    <span className={f.demo === false ? "text-muted-foreground/40" : ""}>
+                      {f.label}{typeof f.demo === "string" ? `: ${f.demo}` : ""}
+                    </span>
+                  </div>
+                ))}
               </div>
-              <p className="text-sm text-muted-foreground mt-1">{meta.desc}</p>
-              {subscriptionPeriod && isActive && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {subscriptionPeriod === "yearly" ? t("piano.annualSub") : t("piano.monthlySub")}
-                </p>
+              {isDemo && <p className="text-xs font-medium text-primary mt-4">{t("piano.activePlan")}</p>}
+            </div>
+
+            {/* Base */}
+            <div className="p-5 flex flex-col rounded-[2px]" style={{ border: isBase ? "2px solid #3b82f6" : "1px solid var(--border)" }}>
+              <p className="font-display text-sm font-semibold text-foreground mb-1">Base</p>
+              <p className="font-display text-2xl font-bold text-foreground">
+                €{annual ? "649" : "59"}<span className="text-sm font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span>
+              </p>
+              {annual && <p className="text-xs text-muted-foreground mt-1">€54,08{t("piano.perMonth")} · {t("piano.save")} €59/{t("piano.yearLabel")}</p>}
+              <div className="space-y-2 text-xs text-muted-foreground flex-1 mt-4">
+                {features.map((f) => (
+                  <div key={f.label} className="flex items-center gap-2">
+                    {f.base === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0" /> : <Check className="w-3 h-3 text-[#3b82f6] shrink-0" />}
+                    <span className={f.base === false ? "text-muted-foreground/40" : "text-foreground"}>
+                      {f.label}{typeof f.base === "string" ? `: ${f.base}` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {isBase ? (
+                <p className="text-xs font-medium text-[#3b82f6] mt-4">{t("piano.activePlan")}</p>
+              ) : isDemo ? (
+                <button
+                  onClick={() => handleSubscribe(annual ? "STRIPE_PRICE_BASE_YEARLY" : "STRIPE_PRICE_BASE_MONTHLY")}
+                  disabled={!!subscribing}
+                  className="w-full mt-4 py-2.5 text-sm font-medium rounded-[2px] transition-all disabled:opacity-50"
+                  style={{ background: "#3b82f6", color: "#fff" }}
+                >{subscribing?.includes("BASE") ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t("piano.subscribe")}</button>
+              ) : null}
+            </div>
+
+            {/* Pro — Consigliato */}
+            <div className="p-5 flex flex-col rounded-[2px] relative" style={{ border: isPro ? "2px solid #c4a882" : "2px solid #c4a882" }}>
+              <div className="absolute -top-3 right-4 px-3 py-0.5 text-xs font-medium rounded-full" style={{ background: "#c4a882", color: "#1a1a1a" }}>{t("piano.recommended")}</div>
+              <p className="font-display text-sm font-semibold text-foreground mb-1">Pro</p>
+              <p className="font-display text-2xl font-bold text-foreground">
+                €{annual ? "1.719" : "159"}<span className="text-sm font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span>
+              </p>
+              {annual && <p className="text-xs text-muted-foreground mt-1">€143,25{t("piano.perMonth")} · {t("piano.save")} €189/{t("piano.yearLabel")}</p>}
+              <div className="space-y-2 text-xs text-muted-foreground flex-1 mt-4">
+                {features.map((f) => (
+                  <div key={f.label} className="flex items-center gap-2">
+                    {f.pro === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0" /> : <Check className="w-3 h-3 text-[#c4a882] shrink-0" />}
+                    <span className={f.pro === false ? "text-muted-foreground/40" : "text-foreground"}>
+                      {f.label}{typeof f.pro === "string" ? `: ${f.pro}` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {isPro ? (
+                <p className="text-xs font-medium text-[#c4a882] mt-4">{t("piano.activePlan")}</p>
+              ) : (
+                <button
+                  onClick={() => handleSubscribe(annual ? "STRIPE_PRICE_PRO_YEARLY" : "STRIPE_PRICE_PRO_MONTHLY")}
+                  disabled={!!subscribing}
+                  className="w-full mt-4 py-2.5 text-sm font-medium rounded-[2px] transition-all disabled:opacity-50"
+                  style={{ background: "#c4a882", color: "#1a1a1a" }}
+                >{subscribing?.includes("PRO") ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t("piano.subscribe")}</button>
               )}
             </div>
           </div>
-          {plan !== "pro" && (
-            <a
-              href="#piani"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-[3px] text-sm font-semibold transition-all hover:scale-[1.02] shrink-0"
-              style={{ background: meta.gradient, color: "#fff", boxShadow: `0 4px 14px ${meta.border}` }}
-            >
-              {t("piano.changePlan")} <ArrowDown className="w-4 h-4" />
-            </a>
-          )}
         </div>
-      </div>
+      </section>
 
-      {/* ════════════════ 2. USAGE GRID ════════════════ */}
-      <div>
-        <h2 className="text-lg font-display font-semibold text-foreground mb-4">{t("piano.yourUsage")}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* All plans: prompt totali */}
-          <UsageCard icon={<Search className="w-5 h-5" />} label={t("piano.promptsUsed")} used={totalUsed} max={totalLimit} extra={liveExtraBrowsing + liveExtraNoBrowsing > 0 ? `+${liveExtraBrowsing + liveExtraNoBrowsing} extra` : undefined} />
-
-          {/* Base+Pro: browsing */}
-          {!isDemo && (
-            <UsageCard icon={<Globe className="w-5 h-5" />} label={t("piano.withBrowsing")} used={liveBrowsingUsed} max={browsingLimit} extra={liveExtraBrowsing > 0 ? `+${liveExtraBrowsing} extra` : undefined} />
-          )}
-
-          {/* Pro: confronti, URL, contesti */}
-          {isPro && (
-            <>
-              <UsageCard icon={<GitCompare className="w-5 h-5" />} label={t("piano.comparisons")} used={liveComparisonsUsed} max={comparisonsLimit} extra={liveExtraComparisons > 0 ? `+${liveExtraComparisons} extra` : undefined} />
-              <UsageCard icon={<Link2 className="w-5 h-5" />} label={t("piano.urlAnalysis")} used={liveUrlAnalysesUsed} max={50} />
-              <UsageCard icon={<MessageSquareText className="w-5 h-5" />} label={t("piano.contextAnalysis")} used={liveContextAnalysesUsed} max={5} />
-            </>
-          )}
-
-          {/* Demo: single prompt card looks lonely, add an upgrade nudge */}
-          {isDemo && (
-            <div className="rounded-[4px] border border-dashed border-[#c4a882]/30 p-5 flex flex-col items-center justify-center text-center gap-2" style={{ background: "rgba(196,168,130,0.03)" }}>
-              <Sparkles className="w-5 h-5 text-[#c4a882]" />
-              <p className="text-sm text-muted-foreground">{t("piano.unlockMore")}</p>
-              <a href="#piani" className="text-xs font-semibold text-[#c4a882] hover:text-[#c4a882]/80 transition-colors">{t("piano.viewPlans")} &darr;</a>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ════════════════ 2b. QUERY WALLET ════════════════ */}
-      {(usage.wallet.browsingQueries > 0 || usage.wallet.noBrowsingQueries > 0 || usage.wallet.confronti > 0) && (
-        <div>
-          <h2 className="text-lg font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-[#c4a882]" /> {t("piano.walletTitle")}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {usage.wallet.browsingQueries > 0 && (
-              <div className="rounded-[4px] border border-[#c4a882]/30 p-5 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
-                <div className="flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-[#c4a882]" />
-                  <span className="text-sm font-medium text-foreground">{t("piano.walletBrowsing")}</span>
-                </div>
-                <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.browsingQueries}</p>
-                <p className="text-xs text-muted-foreground">{t("piano.walletQueryAvailable")}</p>
-              </div>
-            )}
-            {usage.wallet.noBrowsingQueries > 0 && (
-              <div className="rounded-[4px] border border-[#c4a882]/30 p-5 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
-                <div className="flex items-center gap-2">
-                  <Search className="w-4 h-4 text-[#c4a882]" />
-                  <span className="text-sm font-medium text-foreground">{t("piano.walletNoBrowsing")}</span>
-                </div>
-                <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.noBrowsingQueries}</p>
-                <p className="text-xs text-muted-foreground">{t("piano.walletQueryAvailable")}</p>
-              </div>
-            )}
-            {usage.wallet.confronti > 0 && (
-              <div className="rounded-[4px] border border-[#c4a882]/30 p-5 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
-                <div className="flex items-center gap-2">
-                  <GitCompare className="w-4 h-4 text-[#c4a882]" />
-                  <span className="text-sm font-medium text-foreground">{t("piano.walletConfronti")}</span>
-                </div>
-                <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.confronti}</p>
-                <p className="text-xs text-muted-foreground">{t("piano.walletAvailable")}</p>
-              </div>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">{t("piano.walletNeverExpires")}</p>
-        </div>
-      )}
-
-      {/* ════════════════ 3. PLAN CARDS ════════════════ */}
-      <div id="piani" className="scroll-mt-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
-          <h2 className="text-lg font-display font-semibold text-foreground">{t("piano.comparePlans")}</h2>
-          {/* Pill toggle */}
-          <div className="flex items-center bg-surface-2 rounded-full p-1 border border-border">
-            <button
-              onClick={() => setAnnual(false)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${!annual ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              {t("piano.monthly")}
-            </button>
-            <button
-              onClick={() => setAnnual(true)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${annual ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              {t("piano.annual")}
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Demo */}
-          <PlanCard
-            name="Demo"
-            price={t("piano.free")}
-            priceNote={null}
-            color="#6b7280"
-            gradient="linear-gradient(135deg, #6b7280, #9ca3af)"
-            icon={<CreditCard className="w-5 h-5 text-white" />}
-            isCurrent={isDemo}
-            isRecommended={false}
-            features={getFeatures(t).map(f => ({ label: f.label, value: f.demo }))}
-            onSubscribe={null}
-            subscribing={false}
-            labels={{ recommended: t("piano.recommended"), activePlan: t("piano.activePlan"), subscribe: t("piano.subscribe") }}
-          />
-          {/* Base */}
-          <PlanCard
-            name="Base"
-            price={annual ? "€649" : "€59"}
-            priceNote={annual ? t("piano.perYear") : t("piano.perMonth")}
-            annualDetails={annual ? { monthlyEquiv: "€54,08" } : undefined}
-            color="#3b82f6"
-            gradient="linear-gradient(135deg, #3b82f6, #60a5fa)"
-            icon={<Zap className="w-5 h-5 text-white" />}
-            isCurrent={isBase}
-            isRecommended={false}
-            features={getFeatures(t).map(f => ({ label: f.label, value: f.base }))}
-            onSubscribe={!isBase && !isPro ? () => handleSubscribe(annual ? "STRIPE_PRICE_BASE_YEARLY" : "STRIPE_PRICE_BASE_MONTHLY") : null}
-            subscribing={subscribing === (annual ? "STRIPE_PRICE_BASE_YEARLY" : "STRIPE_PRICE_BASE_MONTHLY")}
-            labels={{ recommended: t("piano.recommended"), activePlan: t("piano.activePlan"), subscribe: t("piano.subscribe") }}
-            t={t}
-          />
-          {/* Pro */}
-          <PlanCard
-            name="Pro"
-            price={annual ? "€1.719" : "€159"}
-            priceNote={annual ? t("piano.perYear") : t("piano.perMonth")}
-            annualDetails={annual ? { monthlyEquiv: "€143,25" } : undefined}
-            color="#c4a882"
-            gradient="linear-gradient(135deg, #c4a882, #d4b896)"
-            icon={<Crown className="w-5 h-5 text-white" />}
-            isCurrent={isPro}
-            isRecommended={true}
-            features={getFeatures(t).map(f => ({ label: f.label, value: f.pro }))}
-            onSubscribe={!isPro ? () => handleSubscribe(annual ? "STRIPE_PRICE_PRO_YEARLY" : "STRIPE_PRICE_PRO_MONTHLY") : null}
-            subscribing={subscribing === (annual ? "STRIPE_PRICE_PRO_YEARLY" : "STRIPE_PRICE_PRO_MONTHLY")}
-            labels={{ recommended: t("piano.recommended"), activePlan: t("piano.activePlan"), subscribe: t("piano.subscribe") }}
-            t={t}
-          />
-        </div>
-      </div>
-
-      {/* ════════════════ 4. PACKAGES ════════════════ */}
+      {/* ════════════════ 2. PACCHETTI EXTRA ════════════════ */}
       {packages.length > 0 && (
-        <div>
-          <h2 className="text-lg font-display font-semibold text-foreground mb-1">{t("piano.extraPackages")}</h2>
-          <p className="text-sm text-muted-foreground mb-5">{t("piano.extraPackagesDesc")}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {packages.map((pkg) => (
-              <div
-                key={pkg.priceEnv}
-                className="group rounded-[4px] border border-border p-5 flex flex-col justify-between hover:border-primary/30 hover:shadow-[0_0_20px_rgba(126,184,154,0.06)] transition-all"
-                style={{ background: "var(--surface)" }}
-              >
-                <div>
+        <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+          <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(122,184,154,0.12)" }}>
+              <Download className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.extraPackages")}</h2>
+              <p className="text-xs text-muted-foreground">{t("piano.extraPackagesDesc")}</p>
+            </div>
+          </div>
+          <div className="p-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {packages.map((pkg) => (
+                <div key={pkg.priceEnv} className="p-4 flex flex-col rounded-[2px]" style={{ border: "1px solid var(--border)" }}>
                   <div className="flex items-center gap-2.5 mb-3">
                     <div className="w-8 h-8 rounded-[3px] flex items-center justify-center" style={{ background: pkg.type === "query" ? "rgba(59,130,246,0.12)" : "rgba(196,168,130,0.12)" }}>
                       {pkg.type === "query" ? <Zap className="w-4 h-4 text-[#3b82f6]" /> : <GitCompare className="w-4 h-4 text-[#c4a882]" />}
@@ -374,58 +298,157 @@ export function PianoClient({
                       <p className="text-xs text-muted-foreground">{pkg.desc}</p>
                     </div>
                   </div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-2xl font-display font-bold text-foreground">&euro;{pkg.price}</span>
-                    {pkg.note && (
-                      <span className="text-[0.6rem] font-mono text-muted-foreground uppercase tracking-wider border border-border rounded px-1.5 py-0.5">{pkg.note}</span>
-                    )}
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="font-display text-lg font-bold text-foreground">€{pkg.price}</p>
+                    {pkg.note && <span className="font-mono text-[0.6rem] tracking-wider uppercase text-muted-foreground">{pkg.note}</span>}
                   </div>
+                  <button
+                    onClick={() => handleBuyPackage(pkg.priceEnv)}
+                    disabled={purchasingId !== null}
+                    className="w-full py-2 text-sm font-medium rounded-[2px] transition-all disabled:opacity-50"
+                    style={{ background: "var(--primary)", color: "white" }}
+                  >{purchasingId === pkg.priceEnv ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t("piano.buy")}</button>
                 </div>
-                <button
-                  onClick={() => handleBuyPackage(pkg.priceEnv)}
-                  disabled={purchasingId !== null}
-                  className="mt-4 w-full py-2.5 rounded-[3px] text-sm font-semibold border border-primary/40 text-primary hover:bg-primary hover:text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {purchasingId === pkg.priceEnv ? <Loader2 className="w-4 h-4 animate-spin" /> : t("piano.buy")}
-                </button>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
+        </section>
+      )}
+
+      {/* ════════════════ 3. UTILIZZO ════════════════ */}
+      <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+        <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(122,184,154,0.12)" }}>
+            <Search className="w-4 h-4 text-primary" />
+          </div>
+          <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.yourUsage")}</h2>
         </div>
-      )}
+        <div className="p-5 space-y-5">
+          {/* Prompt totali */}
+          <UsageBar label={t("piano.promptsUsed")} used={totalUsed} max={totalLimit} extra={liveExtraBrowsing + liveExtraNoBrowsing > 0 ? `+${liveExtraBrowsing + liveExtraNoBrowsing} extra` : undefined} />
 
-      {/* ════════════════ 5. SUBSCRIPTION DETAILS ════════════════ */}
-      {!isDemo && (
-        <SubscriptionDetails
-          plan={plan}
-          subscriptionPeriod={subscriptionPeriod}
-          subscriptionStatus={subscriptionStatus}
-        />
-      )}
+          {/* Browsing */}
+          {!isDemo && (
+            <UsageBar label={t("piano.withBrowsing")} used={liveBrowsingUsed} max={browsingLimit} extra={liveExtraBrowsing > 0 ? `+${liveExtraBrowsing} extra` : undefined} />
+          )}
 
-      {/* ════════════════ 6. INVOICE HISTORY ════════════════ */}
-      {!isDemo && <InvoiceHistory />}
+          {/* Pro: confronti, URL, contesti */}
+          {isPro && (
+            <>
+              <UsageBar label={t("piano.comparisons")} used={liveComparisonsUsed} max={comparisonsLimit} extra={liveExtraComparisons > 0 ? `+${liveExtraComparisons} extra` : undefined} />
+              <UsageBar label={t("piano.urlAnalysis")} used={liveUrlAnalysesUsed} max={50} />
+              <UsageBar label={t("piano.contextAnalysis")} used={liveContextAnalysesUsed} max={5} />
+            </>
+          )}
 
-      {/* ════════════════ 7. CANCEL ════════════════ */}
-      {!isDemo && (
-        <div className="rounded-[4px] border border-destructive/20 p-5" style={{ background: "rgba(239,68,68,0.03)" }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-destructive/60" />
+          {/* Demo nudge */}
+          {isDemo && (
+            <div className="rounded-[4px] border border-dashed border-[#c4a882]/30 p-4 flex items-center gap-3" style={{ background: "rgba(196,168,130,0.03)" }}>
+              <Sparkles className="w-5 h-5 text-[#c4a882] shrink-0" />
               <div>
-                <p className="text-sm font-medium text-foreground">{t("piano.cancelQuestion")}</p>
-                <p className="text-xs text-muted-foreground">{t("piano.cancelDesc")}</p>
+                <p className="text-sm text-muted-foreground">{t("piano.unlockMore")}</p>
+                <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="text-xs font-semibold text-[#c4a882] hover:text-[#c4a882]/80 transition-colors">{t("piano.viewPlans")} &uarr;</a>
               </div>
             </div>
-            <button
-              onClick={() => setShowCancelModal(true)}
-              className="px-4 py-2 rounded-[3px] border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors shrink-0"
-            >
-              {t("piano.cancelSubscription")}
-            </button>
-          </div>
+          )}
         </div>
+      </section>
+
+      {/* ════════════════ 4. QUERY WALLET ════════════════ */}
+      {(usage.wallet.browsingQueries > 0 || usage.wallet.noBrowsingQueries > 0 || usage.wallet.confronti > 0) && (
+        <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+          <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(196,168,130,0.12)" }}>
+              <Wallet className="w-4 h-4 text-[#c4a882]" />
+            </div>
+            <div>
+              <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.walletTitle")}</h2>
+              <p className="text-xs text-muted-foreground">{t("piano.walletNeverExpires")}</p>
+            </div>
+          </div>
+          <div className="p-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {usage.wallet.browsingQueries > 0 && (
+                <div className="rounded-[4px] border border-[#c4a882]/30 p-4 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
+                  <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-[#c4a882]" /><span className="text-sm font-medium text-foreground">{t("piano.walletBrowsing")}</span></div>
+                  <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.browsingQueries}</p>
+                  <p className="text-xs text-muted-foreground">{t("piano.walletQueryAvailable")}</p>
+                </div>
+              )}
+              {usage.wallet.noBrowsingQueries > 0 && (
+                <div className="rounded-[4px] border border-[#c4a882]/30 p-4 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
+                  <div className="flex items-center gap-2"><Search className="w-4 h-4 text-[#c4a882]" /><span className="text-sm font-medium text-foreground">{t("piano.walletNoBrowsing")}</span></div>
+                  <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.noBrowsingQueries}</p>
+                  <p className="text-xs text-muted-foreground">{t("piano.walletQueryAvailable")}</p>
+                </div>
+              )}
+              {usage.wallet.confronti > 0 && (
+                <div className="rounded-[4px] border border-[#c4a882]/30 p-4 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
+                  <div className="flex items-center gap-2"><GitCompare className="w-4 h-4 text-[#c4a882]" /><span className="text-sm font-medium text-foreground">{t("piano.walletConfronti")}</span></div>
+                  <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.confronti}</p>
+                  <p className="text-xs text-muted-foreground">{t("piano.walletAvailable")}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
       )}
+
+      {/* ════════════════ 5. GESTIONE ABBONAMENTO ════════════════ */}
+      {!isDemo && (
+        <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+          <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(196,168,130,0.12)" }}>
+              <CreditCard className="w-4 h-4 text-[#c4a882]" />
+            </div>
+            <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.subscriptionTitle")}</h2>
+          </div>
+          <div className="p-5 space-y-5">
+            {/* Plan details grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.activePlan")}</p>
+                <p className="text-sm font-semibold text-foreground mt-1">{planMeta.label}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.period")}</p>
+                <p className="text-sm font-semibold text-foreground mt-1">{subscriptionPeriod === "yearly" ? t("piano.annual") : t("piano.monthly")}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.amount")}</p>
+                <p className="text-sm font-semibold text-foreground mt-1">
+                  {plan === "base" ? (subscriptionPeriod === "yearly" ? "€649" : "€59") : plan === "pro" ? (subscriptionPeriod === "yearly" ? "€1.719" : "€159") : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.status")}</p>
+                <p className="text-sm font-semibold text-foreground mt-1 capitalize">{subscriptionStatus}</p>
+              </div>
+            </div>
+
+            {/* Stripe info */}
+            <div className="flex items-center gap-3 p-3 rounded-[4px] border border-border" style={{ background: "var(--background)" }}>
+              <svg className="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="4" fill="#635BFF"/><path d="M11.2 9.6c0-.66.54-1.02 1.44-1.02.96 0 2.16.3 3.12.84V6.84A8.34 8.34 0 0012.64 6c-2.28 0-3.84 1.2-3.84 3.24 0 3.12 4.32 2.64 4.32 3.96 0 .78-.66 1.02-1.62 1.02-1.38 0-3.18-.72-3.18-.72v2.64s1.44.6 3.18.6c2.34 0 4.02-1.14 4.02-3.24-.06-3.36-4.32-2.76-4.32-4.14z" fill="#fff"/></svg>
+              <div>
+                <p className="text-sm font-medium text-foreground">{t("piano.stripeInfo")}</p>
+                <p className="text-xs text-muted-foreground">{t("piano.stripeInfoDesc")}</p>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-3">
+              <PortalButton />
+              <button
+                onClick={() => setShowCancelModal(true)}
+                className="px-4 py-2 rounded-[3px] border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors"
+              >{t("piano.cancelSubscription")}</button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ════════════════ 6. STORICO FATTURE ════════════════ */}
+      {!isDemo && <InvoiceHistory />}
 
       {/* Cancel modal */}
       {showCancelModal && (
@@ -435,13 +458,9 @@ export function PianoClient({
               <AlertTriangle className="w-5 h-5 text-destructive" />
               <h3 className="text-lg font-semibold text-foreground">{t("piano.cancelSubscription")}</h3>
             </div>
-            <p className="text-sm text-muted-foreground">
-              {t("piano.cancelModalDesc")}
-            </p>
+            <p className="text-sm text-muted-foreground">{t("piano.cancelModalDesc")}</p>
             <div className="flex gap-3 justify-end pt-2">
-              <button onClick={() => setShowCancelModal(false)} className="text-sm px-4 py-2 rounded-[3px] border border-border text-muted-foreground hover:text-foreground transition-colors">
-                {t("piano.back")}
-              </button>
+              <button onClick={() => setShowCancelModal(false)} className="text-sm px-4 py-2 rounded-[3px] border border-border text-muted-foreground hover:text-foreground transition-colors">{t("piano.back")}</button>
               <button onClick={handleCancel} disabled={canceling} className="text-sm px-4 py-2 rounded-[3px] bg-destructive text-white hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center gap-2">
                 {canceling && <Loader2 className="w-4 h-4 animate-spin" />}
                 {t("piano.cancelConfirm")}
@@ -458,207 +477,67 @@ export function PianoClient({
    SUB-COMPONENTS
    ═══════════════════════════════════════════════════════ */
 
-function UsageCard({ icon, label, used, max, extra }: {
-  icon: React.ReactNode; label: string; used: number; max: number; extra?: string;
-}) {
-  const pct = max > 0 ? used / max : 0;
+function UsageBar({ label, used, max, extra }: { label: string; used: number; max: number; extra?: string }) {
+  const pct = max > 0 ? (used / max) * 100 : 0;
   const color = barColor(used, max);
+  const exhausted = max > 0 && used >= max;
+  const almostOut = max > 0 && pct > 70 && !exhausted;
+
   return (
-    <div className="rounded-[4px] border border-border p-5 space-y-3" style={{ background: "var(--surface)" }}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-[3px] flex items-center justify-center" style={{ background: `${color}15` }}>
-            <span style={{ color }}>{icon}</span>
-          </div>
-          <span className="text-sm font-medium text-foreground">{label}</span>
-        </div>
-        <span className="text-xl font-display font-bold text-foreground">{used}<span className="text-sm font-normal text-muted-foreground">/{max}</span></span>
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-sm font-mono">
+          <span style={{ color: exhausted ? "#ef4444" : almostOut ? "#f59e0b" : "var(--foreground)", fontWeight: (exhausted || almostOut) ? 700 : 400 }}>{used}</span>
+          <span className="text-muted-foreground"> / {max}</span>
+          {extra && <span className="text-xs ml-1.5" style={{ color }}>({extra})</span>}
+        </p>
       </div>
-      <div className="h-2.5 rounded-full overflow-hidden" style={{ background: `${color}15` }}>
+      <div className="w-full h-2.5 rounded-full" style={{ background: `${color}15` }}>
         <div
-          className="h-full rounded-full transition-all duration-700 ease-out"
-          style={{
-            width: max > 0 ? `${Math.min(100, pct * 100)}%` : "0%",
-            background: `linear-gradient(90deg, ${color}, ${color}cc)`,
-            minWidth: used > 0 && max > 0 ? "6px" : undefined,
-            boxShadow: pct > 0.5 ? `0 0 8px ${color}40` : undefined,
-          }}
+          className="h-2.5 rounded-full transition-all duration-500"
+          style={{ width: `${Math.min(100, pct)}%`, background: color, minWidth: used > 0 && max > 0 ? "6px" : undefined }}
         />
       </div>
-      {extra && <p className="text-xs font-medium" style={{ color }}>{extra}</p>}
-    </div>
-  );
-}
-
-function PlanCard({ name, price, priceNote, annualDetails, color, gradient, icon, isCurrent, isRecommended, features, onSubscribe, subscribing, labels, t }: {
-  name: string; price: string; priceNote: string | null;
-  annualDetails?: { monthlyEquiv: string };
-  color: string; gradient: string; icon: React.ReactNode;
-  isCurrent: boolean; isRecommended: boolean;
-  features: { label: string; value: boolean | string }[];
-  onSubscribe: (() => void) | null; subscribing: boolean;
-  labels: { recommended: string; activePlan: string; subscribe: string };
-  t?: (k: string) => string;
-}) {
-  return (
-    <div
-      className="relative rounded-[4px] flex flex-col overflow-hidden transition-all"
-      style={{
-        border: isCurrent ? `2px solid ${color}` : "1px solid var(--border)",
-        background: "var(--surface)",
-        boxShadow: isCurrent ? `0 0 24px ${color}15` : undefined,
-      }}
-    >
-      {/* Recommended badge */}
-      {isRecommended && (
-        <div className="absolute top-0 right-0 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-wider text-white rounded-bl-[4px]" style={{ background: gradient }}>
-          {labels.recommended}
-        </div>
+      {exhausted && (
+        <p className="flex items-center gap-1.5 text-xs mt-1.5" style={{ color: "#ef4444" }}>
+          <AlertCircle className="w-3 h-3" /> Limite raggiunto
+        </p>
       )}
-
-      {/* Header */}
-      <div className="p-6 pb-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-[3px] flex items-center justify-center shadow-md" style={{ background: gradient }}>
-            {icon}
-          </div>
-          <h3 className="text-xl font-display font-bold text-foreground">{name}</h3>
-        </div>
-        <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-display font-bold text-foreground">{price}</span>
-          {priceNote && <span className="text-sm text-muted-foreground">{priceNote}</span>}
-        </div>
-        {annualDetails && (
-          <p className="mt-1 text-sm text-muted-foreground">
-            {annualDetails.monthlyEquiv}{t ? t("piano.perMonth") : "/mese"}
-          </p>
-        )}
-      </div>
-
-      {/* Features */}
-      <div className="flex-1 px-6 pb-4 space-y-2.5">
-        {features.map((f) => (
-          <div key={f.label} className="flex items-center gap-2.5 text-xs">
-            {f.value === true ? (
-              <Check className="w-3.5 h-3.5 shrink-0" style={{ color }} />
-            ) : f.value === false ? (
-              <X className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0" />
-            ) : (
-              <Check className="w-3.5 h-3.5 shrink-0" style={{ color }} />
-            )}
-            <span className={f.value === false ? "text-muted-foreground/50" : "text-foreground"}>
-              {f.label}{typeof f.value === "string" ? `: ${f.value}` : ""}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* CTA */}
-      <div className="p-6 pt-2">
-        {isCurrent ? (
-          <div
-            className="w-full py-2.5 rounded-[3px] text-center text-sm font-semibold"
-            style={{ background: `${color}15`, color, border: `1px solid ${color}30` }}
-          >
-            {labels.activePlan}
-          </div>
-        ) : onSubscribe ? (
-          <button
-            onClick={onSubscribe}
-            disabled={subscribing}
-            className="w-full py-2.5 rounded-[3px] text-sm font-semibold text-white transition-all hover:scale-[1.01] hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
-            style={{ background: gradient, boxShadow: `0 4px 14px ${color}30` }}
-          >
-            {subscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : labels.subscribe}
-          </button>
-        ) : (
-          <button disabled className="w-full py-2.5 rounded-[3px] text-sm font-medium text-muted-foreground border border-border opacity-50 cursor-not-allowed">
-            {labels.activePlan}
-          </button>
-        )}
-      </div>
     </div>
   );
 }
 
-/* ─── Subscription Details ─── */
-
-function SubscriptionDetails({ plan, subscriptionPeriod, subscriptionStatus }: {
-  plan: string; subscriptionPeriod: string | null; subscriptionStatus: string;
-}) {
+function PortalButton() {
   const { t } = useTranslation();
-  const [portalLoading, setPortalLoading] = useState(false);
-
-  const planLabel = plan === "pro" ? "Pro" : plan === "base" ? "Base" : plan;
-  const periodLabel = subscriptionPeriod === "yearly" ? t("piano.annual") : t("piano.monthly");
-
-  const prices: Record<string, Record<string, string>> = {
-    base: { monthly: "€59", yearly: "€649" },
-    pro: { monthly: "€159", yearly: "€1.719" },
-  };
-  const amount = prices[plan]?.[subscriptionPeriod ?? "monthly"] ?? "—";
+  const [loading, setLoading] = useState(false);
 
   async function openPortal() {
-    setPortalLoading(true);
+    setLoading(true);
     try {
       const res = await fetch("/api/stripe/portal", { method: "POST" });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
       else alert(data.error || "Errore");
     } catch { alert("Errore di rete"); }
-    finally { setPortalLoading(false); }
+    finally { setLoading(false); }
   }
 
   return (
-    <div className="rounded-[4px] border border-border p-6 space-y-4" style={{ background: "var(--surface)" }}>
-      <div className="flex items-center gap-2">
-        <CreditCard className="w-5 h-5 text-primary" />
-        <h2 className="font-display font-semibold text-foreground">{t("piano.subscriptionTitle")}</h2>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.activePlan")}</p>
-          <p className="text-sm font-semibold text-foreground mt-1">{planLabel}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.period")}</p>
-          <p className="text-sm font-semibold text-foreground mt-1">{periodLabel}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.amount")}</p>
-          <p className="text-sm font-semibold text-foreground mt-1">{amount}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.status")}</p>
-          <p className="text-sm font-semibold text-foreground mt-1 capitalize">{subscriptionStatus}</p>
-        </div>
-      </div>
-      <button
-        onClick={openPortal}
-        disabled={portalLoading}
-        className="flex items-center gap-2 px-4 py-2 rounded-[3px] border border-primary/40 text-primary text-sm font-semibold hover:bg-primary hover:text-white transition-all disabled:opacity-50"
-      >
-        {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Settings2 className="w-4 h-4" />}
-        {t("piano.managePayment")}
-      </button>
-    </div>
+    <button
+      onClick={openPortal}
+      disabled={loading}
+      className="flex items-center gap-2 px-4 py-2 rounded-[3px] border border-primary/40 text-primary text-sm font-semibold hover:bg-primary hover:text-white transition-all disabled:opacity-50"
+    >
+      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Settings2 className="w-4 h-4" />}
+      {t("piano.managePayment")}
+    </button>
   );
-}
-
-/* ─── Invoice History ─── */
-
-interface Invoice {
-  id: string;
-  date: string | null;
-  amount: number;
-  currency: string;
-  status: string;
-  pdf_url: string | null;
 }
 
 function InvoiceHistory() {
   const { t } = useTranslation();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<{ id: string; date: string | null; amount: number; currency: string; status: string; pdf_url: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -669,65 +548,58 @@ function InvoiceHistory() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return (
-    <div className="rounded-[4px] border border-border p-6 flex items-center gap-2 text-muted-foreground text-sm">
-      <Loader2 className="w-4 h-4 animate-spin" /> {t("common.loading")}
-    </div>
-  );
-
   return (
-    <div className="rounded-[4px] border border-border p-6 space-y-4" style={{ background: "var(--surface)" }}>
-      <div className="flex items-center gap-2">
-        <Receipt className="w-5 h-5 text-primary" />
-        <h2 className="font-display font-semibold text-foreground">{t("piano.invoiceHistory")}</h2>
+    <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+      <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(122,184,154,0.12)" }}>
+          <Receipt className="w-4 h-4 text-primary" />
+        </div>
+        <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.invoiceHistory")}</h2>
       </div>
-      {invoices.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("piano.noInvoices")}</p>
-      ) : (
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs text-muted-foreground uppercase tracking-wide border-b border-border">
-              <th className="text-left py-2 pr-4">{t("piano.invoiceDate")}</th>
-              <th className="text-left py-2 pr-4">{t("piano.amount")}</th>
-              <th className="text-left py-2 pr-4">{t("piano.status")}</th>
-              <th className="text-right py-2">PDF</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv) => (
-              <tr key={inv.id} className="border-b border-border/50">
-                <td className="py-2.5 pr-4 text-foreground">
-                  {inv.date ? new Date(inv.date).toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" }) : "—"}
-                </td>
-                <td className="py-2.5 pr-4 text-foreground font-medium">
-                  €{inv.amount.toFixed(2)}
-                </td>
-                <td className="py-2.5 pr-4">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    inv.status === "paid" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
-                  }`}>
-                    {inv.status === "paid" ? t("piano.paid") : inv.status}
-                  </span>
-                </td>
-                <td className="py-2.5 text-right">
-                  {inv.pdf_url && (
-                    <a
-                      href={inv.pdf_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:text-primary/70 text-xs font-medium"
-                    >
-                      <FileDown className="w-3.5 h-3.5" /> {t("piano.download")}
-                    </a>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="p-5">
+        {loading ? (
+          <div className="flex items-center gap-2 text-muted-foreground text-sm py-4">
+            <Loader2 className="w-4 h-4 animate-spin" /> {t("common.loading")}
+          </div>
+        ) : invoices.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4">{t("piano.noInvoices")}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-muted-foreground uppercase tracking-wide border-b border-border">
+                  <th className="text-left py-2 pr-4">{t("piano.invoiceDate")}</th>
+                  <th className="text-left py-2 pr-4">{t("piano.amount")}</th>
+                  <th className="text-left py-2 pr-4">{t("piano.status")}</th>
+                  <th className="text-right py-2">PDF</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="border-b border-border/50">
+                    <td className="py-2.5 pr-4 text-foreground">
+                      {inv.date ? new Date(inv.date).toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                    </td>
+                    <td className="py-2.5 pr-4 text-foreground font-medium">€{inv.amount.toFixed(2)}</td>
+                    <td className="py-2.5 pr-4">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${inv.status === "paid" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                        {inv.status === "paid" ? t("piano.paid") : inv.status}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-right">
+                      {inv.pdf_url && (
+                        <a href={inv.pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:text-primary/70 text-xs font-medium">
+                          <FileDown className="w-3.5 h-3.5" /> {t("piano.download")}
+                        </a>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-      )}
-    </div>
+    </section>
   );
 }
