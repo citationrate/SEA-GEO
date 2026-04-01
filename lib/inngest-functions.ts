@@ -428,16 +428,18 @@ async function executePrompt(
   }
 
   const rawText = aiResult.text;
+  const citationSources: string[] = aiResult.citationSources ?? [];
   const isSkipped = aiResult.error?.includes("SKIPPED");
   const promptError: string | null = rawText ? null : (aiResult.error ?? "Risposta vuota dal modello");
 
-  // Update prompt with response
+  // Update prompt with response + save raw citation URLs
   await (supabase.from("prompts_executed") as any)
     .update({
       raw_response: rawText || null,
       response_length: rawText.length,
       executed_at: new Date().toISOString(),
       error: promptError,
+      citation_urls: citationSources,
     })
     .eq("id", promptRecord.id);
 
@@ -481,6 +483,17 @@ async function executePrompt(
     console.log(`[executePrompt] competitors after normalization+filter: ${normalizedCompNames.length}/${extraction.competitors_found.length} kept: [${normalizedCompNames.join(", ")}]`);
   }
 
+  // Check if brand domain appears in AI-consulted citation URLs (any provider)
+  const brandInCitations = citationSources.length > 0 && task.brandDomain
+    ? citationSources.some(url => {
+        try {
+          const citationDomain = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+          const brand = task.brandDomain!.replace(/^(?:https?:\/\/)?(?:www\.)?/, "").replace(/\/.*$/, "").toLowerCase();
+          return citationDomain.includes(brand) || brand.includes(citationDomain);
+        } catch { return false; }
+      })
+    : false;
+
   await (supabase.from("response_analysis") as any)
     .insert({
       prompt_executed_id: promptRecord.id,
@@ -495,6 +508,7 @@ async function executePrompt(
       competitors_found: normalizedCompNames,
       avi_score: null,
       avi_components: null,
+      brand_in_citations: brandInCitations,
     });
 
   // Save competitor_mentions (with same normalization + institutional filter as competitors table)
@@ -542,11 +556,12 @@ async function executePrompt(
     domain: s.domain,
     title: s.label,
     source_type: s.source_type || "other",
+    source_origin: "text_mention" as const,
     context: s.context,
   }));
   const mergedSources = mergeSources(aiResult.sources, extractorSources);
 
-  // Batch upsert sources
+  // Batch upsert sources (source_origin preserved from ExtractedSource via mergeSources)
   const sourceRows = mergedSources
     .filter(s => s.domain && task.projectId)
     .map(s => ({
@@ -555,6 +570,7 @@ async function executePrompt(
       url: s.url || "https://" + s.domain,
       domain: s.domain,
       source_type: s.source_type || "other",
+      source_origin: s.source_origin || "text_mention",
       context: s.context || "",
       citation_count: 1,
     }));
@@ -678,7 +694,8 @@ export const runAnalysis = inngest.createFunction(
       const { data: queries } = await supabase
         .from("queries")
         .select("*")
-        .eq("project_id", projectId);
+        .eq("project_id", projectId)
+        .eq("is_active", true);
 
       const { data: segments } = await supabase
         .from("audience_segments")

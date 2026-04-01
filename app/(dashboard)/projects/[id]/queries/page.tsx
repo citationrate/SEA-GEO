@@ -309,6 +309,7 @@ function BrandWarning({ brand }: { brand: string }) {
 }
 
 function QueryItem({ query, onDelete, onToggle }: { query: Query; onDelete: (id: string) => void; onToggle: (id: string, active: boolean) => void }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const setType = query.set_type || "manual";
   const colorCls = SET_TYPE_COLORS[setType] || SET_TYPE_COLORS.manual;
   const label = SET_TYPE_LABELS[setType] || "MAN";
@@ -322,7 +323,7 @@ function QueryItem({ query, onDelete, onToggle }: { query: Query; onDelete: (id:
         <button
           onClick={() => onToggle(query.id, isActive)}
           className="shrink-0 transition-colors"
-          title={isActive ? "Disable" : "Enable"}
+          title={isActive ? "Disattiva" : "Attiva"}
         >
           {isActive
             ? <ToggleRight className="w-5 h-5 text-primary" />
@@ -337,12 +338,30 @@ function QueryItem({ query, onDelete, onToggle }: { query: Query; onDelete: (id:
             {label}
           </span>
         )}
-        <button
-          onClick={() => onDelete(query.id)}
-          className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+        {confirmDelete ? (
+          <div className="flex items-center gap-1 animate-fade-in">
+            <button
+              onClick={() => { onDelete(query.id); setConfirmDelete(false); }}
+              className="text-xs font-medium text-destructive hover:text-destructive/80 transition-colors px-1.5 py-0.5 rounded-[2px] border border-destructive/30 bg-destructive/10"
+            >
+              Elimina
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5"
+            >
+              Annulla
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+            title="Elimina query"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
     </li>
   );
