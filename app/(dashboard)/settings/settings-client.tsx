@@ -196,9 +196,14 @@ export function SettingsClient({
           <p className="text-sm text-muted-foreground">{t("settings.changePasswordDesc") || "Riceverai un'email con il link per reimpostare la password."}</p>
           <button
             onClick={async () => {
-              const res = await fetch("/api/auth/reset-password", { method: "POST" });
-              if (res.ok) alert(t("settings.resetSent") || "Email inviata! Controlla la tua casella.");
-              else alert(t("settings.resetError") || "Errore nell'invio. Riprova.");
+              try {
+                const res = await fetch("/api/auth/reset-password", { method: "POST" });
+                const data = await res.json();
+                if (res.ok) alert(t("settings.resetSent") || "Email inviata! Controlla la tua casella.");
+                else alert(data.error || t("settings.resetError") || "Errore nell'invio. Riprova.");
+              } catch {
+                alert(t("settings.resetError") || "Errore di rete. Riprova.");
+              }
             }}
             className="px-4 py-2 border border-primary/40 text-primary rounded-[2px] text-sm font-medium hover:bg-primary/10 transition-colors shrink-0"
           >
