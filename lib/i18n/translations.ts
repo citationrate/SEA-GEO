@@ -53,6 +53,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     piano: {
       title: "Il tuo piano",
       subtitle: "Gestisci il tuo abbonamento e monitora i tuoi utilizzi.",
+      usage: "Uso", plans: "Piani", invoices: "Fatture",
       changePlan: "Cambia piano",
       active: "Attivo",
       demoDesc: "Piano gratuito di prova — 40 prompt totali",
@@ -173,6 +174,8 @@ export const translations: Record<Locale, Record<string, any>> = {
       lowReliability: "Dato instabile",
       reliabilityTooltip: "Misura quanto le risposte AI sono coerenti tra loro all'interno di questa analisi. Non indica la visibilità del brand — un brand poco citato può avere un dato stabile se le AI lo ignorano consistentemente.",
       singleRunNote: "Esegui più analisi per misurare la stabilità nel tempo.",
+      aiConsultedSources: "Fonti Consultate",
+      aiConsultedSourcesDesc: "il tuo dominio è consultato dall'AI",
     },
     settings: {
       title: "Impostazioni", subtitle: "Gestisci profilo, modelli e preferenze",
@@ -355,6 +358,11 @@ export const translations: Record<Locale, Record<string, any>> = {
       brandImpact: "Impatto sul brand",
       review: "Recensioni", ecommerce: "E-commerce", other: "Altro",
       citationsLabel: "Citazioni", analysesLabel: "Analisi",
+      aiConsulted: "Consultate dall'AI",
+      textMention: "Menzionate nel testo",
+      consultedBadge: "Consultata",
+      mentionedBadge: "Menzionata",
+      brandConsultedByAI: "Brand consultato dall'AI",
     },
     datasets: {
       title: "Dataset", subtitle: "Dati raw delle risposte AI",
@@ -955,6 +963,7 @@ export const translations: Record<Locale, Record<string, any>> = {
 },
     piano: {
       title: "Your plan",
+      usage: "Usage", plans: "Plans", invoices: "Invoices",
       subtitle: "Manage your subscription and monitor your usage.",
       changePlan: "Change plan",
       active: "Active",
@@ -1076,6 +1085,8 @@ export const translations: Record<Locale, Record<string, any>> = {
       lowReliability: "Unstable data",
       reliabilityTooltip: "Measures how consistent AI responses are within this analysis. Does not indicate brand visibility — a rarely cited brand can have stable data if AIs consistently ignore it.",
       singleRunNote: "Run more analyses to measure stability over time.",
+      aiConsultedSources: "AI Consulted Sources",
+      aiConsultedSourcesDesc: "your domain is consulted by AI",
     },
     settings: {
       title: "Settings", subtitle: "Manage profile, models and preferences",
@@ -1258,6 +1269,11 @@ export const translations: Record<Locale, Record<string, any>> = {
       brandImpact: "Brand impact",
       review: "Reviews", ecommerce: "E-commerce", other: "Other",
       citationsLabel: "Citations", analysesLabel: "Analyses",
+      aiConsulted: "AI Consulted",
+      textMention: "Text Mentions",
+      consultedBadge: "Consulted",
+      mentionedBadge: "Mentioned",
+      brandConsultedByAI: "Brand consulted by AI",
     },
     datasets: {
       title: "Dataset", subtitle: "Raw AI response data",
@@ -1857,6 +1873,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     piano: {
       title: "Votre forfait",
       subtitle: "Gérez votre abonnement et surveillez votre utilisation.",
+      usage: "Utilisation", plans: "Forfaits", invoices: "Factures",
       changePlan: "Changer de forfait",
       active: "Actif",
       demoDesc: "Forfait d'essai gratuit — 40 prompts au total",
@@ -1977,6 +1994,8 @@ export const translations: Record<Locale, Record<string, any>> = {
       lowReliability: "Donnée instable",
       reliabilityTooltip: "Mesure la cohérence des réponses IA au sein de cette analyse. N'indique pas la visibilité de la marque — une marque peu citée peut avoir des données stables si les IA l'ignorent systématiquement.",
       singleRunNote: "Lancez plus d'analyses pour mesurer la stabilité dans le temps.",
+      aiConsultedSources: "Sources Consultées",
+      aiConsultedSourcesDesc: "votre domaine est consulté par l'IA",
     },
     settings: {
       title: "Paramètres", subtitle: "Gérer profil, modèles et préférences",
@@ -2159,6 +2178,11 @@ export const translations: Record<Locale, Record<string, any>> = {
       brandImpact: "Impact sur la marque",
       review: "Avis", ecommerce: "E-commerce", other: "Autre",
       citationsLabel: "Citations", analysesLabel: "Analyses",
+      aiConsulted: "Consultées par l'IA",
+      textMention: "Mentionnées dans le texte",
+      consultedBadge: "Consultée",
+      mentionedBadge: "Mentionnée",
+      brandConsultedByAI: "Marque consultée par l'IA",
     },
     datasets: {
       title: "Dataset", subtitle: "Données brutes des réponses IA",
@@ -2658,6 +2682,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     piano: {
       title: "Ihr Tarif",
       subtitle: "Verwalten Sie Ihr Abonnement und überwachen Sie Ihre Nutzung.",
+      usage: "Nutzung", plans: "Tarife", invoices: "Rechnungen",
       changePlan: "Tarif ändern",
       active: "Aktiv",
       demoDesc: "Kostenloser Testplan — 40 Prompts insgesamt",
@@ -2778,6 +2803,8 @@ export const translations: Record<Locale, Record<string, any>> = {
       lowReliability: "Instabile Daten",
       reliabilityTooltip: "Misst die Konsistenz der KI-Antworten innerhalb dieser Analyse. Zeigt nicht die Markensichtbarkeit an — eine selten zitierte Marke kann stabile Daten haben, wenn KIs sie konsequent ignorieren.",
       singleRunNote: "Führen Sie mehr Analysen durch, um die Stabilität über die Zeit zu messen.",
+      aiConsultedSources: "Konsultierte Quellen",
+      aiConsultedSourcesDesc: "Ihre Domain wird von der KI konsultiert",
     },
     settings: {
       title: "Einstellungen", subtitle: "Profil, Modelle und Einstellungen verwalten",
@@ -2960,6 +2987,11 @@ export const translations: Record<Locale, Record<string, any>> = {
       brandImpact: "Markenauswirkung",
       review: "Bewertungen", ecommerce: "E-Commerce", other: "Sonstiges",
       citationsLabel: "Zitate", analysesLabel: "Analysen",
+      aiConsulted: "Von KI konsultiert",
+      textMention: "Im Text erwähnt",
+      consultedBadge: "Konsultiert",
+      mentionedBadge: "Erwähnt",
+      brandConsultedByAI: "Marke von KI konsultiert",
     },
     datasets: {
       title: "Dataset", subtitle: "Rohdaten der KI-Antworten",
@@ -3454,6 +3486,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     piano: {
       title: "Tu plan",
       subtitle: "Gestiona tu suscripción y monitorea tu uso.",
+      usage: "Uso", plans: "Planes", invoices: "Facturas",
       changePlan: "Cambiar plan",
       active: "Activo",
       demoDesc: "Plan de prueba gratuito — 40 prompts en total",
@@ -3574,6 +3607,8 @@ export const translations: Record<Locale, Record<string, any>> = {
       lowReliability: "Dato inestable",
       reliabilityTooltip: "Mide la coherencia de las respuestas IA dentro de este análisis. No indica la visibilidad de la marca — una marca poco citada puede tener datos estables si las IA la ignoran consistentemente.",
       singleRunNote: "Ejecuta más análisis para medir la estabilidad en el tiempo.",
+      aiConsultedSources: "Fuentes Consultadas",
+      aiConsultedSourcesDesc: "tu dominio es consultado por la IA",
     },
     settings: {
       title: "Configuración", subtitle: "Gestiona perfil, modelos y preferencias",
@@ -3756,6 +3791,11 @@ export const translations: Record<Locale, Record<string, any>> = {
       brandImpact: "Impacto en la marca",
       review: "Reseñas", ecommerce: "E-commerce", other: "Otro",
       citationsLabel: "Citas", analysesLabel: "Análisis",
+      aiConsulted: "Consultadas por IA",
+      textMention: "Mencionadas en el texto",
+      consultedBadge: "Consultada",
+      mentionedBadge: "Mencionada",
+      brandConsultedByAI: "Marca consultada por IA",
     },
     datasets: {
       title: "Dataset", subtitle: "Datos brutos de las respuestas IA",

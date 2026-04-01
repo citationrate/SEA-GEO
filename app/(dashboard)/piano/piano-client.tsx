@@ -153,46 +153,213 @@ export function PianoClient({
 
   const features = getFeatures(t);
 
+  type PianoTab = "uso" | "piani" | "fatture";
+  const [activeTab, setActiveTab] = useState<PianoTab>("uso");
+
+  // Read tab from URL hash
+  useEffect(() => {
+    const readHash = () => {
+      const hash = window.location.hash.replace("#", "") as PianoTab;
+      if (["uso", "piani", "fatture"].includes(hash)) setActiveTab(hash);
+    };
+    readHash();
+    window.addEventListener("hashchange", readHash);
+    return () => window.removeEventListener("hashchange", readHash);
+  }, []);
+
   return (
     <div className="space-y-6 animate-fade-in">
 
-      {/* ════════════════ 1. PIANO ABBONAMENTO ════════════════ */}
-      <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
-        <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(196,168,130,0.12)" }}>
-              <Coins className="w-4 h-4 text-[#c4a882]" />
-            </div>
-            <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.comparePlans")}</h2>
-          </div>
-          {/* Toggle Mensile / Annuale */}
-          <div className="flex items-center rounded-[4px] p-0.5" style={{ background: "var(--background)" }}>
-            <button
-              onClick={() => setAnnual(false)}
-              className="text-xs font-medium px-3 py-1.5 rounded-[3px] transition-all"
-              style={{
-                background: !annual ? "var(--primary)" : "transparent",
-                color: !annual ? "white" : "var(--muted-foreground)",
-              }}
-            >{t("piano.monthly")}</button>
-            <button
-              onClick={() => setAnnual(true)}
-              className="text-xs font-medium px-3 py-1.5 rounded-[3px] transition-all"
-              style={{
-                background: annual ? "var(--primary)" : "transparent",
-                color: annual ? "white" : "var(--muted-foreground)",
-              }}
-            >{t("piano.annual")}</button>
-          </div>
-        </div>
-        <div className="p-5">
-          {/* Current plan badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-5 rounded-[4px] border border-border" style={{ background: "var(--background)" }}>
-            <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-            <span className="text-xs font-medium text-primary">{planMeta.label} {t("piano.active")}</span>
-          </div>
+      {/* Tab Navigation */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1" style={{ borderBottom: "1px solid var(--border)" }}>
+        {([
+          { key: "uso" as PianoTab, label: t("piano.usage") || "Uso" },
+          { key: "piani" as PianoTab, label: t("piano.plans") || "Piani" },
+          { key: "fatture" as PianoTab, label: t("piano.invoices") || "Fatture" },
+        ]).map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => { setActiveTab(tab.key); window.location.hash = tab.key; }}
+            className="font-mono text-xs uppercase tracking-wider px-4 py-2.5 whitespace-nowrap transition-all"
+            style={{
+              color: activeTab === tab.key ? "var(--primary)" : "var(--muted-foreground)",
+              borderBottom: activeTab === tab.key ? "2px solid var(--primary)" : "2px solid transparent",
+              marginBottom: "-1px",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-          {/* Plan cards grid */}
+      {/* ══════════════ TAB: USO ══════════════ */}
+      {activeTab === "uso" && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Current plan banner */}
+          <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+            <div className="p-5 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "rgba(122,184,154,0.12)" }}>
+                  <CheckCircle2 className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("piano.activePlan")}</p>
+                  <p className="font-display text-xl font-bold" style={{ color: planMeta.color }}>{planMeta.label}</p>
+                </div>
+              </div>
+              {!isDemo && (
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">{t("piano.status")}</p>
+                  <p className="text-sm font-semibold text-foreground capitalize">{subscriptionStatus}</p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Usage bars */}
+          <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+            <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(122,184,154,0.12)" }}>
+                <Search className="w-4 h-4 text-primary" />
+              </div>
+              <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.yourUsage")}</h2>
+            </div>
+            <div className="p-5 space-y-5">
+              <UsageBar label={t("piano.promptsUsed")} used={totalUsed} max={totalLimit} extra={liveExtraBrowsing + liveExtraNoBrowsing > 0 ? `+${liveExtraBrowsing + liveExtraNoBrowsing} extra` : undefined} />
+              {!isDemo && <UsageBar label={t("piano.withBrowsing")} used={liveBrowsingUsed} max={browsingLimit} extra={liveExtraBrowsing > 0 ? `+${liveExtraBrowsing} extra` : undefined} />}
+              {isPro && (
+                <>
+                  <UsageBar label={t("piano.comparisons")} used={liveComparisonsUsed} max={comparisonsLimit} extra={liveExtraComparisons > 0 ? `+${liveExtraComparisons} extra` : undefined} />
+                  <UsageBar label={t("piano.urlAnalysis")} used={liveUrlAnalysesUsed} max={50} />
+                  <UsageBar label={t("piano.contextAnalysis")} used={liveContextAnalysesUsed} max={5} />
+                </>
+              )}
+              {isDemo && (
+                <div className="rounded-[4px] border border-dashed border-[#c4a882]/30 p-4 flex items-center gap-3" style={{ background: "rgba(196,168,130,0.03)" }}>
+                  <Sparkles className="w-5 h-5 text-[#c4a882] shrink-0" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">{t("piano.unlockMore")}</p>
+                    <button onClick={() => { setActiveTab("piani"); window.location.hash = "piani"; }} className="text-xs font-semibold text-[#c4a882] hover:text-[#c4a882]/80 transition-colors">{t("piano.viewPlans")} &rarr;</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Query Wallet */}
+          {(usage.wallet.browsingQueries > 0 || usage.wallet.noBrowsingQueries > 0 || usage.wallet.confronti > 0) && (
+            <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+              <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(196,168,130,0.12)" }}>
+                  <Wallet className="w-4 h-4 text-[#c4a882]" />
+                </div>
+                <div>
+                  <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.walletTitle")}</h2>
+                  <p className="text-xs text-muted-foreground">{t("piano.walletNeverExpires")}</p>
+                </div>
+              </div>
+              <div className="p-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {usage.wallet.browsingQueries > 0 && (
+                    <div className="rounded-[4px] border border-[#c4a882]/30 p-4 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
+                      <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-[#c4a882]" /><span className="text-sm font-medium text-foreground">{t("piano.walletBrowsing")}</span></div>
+                      <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.browsingQueries}</p>
+                      <p className="text-xs text-muted-foreground">{t("piano.walletQueryAvailable")}</p>
+                    </div>
+                  )}
+                  {usage.wallet.noBrowsingQueries > 0 && (
+                    <div className="rounded-[4px] border border-[#c4a882]/30 p-4 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
+                      <div className="flex items-center gap-2"><Search className="w-4 h-4 text-[#c4a882]" /><span className="text-sm font-medium text-foreground">{t("piano.walletNoBrowsing")}</span></div>
+                      <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.noBrowsingQueries}</p>
+                      <p className="text-xs text-muted-foreground">{t("piano.walletQueryAvailable")}</p>
+                    </div>
+                  )}
+                  {usage.wallet.confronti > 0 && (
+                    <div className="rounded-[4px] border border-[#c4a882]/30 p-4 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
+                      <div className="flex items-center gap-2"><GitCompare className="w-4 h-4 text-[#c4a882]" /><span className="text-sm font-medium text-foreground">{t("piano.walletConfronti")}</span></div>
+                      <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.confronti}</p>
+                      <p className="text-xs text-muted-foreground">{t("piano.walletAvailable")}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Extra packages */}
+          {packages.length > 0 && (
+            <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+              <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(122,184,154,0.12)" }}>
+                  <Download className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.extraPackages")}</h2>
+                  <p className="text-xs text-muted-foreground">{t("piano.extraPackagesDesc")}</p>
+                </div>
+              </div>
+              <div className="p-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {packages.map((pkg) => (
+                    <div key={pkg.priceEnv} className="p-4 flex flex-col rounded-[2px]" style={{ border: "1px solid var(--border)" }}>
+                      <div className="flex items-center gap-2.5 mb-3">
+                        <div className="w-8 h-8 rounded-[3px] flex items-center justify-center" style={{ background: pkg.type === "query" ? "rgba(59,130,246,0.12)" : "rgba(196,168,130,0.12)" }}>
+                          {pkg.type === "query" ? <Zap className="w-4 h-4 text-[#3b82f6]" /> : <GitCompare className="w-4 h-4 text-[#c4a882]" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{pkg.label}</p>
+                          <p className="text-xs text-muted-foreground">{pkg.desc}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="font-display text-lg font-bold text-foreground">€{pkg.price}</p>
+                        {pkg.note && <span className="font-mono text-[0.6rem] tracking-wider uppercase text-muted-foreground">{pkg.note}</span>}
+                      </div>
+                      <button onClick={() => handleBuyPackage(pkg.priceEnv)} disabled={purchasingId !== null} className="w-full py-2 text-sm font-medium rounded-[2px] transition-all disabled:opacity-50" style={{ background: "var(--primary)", color: "white" }}>
+                        {purchasingId === pkg.priceEnv ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t("piano.buy")}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Subscription management */}
+          {!isDemo && (
+            <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+              <div className="p-5 flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{t("piano.subscriptionTitle")}</p>
+                  <p className="text-xs text-muted-foreground">{t("piano.stripeInfoDesc")}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <PortalButton />
+                  <button onClick={() => setShowCancelModal(true)} className="px-4 py-2 rounded-[3px] border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors">
+                    {t("piano.cancelSubscription")}
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+        </div>
+      )}
+
+      {/* ══════════════ TAB: PIANI ══════════════ */}
+      {activeTab === "piani" && (
+        <div className="space-y-6 animate-fade-in">
+          <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+            <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[4px] border border-border" style={{ background: "var(--background)" }}>
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-medium text-primary">{planMeta.label} {t("piano.active")}</span>
+              </div>
+              <div className="flex items-center rounded-[4px] p-0.5" style={{ background: "var(--background)" }}>
+                <button onClick={() => setAnnual(false)} className="text-xs font-medium px-3 py-1.5 rounded-[3px] transition-all" style={{ background: !annual ? "var(--primary)" : "transparent", color: !annual ? "white" : "var(--muted-foreground)" }}>{t("piano.monthly")}</button>
+                <button onClick={() => setAnnual(true)} className="text-xs font-medium px-3 py-1.5 rounded-[3px] transition-all" style={{ background: annual ? "var(--primary)" : "transparent", color: annual ? "white" : "var(--muted-foreground)" }}>{t("piano.annual")}</button>
+              </div>
+            </div>
+            <div className="p-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Demo */}
             <div className="p-5 flex flex-col rounded-[2px]" style={{ border: isDemo ? "2px solid var(--primary)" : "1px solid var(--border)" }}>
@@ -272,183 +439,31 @@ export function PianoClient({
           </div>
         </div>
       </section>
-
-      {/* ════════════════ 2. PACCHETTI EXTRA ════════════════ */}
-      {packages.length > 0 && (
-        <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
-          <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(122,184,154,0.12)" }}>
-              <Download className="w-4 h-4 text-primary" />
-            </div>
-            <div>
-              <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.extraPackages")}</h2>
-              <p className="text-xs text-muted-foreground">{t("piano.extraPackagesDesc")}</p>
-            </div>
-          </div>
-          <div className="p-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {packages.map((pkg) => (
-                <div key={pkg.priceEnv} className="p-4 flex flex-col rounded-[2px]" style={{ border: "1px solid var(--border)" }}>
-                  <div className="flex items-center gap-2.5 mb-3">
-                    <div className="w-8 h-8 rounded-[3px] flex items-center justify-center" style={{ background: pkg.type === "query" ? "rgba(59,130,246,0.12)" : "rgba(196,168,130,0.12)" }}>
-                      {pkg.type === "query" ? <Zap className="w-4 h-4 text-[#3b82f6]" /> : <GitCompare className="w-4 h-4 text-[#c4a882]" />}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{pkg.label}</p>
-                      <p className="text-xs text-muted-foreground">{pkg.desc}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="font-display text-lg font-bold text-foreground">€{pkg.price}</p>
-                    {pkg.note && <span className="font-mono text-[0.6rem] tracking-wider uppercase text-muted-foreground">{pkg.note}</span>}
-                  </div>
-                  <button
-                    onClick={() => handleBuyPackage(pkg.priceEnv)}
-                    disabled={purchasingId !== null}
-                    className="w-full py-2 text-sm font-medium rounded-[2px] transition-all disabled:opacity-50"
-                    style={{ background: "var(--primary)", color: "white" }}
-                  >{purchasingId === pkg.priceEnv ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t("piano.buy")}</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        </div>
       )}
 
-      {/* ════════════════ 3. UTILIZZO ════════════════ */}
-      <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
-        <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(122,184,154,0.12)" }}>
-            <Search className="w-4 h-4 text-primary" />
-          </div>
-          <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.yourUsage")}</h2>
-        </div>
-        <div className="p-5 space-y-5">
-          {/* Prompt totali */}
-          <UsageBar label={t("piano.promptsUsed")} used={totalUsed} max={totalLimit} extra={liveExtraBrowsing + liveExtraNoBrowsing > 0 ? `+${liveExtraBrowsing + liveExtraNoBrowsing} extra` : undefined} />
+      {/* ══════════════ TAB: FATTURE ══════════════ */}
+      {activeTab === "fatture" && (
+        <div className="space-y-6 animate-fade-in">
+          <InvoiceHistory />
 
-          {/* Browsing */}
+          {/* Billing portal */}
           {!isDemo && (
-            <UsageBar label={t("piano.withBrowsing")} used={liveBrowsingUsed} max={browsingLimit} extra={liveExtraBrowsing > 0 ? `+${liveExtraBrowsing} extra` : undefined} />
-          )}
-
-          {/* Pro: confronti, URL, contesti */}
-          {isPro && (
-            <>
-              <UsageBar label={t("piano.comparisons")} used={liveComparisonsUsed} max={comparisonsLimit} extra={liveExtraComparisons > 0 ? `+${liveExtraComparisons} extra` : undefined} />
-              <UsageBar label={t("piano.urlAnalysis")} used={liveUrlAnalysesUsed} max={50} />
-              <UsageBar label={t("piano.contextAnalysis")} used={liveContextAnalysesUsed} max={5} />
-            </>
-          )}
-
-          {/* Demo nudge */}
-          {isDemo && (
-            <div className="rounded-[4px] border border-dashed border-[#c4a882]/30 p-4 flex items-center gap-3" style={{ background: "rgba(196,168,130,0.03)" }}>
-              <Sparkles className="w-5 h-5 text-[#c4a882] shrink-0" />
-              <div>
-                <p className="text-sm text-muted-foreground">{t("piano.unlockMore")}</p>
-                <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="text-xs font-semibold text-[#c4a882] hover:text-[#c4a882]/80 transition-colors">{t("piano.viewPlans")} &uarr;</a>
+            <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+              <div className="p-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CreditCard className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{t("piano.stripeInfo")}</p>
+                    <p className="text-xs text-muted-foreground">{t("piano.stripeInfoDesc")}</p>
+                  </div>
+                </div>
+                <PortalButton />
               </div>
-            </div>
+            </section>
           )}
         </div>
-      </section>
-
-      {/* ════════════════ 4. QUERY WALLET ════════════════ */}
-      {(usage.wallet.browsingQueries > 0 || usage.wallet.noBrowsingQueries > 0 || usage.wallet.confronti > 0) && (
-        <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
-          <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(196,168,130,0.12)" }}>
-              <Wallet className="w-4 h-4 text-[#c4a882]" />
-            </div>
-            <div>
-              <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.walletTitle")}</h2>
-              <p className="text-xs text-muted-foreground">{t("piano.walletNeverExpires")}</p>
-            </div>
-          </div>
-          <div className="p-5">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {usage.wallet.browsingQueries > 0 && (
-                <div className="rounded-[4px] border border-[#c4a882]/30 p-4 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
-                  <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-[#c4a882]" /><span className="text-sm font-medium text-foreground">{t("piano.walletBrowsing")}</span></div>
-                  <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.browsingQueries}</p>
-                  <p className="text-xs text-muted-foreground">{t("piano.walletQueryAvailable")}</p>
-                </div>
-              )}
-              {usage.wallet.noBrowsingQueries > 0 && (
-                <div className="rounded-[4px] border border-[#c4a882]/30 p-4 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
-                  <div className="flex items-center gap-2"><Search className="w-4 h-4 text-[#c4a882]" /><span className="text-sm font-medium text-foreground">{t("piano.walletNoBrowsing")}</span></div>
-                  <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.noBrowsingQueries}</p>
-                  <p className="text-xs text-muted-foreground">{t("piano.walletQueryAvailable")}</p>
-                </div>
-              )}
-              {usage.wallet.confronti > 0 && (
-                <div className="rounded-[4px] border border-[#c4a882]/30 p-4 space-y-1" style={{ background: "rgba(196,168,130,0.04)" }}>
-                  <div className="flex items-center gap-2"><GitCompare className="w-4 h-4 text-[#c4a882]" /><span className="text-sm font-medium text-foreground">{t("piano.walletConfronti")}</span></div>
-                  <p className="text-2xl font-display font-bold text-[#c4a882]">{usage.wallet.confronti}</p>
-                  <p className="text-xs text-muted-foreground">{t("piano.walletAvailable")}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
       )}
-
-      {/* ════════════════ 5. GESTIONE ABBONAMENTO ════════════════ */}
-      {!isDemo && (
-        <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
-          <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(196,168,130,0.12)" }}>
-              <CreditCard className="w-4 h-4 text-[#c4a882]" />
-            </div>
-            <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.subscriptionTitle")}</h2>
-          </div>
-          <div className="p-5 space-y-5">
-            {/* Plan details grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.activePlan")}</p>
-                <p className="text-sm font-semibold text-foreground mt-1">{planMeta.label}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.period")}</p>
-                <p className="text-sm font-semibold text-foreground mt-1">{subscriptionPeriod === "yearly" ? t("piano.annual") : t("piano.monthly")}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.amount")}</p>
-                <p className="text-sm font-semibold text-foreground mt-1">
-                  {plan === "base" ? (subscriptionPeriod === "yearly" ? "€649" : "€59") : plan === "pro" ? (subscriptionPeriod === "yearly" ? "€1.719" : "€159") : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.status")}</p>
-                <p className="text-sm font-semibold text-foreground mt-1 capitalize">{subscriptionStatus}</p>
-              </div>
-            </div>
-
-            {/* Stripe info */}
-            <div className="flex items-center gap-3 p-3 rounded-[4px] border border-border" style={{ background: "var(--background)" }}>
-              <svg className="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="4" fill="#635BFF"/><path d="M11.2 9.6c0-.66.54-1.02 1.44-1.02.96 0 2.16.3 3.12.84V6.84A8.34 8.34 0 0012.64 6c-2.28 0-3.84 1.2-3.84 3.24 0 3.12 4.32 2.64 4.32 3.96 0 .78-.66 1.02-1.62 1.02-1.38 0-3.18-.72-3.18-.72v2.64s1.44.6 3.18.6c2.34 0 4.02-1.14 4.02-3.24-.06-3.36-4.32-2.76-4.32-4.14z" fill="#fff"/></svg>
-              <div>
-                <p className="text-sm font-medium text-foreground">{t("piano.stripeInfo")}</p>
-                <p className="text-xs text-muted-foreground">{t("piano.stripeInfoDesc")}</p>
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex items-center gap-3">
-              <PortalButton />
-              <button
-                onClick={() => setShowCancelModal(true)}
-                className="px-4 py-2 rounded-[3px] border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors"
-              >{t("piano.cancelSubscription")}</button>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ════════════════ 6. STORICO FATTURE ════════════════ */}
-      {!isDemo && <InvoiceHistory />}
 
       {/* Cancel modal */}
       {showCancelModal && (
