@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Check, Eye, EyeOff } from "lucide-react";
+import { Suspense } from "react";
 
-export default function UpdatePasswordPage() {
+function UpdatePasswordForm() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -14,26 +15,38 @@ export default function UpdatePasswordPage() {
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 
-  // Supabase includes the recovery token in the URL hash.
-  // The Supabase client auto-detects it and establishes a session.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setReady(true);
+    async function init() {
+      // Exchange the code from URL for a session
+      const code = searchParams.get("code");
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error) {
+          setReady(true);
+          return;
+        }
+        console.error("Code exchange failed:", error.message);
+        setError("Link scaduto o non valido. Richiedi un nuovo reset.");
+        return;
       }
-    });
-    // Also check if already in a session (came via callback)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+
+      // No code — check if already in a session (e.g. via hash fragment)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setReady(true);
+      } else {
+        setError("Sessione non valida. Richiedi un nuovo link di reset.");
+      }
+    }
+    init();
+  }, [searchParams]);
 
   const valid = password.length >= 8 && password === confirm;
 
@@ -69,6 +82,11 @@ export default function UpdatePasswordPage() {
             </div>
             <p className="text-sm text-foreground font-medium">Password aggiornata!</p>
             <p className="text-xs text-muted-foreground">Verrai reindirizzato alla dashboard...</p>
+          </div>
+        ) : error && !ready ? (
+          <div className="text-center space-y-3">
+            <p className="text-sm" style={{ color: "#ef4444" }}>{error}</p>
+            <a href="/settings#account" className="text-sm text-primary hover:text-primary/80 transition-colors">Torna alle impostazioni</a>
           </div>
         ) : !ready ? (
           <div className="text-center space-y-3 py-4">
@@ -122,5 +140,17 @@ export default function UpdatePasswordPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function UpdatePasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--background, #0a0a0a)" }}>
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    }>
+      <UpdatePasswordForm />
+    </Suspense>
   );
 }
