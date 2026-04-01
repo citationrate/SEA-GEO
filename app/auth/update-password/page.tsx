@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 import { Loader2, Check, Eye, EyeOff } from "lucide-react";
@@ -12,12 +12,28 @@ export default function UpdatePasswordPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [ready, setReady] = useState(false);
   const router = useRouter();
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
+
+  // Supabase includes the recovery token in the URL hash.
+  // The Supabase client auto-detects it and establishes a session.
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setReady(true);
+      }
+    });
+    // Also check if already in a session (came via callback)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setReady(true);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const valid = password.length >= 8 && password === confirm;
 
@@ -41,7 +57,6 @@ export default function UpdatePasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--background, #0a0a0a)" }}>
       <div className="w-full max-w-sm p-8 rounded-[4px]" style={{ background: "var(--surface, #141416)", border: "1px solid var(--border, #2a2a2a)" }}>
-        {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="font-display text-xl font-bold text-foreground">Nuova password</h1>
           <p className="text-sm text-muted-foreground mt-1">Scegli una nuova password per il tuo account</p>
@@ -54,6 +69,11 @@ export default function UpdatePasswordPage() {
             </div>
             <p className="text-sm text-foreground font-medium">Password aggiornata!</p>
             <p className="text-xs text-muted-foreground">Verrai reindirizzato alla dashboard...</p>
+          </div>
+        ) : !ready ? (
+          <div className="text-center space-y-3 py-4">
+            <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
+            <p className="text-sm text-muted-foreground">Verifica in corso...</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -74,7 +94,6 @@ export default function UpdatePasswordPage() {
                 </button>
               </div>
             </div>
-
             <div>
               <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5 block">Conferma password</label>
               <input
@@ -83,15 +102,13 @@ export default function UpdatePasswordPage() {
                 onChange={(e) => setConfirm(e.target.value)}
                 placeholder="Ripeti la password"
                 className="w-full rounded-[3px] px-3 py-2.5 text-sm text-foreground"
-                style={{ background: "var(--background, #0a0a0a)", border: `1px solid ${confirm && confirm !== password ? "var(--destructive, #ef4444)" : "var(--border, #2a2a2a)"}`, outline: "none" }}
+                style={{ background: "var(--background, #0a0a0a)", border: `1px solid ${confirm && confirm !== password ? "#ef4444" : "var(--border, #2a2a2a)"}`, outline: "none" }}
               />
               {confirm && confirm !== password && (
-                <p className="text-xs mt-1" style={{ color: "var(--destructive, #ef4444)" }}>Le password non corrispondono</p>
+                <p className="text-xs mt-1" style={{ color: "#ef4444" }}>Le password non corrispondono</p>
               )}
             </div>
-
-            {error && <p className="text-xs" style={{ color: "var(--destructive, #ef4444)" }}>{error}</p>}
-
+            {error && <p className="text-xs" style={{ color: "#ef4444" }}>{error}</p>}
             <button
               type="submit"
               disabled={!valid || loading}
