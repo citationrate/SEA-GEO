@@ -30,6 +30,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     .from("queries")
     .select("*")
     .eq("project_id", params.id)
+    .eq("is_active", true)
     .order("created_at", { ascending: false });
 
   const { data: segments } = await supabase

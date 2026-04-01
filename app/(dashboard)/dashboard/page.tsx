@@ -222,7 +222,8 @@ export default async function DashboardPage({
     const { count: qCount } = await supabase
       .from("queries")
       .select("*", { count: "exact", head: true })
-      .eq("project_id", activeProjectId);
+      .eq("project_id", activeProjectId)
+      .eq("is_active", true);
     projectQueryCount = qCount ?? 0;
 
     const { count: sCount } = await supabase
