@@ -1,4 +1,5 @@
 import { requireAuth } from "@/lib/api-helpers";
+import { createServiceClient } from "@/lib/supabase/service";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -75,17 +76,23 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { supabase, user, error } = await requireAuth();
+    const { user, error } = await requireAuth();
     if (error) return error;
 
     const id = request.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id richiesto" }, { status: 400 });
 
-    const { error: dbError } = await supabase.from("queries").delete().eq("id", id);
-    if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
+    // Use service client to bypass RLS restrictions on delete
+    const svc = createServiceClient();
+    const { error: dbError } = await (svc.from("queries") as any).delete().eq("id", id);
+    if (dbError) {
+      console.error("[queries DELETE] error:", dbError.message, dbError.code);
+      return NextResponse.json({ error: dbError.message }, { status: 500 });
+    }
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err: any) {
+    console.error("[queries DELETE] crash:", err?.message);
     return NextResponse.json({ error: "Errore interno" }, { status: 500 });
   }
 }

@@ -105,26 +105,43 @@ export default function QueriesPage() {
   }
 
   async function deleteQuery(id: string) {
+    // If this query is part of a selection, delete all selected
+    const idsToDelete = selected.size > 0 && selected.has(id) ? Array.from(selected) : [id];
     setError("");
     try {
-      const res = await fetch(`/api/queries?id=${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(t("queries.deleteError"));
-      setQueries(queries.filter((q) => q.id !== id));
+      const results = await Promise.all(
+        idsToDelete.map((qid) => fetch(`/api/queries?id=${qid}`, { method: "DELETE" }))
+      );
+      const failed = results.filter((r) => !r.ok);
+      if (failed.length > 0) {
+        throw new Error(`${failed.length} query non eliminate`);
+      }
+      const idSet = new Set(idsToDelete);
+      setQueries((prev) => prev.filter((q) => !idSet.has(q.id)));
+      setSelected(new Set());
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.error"));
     }
   }
 
   async function toggleQuery(id: string, currentActive: boolean) {
+    // If this query is part of a selection, toggle all selected
+    const idsToToggle = selected.size > 0 && selected.has(id) ? Array.from(selected) : [id];
+    const newActive = !currentActive;
     setError("");
     try {
-      const res = await fetch("/api/queries", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, is_active: !currentActive }),
-      });
-      if (!res.ok) throw new Error(t("common.error"));
-      setQueries(queries.map((q) => q.id === id ? { ...q, is_active: !currentActive } : q));
+      await Promise.all(
+        idsToToggle.map((qid) =>
+          fetch("/api/queries", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: qid, is_active: newActive }),
+          })
+        )
+      );
+      const idSet = new Set(idsToToggle);
+      setQueries((prev) => prev.map((q) => idSet.has(q.id) ? { ...q, is_active: newActive } : q));
+      setSelected(new Set());
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.error"));
     }
@@ -149,9 +166,10 @@ export default function QueriesPage() {
   async function bulkToggle(activate: boolean) {
     setBulkLoading(true);
     setError("");
+    const ids = Array.from(selected);
     try {
       await Promise.all(
-        Array.from(selected).map((id) =>
+        ids.map((id) =>
           fetch("/api/queries", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -159,7 +177,8 @@ export default function QueriesPage() {
           })
         )
       );
-      setQueries(queries.map((q) => selected.has(q.id) ? { ...q, is_active: activate } : q));
+      const idSet = new Set(ids);
+      setQueries((prev) => prev.map((q) => idSet.has(q.id) ? { ...q, is_active: activate } : q));
       setSelected(new Set());
     } catch { setError(t("common.error")); }
     finally { setBulkLoading(false); }
@@ -168,13 +187,15 @@ export default function QueriesPage() {
   async function bulkDelete() {
     setBulkLoading(true);
     setError("");
+    const ids = Array.from(selected);
     try {
-      await Promise.all(
-        Array.from(selected).map((id) =>
-          fetch(`/api/queries?id=${id}`, { method: "DELETE" })
-        )
+      const results = await Promise.all(
+        ids.map((id) => fetch(`/api/queries?id=${id}`, { method: "DELETE" }))
       );
-      setQueries(queries.filter((q) => !selected.has(q.id)));
+      const failed = results.filter((r) => !r.ok);
+      if (failed.length > 0) console.error(`[bulkDelete] ${failed.length}/${ids.length} failed`);
+      const idSet = new Set(ids);
+      setQueries((prev) => prev.filter((q) => !idSet.has(q.id)));
       setSelected(new Set());
       setConfirmBulkDelete(false);
     } catch { setError(t("common.error")); }
