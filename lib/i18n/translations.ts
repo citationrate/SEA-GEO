@@ -53,7 +53,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     piano: {
       title: "Il tuo piano",
       subtitle: "Gestisci il tuo abbonamento e monitora i tuoi utilizzi.",
-      usage: "Uso", plans: "Piani", invoices: "Fatture",
+      usage: "Uso", plans: "Piani", plansAndPackages: "Piani e Pacchetti", invoices: "Fatture",
       changePlan: "Cambia piano",
       active: "Attivo",
       demoDesc: "Piano gratuito di prova — 40 prompt totali",
@@ -963,7 +963,7 @@ export const translations: Record<Locale, Record<string, any>> = {
 },
     piano: {
       title: "Your plan",
-      usage: "Usage", plans: "Plans", invoices: "Invoices",
+      usage: "Usage", plans: "Plans", plansAndPackages: "Plans & Packages", invoices: "Invoices",
       subtitle: "Manage your subscription and monitor your usage.",
       changePlan: "Change plan",
       active: "Active",
@@ -1873,7 +1873,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     piano: {
       title: "Votre forfait",
       subtitle: "Gérez votre abonnement et surveillez votre utilisation.",
-      usage: "Utilisation", plans: "Forfaits", invoices: "Factures",
+      usage: "Utilisation", plans: "Forfaits", plansAndPackages: "Forfaits et Paquets", invoices: "Factures",
       changePlan: "Changer de forfait",
       active: "Actif",
       demoDesc: "Forfait d'essai gratuit — 40 prompts au total",
@@ -2682,7 +2682,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     piano: {
       title: "Ihr Tarif",
       subtitle: "Verwalten Sie Ihr Abonnement und überwachen Sie Ihre Nutzung.",
-      usage: "Nutzung", plans: "Tarife", invoices: "Rechnungen",
+      usage: "Nutzung", plans: "Tarife", plansAndPackages: "Tarife & Pakete", invoices: "Rechnungen",
       changePlan: "Tarif ändern",
       active: "Aktiv",
       demoDesc: "Kostenloser Testplan — 40 Prompts insgesamt",
@@ -3486,7 +3486,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     piano: {
       title: "Tu plan",
       subtitle: "Gestiona tu suscripción y monitorea tu uso.",
-      usage: "Uso", plans: "Planes", invoices: "Facturas",
+      usage: "Uso", plans: "Planes", plansAndPackages: "Planes y Paquetes", invoices: "Facturas",
       changePlan: "Cambiar plan",
       active: "Activo",
       demoDesc: "Plan de prueba gratuito — 40 prompts en total",

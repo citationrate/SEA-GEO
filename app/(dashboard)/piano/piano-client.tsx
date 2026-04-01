@@ -174,7 +174,7 @@ export function PianoClient({
       <div className="flex items-center gap-1 overflow-x-auto pb-1" style={{ borderBottom: "1px solid var(--border)" }}>
         {([
           { key: "uso" as PianoTab, label: t("piano.usage") || "Uso" },
-          { key: "piani" as PianoTab, label: t("piano.plans") || "Piani" },
+          { key: "piani" as PianoTab, label: t("piano.plansAndPackages") || "Piani e Pacchetti" },
           { key: "fatture" as PianoTab, label: t("piano.invoices") || "Fatture" },
         ]).map((tab) => (
           <button
@@ -325,23 +325,6 @@ export function PianoClient({
             </section>
           )}
 
-          {/* Subscription management */}
-          {!isDemo && (
-            <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
-              <div className="p-5 flex items-center justify-between flex-wrap gap-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">{t("piano.subscriptionTitle")}</p>
-                  <p className="text-xs text-muted-foreground">{t("piano.stripeInfoDesc")}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <PortalButton />
-                  <button onClick={() => setShowCancelModal(true)} className="px-4 py-2 rounded-[3px] border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors">
-                    {t("piano.cancelSubscription")}
-                  </button>
-                </div>
-              </div>
-            </section>
-          )}
         </div>
       )}
 
@@ -439,6 +422,24 @@ export function PianoClient({
           </div>
         </div>
       </section>
+
+          {/* Subscription management */}
+          {!isDemo && (
+            <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+              <div className="p-5 flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{t("piano.subscriptionTitle")}</p>
+                  <p className="text-xs text-muted-foreground">{t("piano.stripeInfoDesc")}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <PortalButton />
+                  <button onClick={() => setShowCancelModal(true)} className="px-4 py-2 rounded-[3px] border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors">
+                    {t("piano.cancelSubscription")}
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
         </div>
       )}
 
