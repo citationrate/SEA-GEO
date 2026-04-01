@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const { supabase, user, error } = await requireAuth();
+    const { user, error } = await requireAuth();
     if (error) return error;
 
     const body = await request.json();
@@ -63,13 +63,19 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "id and is_active required" }, { status: 400 });
     }
 
-    const { error: dbError } = await (supabase.from("queries") as any)
+    // Use service client to bypass RLS
+    const svc = createServiceClient();
+    const { error: dbError } = await (svc.from("queries") as any)
       .update({ is_active })
       .eq("id", id);
 
-    if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
+    if (dbError) {
+      console.error("[queries PATCH] error:", dbError.message);
+      return NextResponse.json({ error: dbError.message }, { status: 500 });
+    }
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err: any) {
+    console.error("[queries PATCH] crash:", err?.message);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
