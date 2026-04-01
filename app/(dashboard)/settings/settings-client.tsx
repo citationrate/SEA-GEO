@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Ticket, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Mail, Send } from "lucide-react";
+import { User, Ticket, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Send } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { RestartTourButton } from "./restart-tour-button";
 
@@ -130,7 +130,7 @@ export function SettingsClient({
         {([
           { key: "account" as SettingsTab, label: "Account" },
           { key: "voucher" as SettingsTab, label: "Voucher" },
-          { key: "supporto" as SettingsTab, label: t("settings.support") || "Supporto" },
+          { key: "supporto" as SettingsTab, label: t("settings.supportTab") || "Supporto" },
         ]).map((tab) => (
           <button
             key={tab.key}
@@ -147,7 +147,7 @@ export function SettingsClient({
         ))}
       </div>
 
-      {/* ═══ ACCOUNT TAB ═══ */}
+      {/* ═══ ACCOUNT ═══ */}
       {activeTab === "account" && (<div className="space-y-4 animate-fade-in">
       {/* Profilo */}
       <div data-tour="settings-account" className="card p-6 space-y-4">
@@ -155,7 +155,6 @@ export function SettingsClient({
           <User className="w-5 h-5 text-primary" />
           <h2 className="font-display font-semibold text-foreground">{t("settings.profile")}</h2>
         </div>
-
         <div className="flex items-center gap-4 mb-4">
           <div className="w-14 h-14 rounded-[2px] flex items-center justify-center text-primary font-display text-xl shrink-0" style={{ background: "var(--primary-glow)", border: "1px solid var(--primary-hover)" }}>
             {(fullName?.[0] ?? email?.[0] ?? "U").toUpperCase()}
@@ -165,7 +164,6 @@ export function SettingsClient({
             <p className="text-xs text-muted-foreground">{email}</p>
           </div>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground uppercase tracking-wide">{t("settings.name")}</label>
@@ -195,31 +193,17 @@ export function SettingsClient({
           <h2 className="font-display font-semibold text-foreground">{t("settings.changePassword") || "Modifica password"}</h2>
         </div>
         <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
-          <div>
-            <p className="text-sm text-foreground">{t("settings.changePasswordDesc") || "Riceverai un'email per reimpostare la password"}</p>
-          </div>
+          <p className="text-sm text-muted-foreground">{t("settings.changePasswordDesc") || "Riceverai un'email con il link per reimpostare la password."}</p>
           <button
             onClick={async () => {
               const res = await fetch("/api/auth/reset-password", { method: "POST" });
-              if (res.ok) alert(t("settings.resetSent") || "Email inviata!");
-              else alert(t("settings.resetError") || "Errore");
+              if (res.ok) alert(t("settings.resetSent") || "Email inviata! Controlla la tua casella.");
+              else alert(t("settings.resetError") || "Errore nell'invio. Riprova.");
             }}
             className="px-4 py-2 border border-primary/40 text-primary rounded-[2px] text-sm font-medium hover:bg-primary/10 transition-colors shrink-0"
           >
             {t("settings.resetPassword") || "Reimposta password"}
           </button>
-        </div>
-      </div>
-
-      {/* Tour guidato */}
-      <div data-tour="settings-tour" className="card p-6 space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <PlayCircle className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-semibold text-foreground">{t("settings.guidedTour")}</h2>
-        </div>
-        <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
-          <p className="text-sm text-muted-foreground">{t("settings.reviewTour")}</p>
-          <RestartTourButton />
         </div>
       </div>
 
@@ -285,13 +269,13 @@ export function SettingsClient({
       </div>
       </div>)}
 
-      {/* ═══ VOUCHER TAB ═══ */}
+      {/* ═══ VOUCHER ═══ */}
       {activeTab === "voucher" && (
         <div className="space-y-4 animate-fade-in">
           <div className="card p-6 space-y-4">
             <div className="flex items-center gap-2 mb-2">
               <Ticket className="w-5 h-5 text-primary" />
-              <h2 className="font-display font-semibold text-foreground">Voucher</h2>
+              <h2 className="font-display font-semibold text-foreground">{t("settings.redeemVoucher")}</h2>
             </div>
             <p className="text-sm text-muted-foreground">{t("settings.voucherDesc")}</p>
             <div className="flex gap-2">
@@ -319,33 +303,16 @@ export function SettingsClient({
         </div>
       )}
 
-      {/* ═══ SUPPORTO TAB ═══ */}
+      {/* ═══ SUPPORTO ═══ */}
       {activeTab === "supporto" && (
         <div className="space-y-4 animate-fade-in">
-          {/* Direct email */}
-          <div className="card p-6 space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Mail className="w-5 h-5 text-primary" />
-              <h2 className="font-display font-semibold text-foreground">{t("settings.support") || "Supporto"}</h2>
-            </div>
-            <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
-              <div>
-                <p className="text-sm text-foreground">{t("settings.contactEmail") || "Contattaci via email"}</p>
-                <p className="text-xs text-muted-foreground">{t("settings.contactEmailDesc") || "Per richieste, bug o feedback"}</p>
-              </div>
-              <a href="mailto:info@citationrate.com" className="px-4 py-2 border border-primary/40 text-primary rounded-[2px] text-sm font-medium hover:bg-primary/10 transition-colors shrink-0">
-                info@citationrate.com
-              </a>
-            </div>
-          </div>
-
           {/* Contact form */}
           <div className="card p-6 space-y-4">
             <div className="flex items-center gap-2 mb-2">
               <Send className="w-5 h-5 text-primary" />
-              <h2 className="font-display font-semibold text-foreground">{t("settings.contactSupport") || "Contatta supporto"}</h2>
+              <h2 className="font-display font-semibold text-foreground">{t("settings.contactSupport") || "Contatta il supporto"}</h2>
             </div>
-            <p className="text-sm text-muted-foreground">{t("settings.contactSupportDesc") || "Compila il form e ti risponderemo al più presto."}</p>
+            <p className="text-sm text-muted-foreground">{t("settings.contactSupportDesc") || "Hai bisogno di aiuto? Compila il form e ti risponderemo al più presto."}</p>
 
             <div className="space-y-3">
               <div>
@@ -376,9 +343,21 @@ export function SettingsClient({
                   className="px-4 py-2 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {sendingSupport ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                  {sendingSupport ? t("common.sending") || "Invio..." : t("settings.sendMessage") || "Invia messaggio"}
+                  {sendingSupport ? (t("common.sending") || "Invio...") : (t("settings.sendMessage") || "Invia messaggio")}
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Tour guidato */}
+          <div data-tour="settings-tour" className="card p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <PlayCircle className="w-5 h-5 text-primary" />
+              <h2 className="font-display font-semibold text-foreground">{t("settings.guidedTour")}</h2>
+            </div>
+            <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
+              <p className="text-sm text-muted-foreground">{t("settings.reviewTour")}</p>
+              <RestartTourButton />
             </div>
           </div>
         </div>
