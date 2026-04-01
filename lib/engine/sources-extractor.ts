@@ -1,8 +1,11 @@
+export type SourceOrigin = "ai_consulted" | "text_mention";
+
 export interface ExtractedSource {
   url: string;
   domain: string;
   title?: string;
   source_type: "brand_owned" | "competitor" | "media" | "review" | "social" | "ecommerce" | "wikipedia" | "other";
+  source_origin?: SourceOrigin;
   context?: string;
   associated_brand?: string;
 }
@@ -25,6 +28,7 @@ export function extractFromAnnotations(output: any[], brandDomain?: string): Ext
                   domain,
                   title: annotation.title,
                   source_type: classifyDomain(domain, brandDomain),
+                  source_origin: "text_mention",
                 });
               }
             }
@@ -55,6 +59,7 @@ export function extractFromAnthropicSearch(contentBlocks: any[], brandDomain?: s
                 domain,
                 title: result.title,
                 source_type: classifyDomain(domain, brandDomain),
+                source_origin: "ai_consulted",
                 context: "Anthropic web search",
               });
             }
@@ -84,6 +89,7 @@ export function extractFromGrounding(candidates: any[], brandDomain?: string): E
             domain,
             title: chunk.web.title,
             source_type: classifyDomain(domain, brandDomain),
+            source_origin: "ai_consulted",
           });
         }
       }
@@ -116,6 +122,7 @@ export function extractFromText(text: string, brandDomain?: string): ExtractedSo
       domain,
       title: title || domainToTitle(domain),
       source_type: classifyDomain(domain, brandDomain),
+      source_origin: "text_mention",
       context: context || "fonte citata nella risposta",
     });
   }
@@ -156,7 +163,8 @@ export function extractFromText(text: string, brandDomain?: string): ExtractedSo
   return results;
 }
 
-/** Merge e deduplica fonti per domain, mantiene l'URL più specifico (path più lungo) e il title migliore */
+/** Merge e deduplica fonti per domain, mantiene l'URL più specifico (path più lungo) e il title migliore.
+ *  Prefers 'ai_consulted' over 'text_mention' when same domain appears from both origins. */
 export function mergeSources(...sourceLists: ExtractedSource[][]): ExtractedSource[] {
   const seen = new Map<string, ExtractedSource>();
   for (const list of sourceLists) {
@@ -177,6 +185,10 @@ export function mergeSources(...sourceLists: ExtractedSource[][]): ExtractedSour
         // Keep associated_brand
         if (!existing.associated_brand && source.associated_brand) {
           existing.associated_brand = source.associated_brand;
+        }
+        // Promote to ai_consulted if either source has it
+        if (source.source_origin === "ai_consulted") {
+          existing.source_origin = "ai_consulted";
         }
       }
     }

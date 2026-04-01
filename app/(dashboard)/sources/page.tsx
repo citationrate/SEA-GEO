@@ -9,6 +9,7 @@ export const metadata = { title: "Fonti" };
 export interface SourceDomain {
   domain: string;
   sourceType: string;
+  sourceOrigin: "ai_consulted" | "text_mention";
   citations: number;
   analysisCount: number;
   isBrandOwned: boolean;
@@ -95,12 +96,15 @@ export default async function SourcesPage({
     if (existing) {
       existing.citations += (s.citation_count ?? 1);
       if (s.is_brand_owned) existing.isBrandOwned = true;
+      // Promote to ai_consulted if any row has it
+      if (s.source_origin === "ai_consulted") existing.sourceOrigin = "ai_consulted";
       if (s.url && !existing.urls.includes(s.url)) existing.urls.push(s.url);
       if (context && !existing.contexts.includes(context)) existing.contexts.push(context);
     } else {
       domainMap.set(domain, {
         domain,
         sourceType,
+        sourceOrigin: s.source_origin === "ai_consulted" ? "ai_consulted" : "text_mention",
         citations: s.citation_count ?? 1,
         analysisCount: 0,
         isBrandOwned: !!s.is_brand_owned,
@@ -131,6 +135,10 @@ export default async function SourcesPage({
   const mediaPct = allDomains.length > 0
     ? Math.round((allDomains.filter((d) => d.sourceType === "media").length / allDomains.length) * 100)
     : 0;
+  const aiConsultedCount = allDomains.filter((d) => d.sourceOrigin === "ai_consulted").length;
+  const brandConsultedPct = aiConsultedCount > 0
+    ? Math.round((allDomains.filter((d) => d.sourceOrigin === "ai_consulted" && d.isBrandOwned).length / aiConsultedCount) * 100)
+    : 0;
 
   return (
     <div data-tour="sources-page" className="space-y-6 max-w-[1200px] animate-fade-in">
@@ -144,6 +152,8 @@ export default async function SourcesPage({
         domains={allDomains}
         totalCitations={totalCitations}
         mediaPct={mediaPct}
+        aiConsultedCount={aiConsultedCount}
+        brandConsultedPct={brandConsultedPct}
         brand={brand}
         projectId={selectedId ?? projectIds[0] ?? null}
       />

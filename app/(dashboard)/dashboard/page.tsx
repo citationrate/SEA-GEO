@@ -114,6 +114,22 @@ export default async function DashboardPage({
         .in("project_id", targetIds)
     : { count: 0 };
 
+  // Get AI-consulted citation stats (brand domain in citations from Perplexity/Claude/Gemini)
+  let aiConsultedPct = "--";
+  if (runIds.length > 0) {
+    const promptIdsForCitations = (await supabase.from("prompts_executed").select("id, citation_urls").in("run_id", runIds)).data ?? [];
+    const withCitations = (promptIdsForCitations as any[]).filter((p: any) => p.citation_urls && p.citation_urls.length > 0);
+    if (withCitations.length > 0) {
+      const promptIdsWithCitations = withCitations.map((p: any) => p.id);
+      const { data: analysisRows } = await supabase
+        .from("response_analysis")
+        .select("brand_in_citations")
+        .in("prompt_executed_id", promptIdsWithCitations);
+      const brandInCount = (analysisRows ?? []).filter((r: any) => r.brand_in_citations).length;
+      aiConsultedPct = `${Math.round((brandInCount / withCitations.length) * 100)}%`;
+    }
+  }
+
   // Compute brand mention rate from response_analysis
   let mentionRate = "--";
   if (runIds.length > 0) {
@@ -177,6 +193,7 @@ export default async function DashboardPage({
     { labelKey: "dashboard.sourcesExtracted",    value: String(sourcesCount ?? 0),       subKey: "dashboard.uniqueDomains" },
     { labelKey: "dashboard.aiModels",            value: String(modelsSet.size),          subKey: "dashboard.activeIntegrations" },
     { labelKey: "dashboard.analysesRun",         value: String(runs.length),            subKey: "dashboard.totalHistory" },
+    ...(aiConsultedPct !== "--" ? [{ labelKey: "dashboard.aiConsultedSources", value: aiConsultedPct, subKey: "dashboard.aiConsultedSourcesDesc" }] : []),
   ];
 
   // Competitor bar data — use competitor_avi scores from the latest completed run

@@ -5,7 +5,7 @@ import {
   Globe, X, Loader2, ExternalLink, Search,
   Lightbulb, Newspaper, Star, ShoppingCart,
   MessageCircle, BookOpen, HelpCircle, Swords,
-  Crown, Lock,
+  Crown, Lock, Zap, FileText,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
@@ -14,6 +14,7 @@ import { useUsage } from "@/lib/hooks/useUsage";
 interface SourceDomain {
   domain: string;
   sourceType: string;
+  sourceOrigin: "ai_consulted" | "text_mention";
   citations: number;
   analysisCount: number;
   isBrandOwned: boolean;
@@ -50,12 +51,16 @@ export function SourcesClient({
   domains,
   totalCitations,
   mediaPct,
+  aiConsultedCount,
+  brandConsultedPct,
   brand,
   projectId,
 }: {
   domains: SourceDomain[];
   totalCitations: number;
   mediaPct: number;
+  aiConsultedCount: number;
+  brandConsultedPct: number;
   brand: string;
   projectId: string | null;
 }) {
@@ -67,7 +72,11 @@ export function SourcesClient({
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [localUrlUsed, setLocalUrlUsed] = useState<number | null>(null);
 
-  const filtered = filter ? domains.filter((d) => d.sourceType === filter) : domains;
+  const filtered = filter === "ai_consulted"
+    ? domains.filter((d) => d.sourceOrigin === "ai_consulted")
+    : filter === "text_mention"
+    ? domains.filter((d) => d.sourceOrigin === "text_mention")
+    : filter ? domains.filter((d) => d.sourceType === filter) : domains;
 
   // Effective URL analyses used: local override or from useUsage
   const effectiveUrlUsed = localUrlUsed ?? usage.urlAnalysesUsed;
@@ -120,10 +129,13 @@ export function SourcesClient({
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className={`grid grid-cols-1 gap-3 ${aiConsultedCount > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
         <StatCard value={String(domains.length)} label={t("sources.uniqueDomains")} />
         <StatCard value={String(totalCitations)} label={t("sources.totalCitations")} />
         <StatCard value={`${mediaPct}%`} label={t("sources.mediaStatLabel")} />
+        {aiConsultedCount > 0 && (
+          <StatCard value={`${brandConsultedPct}%`} label={t("sources.brandConsultedByAI")} highlight />
+        )}
       </div>
 
       {/* URL analyses counter (Pro) */}
@@ -201,6 +213,31 @@ export function SourcesClient({
             </button>
           );
         })}
+        {aiConsultedCount > 0 && (
+          <>
+            <span className="w-px h-5 bg-border mx-1" />
+            <button
+              onClick={() => setFilter(filter === "ai_consulted" ? null : "ai_consulted")}
+              className={`px-3 py-1.5 rounded-[2px] text-xs font-medium border transition-all flex items-center gap-1 ${
+                filter === "ai_consulted"
+                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/15"
+                  : "border-border text-muted-foreground hover:border-foreground/40"
+              }`}
+            >
+              <Zap className="w-3 h-3" /> {t("sources.aiConsulted")} ({aiConsultedCount})
+            </button>
+            <button
+              onClick={() => setFilter(filter === "text_mention" ? null : "text_mention")}
+              className={`px-3 py-1.5 rounded-[2px] text-xs font-medium border transition-all flex items-center gap-1 ${
+                filter === "text_mention"
+                  ? "border-slate-500 text-slate-400 bg-slate-500/15"
+                  : "border-border text-muted-foreground hover:border-foreground/40"
+              }`}
+            >
+              <FileText className="w-3 h-3" /> {t("sources.textMention")} ({domains.length - aiConsultedCount})
+            </button>
+          </>
+        )}
       </div>
 
       {/* Domain cards */}
@@ -279,6 +316,15 @@ function DomainCard({ domain: d, onAnalyze, isPro }: { domain: SourceDomain; onA
         <span className="text-muted-foreground">
           {d.analysisCount} {t("sources.analyses")}
         </span>
+        {d.sourceOrigin === "ai_consulted" ? (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-1.5 py-0.5 rounded-[2px]">
+            <Zap className="w-2.5 h-2.5" /> {t("sources.consultedBadge")}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground bg-muted/50 border border-border px-1.5 py-0.5 rounded-[2px]">
+            <FileText className="w-2.5 h-2.5" /> {t("sources.mentionedBadge")}
+          </span>
+        )}
       </div>
 
       {/* Context preview */}

@@ -68,18 +68,33 @@ export async function POST(request: Request) {
 async function updateProfiles(userId: string, data: Record<string, unknown>) {
   console.log("[stripe-webhook] updateProfiles userId:", userId, "data:", JSON.stringify(data));
 
-  // Update on CitationRate (has all columns: plan, subscription_status, stripe_subscription_id, etc.)
+  // Update on CitationRate (has all Stripe columns)
   const cr = getCitationRateClient();
-  const { error: crErr } = await cr.from("profiles").update(data as any).eq("id", userId);
-  if (crErr) console.error("[stripe-webhook] CitationRate update error:", crErr);
-  else console.log("[stripe-webhook] CitationRate profile updated OK");
+  // Ensure profile exists on CitationRate before updating
+  const { data: crProfile } = await cr.from("profiles").select("id").eq("id", userId).maybeSingle();
+  if (!crProfile) {
+    console.log("[stripe-webhook] CitationRate profile missing, creating for:", userId);
+    const { error: createErr } = await cr.from("profiles").insert({ id: userId, plan: data.plan ?? "demo", ...data } as any);
+    if (createErr) console.error("[stripe-webhook] CitationRate profile create error:", createErr);
+    else console.log("[stripe-webhook] CitationRate profile created OK");
+  } else {
+    const { error: crErr } = await cr.from("profiles").update(data as any).eq("id", userId);
+    if (crErr) console.error("[stripe-webhook] CitationRate update error:", crErr);
+    else console.log("[stripe-webhook] CitationRate profile updated OK");
+  }
 
-  // Also update plan on seageo1 (only has 'plan' column — no subscription_status etc.)
+  // Update on seageo1 (try all columns, fallback to plan-only if columns don't exist yet)
   const svc = getSeageo1Client();
-  if ("plan" in data) {
-    const { error: sgErr } = await (svc.from("profiles") as any).update({ plan: data.plan }).eq("id", userId);
-    if (sgErr) console.error("[stripe-webhook] seageo1 update error:", sgErr);
-    else console.log("[stripe-webhook] seageo1 plan updated to:", data.plan);
+  const { error: sgErr } = await (svc.from("profiles") as any).update(data).eq("id", userId);
+  if (sgErr) {
+    console.warn("[stripe-webhook] seageo1 full update failed, trying plan-only:", sgErr.message);
+    if ("plan" in data) {
+      const { error: sgErr2 } = await (svc.from("profiles") as any).update({ plan: data.plan }).eq("id", userId);
+      if (sgErr2) console.error("[stripe-webhook] seageo1 plan-only update error:", sgErr2);
+      else console.log("[stripe-webhook] seageo1 plan updated to:", data.plan);
+    }
+  } else {
+    console.log("[stripe-webhook] seageo1 profile updated OK");
   }
 }
 

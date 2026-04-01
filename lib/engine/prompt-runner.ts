@@ -15,6 +15,8 @@ import {
 export interface AIModelResult {
   text: string;
   sources: ExtractedSource[];
+  /** Raw URLs the AI actually consulted (Perplexity citations, Claude web search, Gemini grounding) */
+  citationSources?: string[];
   error?: string;
 }
 
@@ -107,8 +109,9 @@ export async function callAIModel(
 
             if (text) {
               const searchSources = extractFromAnthropicSearch(msg.content as any[], brandDomain ?? undefined);
+              const citationSources = searchSources.map(s => s.url);
               const textSources = extractFromText(text, brandDomain ?? undefined);
-              return { text, sources: mergeSources(searchSources, textSources) };
+              return { text, sources: mergeSources(searchSources, textSources), citationSources };
             }
           } catch (browsingErr) {
             console.error("[callAIModel] Anthropic web search failed, falling back:", browsingErr instanceof Error ? browsingErr.message : browsingErr);
@@ -184,8 +187,9 @@ export async function callAIModel(
             const text = extractGeminiText(result);
             if (text) {
               const groundingSources = extractFromGrounding((result.response as any).candidates || [], brandDomain ?? undefined);
+              const citationSources = groundingSources.map(s => s.url);
               const textSources = extractFromText(text, brandDomain ?? undefined);
-              return { text, sources: mergeSources(groundingSources, textSources) };
+              return { text, sources: mergeSources(groundingSources, textSources), citationSources };
             }
           } catch (e: any) {
             console.error("[Gemini grounding] failed:", e?.message);
@@ -231,19 +235,20 @@ export async function callAIModel(
         }
 
         // Extract structured citations from Perplexity API response
-        const citationSources: ExtractedSource[] = [];
-        const citations: string[] = data.citations ?? [];
+        const perplexitySources: ExtractedSource[] = [];
+        const citationSources: string[] = data.citations ?? [];
         const seenDomains = new Set<string>();
-        for (const url of citations) {
+        for (const url of citationSources) {
           try {
             const domain = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
             if (domain && !seenDomains.has(domain)) {
               seenDomains.add(domain);
-              citationSources.push({
+              perplexitySources.push({
                 url,
                 domain,
                 title: undefined,
                 source_type: classifyDomainForPerplexity(domain, brandDomain ?? undefined),
+                source_origin: "ai_consulted",
                 context: "Perplexity citation",
               });
             }
@@ -251,7 +256,7 @@ export async function callAIModel(
         }
 
         const textSources = extractFromText(text, brandDomain ?? undefined);
-        return { text, sources: mergeSources(citationSources, textSources) };
+        return { text, sources: mergeSources(perplexitySources, textSources), citationSources };
       }, "Perplexity");
     }
 

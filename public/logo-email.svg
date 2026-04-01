@@ -1,0 +1,5 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="64" ry="64" fill="#8dc5a7"/>
+  <path d="M120 360V250C120 174 176 116 252 116V180C212 180 180 212 180 252H252V360H120Z" fill="#ffffff"/>
+  <g transform="rotate(180 350 240)"><path d="M284 360V250C284 174 340 116 416 116V180C376 180 344 212 344 252H416V360H284Z" fill="#3f7d5b"/></g>
+</svg>
