@@ -432,12 +432,37 @@ export function PianoClient({
           {/* Subscription management */}
           {!isDemo && (
             <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
-              <div className="p-5 flex items-center justify-between flex-wrap gap-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">{t("piano.subscriptionTitle")}</p>
-                  <p className="text-xs text-muted-foreground">{t("piano.stripeInfoDesc")}</p>
+              <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(196,168,130,0.12)" }}>
+                  <CreditCard className="w-4 h-4 text-[#c4a882]" />
                 </div>
-                <div className="flex items-center gap-3">
+                <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.subscriptionTitle")}</h2>
+              </div>
+              <div className="p-5 space-y-5">
+                {/* Plan details grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.activePlan")}</p>
+                    <p className="text-sm font-semibold text-foreground mt-1">{planMeta.label}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.status")}</p>
+                    <p className="text-sm font-semibold text-foreground mt-1 capitalize">{subscriptionStatus}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.period")}</p>
+                    <p className="text-sm font-semibold text-foreground mt-1">{subscriptionPeriod === "yearly" ? t("piano.annual") : t("piano.monthly")}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.amount")}</p>
+                    <p className="text-sm font-semibold text-foreground mt-1">
+                      {plan === "base" ? (subscriptionPeriod === "yearly" ? "€649" : "€59") : plan === "pro" ? (subscriptionPeriod === "yearly" ? "€1.719" : "€159") : "—"}{subscriptionPeriod === "yearly" ? t("piano.perYear") : t("piano.perMonth")}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex items-center gap-3 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
                   <PortalButton />
                   <button onClick={() => setShowCancelModal(true)} className="px-4 py-2 rounded-[3px] border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors">
                     {t("piano.cancelSubscription")}
@@ -447,22 +472,6 @@ export function PianoClient({
             </section>
           )}
           <InvoiceHistory />
-
-          {/* Billing portal */}
-          {!isDemo && (
-            <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
-              <div className="p-5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CreditCard className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{t("piano.stripeInfo")}</p>
-                    <p className="text-xs text-muted-foreground">{t("piano.stripeInfoDesc")}</p>
-                  </div>
-                </div>
-                <PortalButton />
-              </div>
-            </section>
-          )}
         </div>
       )}
 
