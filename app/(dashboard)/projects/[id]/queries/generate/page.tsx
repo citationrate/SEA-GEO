@@ -826,40 +826,21 @@ export default function GenerateQueriesPage() {
             </div>
           </div>
 
-          {/* Usage bar */}
-          <div className="space-y-2 pt-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">
-                {t("generateQueries.usedQueries")} <span className="text-foreground font-bold">{usedThisMonth}</span> / {monthlyLimit} {t("generateQueries.queriesThisMonth")}
-              </span>
-              <span className={`font-mono ${wouldExceed ? "text-destructive" : "text-muted-foreground"}`}>
-                {planId === "pro" ? t("generateQueries.planPro") : planId === "base" ? t("generateQueries.planBase") : "DEMO"}
-              </span>
-            </div>
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${Math.min(100, (usedThisMonth / monthlyLimit) * 100)}%`,
-                  backgroundColor: wouldExceed ? "hsl(var(--destructive))" : "#7eb89a",
-                }}
-              />
-            </div>
-            {wouldExceed && (
-              <div className="flex items-start gap-2 rounded-[2px] border border-destructive/30 bg-destructive/10 px-3 py-2.5">
-                <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-                <div className="text-xs text-destructive space-y-1">
-                  <p className="font-semibold">Generazione bloccata — limite raggiunto</p>
-                  <p>Hai utilizzato {usedThisMonth} / {monthlyLimit} query. Riduci il numero o passa a un piano superiore.</p>
-                  {planId !== "pro" && (
-                    <a href="/settings" className="inline-flex items-center gap-1 text-[#c4a882] hover:underline font-medium">
-                      {planId === "demo" ? "Passa a Base o Pro →" : "Passa a Pro →"}
-                    </a>
-                  )}
-                </div>
+          {/* Limit warning (only if exceeded) */}
+          {wouldExceed && (
+            <div className="flex items-start gap-2 rounded-[2px] border border-destructive/30 bg-destructive/10 px-3 py-2.5">
+              <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <div className="text-xs text-destructive space-y-1">
+                <p className="font-semibold">{t("generateQueries.limitReached")}</p>
+                <p>{t("generateQueries.reduceOrUpgrade")}</p>
+                {planId !== "pro" && (
+                  <a href="/piano#piani" className="inline-flex items-center gap-1 text-[#c4a882] hover:underline font-medium">
+                    {planId === "demo" ? "Passa a Base o Pro →" : "Passa a Pro →"}
+                  </a>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="flex justify-between pt-2">
             <button
