@@ -286,45 +286,6 @@ export function PianoClient({
             </section>
           )}
 
-          {/* Extra packages */}
-          {packages.length > 0 && (
-            <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
-              <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(122,184,154,0.12)" }}>
-                  <Download className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.extraPackages")}</h2>
-                  <p className="text-xs text-muted-foreground">{t("piano.extraPackagesDesc")}</p>
-                </div>
-              </div>
-              <div className="p-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {packages.map((pkg) => (
-                    <div key={pkg.priceEnv} className="p-4 flex flex-col rounded-[2px]" style={{ border: "1px solid var(--border)" }}>
-                      <div className="flex items-center gap-2.5 mb-3">
-                        <div className="w-8 h-8 rounded-[3px] flex items-center justify-center" style={{ background: pkg.type === "query" ? "rgba(59,130,246,0.12)" : "rgba(196,168,130,0.12)" }}>
-                          {pkg.type === "query" ? <Zap className="w-4 h-4 text-[#3b82f6]" /> : <GitCompare className="w-4 h-4 text-[#c4a882]" />}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{pkg.label}</p>
-                          <p className="text-xs text-muted-foreground">{pkg.desc}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="font-display text-lg font-bold text-foreground">€{pkg.price}</p>
-                        {pkg.note && <span className="font-mono text-[0.6rem] tracking-wider uppercase text-muted-foreground">{pkg.note}</span>}
-                      </div>
-                      <button onClick={() => handleBuyPackage(pkg.priceEnv)} disabled={purchasingId !== null} className="w-full py-2 text-sm font-medium rounded-[2px] transition-all disabled:opacity-50" style={{ background: "var(--primary)", color: "white" }}>
-                        {purchasingId === pkg.priceEnv ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t("piano.buy")}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-          )}
-
         </div>
       )}
 
@@ -422,6 +383,45 @@ export function PianoClient({
           </div>
         </div>
       </section>
+
+          {/* Extra packages */}
+          {packages.length > 0 && (
+            <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+              <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(122,184,154,0.12)" }}>
+                  <Download className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h2 className="font-display font-semibold text-sm text-foreground">{t("piano.extraPackages")}</h2>
+                  <p className="text-xs text-muted-foreground">{t("piano.extraPackagesDesc")}</p>
+                </div>
+              </div>
+              <div className="p-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {packages.map((pkg) => (
+                    <div key={pkg.priceEnv} className="p-4 flex flex-col rounded-[2px]" style={{ border: "1px solid var(--border)" }}>
+                      <div className="flex items-center gap-2.5 mb-3">
+                        <div className="w-8 h-8 rounded-[3px] flex items-center justify-center" style={{ background: pkg.type === "query" ? "rgba(59,130,246,0.12)" : "rgba(196,168,130,0.12)" }}>
+                          {pkg.type === "query" ? <Zap className="w-4 h-4 text-[#3b82f6]" /> : <GitCompare className="w-4 h-4 text-[#c4a882]" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{pkg.label}</p>
+                          <p className="text-xs text-muted-foreground">{pkg.desc}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="font-display text-lg font-bold text-foreground">€{pkg.price}</p>
+                        {pkg.note && <span className="font-mono text-[0.6rem] tracking-wider uppercase text-muted-foreground">{pkg.note}</span>}
+                      </div>
+                      <button onClick={() => handleBuyPackage(pkg.priceEnv)} disabled={purchasingId !== null} className="w-full py-2 text-sm font-medium rounded-[2px] transition-all disabled:opacity-50" style={{ background: "var(--primary)", color: "white" }}>
+                        {purchasingId === pkg.priceEnv ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t("piano.buy")}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* Subscription management */}
           {!isDemo && (
