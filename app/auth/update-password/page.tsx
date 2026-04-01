@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Loader2, Check, Eye, EyeOff } from "lucide-react";
-import { Suspense } from "react";
 
-function UpdatePasswordForm() {
+export default function UpdatePasswordPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -15,38 +14,23 @@ function UpdatePasswordForm() {
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 
+  // Session was already established by the callback route.
+  // Just verify we have one.
   useEffect(() => {
-    async function init() {
-      // Exchange the code from URL for a session
-      const code = searchParams.get("code");
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (!error) {
-          setReady(true);
-          return;
-        }
-        console.error("Code exchange failed:", error.message);
-        setError("Link scaduto o non valido. Richiedi un nuovo reset.");
-        return;
-      }
-
-      // No code — check if already in a session (e.g. via hash fragment)
-      const { data: { session } } = await supabase.auth.getSession();
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setReady(true);
       } else {
         setError("Sessione non valida. Richiedi un nuovo link di reset.");
       }
-    }
-    init();
-  }, [searchParams]);
+    });
+  }, []);
 
   const valid = password.length >= 8 && password === confirm;
 
@@ -140,17 +124,5 @@ function UpdatePasswordForm() {
         )}
       </div>
     </div>
-  );
-}
-
-export default function UpdatePasswordPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--background, #0a0a0a)" }}>
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-      </div>
-    }>
-      <UpdatePasswordForm />
-    </Suspense>
   );
 }

@@ -13,7 +13,7 @@ export async function POST() {
     // Send password reset via Supabase Auth
     // The redirect URL must be whitelisted in Supabase dashboard
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: "https://avi.citationrate.com/auth/update-password",
+      redirectTo: "https://avi.citationrate.com/auth/callback?next=/auth/update-password",
     });
 
     if (error) {

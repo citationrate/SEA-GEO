@@ -9,6 +9,12 @@ export async function GET(request: Request) {
     const auth = createServerClient();
     const { error } = await auth.auth.exchangeCodeForSession(code);
     if (!error) {
+      // If a "next" param is set (e.g. password reset), redirect there
+      const next = searchParams.get("next");
+      if (next && next.startsWith("/")) {
+        return NextResponse.redirect(`${origin}${next}`);
+      }
+
       // Check if this is a new user (onboarding not completed)
       const { data: { user } } = await auth.auth.getUser();
       if (user) {
