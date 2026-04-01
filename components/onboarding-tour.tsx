@@ -99,14 +99,14 @@ function getSteps(firstProjectId: string | null, t: (key: string) => string): On
       tooltipPosition: "right",
       pro: false,
     },
-    // 10 — Project detail: generate queries
+    // 10 — Project detail: generate queries (available to all plans)
     {
       title: t("onboarding.generatePrompt") + " ✨",
       description: t("onboarding.generatePromptDesc"),
       route: `/projects/${pid}`,
       selector: '[data-tour="generate-queries-btn"]',
       tooltipPosition: "bottom-right",
-      pro: true,
+      pro: false,
     },
     // 11 — Project detail: launch analysis
     {
@@ -198,16 +198,25 @@ function getSteps(firstProjectId: string | null, t: (key: string) => string): On
       tooltipPosition: "right",
       pro: false,
     },
-    // — Query wizard
+    // — Query wizard (available to all plans)
     {
       title: t("onboarding.queryWizard"),
       description: t("onboarding.queryWizardDesc"),
       route: `/projects/${pid}/queries/generate`,
       selector: '[data-tour="query-wizard-step1"]',
       tooltipPosition: "center",
-      pro: true,
+      pro: false,
     },
-    // 19 — Settings: account
+    // — Piano page
+    {
+      title: t("onboarding.pianoTitle"),
+      description: t("onboarding.pianoDesc"),
+      route: "/piano",
+      selector: '[data-tour="sidebar-plan"]',
+      tooltipPosition: "right",
+      pro: false,
+    },
+    // — Settings: account
     {
       title: t("onboarding.settingsProfile"),
       description: t("onboarding.settingsProfileDesc"),
