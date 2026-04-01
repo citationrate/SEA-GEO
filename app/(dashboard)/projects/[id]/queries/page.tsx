@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, Loader2, MessageSquare, Sparkles, AlertTriangle, ToggleLeft, ToggleRight } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, MessageSquare, Sparkles, AlertTriangle, ToggleLeft, ToggleRight, CheckSquare, Square, Power, PowerOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -42,6 +42,9 @@ export default function QueriesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [targetBrand, setTargetBrand] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
 
   const [tofuText, setTofuText] = useState("");
   const [mofuText, setMofuText] = useState("");
@@ -125,6 +128,57 @@ export default function QueriesPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.error"));
     }
+  }
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAll() {
+    if (selected.size === filteredQueries.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(filteredQueries.map((q) => q.id)));
+    }
+  }
+
+  async function bulkToggle(activate: boolean) {
+    setBulkLoading(true);
+    setError("");
+    try {
+      await Promise.all(
+        Array.from(selected).map((id) =>
+          fetch("/api/queries", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id, is_active: activate }),
+          })
+        )
+      );
+      setQueries(queries.map((q) => selected.has(q.id) ? { ...q, is_active: activate } : q));
+      setSelected(new Set());
+    } catch { setError(t("common.error")); }
+    finally { setBulkLoading(false); }
+  }
+
+  async function bulkDelete() {
+    setBulkLoading(true);
+    setError("");
+    try {
+      await Promise.all(
+        Array.from(selected).map((id) =>
+          fetch(`/api/queries?id=${id}`, { method: "DELETE" })
+        )
+      );
+      setQueries(queries.filter((q) => !selected.has(q.id)));
+      setSelected(new Set());
+      setConfirmBulkDelete(false);
+    } catch { setError(t("common.error")); }
+    finally { setBulkLoading(false); }
   }
 
   const activeCount = queries.filter((q) => q.is_active !== false).length;
@@ -213,6 +267,51 @@ export default function QueriesPage() {
         </div>
       )}
 
+      {/* Bulk actions bar */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-[2px] border border-primary/30 bg-primary/5 animate-fade-in">
+          <span className="text-sm font-medium text-foreground">{selected.size} {selected.size === 1 ? "query selezionata" : "query selezionate"}</span>
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              onClick={() => bulkToggle(true)}
+              disabled={bulkLoading}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-[2px] border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+            >
+              <Power className="w-3 h-3" /> Attiva
+            </button>
+            <button
+              onClick={() => bulkToggle(false)}
+              disabled={bulkLoading}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-[2px] border border-border text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              <PowerOff className="w-3 h-3" /> Disattiva
+            </button>
+            {confirmBulkDelete ? (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={bulkDelete}
+                  disabled={bulkLoading}
+                  className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-[2px] bg-destructive text-white hover:bg-destructive/80 transition-colors disabled:opacity-50"
+                >
+                  {bulkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />} Conferma
+                </button>
+                <button onClick={() => setConfirmBulkDelete(false)} className="text-xs text-muted-foreground px-2 py-1.5 hover:text-foreground transition-colors">Annulla</button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmBulkDelete(true)}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-[2px] border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                <Trash2 className="w-3 h-3" /> Elimina
+              </button>
+            )}
+            <button onClick={() => { setSelected(new Set()); setConfirmBulkDelete(false); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-1">
+              Deseleziona
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* TOFU */}
         <div className="card p-5 space-y-4">
@@ -247,7 +346,7 @@ export default function QueriesPage() {
           ) : (
             <ul className="space-y-2">
               {tofuQueries.map((q) => (
-                <QueryItem key={q.id} query={q} onDelete={deleteQuery} onToggle={toggleQuery} />
+                <QueryItem key={q.id} query={q} onDelete={deleteQuery} onToggle={toggleQuery} selected={selected.has(q.id)} onSelect={toggleSelect} />
               ))}
             </ul>
           )}
@@ -286,7 +385,7 @@ export default function QueriesPage() {
           ) : (
             <ul className="space-y-2">
               {mofuQueries.map((q) => (
-                <QueryItem key={q.id} query={q} onDelete={deleteQuery} onToggle={toggleQuery} />
+                <QueryItem key={q.id} query={q} onDelete={deleteQuery} onToggle={toggleQuery} selected={selected.has(q.id)} onSelect={toggleSelect} />
               ))}
             </ul>
           )}
@@ -308,7 +407,7 @@ function BrandWarning({ brand }: { brand: string }) {
   );
 }
 
-function QueryItem({ query, onDelete, onToggle }: { query: Query; onDelete: (id: string) => void; onToggle: (id: string, active: boolean) => void }) {
+function QueryItem({ query, onDelete, onToggle, selected, onSelect }: { query: Query; onDelete: (id: string) => void; onToggle: (id: string, active: boolean) => void; selected: boolean; onSelect: (id: string) => void }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const setType = query.set_type || "manual";
   const colorCls = SET_TYPE_COLORS[setType] || SET_TYPE_COLORS.manual;
@@ -317,9 +416,15 @@ function QueryItem({ query, onDelete, onToggle }: { query: Query; onDelete: (id:
 
   return (
     <li className={`flex items-start justify-between gap-2 rounded-[2px] px-3 py-2 border group transition-colors ${
-      isActive ? "bg-muted border-border" : "bg-muted/30 border-border/50"
+      selected ? "bg-primary/5 border-primary/30" : isActive ? "bg-muted border-border" : "bg-muted/30 border-border/50"
     }`}>
       <div className="flex items-center gap-2 flex-1 min-w-0">
+        <button onClick={() => onSelect(query.id)} className="shrink-0 transition-colors" title="Seleziona">
+          {selected
+            ? <CheckSquare className="w-4 h-4 text-primary" />
+            : <Square className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+          }
+        </button>
         <button
           onClick={() => onToggle(query.id, isActive)}
           className="shrink-0 transition-colors"
