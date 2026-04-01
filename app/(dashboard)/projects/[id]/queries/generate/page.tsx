@@ -198,7 +198,7 @@ export default function GenerateQueriesPage() {
     }).catch(() => {}).finally(() => setProfileLoaded(true));
 
     fetch(`/api/queries?project_id=${projectId}`).then((r) => r.json()).then((qs) => {
-      if (Array.isArray(qs)) setExistingQueryCount(qs.length);
+      if (Array.isArray(qs)) setExistingQueryCount(qs.filter((q: any) => q.is_active !== false).length);
     }).catch(() => {});
   }, [projectId]);
 
