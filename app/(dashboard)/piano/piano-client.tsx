@@ -175,7 +175,7 @@ export function PianoClient({
         {([
           { key: "uso" as PianoTab, label: t("piano.usage") || "Uso" },
           { key: "piani" as PianoTab, label: t("piano.plansAndPackages") || "Piani e Pacchetti" },
-          { key: "fatture" as PianoTab, label: t("piano.invoices") || "Fatture" },
+          { key: "fatture" as PianoTab, label: t("piano.paymentsAndInvoices") || "Pagamenti e Fatture" },
         ]).map((tab) => (
           <button
             key={tab.key}
@@ -423,6 +423,12 @@ export function PianoClient({
             </section>
           )}
 
+        </div>
+      )}
+
+      {/* ══════════════ TAB: PAGAMENTI E FATTURE ══════════════ */}
+      {activeTab === "fatture" && (
+        <div className="space-y-6 animate-fade-in">
           {/* Subscription management */}
           {!isDemo && (
             <section className="rounded-[4px] border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
@@ -440,12 +446,6 @@ export function PianoClient({
               </div>
             </section>
           )}
-        </div>
-      )}
-
-      {/* ══════════════ TAB: FATTURE ══════════════ */}
-      {activeTab === "fatture" && (
-        <div className="space-y-6 animate-fade-in">
           <InvoiceHistory />
 
           {/* Billing portal */}
