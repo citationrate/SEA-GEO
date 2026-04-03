@@ -78,18 +78,34 @@ export async function POST(request: Request) {
       ...inputs,
     });
 
-    // Insert queries — only columns that exist: project_id, text, funnel_stage
-    const rows = queries.map((q) => ({
+    // Deduplicate against existing queries in this project
+    const { data: existing } = await supabase
+      .from("queries")
+      .select("text")
+      .eq("project_id", project_id);
+    const existingTexts = new Set((existing ?? []).map((r: any) => r.text.trim().toLowerCase()));
+
+    const uniqueQueries = queries.filter((q) => !existingTexts.has(q.text.trim().toLowerCase()));
+    if (uniqueQueries.length === 0) {
+      return NextResponse.json({ error: "Tutte le query esistono già nel progetto" }, { status: 409 });
+    }
+
+    // Insert queries with full metadata (set_type, persona_id, persona_mode)
+    const rows = uniqueQueries.map((q) => ({
       project_id,
       text: q.text,
       funnel_stage: q.funnel_stage.toLowerCase() as "tofu" | "mofu",
+      set_type: q.set_type,
+      ...(q.persona_id ? { persona_id: q.persona_id } : {}),
+      ...(q.persona_mode ? { persona_mode: q.persona_mode } : {}),
     }));
 
     const { error: dbError } = await supabase.from("queries").insert(rows as any);
 
     if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
-    return NextResponse.json({ ok: true, count: queries.length }, { status: 201 });
+    const skipped = queries.length - uniqueQueries.length;
+    return NextResponse.json({ ok: true, count: uniqueQueries.length, skipped }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Errore interno" }, { status: 500 });
   }

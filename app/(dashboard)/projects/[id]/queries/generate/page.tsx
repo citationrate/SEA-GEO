@@ -295,9 +295,10 @@ export default function GenerateQueriesPage() {
         throw new Error(data.error || t("common.error"));
       }
       const data = await res.json();
+      const effectiveSetType = personasEnabled && personas.length > 0 ? "persona" as const : "generale" as const;
       const aiQueries: GeneratedQuery[] = (data.queries ?? []).map((q: any) => ({
         text: q.text,
-        set_type: "generale" as const,
+        set_type: effectiveSetType,
         funnel_stage: q.funnel_stage === "MOFU" ? "MOFU" as const : "TOFU" as const,
       }));
 
@@ -338,11 +339,16 @@ export default function GenerateQueriesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ project_id: projectId, queries: activeQueries, inputs }),
       });
+      const resData = await res.json();
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || t("common.error"));
+        throw new Error(resData.error || t("common.error"));
       }
-      toast.success(`${activeQueries.length} ${t("generateQueries.queriesSaved")}`);
+      const skipped = resData.skipped ?? 0;
+      const saved = resData.count ?? activeQueries.length;
+      const msg = skipped > 0
+        ? `${saved} ${t("generateQueries.queriesSaved")} (${skipped} duplicati saltati)`
+        : `${saved} ${t("generateQueries.queriesSaved")}`;
+      toast.success(msg);
       router.push(`/projects/${projectId}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("generateQueries.saveError"));

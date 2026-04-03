@@ -39,9 +39,19 @@ export async function POST(request: Request) {
     const parsed = querySchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
+    // Check for duplicate query text in this project
+    const { data: existing } = await supabase
+      .from("queries")
+      .select("id")
+      .eq("project_id", parsed.data.project_id)
+      .ilike("text", parsed.data.text.trim());
+    if (existing && existing.length > 0) {
+      return NextResponse.json({ error: "Questa query esiste già nel progetto" }, { status: 409 });
+    }
+
     const { data, error: dbError } = await supabase
       .from("queries")
-      .insert(parsed.data as any)
+      .insert({ ...parsed.data, set_type: "manual" } as any)
       .select("*")
       .single();
 
