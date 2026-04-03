@@ -740,7 +740,14 @@ export const runAnalysis = inngest.createFunction(
 
     const allTasks: PromptTask[] = [];
     for (const query of queries) {
-      for (const segment of effectiveSegments) {
+      // If query was AI-generated with a persona (set_type="persona"), it already
+      // has persona context embedded in its text — skip manual segments to avoid
+      // double-persona conflicts. Use only the default generic segment.
+      const querySegments = (query as any).set_type === "persona"
+        ? [DEFAULT_SEGMENT]
+        : effectiveSegments;
+
+      for (const segment of querySegments) {
         for (const model of modelsUsed) {
           for (let runNum = 1; runNum <= runCount; runNum++) {
             allTasks.push({
