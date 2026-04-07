@@ -236,19 +236,16 @@ export function SettingsClient({
               setTwoFAEnabled((v) => !v);
               alert(t("settings.twoFactorComingSoon") || "Funzionalità in arrivo a breve.");
             }}
-            className="shrink-0 p-0 border-0 bg-transparent cursor-pointer"
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+              twoFAEnabled ? "bg-primary" : "bg-white/15"
+            }`}
           >
             <span
-              className={`relative block w-11 h-6 rounded-full transition-colors ${
-                twoFAEnabled ? "bg-primary" : "bg-muted-foreground/30"
+              aria-hidden
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                twoFAEnabled ? "translate-x-[22px]" : "translate-x-[2px]"
               }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                  twoFAEnabled ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </span>
+            />
           </button>
         </div>
       </div>
