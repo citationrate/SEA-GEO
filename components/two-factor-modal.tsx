@@ -18,7 +18,6 @@ interface Props {
  * On success the session becomes aal2.
  */
 export function TwoFactorModal({ open, onClose, onEnrolled }: Props) {
-  const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [factorId, setFactorId] = useState<string | null>(null);
@@ -36,6 +35,7 @@ export function TwoFactorModal({ open, onClose, onEnrolled }: Props) {
       setError(null);
       setCode("");
       try {
+        const supabase = createClient();
         // Clean up any unverified factors from previous attempts
         const { data: list } = await supabase.auth.mfa.listFactors();
         const stale = list?.totp?.filter((f) => f.status !== "verified") ?? [];
@@ -64,13 +64,14 @@ export function TwoFactorModal({ open, onClose, onEnrolled }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [open, supabase]);
+  }, [open]);
 
   async function verify() {
     if (!factorId || code.length !== 6) return;
     setLoading(true);
     setError(null);
     try {
+      const supabase = createClient();
       const { data: ch, error: chErr } = await supabase.auth.mfa.challenge({ factorId });
       if (chErr || !ch) {
         setError(chErr?.message || "Errore nella challenge");
@@ -98,6 +99,7 @@ export function TwoFactorModal({ open, onClose, onEnrolled }: Props) {
     // If user closes without verifying, remove the half-enrolled factor
     if (factorId) {
       try {
+        const supabase = createClient();
         await supabase.auth.mfa.unenroll({ factorId });
       } catch {
         /* ignore */

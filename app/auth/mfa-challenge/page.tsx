@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+export const dynamic = "force-dynamic";
+
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ShieldCheck, Loader2, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function MfaChallengePage() {
-  const supabase = createClient();
+function MfaChallengeInner() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/dashboard";
@@ -18,22 +19,23 @@ export default function MfaChallengePage() {
 
   useEffect(() => {
     (async () => {
+      const supabase = createClient();
       const { data } = await supabase.auth.mfa.listFactors();
       const totp = data?.totp?.find((f) => f.status === "verified");
       if (!totp) {
-        // Nothing to challenge → straight to dashboard
         router.replace(next);
         return;
       }
       setFactorId(totp.id);
     })();
-  }, [supabase, router, next]);
+  }, [router, next]);
 
   async function submit() {
     if (!factorId || code.length !== 6) return;
     setLoading(true);
     setError(null);
     try {
+      const supabase = createClient();
       const { data: ch, error: chErr } = await supabase.auth.mfa.challenge({ factorId });
       if (chErr || !ch) {
         setError(chErr?.message || "Errore nella challenge");
@@ -57,6 +59,7 @@ export default function MfaChallengePage() {
   }
 
   async function signOut() {
+    const supabase = createClient();
     await supabase.auth.signOut();
   }
 
@@ -113,5 +116,19 @@ export default function MfaChallengePage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function MfaChallengePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <MfaChallengeInner />
+    </Suspense>
   );
 }
