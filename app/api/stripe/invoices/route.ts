@@ -17,7 +17,7 @@ export async function GET() {
 
     const invoices = await getStripe().invoices.list({
       customer: customerId,
-      limit: 10,
+      limit: 100,
     });
 
     const result = invoices.data.map((inv) => ({

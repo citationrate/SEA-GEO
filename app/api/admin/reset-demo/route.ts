@@ -188,7 +188,9 @@ export async function POST(request: Request) {
         subscription_status: "inactive",
         subscription_period: null,
         stripe_subscription_id: null,
-        stripe_customer_id: null,
+        // NOTE: NON azzerare stripe_customer_id — serve a mantenere lo
+        // storico fatture accessibile dopo il reset a demo. Il customer
+        // su Stripe è permanente e va riusato in caso di nuova sub.
       } as any).eq("id", userId);
       log.push({ step: "reset_citationrate_profile", ok: true });
     } catch (err: any) {
