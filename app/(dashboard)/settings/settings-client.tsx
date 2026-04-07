@@ -236,15 +236,19 @@ export function SettingsClient({
               setTwoFAEnabled((v) => !v);
               alert(t("settings.twoFactorComingSoon") || "Funzionalità in arrivo a breve.");
             }}
-            className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
-              twoFAEnabled ? "bg-primary" : "bg-muted-foreground/30"
-            }`}
+            className="shrink-0 p-0 border-0 bg-transparent cursor-pointer"
           >
             <span
-              className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                twoFAEnabled ? "translate-x-[22px]" : "translate-x-[2px]"
+              className={`relative block w-11 h-6 rounded-full transition-colors ${
+                twoFAEnabled ? "bg-primary" : "bg-muted-foreground/30"
               }`}
-            />
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                  twoFAEnabled ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </span>
           </button>
         </div>
       </div>
