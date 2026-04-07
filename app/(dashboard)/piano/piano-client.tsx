@@ -36,7 +36,7 @@ const PLAN_META: Record<string, { label: string; color: string }> = {
   pro:  { label: "Pro", color: "#c4a882" },
 };
 
-function getFeatures(t: (k: string) => string) {
+function getAviFeatures(t: (k: string) => string) {
   return [
     { label: t("piano.promptsMonth"),           demo: "40",              base: "100",            pro: "300" },
     { label: t("piano.realtimeBrowsing"),       demo: false,             base: `30 ${t("piano.prompt")}`, pro: `90 ${t("piano.prompt")}` },
@@ -46,6 +46,23 @@ function getFeatures(t: (k: string) => string) {
     { label: t("piano.competitiveComparisons"), demo: false,             base: false,            pro: `10${t("piano.perMonth")}` },
     { label: t("piano.urlAnalyses"),            demo: false,             base: false,            pro: `50${t("piano.perMonth")}` },
     { label: t("piano.aiContextAnalyses"),      demo: false,             base: false,            pro: `5${t("piano.perMonth")}` },
+  ];
+}
+
+/**
+ * Citability Score features (shared subscription).
+ * Demo: 1 audit, 1 URL, only general score + per-AI score (7 AI)
+ * Base: 10 audit/month, max 3 URL/audit, 10 insights to improve the score
+ * Pro:  50 audit/month, max 5 URL/audit, all insights + AI-specific insights
+ */
+function getCsFeatures(t: (k: string) => string) {
+  return [
+    { label: t("piano.csAudits"),       demo: `1`,                       base: `10${t("piano.perMonth")}`, pro: `50${t("piano.perMonth")}` },
+    { label: t("piano.csMaxUrls"),      demo: `1`,                       base: `3`,                        pro: `5` },
+    { label: t("piano.csScoreOverall"), demo: true,                      base: true,                       pro: true },
+    { label: t("piano.csScorePerAi"),   demo: t("piano.csScorePerAi7"),  base: true,                       pro: true },
+    { label: t("piano.csInsights"),     demo: false,                     base: `10`,                       pro: t("piano.csInsightsAll") },
+    { label: t("piano.csInsightsPerAi"),demo: false,                     base: false,                      pro: true },
   ];
 }
 
@@ -151,7 +168,8 @@ export function PianoClient({
     finally { setCanceling(false); setShowCancelModal(false); }
   }
 
-  const features = getFeatures(t);
+  const aviFeatures = getAviFeatures(t);
+  const csFeatures = getCsFeatures(t);
 
   type PianoTab = "uso" | "piani" | "fatture";
   const [activeTab, setActiveTab] = useState<PianoTab>("uso");
@@ -309,15 +327,29 @@ export function PianoClient({
             <div className="p-5 flex flex-col rounded-[2px]" style={{ border: isDemo ? "2px solid var(--primary)" : "1px solid var(--border)" }}>
               <p className="font-display text-sm font-semibold text-foreground mb-1">Demo</p>
               <p className="font-display text-2xl font-bold text-foreground mb-4">{t("piano.free")}</p>
-              <div className="space-y-2 text-xs text-muted-foreground flex-1">
-                {features.map((f) => (
-                  <div key={f.label} className="flex items-center gap-2">
-                    {f.demo === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0" /> : <Check className="w-3 h-3 text-muted-foreground shrink-0" />}
-                    <span className={f.demo === false ? "text-muted-foreground/40" : ""}>
-                      {f.label}{typeof f.demo === "string" ? `: ${f.demo}` : ""}
-                    </span>
-                  </div>
-                ))}
+              <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground flex-1">
+                <div className="space-y-1.5 pr-3" style={{ borderRight: "1px solid var(--border)" }}>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-primary mb-1.5">{t("piano.aviHeader")}</p>
+                  {aviFeatures.map((f) => (
+                    <div key={f.label} className="flex items-start gap-1.5">
+                      {f.demo === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" /> : <Check className="w-3 h-3 text-muted-foreground shrink-0 mt-0.5" />}
+                      <span className={f.demo === false ? "text-muted-foreground/40" : ""}>
+                        {f.label}{typeof f.demo === "string" ? `: ${f.demo}` : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#c4a882] mb-1.5">{t("piano.csHeader")}</p>
+                  {csFeatures.map((f) => (
+                    <div key={f.label} className="flex items-start gap-1.5">
+                      {f.demo === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" /> : <Check className="w-3 h-3 text-muted-foreground shrink-0 mt-0.5" />}
+                      <span className={f.demo === false ? "text-muted-foreground/40" : ""}>
+                        {f.label}{typeof f.demo === "string" ? `: ${f.demo}` : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
               {isDemo && <p className="text-xs font-medium text-primary mt-4">{t("piano.activePlan")}</p>}
             </div>
@@ -329,15 +361,29 @@ export function PianoClient({
                 €{annual ? "649" : "59"}<span className="text-sm font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span>
               </p>
               {annual && <p className="text-xs text-muted-foreground mt-1">€54,08{t("piano.perMonth")} · {t("piano.save")} €59/{t("piano.yearLabel")}</p>}
-              <div className="space-y-2 text-xs text-muted-foreground flex-1 mt-4">
-                {features.map((f) => (
-                  <div key={f.label} className="flex items-center gap-2">
-                    {f.base === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0" /> : <Check className="w-3 h-3 text-[#3b82f6] shrink-0" />}
-                    <span className={f.base === false ? "text-muted-foreground/40" : "text-foreground"}>
-                      {f.label}{typeof f.base === "string" ? `: ${f.base}` : ""}
-                    </span>
-                  </div>
-                ))}
+              <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground flex-1 mt-4">
+                <div className="space-y-1.5 pr-3" style={{ borderRight: "1px solid var(--border)" }}>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-primary mb-1.5">{t("piano.aviHeader")}</p>
+                  {aviFeatures.map((f) => (
+                    <div key={f.label} className="flex items-start gap-1.5">
+                      {f.base === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" /> : <Check className="w-3 h-3 text-[#3b82f6] shrink-0 mt-0.5" />}
+                      <span className={f.base === false ? "text-muted-foreground/40" : "text-foreground"}>
+                        {f.label}{typeof f.base === "string" ? `: ${f.base}` : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#c4a882] mb-1.5">{t("piano.csHeader")}</p>
+                  {csFeatures.map((f) => (
+                    <div key={f.label} className="flex items-start gap-1.5">
+                      {f.base === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" /> : <Check className="w-3 h-3 text-[#3b82f6] shrink-0 mt-0.5" />}
+                      <span className={f.base === false ? "text-muted-foreground/40" : "text-foreground"}>
+                        {f.label}{typeof f.base === "string" ? `: ${f.base}` : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
               {isBase ? (
                 <p className="text-xs font-medium text-[#3b82f6] mt-4">{t("piano.activePlan")}</p>
@@ -359,15 +405,29 @@ export function PianoClient({
                 €{annual ? "1.719" : "159"}<span className="text-sm font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span>
               </p>
               {annual && <p className="text-xs text-muted-foreground mt-1">€143,25{t("piano.perMonth")} · {t("piano.save")} €189/{t("piano.yearLabel")}</p>}
-              <div className="space-y-2 text-xs text-muted-foreground flex-1 mt-4">
-                {features.map((f) => (
-                  <div key={f.label} className="flex items-center gap-2">
-                    {f.pro === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0" /> : <Check className="w-3 h-3 text-[#c4a882] shrink-0" />}
-                    <span className={f.pro === false ? "text-muted-foreground/40" : "text-foreground"}>
-                      {f.label}{typeof f.pro === "string" ? `: ${f.pro}` : ""}
-                    </span>
-                  </div>
-                ))}
+              <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground flex-1 mt-4">
+                <div className="space-y-1.5 pr-3" style={{ borderRight: "1px solid var(--border)" }}>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-primary mb-1.5">{t("piano.aviHeader")}</p>
+                  {aviFeatures.map((f) => (
+                    <div key={f.label} className="flex items-start gap-1.5">
+                      {f.pro === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" /> : <Check className="w-3 h-3 text-[#c4a882] shrink-0 mt-0.5" />}
+                      <span className={f.pro === false ? "text-muted-foreground/40" : "text-foreground"}>
+                        {f.label}{typeof f.pro === "string" ? `: ${f.pro}` : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#c4a882] mb-1.5">{t("piano.csHeader")}</p>
+                  {csFeatures.map((f) => (
+                    <div key={f.label} className="flex items-start gap-1.5">
+                      {f.pro === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" /> : <Check className="w-3 h-3 text-[#c4a882] shrink-0 mt-0.5" />}
+                      <span className={f.pro === false ? "text-muted-foreground/40" : "text-foreground"}>
+                        {f.label}{typeof f.pro === "string" ? `: ${f.pro}` : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
               {isPro ? (
                 <p className="text-xs font-medium text-[#c4a882] mt-4">{t("piano.activePlan")}</p>
