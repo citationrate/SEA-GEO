@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { User, Ticket, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Send, Smartphone } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { RestartTourButton } from "./restart-tour-button";
+import { TwoFactorModal } from "@/components/two-factor-modal";
+import { createClient as createAuthClient } from "@/lib/supabase/client";
 
 type SettingsTab = "account" | "voucher" | "supporto";
 
@@ -51,8 +53,66 @@ export function SettingsClient({
 
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // 2FA (UI only — backend non ancora implementato)
+  // 2FA (TOTP via Supabase Auth)
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+  const [twoFAFactorId, setTwoFAFactorId] = useState<string | null>(null);
+  const [twoFALoading, setTwoFALoading] = useState(true);
+  const [twoFAModalOpen, setTwoFAModalOpen] = useState(false);
+
+  // Load current MFA state on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const sb = createAuthClient();
+        const { data } = await sb.auth.mfa.listFactors();
+        const verified = data?.totp?.find((f) => f.status === "verified");
+        if (cancelled) return;
+        if (verified) {
+          setTwoFAEnabled(true);
+          setTwoFAFactorId(verified.id);
+        } else {
+          setTwoFAEnabled(false);
+          setTwoFAFactorId(null);
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        if (!cancelled) setTwoFALoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleTwoFAToggle() {
+    if (twoFALoading) return;
+    if (!twoFAEnabled) {
+      // Turn ON → open enroll modal
+      setTwoFAModalOpen(true);
+      return;
+    }
+    // Turn OFF → confirm + unenroll
+    const ok = window.confirm(
+      t("settings.twoFactorDisableConfirm") ||
+        "Sei sicuro di voler disattivare l'autenticazione a due fattori?",
+    );
+    if (!ok || !twoFAFactorId) return;
+    setTwoFALoading(true);
+    try {
+      const sb = createAuthClient();
+      const { error: unErr } = await sb.auth.mfa.unenroll({ factorId: twoFAFactorId });
+      if (unErr) {
+        alert(unErr.message);
+        return;
+      }
+      setTwoFAEnabled(false);
+      setTwoFAFactorId(null);
+    } finally {
+      setTwoFALoading(false);
+    }
+  }
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>("account");
 
@@ -232,11 +292,9 @@ export function SettingsClient({
             role="switch"
             aria-checked={twoFAEnabled}
             aria-label={t("settings.twoFactorTitle") || "Autenticazione a due fattori"}
-            onClick={() => {
-              setTwoFAEnabled((v) => !v);
-              alert(t("settings.twoFactorComingSoon") || "Funzionalità in arrivo a breve.");
-            }}
-            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+            onClick={handleTwoFAToggle}
+            disabled={twoFALoading}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:opacity-50 ${
               twoFAEnabled ? "bg-primary" : "bg-white/15"
             }`}
           >
@@ -405,6 +463,15 @@ export function SettingsClient({
           </div>
         </div>
       )}
+
+      <TwoFactorModal
+        open={twoFAModalOpen}
+        onClose={() => setTwoFAModalOpen(false)}
+        onEnrolled={(id) => {
+          setTwoFAEnabled(true);
+          setTwoFAFactorId(id);
+        }}
+      />
     </>
   );
 }

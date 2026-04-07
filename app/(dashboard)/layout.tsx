@@ -10,6 +10,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { data: { user } } = await auth.auth.getUser();
   if (!user) redirect("/login");
 
+  // 2FA guard: if user has an active TOTP factor and the session is still
+  // aal1, force a step-up via /auth/mfa-challenge before entering the app.
+  try {
+    const { data: aal } = await auth.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal && aal.currentLevel === "aal1" && aal.nextLevel === "aal2") {
+      redirect("/auth/mfa-challenge");
+    }
+  } catch {
+    /* listFactors/AAL not available — fail open, do not lock the user out */
+  }
+
   const supabase = createDataClient();
 
   // Auto-create profile in seageo1 if first visit from CitationRate auth
