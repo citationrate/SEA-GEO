@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Ticket, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Send } from "lucide-react";
+import { User, Ticket, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Send, Smartphone } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { RestartTourButton } from "./restart-tour-button";
 
@@ -50,6 +50,9 @@ export function SettingsClient({
   const [sendingSupport, setSendingSupport] = useState(false);
 
   const [loggingOut, setLoggingOut] = useState(false);
+
+  // 2FA (UI only — backend non ancora implementato)
+  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>("account");
 
@@ -208,6 +211,40 @@ export function SettingsClient({
             className="px-4 py-2 border border-primary/40 text-primary rounded-[2px] text-sm font-medium hover:bg-primary/10 transition-colors shrink-0"
           >
             {t("settings.resetPassword") || "Reimposta password"}
+          </button>
+        </div>
+
+        {/* 2FA via SMS */}
+        <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <Smartphone className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                {t("settings.twoFactorTitle") || "Autenticazione a due fattori (SMS)"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t("settings.twoFactorDesc") || "Aggiungi un livello di sicurezza extra al tuo account"}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={twoFAEnabled}
+            aria-label={t("settings.twoFactorTitle") || "Autenticazione a due fattori"}
+            onClick={() => {
+              setTwoFAEnabled((v) => !v);
+              alert(t("settings.twoFactorComingSoon") || "Funzionalità in arrivo a breve.");
+            }}
+            className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
+              twoFAEnabled ? "bg-primary" : "bg-muted-foreground/30"
+            }`}
+          >
+            <span
+              className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                twoFAEnabled ? "translate-x-[22px]" : "translate-x-[2px]"
+              }`}
+            />
           </button>
         </div>
       </div>
