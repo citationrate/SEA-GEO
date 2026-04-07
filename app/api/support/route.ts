@@ -12,12 +12,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Compila tutti i campi" }, { status: 400 });
     }
 
+    if (!process.env.RESEND_API_KEY) {
+      console.error("[support] RESEND_API_KEY not configured");
+      return NextResponse.json(
+        { error: "Servizio email non configurato. Contatta l'amministratore." },
+        { status: 503 },
+      );
+    }
+
     const resend = new Resend(process.env.RESEND_API_KEY);
     const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@aicitationrate.com";
+    const toEmail = process.env.CONSULTATION_EMAIL || "info@citationrate.com";
 
-    await resend.emails.send({
+    const sendResult = await resend.emails.send({
       from: `AVI Support <${fromEmail}>`,
-      to: process.env.CONSULTATION_EMAIL || "info@citationrate.com",
+      to: toEmail,
       replyTo: user!.email!,
       subject: `[AVI Support] ${subject.trim()}`,
       html: `
@@ -29,7 +38,15 @@ export async function POST(request: Request) {
       `,
     });
 
-    return NextResponse.json({ ok: true });
+    if (sendResult.error) {
+      console.error("[support] resend error:", sendResult.error);
+      return NextResponse.json(
+        { error: `Resend: ${sendResult.error.message || "errore sconosciuto"}` },
+        { status: 502 },
+      );
+    }
+
+    return NextResponse.json({ ok: true, id: sendResult.data?.id });
   } catch (err: any) {
     console.error("[support] error:", err?.message);
     return NextResponse.json({ error: "Errore nell'invio" }, { status: 500 });
