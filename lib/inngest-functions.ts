@@ -784,11 +784,19 @@ export const runAnalysis = inngest.createFunction(
         const supabase = createServiceClient();
         for (const task of batches[i]) {
           await executePrompt(supabase, task, normCache);
+          // Update progress dopo OGNI prompt (non solo a fine batch) usando il
+          // count reale di prompts_executed → idempotente rispetto ai retry
+          // di Inngest e niente "salti" da 15 nella barra del client.
+          const { count } = await supabase
+            .from("prompts_executed")
+            .select("*", { count: "exact", head: true })
+            .eq("run_id", runId);
+          if (typeof count === "number") {
+            await (supabase.from("analysis_runs") as any)
+              .update({ completed_prompts: Math.min(count, allTasks.length) })
+              .eq("id", runId);
+          }
         }
-        const completedSoFar = Math.min((i + 1) * batchSize, allTasks.length);
-        await (supabase.from("analysis_runs") as any)
-          .update({ completed_prompts: completedSoFar })
-          .eq("id", runId);
       });
     }
 

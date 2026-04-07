@@ -9,6 +9,7 @@ import { DeleteRunButton, RestoreRunButton } from "./run-actions";
 import { ShareButton } from "./share-button";
 import { TranslatedStatus, TranslatedLabel } from "./run-i18n";
 import { RunDetailClient } from "./run-detail-client";
+import { GalacticSiegeGame } from "@/components/galactic-siege-game";
 
 const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = {
   pending:   { label: "In attesa",   class: "badge-muted",    icon: Clock },
@@ -268,6 +269,9 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
           <p className="text-xs text-muted-foreground">
             <span className="text-foreground font-medium">{r.completed_prompts}</span> / {r.total_prompts} prompt completati
           </p>
+          <div className="pt-2">
+            <GalacticSiegeGame />
+          </div>
         </div>
       )}
 
