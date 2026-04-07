@@ -6,8 +6,10 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ShieldCheck, Loader2, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslation } from "@/lib/i18n/context";
 
 function MfaChallengeInner() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/dashboard";
@@ -69,8 +71,8 @@ function MfaChallengeInner() {
         <div className="flex items-center gap-3">
           <ShieldCheck className="w-7 h-7 text-primary" />
           <div>
-            <h1 className="font-display font-bold text-xl text-foreground">Verifica in due passaggi</h1>
-            <p className="text-sm text-muted-foreground">Inserisci il codice dalla tua app authenticator</p>
+            <h1 className="font-display font-bold text-xl text-foreground">{t("settings.tfchallengeTitle")}</h1>
+            <p className="text-sm text-muted-foreground">{t("settings.tfchallengeSubtitle")}</p>
           </div>
         </div>
 
@@ -104,7 +106,7 @@ function MfaChallengeInner() {
           className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-3 rounded-sm hover:bg-primary/85 transition-colors disabled:opacity-50"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-          Verifica
+          {t("settings.tfverify")}
         </button>
 
         <button
@@ -112,7 +114,7 @@ function MfaChallengeInner() {
           onClick={signOut}
           className="w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          <LogOut className="w-3 h-3" /> Esci
+          <LogOut className="w-3 h-3" /> {t("settings.tfsignOut")}
         </button>
       </div>
     </div>

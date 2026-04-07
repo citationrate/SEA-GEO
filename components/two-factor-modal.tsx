@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, Loader2, ShieldCheck, Copy, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface Props {
   open: boolean;
@@ -18,6 +19,7 @@ interface Props {
  * On success the session becomes aal2.
  */
 export function TwoFactorModal({ open, onClose, onEnrolled }: Props) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [factorId, setFactorId] = useState<string | null>(null);
@@ -130,41 +132,41 @@ export function TwoFactorModal({ open, onClose, onEnrolled }: Props) {
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-primary" />
             <h2 className="font-display font-bold text-lg text-foreground">
-              Attiva autenticazione a due fattori
+              {t("settings.tfmodalTitle")}
             </h2>
           </div>
           <button
             onClick={handleClose}
             className="text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Chiudi"
+            aria-label={t("common.close")}
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <ol className="text-sm text-muted-foreground space-y-1 list-decimal pl-5">
-          <li>Apri un'app authenticator (Google Authenticator, 1Password, Authy…)</li>
-          <li>Scansiona il QR code qui sotto</li>
-          <li>Inserisci il codice a 6 cifre per confermare</li>
+          <li>{t("settings.tfstep1")}</li>
+          <li>{t("settings.tfstep2")}</li>
+          <li>{t("settings.tfstep3")}</li>
         </ol>
 
         {loading && !qrSvg && (
           <div className="flex items-center justify-center py-12 text-muted-foreground">
-            <Loader2 className="w-5 h-5 animate-spin mr-2" /> Generazione QR…
+            <Loader2 className="w-5 h-5 animate-spin mr-2" /> {t("settings.tfgeneratingQr")}
           </div>
         )}
 
         {qrSvg && (
           <div className="flex flex-col items-center gap-3">
-            <div
-              className="bg-white p-3 rounded-md"
-              // Supabase returns the QR as an SVG string
-              dangerouslySetInnerHTML={{ __html: qrSvg }}
+            <img
+              src={qrSvg}
+              alt={t("settings.tfqrAlt")}
+              className="bg-white p-3 rounded-md w-48 h-48"
             />
             {secret && (
               <div className="w-full">
                 <p className="text-[11px] uppercase tracking-widest text-muted-foreground mb-1">
-                  Oppure inserisci manualmente
+                  {t("settings.tfmanualEntry")}
                 </p>
                 <div className="flex items-center gap-2 bg-muted/30 rounded-[2px] px-3 py-2">
                   <code className="text-xs font-mono text-foreground break-all flex-1">{secret}</code>
@@ -172,7 +174,7 @@ export function TwoFactorModal({ open, onClose, onEnrolled }: Props) {
                     type="button"
                     onClick={copySecret}
                     className="text-muted-foreground hover:text-primary transition-colors shrink-0"
-                    aria-label="Copia"
+                    aria-label="Copy"
                   >
                     {copied ? <Check className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4" />}
                   </button>
@@ -185,7 +187,7 @@ export function TwoFactorModal({ open, onClose, onEnrolled }: Props) {
         {qrSvg && (
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Codice a 6 cifre
+              {t("settings.tfcodeLabel")}
             </label>
             <input
               type="text"
@@ -214,7 +216,7 @@ export function TwoFactorModal({ open, onClose, onEnrolled }: Props) {
             disabled={loading}
             className="flex-1 text-sm font-semibold py-2.5 rounded-sm border border-border text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
           >
-            Annulla
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -223,7 +225,7 @@ export function TwoFactorModal({ open, onClose, onEnrolled }: Props) {
             className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-sm hover:bg-primary/85 transition-colors disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-            Attiva
+            {t("settings.tfactivate")}
           </button>
         </div>
       </div>
