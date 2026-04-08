@@ -26,6 +26,18 @@ export function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  async function confirmLogout() {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+    } finally {
+      setLoggingOut(false);
+      setShowLogoutConfirm(false);
+    }
+  }
   const isPro = profile?.plan === "pro";
   const isDemo = !profile?.plan || profile.plan === "demo";
   const isBase = profile?.plan === "base";
@@ -273,20 +285,52 @@ export function Sidebar({ profile }: SidebarProps) {
           </Link>
           {(!collapsed || mobileOpen) && (
             <button
-              onClick={async () => {
-                setLoggingOut(true);
-                await fetch("/api/auth/logout", { method: "POST" });
-                router.push("/login");
-              }}
+              onClick={() => setShowLogoutConfirm(true)}
               disabled={loggingOut}
               className="flex-shrink-0 p-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors disabled:opacity-50"
-              title="Esci"
+              title={t("sidebar.logout")}
             >
               <LogOut className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
       </div>
+
+      {/* Logout confirmation modal */}
+      {showLogoutConfirm && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => !loggingOut && setShowLogoutConfirm(false)}
+        >
+          <div
+            className="card p-6 w-full max-w-sm mx-4 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="font-display font-bold text-lg text-foreground">
+              {t("sidebar.logoutTitle")}
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {t("sidebar.logoutConfirm")}
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                disabled={loggingOut}
+                className="px-4 py-2 rounded-[2px] border border-border text-sm text-foreground hover:bg-surface-2 transition-colors disabled:opacity-50"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                onClick={confirmLogout}
+                disabled={loggingOut}
+                className="px-4 py-2 rounded-[2px] bg-destructive text-destructive-foreground text-sm font-semibold hover:bg-destructive/85 transition-colors disabled:opacity-50"
+              >
+                {t("sidebar.logout")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 
