@@ -654,6 +654,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       foundInTopics: "competitor individuati",
       analyzeContexts: "Analizza Contesti con AI",
       analyzingContexts: "Analisi in corso...",
+      analyzingContextsNote: "Potrebbe volerci qualche minuto: stiamo processando tutte le risposte del progetto.",
       contextLimitReached: "Hai raggiunto il limite di 5 analisi contesti questo mese.",
       proRequired: "Funzionalit\u00e0 disponibile nel piano Pro",
       proDesc: "Passa a Pro per analizzare i contesti competitivi con AI.",
@@ -1609,6 +1610,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       foundInTopics: "competitors found",
       analyzeContexts: "Analyze Contexts with AI",
       analyzingContexts: "Analysis in progress...",
+      analyzingContextsNote: "This may take a few minutes — we're processing every response in the project.",
       contextLimitReached: "You have reached the limit of 5 context analyses this month.",
       proRequired: "Feature available on Pro plan",
       proDesc: "Upgrade to Pro to analyze competitive contexts with AI.",
@@ -2542,7 +2544,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     deletedProjects: { noDeleted: "Aucun projet supprim\u00e9", deletedOn: "Supprim\u00e9 le", restore: "Restaurer" },
     competitors: {
       title: "Concurrents", foundInTopics: "concurrents identifi\u00e9s",
-      analyzeContexts: "Analyser les contextes avec IA", analyzingContexts: "Analyse en cours...",
+      analyzeContexts: "Analyser les contextes avec IA", analyzingContexts: "Analyse en cours...", analyzingContextsNote: "Cela peut prendre quelques minutes\u00a0: nous analysons toutes les r\u00e9ponses du projet.",
       contextLimitReached: "Vous avez atteint la limite de 5 analyses de contextes ce mois-ci.",
       proRequired: "Fonctionnalit\u00e9 disponible dans le plan Pro", proDesc: "Passez \u00e0 Pro pour analyser les contextes concurrentiels avec IA.",
       modelVariation: "Les concurrents d\u00e9couverts varient selon le mod\u00e8le IA. Utilisez les filtres pour explorer.",
@@ -3394,7 +3396,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     deletedProjects: { noDeleted: "Keine gel\u00f6schten Projekte", deletedOn: "Gel\u00f6scht am", restore: "Wiederherstellen" },
     competitors: {
       title: "Wettbewerber", foundInTopics: "Wettbewerber identifiziert",
-      analyzeContexts: "Kontexte mit KI analysieren", analyzingContexts: "Analyse l\u00e4uft...",
+      analyzeContexts: "Kontexte mit KI analysieren", analyzingContexts: "Analyse l\u00e4uft...", analyzingContextsNote: "Das kann einige Minuten dauern \u2013 wir verarbeiten alle Antworten des Projekts.",
       contextLimitReached: "Sie haben das Limit von 5 Kontextanalysen diesen Monat erreicht.",
       proRequired: "Verf\u00fcgbar im Pro-Plan", proDesc: "Wechseln Sie zu Pro f\u00fcr KI-Kontextanalyse.",
       modelVariation: "Entdeckte Wettbewerber variieren je nach KI-Modell.",
@@ -4244,7 +4246,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     deletedProjects: { noDeleted: "Ning\u00fan proyecto eliminado", deletedOn: "Eliminado el", restore: "Restaurar" },
     competitors: {
       title: "Competidores", foundInTopics: "competidores identificados",
-      analyzeContexts: "Analizar contextos con IA", analyzingContexts: "An\u00e1lisis en curso...",
+      analyzeContexts: "Analizar contextos con IA", analyzingContexts: "An\u00e1lisis en curso...", analyzingContextsNote: "Puede tardar unos minutos: estamos procesando todas las respuestas del proyecto.",
       contextLimitReached: "Has alcanzado el l\u00edmite de 5 an\u00e1lisis de contextos este mes.",
       proRequired: "Disponible en el plan Pro", proDesc: "Cambia a Pro para analizar contextos competitivos con IA.",
       modelVariation: "Los competidores descubiertos var\u00edan seg\u00fan el modelo IA.",

@@ -4,6 +4,15 @@ import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { getUserPlanLimits, getCurrentUsage, incrementContextAnalysesUsed } from "@/lib/usage";
 
+// Fluid Compute: allow up to the platform max. A project with ~100 competitors
+// was timing out at the 300s default because analysis was sequential.
+export const maxDuration = 800;
+
+// Process competitors in parallel batches to stay well under maxDuration.
+// Each Haiku call is ~2–3s, so batches of 8 keep a 100-competitor project
+// under ~45s wall-clock instead of ~300s.
+const CONCURRENCY = 8;
+
 const bodySchema = z.object({
   project_id: z.union([z.string().uuid(), z.array(z.string().uuid())]),
 });
@@ -110,14 +119,17 @@ export async function POST(request: Request) {
 
     // Analyze each competitor with Claude Haiku
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const results: { id: string; name: string; project_id: string; analysis: any }[] = [];
 
-    for (const comp of competitors as any[]) {
+    const processCompetitor = async (comp: any): Promise<{ id: string; name: string; project_id: string; analysis: any }> => {
       const key = comp.name.toLowerCase().trim();
       const texts = compTexts.get(key);
       if (!texts?.length) {
-        results.push({ id: comp.id, name: comp.name, project_id: comp.project_id, analysis: { macro_themes: [], positioning_summary: projectLang === "en" ? "No context available for analysis." : "Nessun contesto disponibile per l'analisi." } });
-        continue;
+        return {
+          id: comp.id,
+          name: comp.name,
+          project_id: comp.project_id,
+          analysis: { macro_themes: [], positioning_summary: projectLang === "en" ? "No context available for analysis." : "Nessun contesto disponibile per l'analisi." },
+        };
       }
 
       // Limit to max 10 responses to keep prompt size manageable
@@ -157,7 +169,6 @@ ${truncated}`;
         });
 
         const raw = message.content[0]?.type === "text" ? message.content[0].text : "";
-        // Extract JSON from response
         const jsonMatch = raw.match(/\{[\s\S]*\}/);
         let analysis: any = { macro_themes: [], positioning_summary: "" };
 
@@ -194,16 +205,25 @@ ${truncated}`;
           }
         }
 
-        results.push({ id: comp.id, name: comp.name, project_id: comp.project_id, analysis });
+        return { id: comp.id, name: comp.name, project_id: comp.project_id, analysis };
       } catch (err) {
-        console.error(`[competitors/analyze] OpenAI error for "${comp.name}":`, err instanceof Error ? err.message : err);
-        results.push({
+        console.error(`[competitors/analyze] Anthropic error for "${comp.name}":`, err instanceof Error ? err.message : err);
+        return {
           id: comp.id,
           name: comp.name,
           project_id: comp.project_id,
           analysis: { macro_themes: [], positioning_summary: `Errore: ${err instanceof Error ? err.message : "errore sconosciuto"}` },
-        });
+        };
       }
+    };
+
+    // Run competitor analyses in parallel batches of CONCURRENCY.
+    const compArr = competitors as any[];
+    const results: { id: string; name: string; project_id: string; analysis: any }[] = [];
+    for (let i = 0; i < compArr.length; i += CONCURRENCY) {
+      const batch = compArr.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.all(batch.map(processCompetitor));
+      results.push(...batchResults);
     }
 
     // Save results to DB in a single batch upsert

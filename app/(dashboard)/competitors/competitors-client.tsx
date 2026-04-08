@@ -207,6 +207,13 @@ export function CompetitorsClient({
         </div>
       </div>
 
+      {/* Processing notice shown while context analysis is running */}
+      {analyzing && (
+        <p className="text-xs text-muted-foreground italic">
+          {t("competitors.analyzingContextsNote")}
+        </p>
+      )}
+
       {/* Context analyses counter (Pro) */}
       {isPro && !usage.loading && usage.contextAnalysesLimit > 0 && (
         <div className="card px-4 py-2.5 max-w-xs">
@@ -324,7 +331,6 @@ export function CompetitorsClient({
               <div className="card p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="font-display font-semibold text-foreground text-sm">Benchmark{selectedModel ? ` — ${selectedModel}` : ""}</h2>
-                  <span className="text-[10px] text-muted-foreground">{t("competitors.benchmarkNote")}</span>
                 </div>
                 <div className="space-y-2.5">
                   {/* Brand row */}
