@@ -4,9 +4,10 @@ import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { getUserPlanLimits, getCurrentUsage, incrementContextAnalysesUsed } from "@/lib/usage";
 
-// Fluid Compute: allow up to the platform max. A project with ~100 competitors
-// was timing out at the 300s default because analysis was sequential.
-export const maxDuration = 800;
+// Hobby plan cap is 300s. The real fix for the previous timeout is the
+// parallel batching below — 100 competitors now finish in ~45s instead of
+// exceeding 300s sequentially.
+export const maxDuration = 300;
 
 // Process competitors in parallel batches to stay well under maxDuration.
 // Each Haiku call is ~2–3s, so batches of 8 keep a 100-competitor project
