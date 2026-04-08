@@ -96,14 +96,15 @@ export function AnalysisLauncher({
         throw new Error(data.error || t("analysisLauncher.startError"));
       }
 
-      const data = await res.json();
-      const runId = data.run_id ?? data.runId;
+      // Intentionally do NOT navigate to the run detail here. The run detail
+      // page would be empty while prompts are still executing and the user
+      // would see a confusing "empty queries" screen. Instead close the modal
+      // and refresh the project page — the AnalysisProgress banner is shown
+      // server-side while the run is "running" and will auto-navigate to the
+      // run detail when the run completes.
+      await res.json().catch(() => ({}));
       setOpen(false);
-      if (runId) {
-        router.push(`/projects/${projectId}/runs/${runId}`);
-      } else {
-        router.refresh();
-      }
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("projects.unknownError"));
     } finally {
