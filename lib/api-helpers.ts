@@ -63,7 +63,7 @@ async function ensureProfile(
         const fkTables = [
           { table: "projects", column: "user_id" },
           { table: "analysis_runs", column: "created_by" },
-          { table: "usage_monthly", column: "user_id" },
+          // usage_monthly removed: replaced by user_usage on CitationRate (post-unification)
           { table: "competitive_analyses", column: "user_id" },
           { table: "packages_purchased", column: "user_id" },
         ];

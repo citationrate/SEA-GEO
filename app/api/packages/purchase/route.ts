@@ -2,7 +2,7 @@ import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
-import { getUserPlanLimits } from "@/lib/usage";
+import { getUserPlanLimits, addToWallet } from "@/lib/usage";
 
 // TODO: Integrate Stripe for real payments — currently purchase is simulated (admin grants via SQL)
 
@@ -58,42 +58,16 @@ export async function POST(request: Request) {
       }
     }
 
-    // Ensure usage_monthly row exists
-    const { data: existing } = await (svc.from("usage_monthly") as any)
-      .select("extra_browsing_prompts, extra_no_browsing_prompts, extra_comparisons")
-      .eq("user_id", user.id)
-      .eq("period", period)
-      .maybeSingle();
+    // Add purchased credits to the AVI wallet (seageo1.query_wallet) — same path
+    // used by the Stripe webhook on AVI domain for real package purchases.
+    await addToWallet(
+      user.id,
+      Number(pkg.browsing_prompts) || 0,
+      Number(pkg.no_browsing_prompts) || 0,
+      Number(pkg.comparisons) || 0,
+    );
 
-    const extraBrowsing = (Number(existing?.extra_browsing_prompts) || 0) + Number(pkg.browsing_prompts);
-    const extraNoBrowsing = (Number(existing?.extra_no_browsing_prompts) || 0) + Number(pkg.no_browsing_prompts);
-    const extraComparisons = (Number(existing?.extra_comparisons) || 0) + Number(pkg.comparisons);
-
-    if (existing) {
-      await (svc.from("usage_monthly") as any)
-        .update({
-          extra_browsing_prompts: extraBrowsing,
-          extra_no_browsing_prompts: extraNoBrowsing,
-          extra_comparisons: extraComparisons,
-        })
-        .eq("user_id", user.id)
-        .eq("period", period);
-    } else {
-      await (svc.from("usage_monthly") as any)
-        .insert({
-          user_id: user.id,
-          period,
-          browsing_prompts_used: 0,
-          no_browsing_prompts_used: 0,
-          prompts_used: 0,
-          comparisons_used: 0,
-          extra_browsing_prompts: Number(pkg.browsing_prompts),
-          extra_no_browsing_prompts: Number(pkg.no_browsing_prompts),
-          extra_comparisons: Number(pkg.comparisons),
-        });
-    }
-
-    // Record purchase
+    // Record purchase log (seageo1.package_purchases)
     await (svc.from("package_purchases") as any).insert({
       user_id: user.id,
       package_id,
@@ -103,9 +77,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      extra_browsing_prompts: extraBrowsing,
-      extra_no_browsing_prompts: extraNoBrowsing,
-      extra_comparisons: extraComparisons,
+      added_browsing: Number(pkg.browsing_prompts) || 0,
+      added_no_browsing: Number(pkg.no_browsing_prompts) || 0,
+      added_comparisons: Number(pkg.comparisons) || 0,
     });
   } catch (err) {
     console.error("[packages/purchase] error:", err);

@@ -2,7 +2,8 @@ import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
-import { createClient } from "@supabase/supabase-js";
+import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
+import { addToWallet, ensureUserUsage } from "@/lib/usage";
 
 const schema = z.object({ code: z.string().min(1) });
 
@@ -17,6 +18,7 @@ export async function POST(request: Request) {
 
     const { code } = parsed.data;
     const svc = createServiceClient();
+    const crSvc = createCitationRateServiceClient();
 
     console.log("[voucher] Looking up code:", code.toUpperCase(), "user:", user.id);
 
@@ -39,95 +41,52 @@ export async function POST(request: Request) {
     }
 
     const type = voucher.type || "plan_upgrade";
-    const period = new Date().toISOString().slice(0, 7);
     const messages: string[] = [];
 
-    // ── Plan upgrade (syncs to BOTH seageo1 and CitationRate) ──
+    // Ensure user_usage row exists / cycle is current before any mutation
+    await ensureUserUsage(user.id);
+
+    // ── Plan upgrade (CitationRate is source of truth + seageo1 shadow) ──
     if ((type === "plan_upgrade" || type === "combo") && voucher.plan) {
-      // Update seageo1
+      await (crSvc.from("profiles") as any)
+        .update({ plan: voucher.plan })
+        .eq("id", user.id);
       await (svc.from("profiles") as any)
         .update({ plan: voucher.plan })
         .eq("id", user.id);
-
-      // Also update CitationRate so plan is synced across both platforms
-      try {
-        const crUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const crKey = process.env.CITATIONRATE_SERVICE_ROLE_KEY;
-        if (crUrl && crKey) {
-          const cr = createClient(crUrl, crKey);
-          await cr.from("profiles").update({ plan: voucher.plan } as any).eq("id", user.id);
-          console.log("[voucher] CitationRate plan synced to:", voucher.plan);
-        }
-      } catch (err) {
-        console.error("[voucher] CitationRate sync failed:", err instanceof Error ? err.message : err);
-      }
-
+      console.log("[voucher] plan synced to:", voucher.plan);
       messages.push(`Piano ${voucher.plan.charAt(0).toUpperCase() + voucher.plan.slice(1)} attivato`);
     }
 
-    // ── Usage reset ──
+    // ── Usage reset (start a fresh 30-day cycle on CitationRate) ──
     if ((type === "usage_reset" || type === "combo") && voucher.reset_usage) {
-      const { data: existing } = await (svc.from("usage_monthly") as any)
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("period", period)
-        .maybeSingle();
-
-      if (existing) {
-        await (svc.from("usage_monthly") as any)
-          .update({
-            browsing_prompts_used: 0,
-            no_browsing_prompts_used: 0,
-            comparisons_used: 0,
-            prompts_used: 0,
-          })
-          .eq("user_id", user.id)
-          .eq("period", period);
-      }
+      const now = new Date();
+      const end = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      await (crSvc.from("user_usage") as any)
+        .update({
+          cycle_start: now.toISOString(),
+          cycle_end: end.toISOString(),
+          browsing_prompts_used: 0,
+          no_browsing_prompts_used: 0,
+          comparisons_used: 0,
+          prompts_used: 0,
+          cs_audits_used: 0,
+          url_analyses_used: 0,
+          context_analyses_used: 0,
+          updated_at: now.toISOString(),
+        })
+        .eq("user_id", user.id);
       messages.push("Contatori azzerati");
     }
 
-    // ── Query / comparison credits ──
+    // ── Query / comparison credits → wallet on seageo1.query_wallet ──
     const extraBrowsing = Number(voucher.extra_browsing_prompts) || 0;
     const extraNoBrowsing = Number(voucher.extra_no_browsing_prompts) || 0;
     const extraComparisons = Number(voucher.extra_comparisons) || 0;
     const hasCredits = extraBrowsing > 0 || extraNoBrowsing > 0 || extraComparisons > 0;
 
     if (hasCredits) {
-      const { data: existing } = await (svc.from("usage_monthly") as any)
-        .select("extra_browsing_prompts, extra_no_browsing_prompts, extra_comparisons")
-        .eq("user_id", user.id)
-        .eq("period", period)
-        .maybeSingle();
-
-      const newBrowsing = (Number(existing?.extra_browsing_prompts) || 0) + extraBrowsing;
-      const newNoBrowsing = (Number(existing?.extra_no_browsing_prompts) || 0) + extraNoBrowsing;
-      const newComparisons = (Number(existing?.extra_comparisons) || 0) + extraComparisons;
-
-      if (existing) {
-        await (svc.from("usage_monthly") as any)
-          .update({
-            extra_browsing_prompts: newBrowsing,
-            extra_no_browsing_prompts: newNoBrowsing,
-            extra_comparisons: newComparisons,
-          })
-          .eq("user_id", user.id)
-          .eq("period", period);
-      } else {
-        await (svc.from("usage_monthly") as any)
-          .insert({
-            user_id: user.id,
-            period,
-            browsing_prompts_used: 0,
-            no_browsing_prompts_used: 0,
-            prompts_used: 0,
-            comparisons_used: 0,
-            extra_browsing_prompts: extraBrowsing,
-            extra_no_browsing_prompts: extraNoBrowsing,
-            extra_comparisons: extraComparisons,
-          });
-      }
-
+      await addToWallet(user.id, extraBrowsing, extraNoBrowsing, extraComparisons);
       const parts: string[] = [];
       if (extraBrowsing > 0) parts.push(`+${extraBrowsing} query browsing`);
       if (extraNoBrowsing > 0) parts.push(`+${extraNoBrowsing} query standard`);
