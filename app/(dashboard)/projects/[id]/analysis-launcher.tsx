@@ -46,6 +46,7 @@ export function AnalysisLauncher({
   const usage = useUsage();
   const profileLoaded = !usage.loading;
   const isDemo = usage.isDemo;
+  const isBase = usage.planId === "base";
 
   // Demo plan: no browsing allowed
   const effectiveBrowsing = isDemo ? false : browsing;
@@ -87,7 +88,7 @@ export function AnalysisLauncher({
       const res = await fetch("/api/analysis/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, run_count: runCount, browsing: effectiveBrowsing, query_source: querySource }),
+        body: JSON.stringify({ project_id: projectId, run_count: runCount, browsing: effectiveBrowsing, query_source: isBase ? "plan" : querySource }),
       });
 
       if (!res.ok) {
@@ -253,7 +254,7 @@ export function AnalysisLauncher({
             )}
 
             {/* Query source selector — only shown if wallet has credits */}
-            {!isDemo && hasWallet && (
+            {!isDemo && !isBase && hasWallet && (
               <div className="space-y-2">
                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                   <Wallet className="w-3.5 h-3.5" /> {t("piano.querySource")}
