@@ -73,7 +73,7 @@ export function CompareList({ list, projectsList }: CompareListProps) {
         <div className="card px-4 py-3 flex items-center gap-4">
           <div className="flex-1 space-y-1">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">{t("compare.comparisonsUsed") || "Comparisons"}</span>
+              <span className="text-muted-foreground">{t("compare.comparisonsUsed")}</span>
               <span className="text-foreground font-medium">{usage.comparisonsUsed} / {usage.comparisonsLimit}</span>
             </div>
             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
