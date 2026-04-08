@@ -234,7 +234,7 @@ export function AnalysisLauncher({
                     <div className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full shadow-sm transition-all duration-200 ${
                       browsing && browsingRemaining > 0
                         ? "translate-x-[22px] bg-white"
-                        : "translate-x-[1px] bg-muted-foreground/70"
+                        : "translate-x-[1px] bg-foreground"
                     }`} />
                   </div>
                   <div className="flex-1 min-w-0">
