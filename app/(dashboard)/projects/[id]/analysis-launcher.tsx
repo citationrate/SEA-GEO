@@ -226,8 +226,16 @@ export function AnalysisLauncher({
                       : "border-border hover:border-border/80"
                   } ${browsingRemaining <= 0 ? "opacity-60" : ""}`}
                 >
-                  <div className={`relative w-11 h-6 rounded-full transition-colors ${browsing && browsingRemaining > 0 ? "bg-primary" : "bg-muted-foreground/30"}`}>
-                    <div className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${browsing && browsingRemaining > 0 ? "translate-x-[22px]" : "translate-x-[2px]"}`} />
+                  <div className={`relative w-11 h-6 rounded-full border transition-colors ${
+                    browsing && browsingRemaining > 0
+                      ? "bg-primary border-primary"
+                      : "bg-muted border-border"
+                  }`}>
+                    <div className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full shadow-sm transition-all duration-200 ${
+                      browsing && browsingRemaining > 0
+                        ? "translate-x-[22px] bg-white"
+                        : "translate-x-[1px] bg-muted-foreground/70"
+                    }`} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
