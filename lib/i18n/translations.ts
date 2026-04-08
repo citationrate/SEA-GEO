@@ -351,6 +351,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     compare: {
       title: "Confronto Competitivo",
       subtitle: "Analisi AI head-to-head tra brand",
+      comparisonsUsed: "Confronti usati questo mese",
       proFeature: "Funzionalità Pro",
       proDescription: "L'analisi competitiva AI confronta il tuo brand con un competitor specifico su driver chiave, misurando Win Rate, First Mention Rate e CompScore attraverso risposte multiple di diversi modelli AI.",
       proOnly: "Questa funzionalità è disponibile solo nel piano Pro.",
@@ -1311,6 +1312,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     },
     compare: {
       title: "Competitive Comparison",
+      comparisonsUsed: "Comparisons used this month",
       subtitle: "AI head-to-head analysis between brands",
       proFeature: "Pro Feature",
       proDescription: "AI competitive analysis compares your brand with a specific competitor on key drivers, measuring Win Rate, First Mention Rate and CompScore through multiple responses from different AI models.",
@@ -2269,6 +2271,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       failed: "Échouée", cancelled: "Annulée",
     },
     compare: {
+      comparisonsUsed: "Comparaisons utilis\u00e9es ce mois-ci",
       title: "Comparaison concurrentielle",
       subtitle: "Analyse IA face-à-face entre marques",
       proFeature: "Fonctionnalité Pro",
@@ -3128,6 +3131,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     },
     compare: {
       title: "Wettbewerbsvergleich",
+      comparisonsUsed: "Diesen Monat verwendete Vergleiche",
       subtitle: "KI-Direktvergleich zwischen Marken",
       proFeature: "Pro-Funktion",
       proDescription: "Die KI-Wettbewerbsanalyse vergleicht Ihre Marke mit einem Wettbewerber auf wichtige Treiber, misst Win Rate, First Mention Rate und CompScore.",
@@ -3980,7 +3984,8 @@ export const translations: Record<Locale, Record<string, any>> = {
       failed: "Fallido", cancelled: "Cancelado",
     },
     compare: {
-      title: "Comparación competitiva",
+      title: "Comparaci\u00f3n competitiva",
+      comparisonsUsed: "Comparaciones usadas este mes",
       subtitle: "Análisis IA cara a cara entre marcas",
       proFeature: "Función Pro",
       proDescription: "El análisis competitivo IA compara tu marca con un competidor en drivers clave, midiendo Win Rate, First Mention Rate y CompScore.",
