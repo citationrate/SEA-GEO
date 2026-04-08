@@ -146,7 +146,7 @@ export function AnalysisLauncher({
               <button onClick={() => setOpen(false)} className="flex-1 text-sm font-semibold py-2.5 rounded-sm border border-border text-muted-foreground hover:text-foreground transition-colors">
                 Chiudi
               </button>
-              <a href="/settings" className="flex-1 flex items-center justify-center gap-2 bg-[#c4a882] text-background font-semibold text-sm py-2.5 rounded-sm hover:bg-[#c4a882]/85 transition-colors">
+              <a href="/piano" className="flex-1 flex items-center justify-center gap-2 bg-[#c4a882] text-background font-semibold text-sm py-2.5 rounded-sm hover:bg-[#c4a882]/85 transition-colors">
                 Scegli un piano
               </a>
             </div>
@@ -381,7 +381,7 @@ export function AnalysisLauncher({
                       : `Questa analisi richiede ${totalPrompts} prompt ma te ne restano solo ${noBrowsingRemaining}. Riduci le query o passa a un piano superiore.`}
                   </p>
                   {!usage.isPro && (
-                    <a href="/settings" className="inline-flex items-center gap-1 text-[#c4a882] hover:underline font-medium">
+                    <a href="/piano" className="inline-flex items-center gap-1 text-[#c4a882] hover:underline font-medium">
                       {isDemo ? "Passa a Base o Pro →" : "Passa a Pro →"}
                     </a>
                   )}
