@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Play, X, Loader2, Cpu, Globe, AlertTriangle, Lock, Settings2, Wallet } from "lucide-react";
+import { Play, X, Loader2, Cpu, Globe, AlertTriangle, Lock, Settings2, Wallet, Crown } from "lucide-react";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
@@ -381,8 +381,13 @@ export function AnalysisLauncher({
                       : `Questa analisi richiede ${totalPrompts} prompt ma te ne restano solo ${noBrowsingRemaining}. Riduci le query o passa a un piano superiore.`}
                   </p>
                   {!usage.isPro && (
-                    <a href="/piano#piani" className="inline-flex items-center gap-1 text-[#c4a882] hover:underline font-medium">
-                      {isDemo ? "Passa a Base o Pro →" : "Passa a Pro →"}
+                    <a
+                      href="/piano#piani"
+                      className="mt-2 inline-flex items-center justify-center gap-1.5 bg-[#c4a882] text-background font-semibold text-xs px-4 py-2 rounded-sm shadow-sm shadow-[#c4a882]/20 hover:bg-[#c4a882]/85 hover:shadow-md hover:shadow-[#c4a882]/30 transition-all"
+                    >
+                      <Crown className="w-3.5 h-3.5" />
+                      {isDemo ? "Passa a Base o Pro" : "Passa a Pro"}
+                      <span aria-hidden>→</span>
                     </a>
                   )}
                 </div>
