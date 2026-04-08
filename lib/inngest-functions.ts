@@ -25,7 +25,14 @@ function buildPrompt(query: string, segmentContext: string, language: string): s
     es: { instruction: "IMPORTANT: You MUST respond ONLY in Spanish (español). Every word of your response must be in Spanish.", contextLabel: "Contexto del usuario", questionLabel: "Pregunta" },
   };
   const l = langMap[language] ?? langMap.en;
-  return `${l.instruction}\n\n${l.contextLabel}: ${segmentContext}\n\n${l.questionLabel}: ${query}`;
+  // If no audience segment is configured, omit the "User context" line entirely
+  // so the AI gets just the bare question (target/segment is opt-in, set
+  // manually before launch).
+  const ctx = (segmentContext ?? "").trim();
+  if (!ctx) {
+    return `${l.instruction}\n\n${l.questionLabel}: ${query}`;
+  }
+  return `${l.instruction}\n\n${l.contextLabel}: ${ctx}\n\n${l.questionLabel}: ${query}`;
 }
 
 /* ─── Competitor normalization ─── */
@@ -730,11 +737,13 @@ export const runAnalysis = inngest.createFunction(
     const siteAnalysis = project.site_analysis ?? null;
     const sectorKeywords: string[] = siteAnalysis?.sector_keywords ?? [];
 
-    // Build all prompt tasks
-    // If no segments configured, use a default generic audience fallback (null segment_id)
+    // Build all prompt tasks.
+    // Audience segments are now manual-only: if the user hasn't created any
+    // segment for the project, we run each query once with no user context
+    // (the prompt will just be the bare question, no "Contesto utente:" line).
     const DEFAULT_SEGMENT = {
       id: null as string | null,
-      prompt_context: "Pubblico generale, senza un profilo demografico specifico.",
+      prompt_context: "",
     };
     const effectiveSegments = segments.length > 0 ? segments : [DEFAULT_SEGMENT];
 
