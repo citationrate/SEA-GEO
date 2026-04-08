@@ -163,7 +163,7 @@ export function SettingsClient({
   }
 
   async function sendSupportMessage() {
-    if (!supportSubject.trim() || supportMessage.trim().length < 10) return;
+    if (!supportSubject.trim() || supportMessage.trim().length < 3) return;
     setSendingSupport(true);
     try {
       const res = await fetch("/api/support", {
@@ -440,7 +440,7 @@ export function SettingsClient({
                 <p className="text-xs text-muted-foreground">{t("settings.supportFrom") || "Da:"} {email}</p>
                 <button
                   onClick={sendSupportMessage}
-                  disabled={sendingSupport || !supportSubject.trim() || supportMessage.trim().length < 10}
+                  disabled={sendingSupport || !supportSubject.trim() || supportMessage.trim().length < 3}
                   className="px-4 py-2 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {sendingSupport ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}

@@ -8,8 +8,8 @@ export async function POST(request: Request) {
     if (error) return error;
 
     const { subject, message } = await request.json();
-    if (!subject?.trim() || !message?.trim() || message.trim().length < 10) {
-      return NextResponse.json({ error: "Compila tutti i campi" }, { status: 400 });
+    if (!subject?.trim() || !message?.trim() || message.trim().length < 3) {
+      return NextResponse.json({ error: "Compila oggetto e messaggio (min 3 caratteri)" }, { status: 400 });
     }
 
     if (!process.env.RESEND_API_KEY) {
