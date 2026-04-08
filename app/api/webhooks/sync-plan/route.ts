@@ -82,48 +82,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    // Reset usage counters for current period on plan change
-    const period = billingPeriodStart
-      ? billingPeriodStart.slice(0, 7)
-      : new Date().toISOString().slice(0, 7);
-
-    // Check if row exists for this period
-    const { data: existing } = await (supabase.from("usage_monthly") as any)
-      .select("id")
-      .eq("user_id", userId)
-      .eq("period", period)
-      .maybeSingle();
-
-    let usageError;
-    if (existing) {
-      ({ error: usageError } = await (supabase.from("usage_monthly") as any)
-        .update({
-          browsing_prompts_used: 0,
-          no_browsing_prompts_used: 0,
-          comparisons_used: 0,
-          prompts_used: 0,
-        })
-        .eq("user_id", userId)
-        .eq("period", period));
-    } else {
-      ({ error: usageError } = await (supabase.from("usage_monthly") as any)
-        .insert({
-          user_id: userId,
-          period,
-          browsing_prompts_used: 0,
-          no_browsing_prompts_used: 0,
-          comparisons_used: 0,
-          prompts_used: 0,
-        }));
-    }
-
-    if (usageError) {
-      console.error("[sync-plan] usage reset error:", usageError.message);
-    } else {
-      console.log("[sync-plan] usage reset for period:", period, "user:", userId);
-    }
-
-    console.log("[sync-plan] updated:", userId, "→", normalizedPlan);
+    // Cycle counters on CitationRate.user_usage are reset by the Stripe suite
+    // webhook (checkout.session.completed / invoice.paid). This Supabase
+    // database webhook is now plan-shadow-only — no longer touches usage.
+    console.log("[sync-plan] updated:", userId, "→", normalizedPlan, "(usage reset is owned by Stripe suite webhook)");
     return NextResponse.json({ ok: true, user_id: userId, plan: normalizedPlan });
   } catch (err) {
     console.error("[sync-plan] error:", err instanceof Error ? err.message : err);

@@ -70,40 +70,11 @@ export async function POST(request: Request) {
       .update({ plan: newPlan })
       .eq("id", user.id);
 
-    // Reset usage counters for the current period on plan upgrade
-    const period = new Date().toISOString().slice(0, 7);
-    const { data: existingUsage } = await (svc.from("usage_monthly") as any)
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("period", period)
-      .maybeSingle();
-
-    if (existingUsage) {
-      await (svc.from("usage_monthly") as any)
-        .update({
-          browsing_prompts_used: 0,
-          no_browsing_prompts_used: 0,
-          comparisons_used: 0,
-          prompts_used: 0,
-          extra_browsing_prompts: 0,
-          extra_no_browsing_prompts: 0,
-          extra_comparisons: 0,
-        })
-        .eq("user_id", user.id)
-        .eq("period", period);
-    } else {
-      await (svc.from("usage_monthly") as any)
-        .insert({
-          user_id: user.id,
-          period,
-          browsing_prompts_used: 0,
-          no_browsing_prompts_used: 0,
-          comparisons_used: 0,
-          prompts_used: 0,
-        });
-    }
-
-    console.log("[confirm-subscription] Activated:", user.id, "→", newPlan, billingCycle, "— usage reset");
+    // PayPal flow is deprecated post-unification (2026-04-08). Cycle counters
+    // now live on CitationRate.user_usage and are reset by the Stripe suite
+    // webhook on checkout.session.completed / invoice.paid. The legacy
+    // seageo1.usage_monthly table was dropped — no usage write here.
+    console.log("[confirm-subscription] Activated:", user.id, "→", newPlan, billingCycle, "(legacy PayPal path, no usage write)");
 
     return NextResponse.json({
       ok: true,

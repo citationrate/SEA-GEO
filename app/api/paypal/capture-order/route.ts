@@ -66,41 +66,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Pacchetto non riconosciuto, pagamento registrato" }, { status: 400 });
     }
 
-    // Credit package to user's usage
-    const period = purchase.period;
-    const { data: existing } = await (svc.from("usage_monthly") as any)
-      .select("extra_browsing_prompts, extra_no_browsing_prompts, extra_comparisons")
-      .eq("user_id", user.id)
-      .eq("period", period)
-      .maybeSingle();
-
-    const extraBrowsing = (Number(existing?.extra_browsing_prompts) || 0) + pkg.browsing_prompts;
-    const extraNoBrowsing = (Number(existing?.extra_no_browsing_prompts) || 0) + pkg.no_browsing_prompts;
-    const extraComparisons = (Number(existing?.extra_comparisons) || 0) + pkg.comparisons;
-
-    if (existing) {
-      await (svc.from("usage_monthly") as any)
-        .update({
-          extra_browsing_prompts: extraBrowsing,
-          extra_no_browsing_prompts: extraNoBrowsing,
-          extra_comparisons: extraComparisons,
-        })
-        .eq("user_id", user.id)
-        .eq("period", period);
-    } else {
-      await (svc.from("usage_monthly") as any)
-        .insert({
-          user_id: user.id,
-          period,
-          browsing_prompts_used: 0,
-          no_browsing_prompts_used: 0,
-          prompts_used: 0,
-          comparisons_used: 0,
-          extra_browsing_prompts: pkg.browsing_prompts,
-          extra_no_browsing_prompts: pkg.no_browsing_prompts,
-          extra_comparisons: pkg.comparisons,
-        });
-    }
+    // PayPal flow is deprecated post-unification (2026-04-08). New AVI package
+    // purchases go through Stripe → seageo1.query_wallet via addToWallet().
+    // This route is kept only for legacy capture acknowledgement and no longer
+    // credits any wallet/usage table — the table usage_monthly was dropped.
+    console.warn("[capture-order] PayPal flow deprecated; not crediting any wallet for", purchase.id, "pkg:", purchase.package_id, JSON.stringify(pkg));
 
     // Mark purchase as completed
     await (svc.from("package_purchases") as any)
@@ -111,9 +81,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      extra_browsing_prompts: extraBrowsing,
-      extra_no_browsing_prompts: extraNoBrowsing,
-      extra_comparisons: extraComparisons,
+      deprecated: true,
+      package_id: purchase.package_id,
     });
   } catch (err: any) {
     console.error("[paypal/capture-order] error:", err?.message ?? err);

@@ -172,12 +172,13 @@ export async function POST(request: Request) {
       log.push({ step: "delete_package_purchases", ok: false, error: err.message });
     }
 
-    // Reset usage_monthly
+    // Reset cycle counters on CitationRate.user_usage (replaces legacy seageo1.usage_monthly)
     try {
-      await (svc.from("usage_monthly") as any).delete().eq("user_id", userId);
-      log.push({ step: "delete_usage_monthly", ok: true });
+      const cr = getCitationRateClient();
+      await (cr.from("user_usage") as any).delete().eq("user_id", userId);
+      log.push({ step: "delete_user_usage", ok: true });
     } catch (err: any) {
-      log.push({ step: "delete_usage_monthly", ok: false, error: err.message });
+      log.push({ step: "delete_user_usage", ok: false, error: err.message });
     }
 
     // Reset profile on CitationRate
