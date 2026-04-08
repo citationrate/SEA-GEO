@@ -10,10 +10,9 @@ import {
   LayoutDashboard, FolderOpen, Play, BarChart3,
   Users, Link2, Tag, GitCompare, Settings,
   Database, ChevronRight, Plus,
-  PanelLeftClose, PanelLeftOpen, MessageSquareText,
+  PanelLeftClose, PanelLeftOpen,
   ExternalLink, X, Newspaper, CreditCard, Sparkles, LogOut,
 } from "lucide-react";
-import { useConsultation } from "@/lib/consultation-context";
 import { useMobileNav } from "./mobile-nav-context";
 import { useHasUnreadNews } from "@/components/ai-news-panel";
 
@@ -33,7 +32,6 @@ export function Sidebar({ profile }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const { t } = useTranslation();
-  const { openModal } = useConsultation();
   const { isOpen: mobileOpen, close: closeMobile } = useMobileNav();
   const hasUnread = useHasUnreadNews();
 
@@ -220,19 +218,23 @@ export function Sidebar({ profile }: SidebarProps) {
         </div>
       )}
 
-      {/* Consultation CTA — bottom of sidebar */}
+      {/* Switch to Citability Score (CS) — bottom of sidebar */}
       <div className="px-2 pb-2 flex-shrink-0">
-        <button
-          onClick={() => { openModal(); closeMobile(); }}
+        <a
+          href="https://suite.citationrate.com/dashboard"
+          onClick={closeMobile}
           className={cn(
-            "w-full flex items-center gap-2 px-2 py-2 rounded-[2px] text-[#c4a882] border border-[#c4a882]/20 bg-[#c4a882]/5 hover:bg-[#c4a882]/10 transition-colors",
+            "w-full flex items-center gap-2 px-2 py-2 rounded-[2px] transition-colors",
             collapsed && !mobileOpen && "justify-center px-0",
           )}
-          title={collapsed && !mobileOpen ? t("sidebar.requestConsultation") : undefined}
+          style={{ color: "var(--c-sage)" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--c-sage-bg)"; e.currentTarget.style.color = "var(--c-cream)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--c-sage)"; }}
+          title={collapsed && !mobileOpen ? t("sidebar.switchTool") : undefined}
         >
-          <MessageSquareText className="w-4 h-4 shrink-0" />
-          {(!collapsed || mobileOpen) && <span className="text-xs font-semibold">{t("sidebar.requestConsultation")}</span>}
-        </button>
+          <ExternalLink className="w-4 h-4 shrink-0" />
+          {(!collapsed || mobileOpen) && <span className="text-xs font-semibold">{t("sidebar.switchTool")}</span>}
+        </a>
       </div>
 
       {/* Profile → links to settings */}

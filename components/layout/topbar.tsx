@@ -2,13 +2,15 @@
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSelector } from "@/components/language-selector";
-import { Menu, ExternalLink } from "lucide-react";
+import { Menu, MessageSquareText } from "lucide-react";
 import { useMobileNav } from "./mobile-nav-context";
 import { useTranslation } from "@/lib/i18n/context";
+import { useConsultation } from "@/lib/consultation-context";
 
 export function TopBar() {
   const { toggle } = useMobileNav();
   const { t } = useTranslation();
+  const { openModal } = useConsultation();
 
   return (
     <header
@@ -25,16 +27,13 @@ export function TopBar() {
       </button>
 
       <div className="flex items-center gap-3">
-        <a
-          href="https://suite.citationrate.com/dashboard"
-          className="hidden md:flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-[2px] transition-colors"
-          style={{ color: "var(--c-sage)" }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--c-sage-bg)"; e.currentTarget.style.color = "var(--c-cream)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--c-sage)"; }}
+        <button
+          onClick={() => openModal()}
+          className="hidden md:flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-[2px] text-[#c4a882] border border-[#c4a882]/20 bg-[#c4a882]/5 hover:bg-[#c4a882]/10 transition-colors"
         >
-          <ExternalLink className="w-3.5 h-3.5" />
-          {t("sidebar.switchTool")}
-        </a>
+          <MessageSquareText className="w-3.5 h-3.5" />
+          {t("sidebar.requestConsultation")}
+        </button>
         <LanguageSelector />
         <ThemeToggle />
       </div>
