@@ -146,6 +146,7 @@ export default async function CompetitorsPage({
   }>();
 
   let totalPrompts = effectivePromptIds.length;
+  let brandMentionedCount = 0;
 
   if (effectivePromptIds.length > 0) {
     const promptMap = new Map(effectivePrompts.map((p: any) => [p.id, p]));
@@ -159,12 +160,13 @@ export default async function CompetitorsPage({
 
     const { data: analyses } = await supabase
       .from("response_analysis")
-      .select("prompt_executed_id, competitors_found, sentiment_score, topics")
+      .select("prompt_executed_id, competitors_found, sentiment_score, topics, brand_mentioned")
       .in("prompt_executed_id", effectivePromptIds);
 
     (analyses ?? []).forEach((a: any) => {
       const prompt = promptMap.get(a.prompt_executed_id);
       const queryType = prompt ? queryStageMap.get(prompt.query_id) : null;
+      if (a.brand_mentioned) brandMentionedCount++;
 
       (a.competitors_found ?? []).forEach((name: string) => {
         let stats = compStats.get(name);
@@ -289,8 +291,15 @@ export default async function CompetitorsPage({
     }
   }
 
-  // Get brand AVI for benchmark
-  const brandAviScore = lastAviRow ? Math.round((lastAviRow as any).avi_score * 10) / 10 : null;
+  // Get brand AVI for benchmark.
+  // When a model filter is active, mirror the competitor logic: switch from the
+  // global avi_history score (model-agnostic) to the per-model brand mention
+  // rate, so that the benchmark bar reacts to the model selector.
+  const globalBrandAvi = lastAviRow ? Math.round((lastAviRow as any).avi_score * 10) / 10 : null;
+  const brandMentionScore = totalPrompts > 0
+    ? Math.round((brandMentionedCount / totalPrompts) * 1000) / 10
+    : null;
+  const brandAviScore = selectedModel ? brandMentionScore : globalBrandAvi;
 
   const rows = Array.from(grouped.values()).sort((a, b) => {
     const aviA = compAviMap.get(a.name.toLowerCase().trim()) ?? (totalPrompts > 0 ? (a.mentions / totalPrompts) * 100 : 0);
