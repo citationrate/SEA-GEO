@@ -138,6 +138,7 @@ export function CompetitorsClient({
         const data = await res.json();
         throw new Error(data.error || t("common.error"));
       }
+      await usage.refetch();
       router.refresh();
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : t("competitors.analysisError"));

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface UsageData {
   plan: null;
@@ -35,6 +35,7 @@ interface UsageData {
   promptsUsed: number;
   promptsLimit: number;
   promptsRemaining: number;
+  refetch: () => Promise<void>;
 }
 
 const DEFAULTS: UsageData = {
@@ -51,68 +52,69 @@ const DEFAULTS: UsageData = {
   wallet: { browsingQueries: 0, noBrowsingQueries: 0, confronti: 0 },
   isDemo: true, isPro: false, loading: true,
   promptsUsed: 0, promptsLimit: 40, promptsRemaining: 40,
+  refetch: async () => {},
 };
 
 export function useUsage(): UsageData {
   const [data, setData] = useState<UsageData>(DEFAULTS);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch("/api/usage");
-        if (!res.ok) {
-          setData((d) => ({ ...d, loading: false }));
-          return;
-        }
-        const json = await res.json();
-
-        const totalUsed = (json.browsingPromptsUsed ?? 0) + (json.noBrowsingPromptsUsed ?? 0);
-        const totalLimit = (json.browsingPromptsLimit ?? 0) + (json.noBrowsingPromptsLimit ?? 0);
-
-        setData({
-          plan: null,
-          planId: json.planId ?? "demo",
-          browsingPromptsUsed: json.browsingPromptsUsed ?? 0,
-          browsingPromptsLimit: json.browsingPromptsLimit ?? 0,
-          browsingPromptsRemaining: json.browsingPromptsRemaining ?? 0,
-          noBrowsingPromptsUsed: json.noBrowsingPromptsUsed ?? 0,
-          noBrowsingPromptsLimit: json.noBrowsingPromptsLimit ?? 0,
-          noBrowsingPromptsRemaining: json.noBrowsingPromptsRemaining ?? 0,
-          comparisonsUsed: json.comparisonsUsed ?? 0,
-          comparisonsLimit: json.comparisonsLimit ?? 0,
-          comparisonsRemaining: json.comparisonsRemaining ?? 0,
-          extraBrowsingPrompts: json.extraBrowsingPrompts ?? 0,
-          extraNoBrowsingPrompts: json.extraNoBrowsingPrompts ?? 0,
-          extraComparisons: json.extraComparisons ?? 0,
-          urlAnalysesUsed: json.urlAnalysesUsed ?? 0,
-          urlAnalysesLimit: json.urlAnalysesLimit ?? 0,
-          urlAnalysesRemaining: json.urlAnalysesRemaining ?? 0,
-          contextAnalysesUsed: json.contextAnalysesUsed ?? 0,
-          contextAnalysesLimit: json.contextAnalysesLimit ?? 0,
-          contextAnalysesRemaining: json.contextAnalysesRemaining ?? 0,
-          canGenerateQueries: json.canGenerateQueries ?? false,
-          canAccessDataset: json.canAccessDataset ?? false,
-          canAccessComparisons: json.canAccessComparisons ?? false,
-          maxModelsPerProject: json.maxModelsPerProject ?? 2,
-          isDemo: json.isDemo ?? true,
-          wallet: {
-            browsingQueries: json.wallet?.browsingQueries ?? 0,
-            noBrowsingQueries: json.wallet?.noBrowsingQueries ?? 0,
-            confronti: json.wallet?.confronti ?? 0,
-          },
-          isPro: json.isPro ?? false,
-          loading: false,
-          promptsUsed: totalUsed,
-          promptsLimit: totalLimit,
-          promptsRemaining: Math.max(0, totalLimit - totalUsed),
-        });
-      } catch (err) {
-        console.error("[useUsage] error:", err);
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/usage", { cache: "no-store" });
+      if (!res.ok) {
         setData((d) => ({ ...d, loading: false }));
+        return;
       }
+      const json = await res.json();
+
+      const totalUsed = (json.browsingPromptsUsed ?? 0) + (json.noBrowsingPromptsUsed ?? 0);
+      const totalLimit = (json.browsingPromptsLimit ?? 0) + (json.noBrowsingPromptsLimit ?? 0);
+
+      setData((prev) => ({
+        ...prev,
+        plan: null,
+        planId: json.planId ?? "demo",
+        browsingPromptsUsed: json.browsingPromptsUsed ?? 0,
+        browsingPromptsLimit: json.browsingPromptsLimit ?? 0,
+        browsingPromptsRemaining: json.browsingPromptsRemaining ?? 0,
+        noBrowsingPromptsUsed: json.noBrowsingPromptsUsed ?? 0,
+        noBrowsingPromptsLimit: json.noBrowsingPromptsLimit ?? 0,
+        noBrowsingPromptsRemaining: json.noBrowsingPromptsRemaining ?? 0,
+        comparisonsUsed: json.comparisonsUsed ?? 0,
+        comparisonsLimit: json.comparisonsLimit ?? 0,
+        comparisonsRemaining: json.comparisonsRemaining ?? 0,
+        extraBrowsingPrompts: json.extraBrowsingPrompts ?? 0,
+        extraNoBrowsingPrompts: json.extraNoBrowsingPrompts ?? 0,
+        extraComparisons: json.extraComparisons ?? 0,
+        urlAnalysesUsed: json.urlAnalysesUsed ?? 0,
+        urlAnalysesLimit: json.urlAnalysesLimit ?? 0,
+        urlAnalysesRemaining: json.urlAnalysesRemaining ?? 0,
+        contextAnalysesUsed: json.contextAnalysesUsed ?? 0,
+        contextAnalysesLimit: json.contextAnalysesLimit ?? 0,
+        contextAnalysesRemaining: json.contextAnalysesRemaining ?? 0,
+        canGenerateQueries: json.canGenerateQueries ?? false,
+        canAccessDataset: json.canAccessDataset ?? false,
+        canAccessComparisons: json.canAccessComparisons ?? false,
+        maxModelsPerProject: json.maxModelsPerProject ?? 2,
+        isDemo: json.isDemo ?? true,
+        wallet: {
+          browsingQueries: json.wallet?.browsingQueries ?? 0,
+          noBrowsingQueries: json.wallet?.noBrowsingQueries ?? 0,
+          confronti: json.wallet?.confronti ?? 0,
+        },
+        isPro: json.isPro ?? false,
+        loading: false,
+        promptsUsed: totalUsed,
+        promptsLimit: totalLimit,
+        promptsRemaining: Math.max(0, totalLimit - totalUsed),
+      }));
+    } catch (err) {
+      console.error("[useUsage] error:", err);
+      setData((d) => ({ ...d, loading: false }));
     }
-    load();
   }, []);
 
-  return data;
+  useEffect(() => { load(); }, [load]);
+
+  return { ...data, refetch: load };
 }
