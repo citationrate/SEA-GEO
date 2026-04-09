@@ -645,7 +645,7 @@ export default function NewProjectPage() {
                                 className={`flex items-center gap-2 p-2 rounded-[2px] transition-colors ${
                                   locked ? "opacity-70 cursor-not-allowed" : isSelected ? "bg-primary/10 cursor-pointer" : "hover:bg-muted/30 cursor-pointer"
                                 }`}
-                                title={locked ? "Disponibile dal piano Pro — €159/mese" : undefined}>
+                                title={locked ? `${t("compare.proOnly")} — €159${t("piano.perMonth")} ${t("piano.plusVat")}` : undefined}>
                                 <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
                                   locked ? "border-muted-foreground/40" : isSelected ? "border-primary" : "border-muted-foreground"
                                 }`}>

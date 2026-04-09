@@ -359,8 +359,9 @@ export function PianoClient({
               <p className="font-display text-sm font-semibold text-foreground mb-1">Base</p>
               <p className="font-display text-2xl font-bold text-foreground">
                 €{annual ? "649" : "59"}<span className="text-sm font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span>
+                <span className="text-xs font-normal text-muted-foreground ml-1">{t("piano.plusVat")}</span>
               </p>
-              {annual && <p className="text-xs text-muted-foreground mt-1">€54,08{t("piano.perMonth")} · {t("piano.save")} €59/{t("piano.yearLabel")}</p>}
+              {annual && <p className="text-xs text-muted-foreground mt-1">€54,08{t("piano.perMonth")} · {t("piano.save")} €59/{t("piano.yearLabel")} · {t("piano.plusVat")}</p>}
               <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground flex-1 mt-4">
                 <div className="space-y-1.5 pr-3" style={{ borderRight: "1px solid var(--border)" }}>
                   <p className="text-[9px] font-bold uppercase tracking-widest text-primary mb-1.5">{t("piano.aviHeader")}</p>
@@ -403,8 +404,9 @@ export function PianoClient({
               <p className="font-display text-sm font-semibold text-foreground mb-1">Pro</p>
               <p className="font-display text-2xl font-bold text-foreground">
                 €{annual ? "1.719" : "159"}<span className="text-sm font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span>
+                <span className="text-xs font-normal text-muted-foreground ml-1">{t("piano.plusVat")}</span>
               </p>
-              {annual && <p className="text-xs text-muted-foreground mt-1">€143,25{t("piano.perMonth")} · {t("piano.save")} €189/{t("piano.yearLabel")}</p>}
+              {annual && <p className="text-xs text-muted-foreground mt-1">€143,25{t("piano.perMonth")} · {t("piano.save")} €189/{t("piano.yearLabel")} · {t("piano.plusVat")}</p>}
               <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground flex-1 mt-4">
                 <div className="space-y-1.5 pr-3" style={{ borderRight: "1px solid var(--border)" }}>
                   <p className="text-[9px] font-bold uppercase tracking-widest text-primary mb-1.5">{t("piano.aviHeader")}</p>
@@ -470,7 +472,7 @@ export function PianoClient({
                         </div>
                       </div>
                       <div className="flex items-center justify-between mb-3">
-                        <p className="font-display text-lg font-bold text-foreground">€{pkg.price}</p>
+                        <p className="font-display text-lg font-bold text-foreground">€{pkg.price} <span className="text-xs font-normal text-muted-foreground">{t("piano.plusVat")}</span></p>
                         {pkg.note && <span className="font-mono text-[0.6rem] tracking-wider uppercase text-muted-foreground">{pkg.note}</span>}
                       </div>
                       <button onClick={() => handleBuyPackage(pkg.priceEnv)} disabled={purchasingId !== null} className="w-full py-2 text-sm font-medium rounded-[2px] transition-all disabled:opacity-50" style={{ background: "var(--primary)", color: "white" }}>
@@ -516,7 +518,7 @@ export function PianoClient({
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("piano.amount")}</p>
                     <p className="text-sm font-semibold text-foreground mt-1">
-                      {plan === "base" ? (subscriptionPeriod === "yearly" ? "€649" : "€59") : plan === "pro" ? (subscriptionPeriod === "yearly" ? "€1.719" : "€159") : "—"}{subscriptionPeriod === "yearly" ? t("piano.perYear") : t("piano.perMonth")}
+                      {plan === "base" ? (subscriptionPeriod === "yearly" ? "€649" : "€59") : plan === "pro" ? (subscriptionPeriod === "yearly" ? "€1.719" : "€159") : "—"}{subscriptionPeriod === "yearly" ? t("piano.perYear") : t("piano.perMonth")} {t("piano.plusVat")}
                     </p>
                   </div>
                 </div>
