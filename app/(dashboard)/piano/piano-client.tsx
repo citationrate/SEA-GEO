@@ -193,7 +193,7 @@ export function PianoClient({
         {([
           { key: "uso" as PianoTab, label: t("piano.usage") || "Uso" },
           { key: "piani" as PianoTab, label: t("piano.plansAndPackages") || "Piani e Pacchetti" },
-          { key: "fatture" as PianoTab, label: t("piano.paymentsAndInvoices") || "Pagamenti e Fatture" },
+          // { key: "fatture" as PianoTab, label: t("piano.paymentsAndInvoices") || "Pagamenti e Fatture" },
         ]).map((tab) => (
           <button
             key={tab.key}
