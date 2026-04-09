@@ -121,7 +121,7 @@ export default async function TopicsPage({
       relevanceScore: stats.mofu * 2 + stats.tofu * 1 + stats.bofu * 1,
       funnelBreakdown: { tofu: stats.tofu, mofu: stats.mofu, bofu: stats.bofu },
     }))
-    .filter((t) => t.count >= 2)
+    .filter((t) => t.count >= 1)
     .sort((a, b) => b.relevanceScore - a.relevanceScore || b.count - a.count);
 
   // Extract available models for filter pills
