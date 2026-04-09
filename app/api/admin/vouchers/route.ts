@@ -11,7 +11,7 @@ async function requireAdmin() {
     .select("is_admin")
     .eq("id", user.id)
     .single();
-  const isAdmin = profile?.is_admin === true || user.email?.endsWith("@seageo.it");
+  const isAdmin = profile?.is_admin === true;
   if (!isAdmin) return { error: NextResponse.json({ error: "Non autorizzato" }, { status: 403 }) };
   return { user, error: null };
 }

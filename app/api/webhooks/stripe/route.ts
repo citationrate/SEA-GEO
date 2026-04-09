@@ -54,6 +54,12 @@ export async function POST(request: Request) {
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   console.log("[stripe-webhook] checkout.session.completed, session:", session.id, "mode:", session.mode);
 
+  // Never credit unpaid sessions (e.g. async payment methods still pending).
+  if (session.payment_status !== "paid") {
+    console.log("[stripe-webhook] Ignoring unpaid session:", session.id, "status:", session.payment_status);
+    return;
+  }
+
   // Subscriptions are owned by the suite webhook — ignore here.
   if (session.mode !== "payment") {
     console.log("[stripe-webhook] Ignoring non-payment session (handled by suite webhook)");

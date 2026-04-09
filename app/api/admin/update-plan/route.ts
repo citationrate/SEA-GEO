@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     if (error) return error;
 
     const { data: callerProfile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
-    const isAdmin = (callerProfile as any)?.is_admin === true || user.email?.endsWith("@seageo.it");
+    const isAdmin = (callerProfile as any)?.is_admin === true;
     if (!isAdmin) return NextResponse.json({ error: "Not authorized" }, { status: 403 });
 
     const body = await request.json();

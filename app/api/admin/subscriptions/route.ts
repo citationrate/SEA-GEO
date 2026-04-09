@@ -13,7 +13,7 @@ function getCitationRateClient() {
 
 async function verifyAdmin(supabase: any, user: any) {
   const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
-  return (profile as any)?.is_admin === true || user.email?.endsWith("@seageo.it");
+  return (profile as any)?.is_admin === true;
 }
 
 /* GET — list all users with subscription data */

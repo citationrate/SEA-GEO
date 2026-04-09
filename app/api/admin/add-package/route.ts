@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       .select("is_admin")
       .eq("id", user!.id)
       .single();
-    const isAdmin = (profile as any)?.is_admin === true || user!.email?.endsWith("@seageo.it");
+    const isAdmin = (profile as any)?.is_admin === true;
     if (!isAdmin) return NextResponse.json({ error: "Not authorized" }, { status: 403 });
 
     const body = await request.json();
