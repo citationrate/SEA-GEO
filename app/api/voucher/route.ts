@@ -48,11 +48,15 @@ export async function POST(request: Request) {
 
     // ── Plan upgrade (CitationRate is source of truth + seageo1 shadow) ──
     if ((type === "plan_upgrade" || type === "combo") && voucher.plan) {
+      const planUpdate = {
+        plan: voucher.plan,
+        subscription_status: voucher.plan === "demo" ? "inactive" : "active",
+      };
       await (crSvc.from("profiles") as any)
-        .update({ plan: voucher.plan })
+        .update(planUpdate)
         .eq("id", user.id);
       await (svc.from("profiles") as any)
-        .update({ plan: voucher.plan })
+        .update(planUpdate)
         .eq("id", user.id);
       console.log("[voucher] plan synced to:", voucher.plan);
       messages.push(`Piano ${voucher.plan.charAt(0).toUpperCase() + voucher.plan.slice(1)} attivato`);

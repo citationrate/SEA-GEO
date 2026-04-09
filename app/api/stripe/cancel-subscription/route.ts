@@ -33,12 +33,11 @@ export async function POST() {
       subId = (crProfile as any)?.stripe_subscription_id;
     }
 
-    if (!subId) {
-      return NextResponse.json({ error: "No active subscription" }, { status: 400 });
+    // If there's a Stripe subscription, cancel it on Stripe first.
+    // Voucher-upgraded users have no subscription — skip Stripe call.
+    if (subId) {
+      await cancelSubscription(subId);
     }
-
-    // Cancel on Stripe immediately
-    await cancelSubscription(subId);
 
     // Revert to demo on CitationRate
     try {
