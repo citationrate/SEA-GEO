@@ -85,6 +85,7 @@ export async function createSubscriptionCheckout(
     cancel_url: cancelUrl,
     metadata: { user_id: userId },
     subscription_data: { metadata: { user_id: userId } },
+    automatic_tax: { enabled: true },
   };
   if (stripeCustomerId) params.customer = stripeCustomerId;
   else params.customer_email = customerEmail;
@@ -106,6 +107,7 @@ export async function createOneTimeCheckout(
     success_url: successUrl,
     cancel_url: cancelUrl,
     metadata: { user_id: userId },
+    automatic_tax: { enabled: true },
   };
   if (stripeCustomerId) params.customer = stripeCustomerId;
   else params.customer_email = customerEmail;
