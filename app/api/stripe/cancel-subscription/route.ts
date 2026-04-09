@@ -15,12 +15,23 @@ export async function POST() {
     const { supabase, user, error } = await requireAuth();
     if (error) return error;
 
-    // Get stripe_subscription_id from seageo1 profiles
-    const { data: profile } = await (supabase!.from("profiles") as any)
+    // Get stripe_subscription_id — try seageo1 first, fallback to CitationRate
+    // (the suite webhook writes it to CR, the AVI webhook used to write it to
+    // seageo1 but that handler was removed during unification)
+    const { data: sgProfile } = await (supabase!.from("profiles") as any)
       .select("stripe_subscription_id")
       .eq("id", user!.id)
       .single();
-    const subId = profile?.stripe_subscription_id;
+    let subId = sgProfile?.stripe_subscription_id;
+
+    if (!subId) {
+      const cr = getCitationRateClient();
+      const { data: crProfile } = await cr.from("profiles")
+        .select("stripe_subscription_id")
+        .eq("id", user!.id)
+        .single();
+      subId = (crProfile as any)?.stripe_subscription_id;
+    }
 
     if (!subId) {
       return NextResponse.json({ error: "No active subscription" }, { status: 400 });
