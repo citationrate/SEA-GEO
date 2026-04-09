@@ -259,7 +259,16 @@ export function AiNewsPanel() {
 
                 <div className="flex-1 min-w-0 space-y-2">
                   <p className="text-sm text-foreground leading-relaxed">
-                    {item.text}
+                    {item.source ? (
+                      <a
+                        href={item.source}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-primary hover:underline transition-colors"
+                      >
+                        {item.text}
+                      </a>
+                    ) : item.text}
                   </p>
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Severity badge — translated */}
