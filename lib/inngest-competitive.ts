@@ -148,10 +148,12 @@ function generateQueries(
   const b = titleCase(brandB);
   const driverKey = driver.toLowerCase().trim();
 
-  const isEnglish = language === "en";
-  const templates = isEnglish
-    ? (DRIVER_TEMPLATES_EN[driverKey] ?? FALLBACK_TEMPLATES_EN)
-    : (DRIVER_TEMPLATES_IT[driverKey] ?? FALLBACK_TEMPLATES_IT);
+  // Use English templates for all non-Italian languages (EN/FR/DE/ES)
+  // so the AI receives English query patterns, then the lang instruction
+  // (added later) forces the response language.
+  const templates = language === "it"
+    ? (DRIVER_TEMPLATES_IT[driverKey] ?? FALLBACK_TEMPLATES_IT)
+    : (DRIVER_TEMPLATES_EN[driverKey] ?? FALLBACK_TEMPLATES_EN);
 
   return templates.map((tpl, i) => ({
     pattern: String.fromCharCode(65 + i),
@@ -175,9 +177,11 @@ async function evaluateResponse(
   const brandALabel = brandA === brandANorm ? `"${brandANorm}"` : `"${brandA}" / "${brandANorm}"`;
   const brandBLabel = brandB === brandBNorm ? `"${brandBNorm}"` : `"${brandB}" / "${brandBNorm}"`;
 
-  const isEnglish = language === "en";
+  const langNameMap: Record<string, string> = { it: "Italian", en: "English", fr: "French", de: "German", es: "Spanish" };
+  const outputLang = langNameMap[language] ?? "English";
+  const useEnglishPrompt = language !== "it";
 
-  const prompt = isEnglish
+  const prompt = useEnglishPrompt
     ? `You are a competitive analyst. Read this AI response to a comparative query between Brand A (${brandALabel}) and Brand B (${brandBLabel}).
 
 CASE-INSENSITIVE RULE: Brand names may appear in any capitalization. Treat "${brandA}", "${brandANorm}", "${brandA.toUpperCase()}" as Brand A. Treat "${brandB}", "${brandBNorm}", "${brandB.toUpperCase()}" as Brand B.
@@ -198,7 +202,7 @@ AI responses are often diplomatic. Do NOT be fooled by polite phrasing. Look for
 - Use 0.5 ONLY if language is truly identical for both, with no preference signal
 
 - first_mention: "A" if Brand A appears first in text, "B" if Brand B appears first, "tie" if same sentence.
-- key_arguments: max 3 key arguments (in English).
+- key_arguments: max 3 key arguments (in ${outputLang}).
 
 Respond ONLY with this JSON:
 {"recommendation": 1, "first_mention": "A", "key_arguments": ["arg1", "arg2"]}
