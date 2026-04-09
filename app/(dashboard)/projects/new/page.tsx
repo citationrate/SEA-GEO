@@ -142,10 +142,18 @@ export default function NewProjectPage() {
   const [competitorInput, setCompetitorInput] = useState("");
   const [marketContext, setMarketContext] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
-  const [language, setLanguage] = useState<"it" | "en">(() => {
+  const LANG_OPTIONS = [
+    { value: "it", label: "🇮🇹 Italiano" },
+    { value: "en", label: "🇬🇧 English" },
+    { value: "fr", label: "🇫🇷 Français" },
+    { value: "de", label: "🇩🇪 Deutsch" },
+    { value: "es", label: "🇪🇸 Español" },
+  ] as const;
+  type DetectionLang = typeof LANG_OPTIONS[number]["value"];
+  const [language, setLanguage] = useState<DetectionLang>(() => {
     if (typeof navigator !== "undefined") {
-      const browserLang = navigator.language?.slice(0, 2);
-      return browserLang === "en" ? "en" : "it";
+      const browserLang = navigator.language?.slice(0, 2) as DetectionLang;
+      if (LANG_OPTIONS.some((l) => l.value === browserLang)) return browserLang;
     }
     return "it";
   });
@@ -354,20 +362,19 @@ export default function NewProjectPage() {
             {t("projects.detectionLanguage")}
             <InfoTooltip text={t("projects.detectionLanguageTooltip")} />
           </label>
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => { setLanguage("it"); if (websiteUrl.trim().length >= 5) { analyzedUrlRef.current = ""; analyzeSite(websiteUrl); } }}
-              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-[2px] border text-sm font-medium transition-all ${
-                language === "it" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-muted-foreground"
-              }`}>
-              🇮🇹 Italiano
-            </button>
-            <button type="button" onClick={() => { setLanguage("en"); if (websiteUrl.trim().length >= 5) { analyzedUrlRef.current = ""; analyzeSite(websiteUrl); } }}
-              className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-[2px] border text-sm font-medium transition-all ${
-                language === "en" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-muted-foreground"
-              }`}>
-              🇬🇧 English
-            </button>
-          </div>
+          <select
+            value={language}
+            onChange={(e) => {
+              const val = e.target.value as DetectionLang;
+              setLanguage(val);
+              if (websiteUrl.trim().length >= 5) { analyzedUrlRef.current = ""; analyzeSite(websiteUrl); }
+            }}
+            className="input-base w-full"
+          >
+            {LANG_OPTIONS.map((l) => (
+              <option key={l.value} value={l.value}>{l.label}</option>
+            ))}
+          </select>
         </div>
 
         {/* Settore e Tipo Brand */}
@@ -415,12 +422,16 @@ export default function NewProjectPage() {
             <input type="text" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)}
               onBlur={() => analyzeSite(websiteUrl)}
               placeholder={t("projects.websitePlaceholder")} className="input-base" />
-            {siteAnalysisLoading && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              </div>
-            )}
           </div>
+          {siteAnalysisLoading && (
+            <div className="flex items-center gap-3 rounded-[2px] border border-primary/30 bg-primary/5 px-4 py-3 animate-pulse">
+              <Loader2 className="w-5 h-5 animate-spin text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-foreground">{t("projects.analyzingSite")}</p>
+                <p className="text-xs text-muted-foreground">{t("projects.analyzingSiteDesc")}</p>
+              </div>
+            </div>
+          )}
           {siteAnalysisError && (
             <p className="text-xs text-muted-foreground">{siteAnalysisError}</p>
           )}
@@ -428,9 +439,14 @@ export default function NewProjectPage() {
 
         {/* Site analysis results — titles follow detection language, not UI language */}
         {siteAnalysis && (() => {
-          const labels = language === "en"
-            ? { analyzed: "We analyzed your website", service: "Detected service", audience: "Target audience", value: "Value proposition", tone: "Tone", geo: "Coverage", keywords: "Sector keywords" }
-            : { analyzed: "Abbiamo analizzato il tuo sito", service: "Servizio rilevato", audience: "Pubblico target", value: "Proposta di valore", tone: "Tono", geo: "Copertura", keywords: "Parole chiave settore" };
+          const labelsByLang: Record<string, { analyzed: string; service: string; audience: string; value: string; tone: string; geo: string; keywords: string }> = {
+            it: { analyzed: "Abbiamo analizzato il tuo sito", service: "Servizio rilevato", audience: "Pubblico target", value: "Proposta di valore", tone: "Tono", geo: "Copertura", keywords: "Parole chiave settore" },
+            en: { analyzed: "We analyzed your website", service: "Detected service", audience: "Target audience", value: "Value proposition", tone: "Tone", geo: "Coverage", keywords: "Sector keywords" },
+            fr: { analyzed: "Nous avons analys\u00e9 votre site", service: "Service d\u00e9tect\u00e9", audience: "Public cible", value: "Proposition de valeur", tone: "Ton", geo: "Couverture", keywords: "Mots-cl\u00e9s secteur" },
+            de: { analyzed: "Wir haben Ihre Website analysiert", service: "Erkannter Service", audience: "Zielgruppe", value: "Wertversprechen", tone: "Tonfall", geo: "Abdeckung", keywords: "Branchenschl\u00fcsselw\u00f6rter" },
+            es: { analyzed: "Hemos analizado tu sitio", service: "Servicio detectado", audience: "P\u00fablico objetivo", value: "Propuesta de valor", tone: "Tono", geo: "Cobertura", keywords: "Palabras clave del sector" },
+          };
+          const labels = labelsByLang[language] ?? labelsByLang.en;
           return (
           <div className="rounded-[2px] border border-primary/30 bg-primary/5 p-4 space-y-3">
             <div className="flex items-center gap-2">
