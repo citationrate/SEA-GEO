@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS, DEMO_MODEL_IDS } from "@/lib/engine/models";
 import { inngest } from "@/lib/inngest";
-import { getUserPlanLimits, getCurrentUsage, getWallet, consumeWalletQueries, incrementBrowsingPromptsUsed, incrementNoBrowsingPromptsUsed } from "@/lib/usage";
+import { getUserPlanLimits, getCurrentUsage, getWallet } from "@/lib/usage";
 
 const startSchema = z.object({
   project_id: z.string().uuid(),
@@ -161,7 +161,9 @@ export async function POST(request: Request) {
 
     if (runError) return NextResponse.json({ error: runError.message }, { status: 500 });
 
-    // Trigger Inngest function — returns immediately
+    // Trigger Inngest function — credit deduction happens inside the function
+    // AFTER the analysis is confirmed started, not here (fire-and-forget).
+    // If Inngest fails to pick up the event, no credits are lost.
     await inngest.send({
       name: "analysis/start",
       data: {
@@ -170,23 +172,14 @@ export async function POST(request: Request) {
         modelsUsed: validModels,
         runCount: run_count,
         browsing,
+        // Pass billing context so Inngest can deduct after confirming start
+        billing: {
+          userId: user.id,
+          querySource: query_source,
+          promptCost,
+        },
       },
     });
-
-    // Consume from the appropriate source
-    if (query_source === "wallet") {
-      await consumeWalletQueries(user.id, browsing ? promptCost : 0, browsing ? 0 : promptCost).catch((err) =>
-        console.error("[analysis/start] wallet consume error:", err)
-      );
-    } else if (browsing) {
-      await incrementBrowsingPromptsUsed(user.id, promptCost).catch((err) =>
-        console.error("[analysis/start] browsing usage increment error:", err)
-      );
-    } else {
-      await incrementNoBrowsingPromptsUsed(user.id, promptCost).catch((err) =>
-        console.error("[analysis/start] no-browsing usage increment error:", err)
-      );
-    }
 
     return NextResponse.json({
       run_id: run.id,

@@ -85,11 +85,28 @@ export async function ensureUserUsage(userId: string): Promise<any> {
 }
 
 async function incrementCycleCounter(userId: string, column: string, amount: number): Promise<void> {
-  const row = await ensureUserUsage(userId);
-  const current = Number((row as any)?.[column]) || 0;
-  await (cr().from("user_usage") as any)
-    .update({ [column]: current + amount, updated_at: new Date().toISOString() })
-    .eq("user_id", userId);
+  // Ensure the row exists before the atomic increment
+  await ensureUserUsage(userId);
+  // Atomic increment via rpc — avoids read→write race conditions.
+  // Falls back to non-atomic if the DB function doesn't exist yet.
+  const svc = cr();
+  const { error: rpcErr } = await (svc.rpc as any)("increment_usage", {
+    p_user_id: userId,
+    p_column: column,
+    p_amount: amount,
+  });
+  if (rpcErr) {
+    // Fallback: non-atomic (safe enough for low-concurrency pre-launch)
+    console.warn("[usage] increment_usage rpc failed, using fallback:", rpcErr.message);
+    const { data: row } = await (svc.from("user_usage") as any)
+      .select(column)
+      .eq("user_id", userId)
+      .single();
+    const current = Number(row?.[column]) || 0;
+    await (svc.from("user_usage") as any)
+      .update({ [column]: current + amount, updated_at: new Date().toISOString() })
+      .eq("user_id", userId);
+  }
 }
 
 export async function incrementBrowsingPromptsUsed(userId: string, count: number): Promise<void> {
@@ -198,18 +215,30 @@ export async function consumeWalletQueries(
   noBrowsing: number,
 ): Promise<void> {
   const svc = sg();
-  const { data: existing } = await (svc.from("query_wallet") as any)
-    .select("browsing_queries, no_browsing_queries")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (!existing) return;
-  await (svc.from("query_wallet") as any)
-    .update({
-      browsing_queries: Math.max(0, (Number(existing.browsing_queries) || 0) - browsing),
-      no_browsing_queries: Math.max(0, (Number(existing.no_browsing_queries) || 0) - noBrowsing),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("user_id", userId);
+  // Atomic decrement with >= guard via rpc — prevents going negative.
+  const { data: ok, error: rpcErr } = await (svc.rpc as any)("consume_wallet", {
+    p_user_id: userId,
+    p_browsing: browsing,
+    p_no_browsing: noBrowsing,
+  });
+  if (rpcErr) {
+    // Fallback: non-atomic (for pre-migration compatibility)
+    console.warn("[usage] consume_wallet rpc failed, using fallback:", rpcErr.message);
+    const { data: existing } = await (svc.from("query_wallet") as any)
+      .select("browsing_queries, no_browsing_queries")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!existing) return;
+    const newBrowsing = Math.max(0, (Number(existing.browsing_queries) || 0) - browsing);
+    const newNoBrowsing = Math.max(0, (Number(existing.no_browsing_queries) || 0) - noBrowsing);
+    await (svc.from("query_wallet") as any)
+      .update({ browsing_queries: newBrowsing, no_browsing_queries: newNoBrowsing, updated_at: new Date().toISOString() })
+      .eq("user_id", userId);
+    return;
+  }
+  if (ok === false) {
+    throw new Error("Crediti wallet insufficienti");
+  }
 }
 
 export async function consumeWalletConfronti(
@@ -237,21 +266,32 @@ export async function addToWallet(
   confronti: number,
 ): Promise<void> {
   const svc = sg();
-  const { data: existing } = await (svc.from("query_wallet") as any)
-    .select("browsing_queries, no_browsing_queries, confronti")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (existing) {
-    await (svc.from("query_wallet") as any)
-      .update({
-        browsing_queries: (Number(existing.browsing_queries) || 0) + browsingQueries,
-        no_browsing_queries: (Number(existing.no_browsing_queries) || 0) + noBrowsingQueries,
-        confronti: (Number(existing.confronti) || 0) + confronti,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", userId);
-  } else {
-    await (svc.from("query_wallet") as any)
-      .insert({ user_id: userId, browsing_queries: browsingQueries, no_browsing_queries: noBrowsingQueries, confronti });
+  // Atomic upsert via rpc — prevents read→write race.
+  const { error: rpcErr } = await (svc.rpc as any)("add_to_wallet", {
+    p_user_id: userId,
+    p_browsing: browsingQueries,
+    p_no_browsing: noBrowsingQueries,
+    p_confronti: confronti,
+  });
+  if (rpcErr) {
+    // Fallback: non-atomic (for pre-migration compatibility)
+    console.warn("[usage] add_to_wallet rpc failed, using fallback:", rpcErr.message);
+    const { data: existing } = await (svc.from("query_wallet") as any)
+      .select("browsing_queries, no_browsing_queries, confronti")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (existing) {
+      await (svc.from("query_wallet") as any)
+        .update({
+          browsing_queries: (Number(existing.browsing_queries) || 0) + browsingQueries,
+          no_browsing_queries: (Number(existing.no_browsing_queries) || 0) + noBrowsingQueries,
+          confronti: (Number(existing.confronti) || 0) + confronti,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+    } else {
+      await (svc.from("query_wallet") as any)
+        .insert({ user_id: userId, browsing_queries: browsingQueries, no_browsing_queries: noBrowsingQueries, confronti });
+    }
   }
 }

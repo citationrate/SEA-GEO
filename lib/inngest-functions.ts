@@ -6,6 +6,7 @@ import { type ExtractedSource, mergeSources } from "./engine/sources-extractor";
 import { canonicalizeCompetitorName, extractBrandOnly } from "./engine/competitor-names";
 import { callAIModel, type AIModelResult } from "./engine/prompt-runner";
 import { filterAvailableModels } from "./engine/models";
+import { consumeWalletQueries, incrementBrowsingPromptsUsed, incrementNoBrowsingPromptsUsed } from "./usage";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /* ─── Helpers ─── */
@@ -668,12 +669,13 @@ export const runAnalysis = inngest.createFunction(
   },
   { event: "analysis/start" },
   async ({ event, step }) => {
-    const { runId, projectId, modelsUsed: rawModels, runCount, browsing = true } = event.data as {
+    const { runId, projectId, modelsUsed: rawModels, runCount, browsing = true, billing } = event.data as {
       runId: string;
       projectId: string;
       modelsUsed: string[];
       runCount: number;
       browsing?: boolean;
+      billing?: { userId: string; querySource: string; promptCost: number };
     };
 
     // Filter out models whose provider credentials are not configured
@@ -718,6 +720,24 @@ export const runAnalysis = inngest.createFunction(
     });
 
     const { project, queries, segments } = loadedData;
+
+    // Step 1b: deduct credits now that the analysis is confirmed viable.
+    // This runs INSIDE Inngest so credits aren't lost if the trigger failed.
+    if (billing) {
+      await step.run("deduct-credits", async () => {
+        if (billing.querySource === "wallet") {
+          await consumeWalletQueries(
+            billing.userId,
+            browsing ? billing.promptCost : 0,
+            browsing ? 0 : billing.promptCost,
+          );
+        } else if (browsing) {
+          await incrementBrowsingPromptsUsed(billing.userId, billing.promptCost);
+        } else {
+          await incrementNoBrowsingPromptsUsed(billing.userId, billing.promptCost);
+        }
+      });
+    }
 
     // Abort if project was soft-deleted
     if (project.deleted_at) {
