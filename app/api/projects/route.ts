@@ -25,7 +25,7 @@ const projectSchema = z.object({
   website_url: z.string().nullable().default(null),
   known_competitors: z.array(z.string()).default([]),
   market_context: z.string().nullable().default(null),
-  language: z.enum(["it", "en"]),
+  language: z.enum(["it", "en", "fr", "de", "es"]),
   country: z.string().nullable().default(null),
   models_config: z.array(z.string()).min(1).default(["gpt-5.4-mini"]),
   site_analysis: z.any().nullable().default(null),

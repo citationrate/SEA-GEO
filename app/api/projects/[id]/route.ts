@@ -28,7 +28,7 @@ const updateSchema = z.object({
   sector: z.string().nullable().default(null),
   brand_type: z.string().nullable().default(null),
   market_context: z.string().nullable().default(null),
-  language: z.enum(["it", "en"]),
+  language: z.enum(["it", "en", "fr", "de", "es"]),
   country: z.string().nullable().default(null),
 });
 
