@@ -15,6 +15,7 @@ const LS_KEY = "seageo-lang";
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("it");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(LS_KEY) as Locale | null;
@@ -22,6 +23,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       setLocaleState(stored);
       document.documentElement.lang = stored;
     }
+    setMounted(true);
   }, []);
 
   const setLocale = useCallback((l: Locale) => {
@@ -50,8 +52,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     [locale],
   );
 
+  // Until mounted, render with the default locale ("it") so SSR and first
+  // client render match — prevents React hydration mismatch when localStorage
+  // holds a different locale.
   return (
-    <I18nContext.Provider value={{ locale, setLocale, t }}>
+    <I18nContext.Provider value={{ locale: mounted ? locale : "it", setLocale, t }}>
       {children}
     </I18nContext.Provider>
   );

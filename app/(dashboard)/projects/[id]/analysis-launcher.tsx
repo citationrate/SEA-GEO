@@ -374,11 +374,11 @@ export function AnalysisLauncher({
               <div className="flex items-start gap-2.5 rounded-[2px] border border-destructive/30 bg-destructive/10 px-4 py-3">
                 <Lock className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
                 <div className="text-xs text-destructive space-y-1.5">
-                  <p className="font-semibold">Lancio bloccato — prompt insufficienti</p>
+                  <p className="font-semibold">{t("analysisLauncher.launchBlocked")}</p>
                   <p>
                     {effectiveBrowsing
-                      ? `Questa analisi richiede ${totalPrompts} prompt con browsing ma te ne restano solo ${browsingRemaining}. Disattiva il browsing oppure riduci le query.`
-                      : `Questa analisi richiede ${totalPrompts} prompt ma te ne restano solo ${noBrowsingRemaining}. Riduci le query o passa a un piano superiore.`}
+                      ? t("analysisLauncher.insufficientBrowsing").replace("{count}", String(totalPrompts)).replace("{remaining}", String(browsingRemaining))
+                      : t("analysisLauncher.insufficientNoBrowsing").replace("{count}", String(totalPrompts)).replace("{remaining}", String(noBrowsingRemaining))}
                   </p>
                   {!usage.isPro && (
                     <a

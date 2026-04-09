@@ -52,11 +52,11 @@ export async function POST(request: Request) {
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  console.log("[stripe-webhook] checkout.session.completed, session:", session.id, "mode:", session.mode);
+  console.log("[stripe-webhook] checkout.session.completed, mode:", session.mode);
 
   // Never credit unpaid sessions (e.g. async payment methods still pending).
   if (session.payment_status !== "paid") {
-    console.log("[stripe-webhook] Ignoring unpaid session:", session.id, "status:", session.payment_status);
+    console.log("[stripe-webhook] Ignoring unpaid session, status:", session.payment_status);
     return;
   }
 
@@ -74,7 +74,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const lineItems = await getStripe().checkout.sessions.listLineItems(session.id);
   const priceId = lineItems.data[0]?.price?.id;
-  console.log("[stripe-webhook] package priceId:", priceId);
   if (!priceId || !isPackagePrice(priceId)) {
     console.log("[stripe-webhook] Not an AVI package price, ignoring:", priceId);
     return;
@@ -82,7 +81,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const details = packageDetailsFromPriceId(priceId);
   if (!details) return;
-  console.log("[stripe-webhook] package details:", JSON.stringify(details));
 
   // CitationRate packages are fulfilled by the suite webhook.
   if (details.platform !== "avi") {
@@ -115,5 +113,5 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     isCompare ? details.queries_added : 0,
   );
 
-  console.log(`[stripe-webhook] Added to wallet: ${details.package_type} (+${details.queries_added}) for user ${userId}`);
+  console.log(`[stripe-webhook] Wallet credited: ${details.package_type} (+${details.queries_added})`);
 }

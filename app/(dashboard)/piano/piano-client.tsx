@@ -162,7 +162,7 @@ export function PianoClient({
     try {
       const res = await fetch("/api/stripe/cancel-subscription", { method: "POST" });
       const data = await res.json();
-      if (data.ok) { alert("Abbonamento cancellato."); window.location.reload(); }
+      if (data.ok) { alert(t("analysisLauncher.subscriptionCancelled")); window.location.reload(); }
       else alert(data.error || "Errore");
     } catch { alert("Errore di rete"); }
     finally { setCanceling(false); setShowCancelModal(false); }
