@@ -26,22 +26,28 @@ export async function POST() {
       return NextResponse.json({ error: "No active subscription" }, { status: 400 });
     }
 
-    // Cancel on Stripe (cancels at period end by default)
+    // Cancel on Stripe immediately
     await cancelSubscription(subId);
 
-    // Update status on CitationRate
+    // Revert to demo on CitationRate
     try {
       const cr = getCitationRateClient();
       await cr.from("profiles").update({
-        subscription_status: "cancelled",
+        plan: "demo",
+        subscription_status: "inactive",
+        subscription_period: null,
+        stripe_subscription_id: null,
       } as any).eq("id", user!.id);
     } catch (err: any) {
       console.error("[cancel-subscription] CitationRate update error:", err.message);
     }
 
-    // Also update seageo1
+    // Revert to demo on seageo1
     await (supabase!.from("profiles") as any).update({
-      subscription_status: "cancelled",
+      plan: "demo",
+      subscription_status: "inactive",
+      subscription_period: null,
+      stripe_subscription_id: null,
     }).eq("id", user!.id);
 
     return NextResponse.json({ ok: true });
