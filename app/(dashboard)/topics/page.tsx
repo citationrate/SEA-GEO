@@ -91,8 +91,9 @@ export default async function TopicsPage({
 
     const { data: analyses } = await supabase
       .from("response_analysis")
-      .select("prompt_executed_id, topics")
-      .in("prompt_executed_id", promptIds);
+      .select("prompt_executed_id, topics, brand_mentioned")
+      .in("prompt_executed_id", promptIds)
+      .eq("brand_mentioned", true);
 
     (analyses ?? []).forEach((a: any) => {
       const queryId = promptQueryMap.get(a.prompt_executed_id);
