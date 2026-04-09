@@ -5,7 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const schema = z.object({
   url: z.string().min(1),
-  language: z.enum(["it", "en"]).default("it"),
+  language: z.enum(["it", "en", "fr", "de", "es"]).default("it"),
 });
 
 export interface SiteAnalysis {
@@ -163,22 +163,32 @@ export async function POST(request: Request) {
       max_tokens: 1500,
       messages: [{
         role: "user",
-        content: `Analyze this website and extract structured information. Respond in ${language === "it" ? "Italian" : "English"}. Return JSON only, no other text.
+        content: (() => {
+          const langMap: Record<string, { name: string; tones: string; geos: string }> = {
+            it: { name: "Italian", tones: "professionale, amichevole, lusso, economico, tecnico", geos: "locale, nazionale, internazionale" },
+            en: { name: "English", tones: "professional, friendly, luxury, budget, technical", geos: "local, national, international" },
+            fr: { name: "French", tones: "professionnel, amical, luxe, \u00e9conomique, technique", geos: "local, national, international" },
+            de: { name: "German", tones: "professionell, freundlich, Luxus, g\u00fcnstig, technisch", geos: "lokal, national, international" },
+            es: { name: "Spanish", tones: "profesional, amigable, lujo, econ\u00f3mico, t\u00e9cnico", geos: "local, nacional, internacional" },
+          };
+          const l = langMap[language] ?? langMap.en;
+          return `Analyze this website and extract structured information. Respond ENTIRELY in ${l.name}. Return JSON only, no other text.
 
 Website content:
 ${content.slice(0, 4000)}
 
-Extract (all text values MUST be in ${language === "it" ? "Italian" : "English"}):
-1. main_service: What is the primary service/product offered? (1-2 sentences)
-2. target_audience: Who are the customers? (B2B/B2C, demographics, profession)
-3. value_proposition: What makes this brand unique? (1-2 sentences)
-4. sector_keywords: 5-10 keywords that describe the sector (array of strings)
+Extract (ALL text values MUST be in ${l.name}):
+1. main_service: What is the primary service/product offered? (1-2 sentences, in ${l.name})
+2. target_audience: Who are the customers? (B2B/B2C, demographics, profession, in ${l.name})
+3. value_proposition: What makes this brand unique? (1-2 sentences, in ${l.name})
+4. sector_keywords: 5-10 keywords that describe the sector (array of strings, in ${l.name})
 5. competitor_signals: Any competitors or similar brands mentioned on the site (array of company names, empty if none found)
-6. tone: One of: ${language === "it" ? "professionale, amichevole, lusso, economico, tecnico" : "professional, friendly, luxury, budget, technical"}
-7. geography: One of: ${language === "it" ? "locale, nazionale, internazionale" : "local, national, international"}
+6. tone: One of: ${l.tones}
+7. geography: One of: ${l.geos}
 
 Return ONLY valid JSON:
-{"main_service": "...", "target_audience": "...", "value_proposition": "...", "sector_keywords": [...], "competitor_signals": [...], "tone": "...", "geography": "..."}`,
+{"main_service": "...", "target_audience": "...", "value_proposition": "...", "sector_keywords": [...], "competitor_signals": [...], "tone": "...", "geography": "..."}`;
+        })(),
       }],
     });
 
