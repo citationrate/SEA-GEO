@@ -197,7 +197,7 @@ export function CompetitorsClient({
                   <p className="text-foreground font-medium mb-1">{t("competitors.proRequired")}</p>
                   <p className="text-muted-foreground text-xs mb-2">{t("competitors.proDesc")}</p>
                   <div className="flex items-center justify-between">
-                    <a href="/settings#piano" className="text-[#c4a882] text-xs font-semibold hover:text-[#c4a882]/80 transition-colors">{t("settings.upgradePro")} &rarr;</a>
+                    <a href="/piano#piani" className="text-[#c4a882] text-xs font-semibold hover:text-[#c4a882]/80 transition-colors">{t("settings.upgradePro")} &rarr;</a>
                     <button onClick={() => setShowProGate(false)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t("common.close")}</button>
                   </div>
                 </div>

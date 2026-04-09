@@ -538,7 +538,7 @@ function AnalyzeDrawer({
                   <p className="text-sm text-[#c4a882] font-medium">{t("sources.proRequiredUrl")}</p>
                 </div>
                 <p className="text-xs text-muted-foreground">{t("sources.proRequiredUrlDesc")}</p>
-                <a href="/settings" className="inline-block text-xs font-semibold text-[#c4a882] hover:text-[#c4a882]/80 transition-colors mt-1">{t("settings.upgradePro")} &rarr;</a>
+                <a href="/piano#piani" className="inline-block text-xs font-semibold text-[#c4a882] hover:text-[#c4a882]/80 transition-colors mt-1">{t("settings.upgradePro")} &rarr;</a>
               </div>
             )}
 

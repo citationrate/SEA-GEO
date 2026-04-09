@@ -29,7 +29,7 @@ export function DemoBanner({ plan }: { plan: string }) {
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <Link
-          href="/piano"
+          href="/piano#piani"
           className="text-xs font-medium px-3 py-1.5 rounded-[2px] bg-[#c4a882] text-white hover:bg-[#c4a882]/80 transition-colors whitespace-nowrap"
         >
           Vedi i piani &rarr;
