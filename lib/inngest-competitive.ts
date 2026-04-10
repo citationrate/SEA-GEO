@@ -201,8 +201,8 @@ AI responses are often diplomatic. Do NOT be fooled by polite phrasing. Look for
 - Response suggests X as first choice or recommendation → X WINS
 - Use 0.5 ONLY if language is truly identical for both, with no preference signal
 
-- first_mention: "A" if Brand A appears first in text, "B" if Brand B appears first, "tie" if same sentence.
-- key_arguments: max 3 key arguments (in ${outputLang}).
+- first_mention: "A" if Brand A appears first in text, "B" if Brand B appears first. One brand ALWAYS appears before the other — never return "tie".
+- key_arguments: max 3 key arguments. IMPORTANT: Write them in ${outputLang}, regardless of the response language.
 
 Respond ONLY with this JSON:
 {"recommendation": 1, "first_mention": "A", "key_arguments": ["arg1", "arg2"]}
@@ -231,8 +231,8 @@ Le risposte AI sono spesso diplomatiche. NON farti ingannare da formule di corte
 - La risposta suggerisce X come prima scelta o raccomandazione → X VINCE
 - Usa 0.5 SOLO se il linguaggio è davvero identico per entrambi, senza alcun segnale di preferenza
 
-- first_mention: "A" se Brand A appare per primo nel testo, "B" se Brand B appare per primo, "tie" se nella stessa frase.
-- key_arguments: max 3 argomenti principali.
+- first_mention: "A" se Brand A appare per primo nel testo, "B" se Brand B appare per primo. Un brand appare SEMPRE prima dell'altro — non restituire mai "tie".
+- key_arguments: max 3 argomenti principali in italiano.
 
 ESEMPI:
 - "Entrambi sono ottimi, dipende dalle preferenze" ma 3 vantaggi di ${brandBNorm} e 1 di ${brandANorm} → recommendation: 2
@@ -264,7 +264,7 @@ ${responseText}`;
     const rec = typeof parsed.recommendation === "number" ? parsed.recommendation : 0.5;
     const result = {
       recommendation: VALID_RECOMMENDATIONS.has(rec) ? rec : 0.5,
-      first_mention: ["A", "B", "tie"].includes(parsed.first_mention) ? parsed.first_mention : "tie",
+      first_mention: ["A", "B"].includes(parsed.first_mention) ? parsed.first_mention : "A",
       key_arguments: Array.isArray(parsed.key_arguments) ? parsed.key_arguments.slice(0, 3) : [],
     };
     console.log(`[competitive/eval] brandA="${brandA}" (norm="${brandANorm}"), brandB="${brandB}" (norm="${brandBNorm}"), response_preview="${responseText.substring(0, 100)}", rec=${result.recommendation}, fm=${result.first_mention}`);
@@ -272,7 +272,16 @@ ${responseText}`;
   } catch {
     console.error("[competitive] evaluation parse failed:", cleaned.substring(0, 200));
     console.log(`[competitive/eval-fail] brandA="${brandA}" (norm="${brandANorm}"), brandB="${brandB}" (norm="${brandBNorm}"), response_preview="${responseText.substring(0, 100)}"`);
-    return { recommendation: 0.5, first_mention: "tie", key_arguments: [] };
+    // Determine first_mention from raw text position
+    const lower = responseText.toLowerCase();
+    const posA = Math.min(
+      ...[brandA, brandANorm].map(b => { const i = lower.indexOf(b.toLowerCase()); return i >= 0 ? i : Infinity; })
+    );
+    const posB = Math.min(
+      ...[brandB, brandBNorm].map(b => { const i = lower.indexOf(b.toLowerCase()); return i >= 0 ? i : Infinity; })
+    );
+    const fm = posB < posA ? "B" : "A";
+    return { recommendation: 0.5, first_mention: fm, key_arguments: [] };
   }
 }
 
