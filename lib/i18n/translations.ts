@@ -966,6 +966,29 @@ export const translations: Record<Locale, Record<string, any>> = {
       ctaDesc: "Parla con un esperto AVI per un'analisi personalizzata.",
       ctaButton: "Richiedi consulenza",
     },
+    legal: {
+      privacy: "Privacy Policy", terms: "Termini di Servizio", cookies: "Cookie Policy", sale: "Condizioni di Vendita",
+    },
+    cookie: {
+      bannerTitle: "Questo sito utilizza i cookie",
+      bannerDesc: "Utilizziamo cookie necessari per il funzionamento del sito e, con il tuo consenso, cookie di analytics e marketing.",
+      acceptAll: "Accetta tutti", necessaryOnly: "Solo necessari", customize: "Personalizza", save: "Salva preferenze",
+      necessary: "Necessari", necessaryDesc: "Cookie essenziali per autenticazione e funzionamento del sito. Sempre attivi.",
+      analytics: "Analytics", analyticsDesc: "Cookie per analisi anonimizzata della navigazione (Google Analytics).",
+      marketing: "Marketing", marketingDesc: "Cookie per remarketing e misurazione campagne (Meta, LinkedIn).",
+    },
+    consent: {
+      tosRequired: "Ho letto e accetto la", privacyAnd: "e la",
+      marketingOptional: "Acconsento a ricevere comunicazioni commerciali e promozionali",
+      mustAccept: "Devi accettare i Termini e la Privacy Policy per continuare",
+    },
+    settingsPrivacy: {
+      tab: "Privacy", cookiePrefs: "Preferenze Cookie", cookiePrefsSaved: "Preferenze cookie salvate",
+      legalDocs: "Documenti Legali", consentHistory: "Storico Consensi",
+      tosAccepted: "Termini di Servizio accettati il", privacyAccepted: "Privacy Policy accettata il",
+      saleAccepted: "Condizioni di Vendita accettate il", cookieAccepted: "Preferenze cookie aggiornate il",
+      notAccepted: "Non ancora accettato",
+    },
 
   },
 
@@ -1933,6 +1956,29 @@ export const translations: Record<Locale, Record<string, any>> = {
       ctaDesc: "Talk to a AVI expert for a personalized analysis.",
       ctaButton: "Request consultation",
     },
+    legal: {
+      privacy: "Privacy Policy", terms: "Terms of Service", cookies: "Cookie Policy", sale: "Terms of Sale",
+    },
+    cookie: {
+      bannerTitle: "This site uses cookies",
+      bannerDesc: "We use necessary cookies for site functionality and, with your consent, analytics and marketing cookies.",
+      acceptAll: "Accept all", necessaryOnly: "Necessary only", customize: "Customize", save: "Save preferences",
+      necessary: "Necessary", necessaryDesc: "Essential cookies for authentication and site functionality. Always active.",
+      analytics: "Analytics", analyticsDesc: "Cookies for anonymous browsing analysis (Google Analytics).",
+      marketing: "Marketing", marketingDesc: "Cookies for remarketing and campaign measurement (Meta, LinkedIn).",
+    },
+    consent: {
+      tosRequired: "I have read and accept the", privacyAnd: "and the",
+      marketingOptional: "I consent to receiving commercial and promotional communications",
+      mustAccept: "You must accept the Terms and Privacy Policy to continue",
+    },
+    settingsPrivacy: {
+      tab: "Privacy", cookiePrefs: "Cookie Preferences", cookiePrefsSaved: "Cookie preferences saved",
+      legalDocs: "Legal Documents", consentHistory: "Consent History",
+      tosAccepted: "Terms of Service accepted on", privacyAccepted: "Privacy Policy accepted on",
+      saleAccepted: "Terms of Sale accepted on", cookieAccepted: "Cookie preferences updated on",
+      notAccepted: "Not yet accepted",
+    },
 
   },
 
@@ -2799,6 +2845,29 @@ export const translations: Record<Locale, Record<string, any>> = {
       ctaDesc: "Parlez à un expert AVI pour une analyse personnalisée.",
       ctaButton: "Demander une consultation",
     },
+    legal: {
+      privacy: "Politique de Confidentialité", terms: "Conditions d'Utilisation", cookies: "Politique de Cookies", sale: "Conditions de Vente",
+    },
+    cookie: {
+      bannerTitle: "Ce site utilise des cookies",
+      bannerDesc: "Nous utilisons des cookies nécessaires au fonctionnement du site et, avec votre consentement, des cookies d'analyse et de marketing.",
+      acceptAll: "Tout accepter", necessaryOnly: "Nécessaires uniquement", customize: "Personnaliser", save: "Enregistrer les préférences",
+      necessary: "Nécessaires", necessaryDesc: "Cookies essentiels pour l'authentification et le fonctionnement du site. Toujours actifs.",
+      analytics: "Analytiques", analyticsDesc: "Cookies pour l'analyse anonyme de la navigation (Google Analytics).",
+      marketing: "Marketing", marketingDesc: "Cookies pour le remarketing et la mesure des campagnes (Meta, LinkedIn).",
+    },
+    consent: {
+      tosRequired: "J'ai lu et j'accepte les", privacyAnd: "et la",
+      marketingOptional: "J'accepte de recevoir des communications commerciales et promotionnelles",
+      mustAccept: "Vous devez accepter les Conditions et la Politique de Confidentialité pour continuer",
+    },
+    settingsPrivacy: {
+      tab: "Confidentialité", cookiePrefs: "Préférences de Cookies", cookiePrefsSaved: "Préférences de cookies enregistrées",
+      legalDocs: "Documents Juridiques", consentHistory: "Historique des Consentements",
+      tosAccepted: "Conditions d'Utilisation acceptées le", privacyAccepted: "Politique de Confidentialité acceptée le",
+      saleAccepted: "Conditions de Vente acceptées le", cookieAccepted: "Préférences de cookies mises à jour le",
+      notAccepted: "Pas encore accepté",
+    },
 
   },
 
@@ -3660,6 +3729,29 @@ export const translations: Record<Locale, Record<string, any>> = {
       ctaDesc: "Sprechen Sie mit einem AVI-Experten für eine personalisierte Analyse.",
       ctaButton: "Beratung anfordern",
     },
+    legal: {
+      privacy: "Datenschutzerklärung", terms: "Nutzungsbedingungen", cookies: "Cookie-Richtlinie", sale: "Verkaufsbedingungen",
+    },
+    cookie: {
+      bannerTitle: "Diese Website verwendet Cookies",
+      bannerDesc: "Wir verwenden notwendige Cookies für die Funktionalität der Website und, mit Ihrer Zustimmung, Analyse- und Marketing-Cookies.",
+      acceptAll: "Alle akzeptieren", necessaryOnly: "Nur notwendige", customize: "Anpassen", save: "Einstellungen speichern",
+      necessary: "Notwendige", necessaryDesc: "Wesentliche Cookies für Authentifizierung und Websitefunktionalität. Immer aktiv.",
+      analytics: "Analytik", analyticsDesc: "Cookies für anonyme Navigationsanalyse (Google Analytics).",
+      marketing: "Marketing", marketingDesc: "Cookies für Remarketing und Kampagnenmessung (Meta, LinkedIn).",
+    },
+    consent: {
+      tosRequired: "Ich habe die", privacyAnd: "und die",
+      marketingOptional: "Ich stimme dem Erhalt von kommerziellen und werblichen Mitteilungen zu",
+      mustAccept: "Sie müssen die Nutzungsbedingungen und die Datenschutzerklärung akzeptieren, um fortzufahren",
+    },
+    settingsPrivacy: {
+      tab: "Datenschutz", cookiePrefs: "Cookie-Einstellungen", cookiePrefsSaved: "Cookie-Einstellungen gespeichert",
+      legalDocs: "Rechtliche Dokumente", consentHistory: "Einwilligungsverlauf",
+      tosAccepted: "Nutzungsbedingungen akzeptiert am", privacyAccepted: "Datenschutzerklärung akzeptiert am",
+      saleAccepted: "Verkaufsbedingungen akzeptiert am", cookieAccepted: "Cookie-Einstellungen aktualisiert am",
+      notAccepted: "Noch nicht akzeptiert",
+    },
 
   },
 
@@ -4520,6 +4612,29 @@ export const translations: Record<Locale, Record<string, any>> = {
       ctaTitle: "¿No sabes cómo interpretar tu AVI Score?",
       ctaDesc: "Habla con un experto de AVI para un análisis personalizado.",
       ctaButton: "Solicitar consultoría",
+    },
+    legal: {
+      privacy: "Política de Privacidad", terms: "Términos de Servicio", cookies: "Política de Cookies", sale: "Condiciones de Venta",
+    },
+    cookie: {
+      bannerTitle: "Este sitio utiliza cookies",
+      bannerDesc: "Utilizamos cookies necesarias para el funcionamiento del sitio y, con tu consentimiento, cookies de análisis y marketing.",
+      acceptAll: "Aceptar todas", necessaryOnly: "Solo necesarias", customize: "Personalizar", save: "Guardar preferencias",
+      necessary: "Necesarias", necessaryDesc: "Cookies esenciales para autenticación y funcionamiento del sitio. Siempre activas.",
+      analytics: "Analíticas", analyticsDesc: "Cookies para análisis anónimo de navegación (Google Analytics).",
+      marketing: "Marketing", marketingDesc: "Cookies para remarketing y medición de campañas (Meta, LinkedIn).",
+    },
+    consent: {
+      tosRequired: "He leído y acepto los", privacyAnd: "y la",
+      marketingOptional: "Consiento recibir comunicaciones comerciales y promocionales",
+      mustAccept: "Debes aceptar los Términos y la Política de Privacidad para continuar",
+    },
+    settingsPrivacy: {
+      tab: "Privacidad", cookiePrefs: "Preferencias de Cookies", cookiePrefsSaved: "Preferencias de cookies guardadas",
+      legalDocs: "Documentos Legales", consentHistory: "Historial de Consentimientos",
+      tosAccepted: "Términos de Servicio aceptados el", privacyAccepted: "Política de Privacidad aceptada el",
+      saleAccepted: "Condiciones de Venta aceptadas el", cookieAccepted: "Preferencias de cookies actualizadas el",
+      notAccepted: "Aún no aceptado",
     },
 
   },

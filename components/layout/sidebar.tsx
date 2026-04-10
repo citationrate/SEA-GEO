@@ -230,6 +230,17 @@ export function Sidebar({ profile }: SidebarProps) {
         </div>
       )}
 
+      {/* Legal links */}
+      {(!collapsed || mobileOpen) && (
+        <div className="flex items-center justify-center gap-3 py-2 px-2 border-t border-border">
+          <a href="https://suite.citationrate.com/legal/privacy" target="_blank" className="font-mono text-[0.55rem] tracking-wide text-muted-foreground hover:text-foreground transition-colors">{t("legal.privacy")}</a>
+          <span className="text-[0.55rem] text-border">·</span>
+          <a href="https://suite.citationrate.com/legal/terms" target="_blank" className="font-mono text-[0.55rem] tracking-wide text-muted-foreground hover:text-foreground transition-colors">{t("legal.terms")}</a>
+          <span className="text-[0.55rem] text-border">·</span>
+          <a href="https://suite.citationrate.com/legal/cookies" target="_blank" className="font-mono text-[0.55rem] tracking-wide text-muted-foreground hover:text-foreground transition-colors">{t("legal.cookies")}</a>
+        </div>
+      )}
+
       {/* Switch to Citability Score (CS) — bottom of sidebar */}
       <div className="px-2 pb-2 flex-shrink-0">
         <a
