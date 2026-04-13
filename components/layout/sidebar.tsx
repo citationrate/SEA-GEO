@@ -239,16 +239,16 @@ export function Sidebar({ profile }: SidebarProps) {
           href="https://suite.citationrate.com/dashboard"
           onClick={closeMobile}
           className={cn(
-            "w-full flex items-center gap-2 px-2 py-2 rounded-[2px] transition-colors",
-            collapsed && !mobileOpen && "justify-center px-0",
+            "w-full flex items-center gap-2 rounded-[2px] transition-colors",
+            collapsed && !mobileOpen ? "justify-center py-2" : "py-2 px-3",
           )}
-          style={{ color: "var(--c-sage)" }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--c-sage-bg)"; e.currentTarget.style.color = "var(--c-cream)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--c-sage)"; }}
+          style={{ color: "var(--primary)" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--primary-glow)"; e.currentTarget.style.color = "var(--cream)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--primary)"; }}
           title={collapsed && !mobileOpen ? t("sidebar.switchTool") : undefined}
         >
           <ExternalLink className="w-4 h-4 shrink-0" aria-hidden="true" />
-          {(!collapsed || mobileOpen) && <span className="text-xs font-semibold">{t("sidebar.switchTool")}</span>}
+          {(!collapsed || mobileOpen) && <span className="text-sm">{t("sidebar.switchTool")}</span>}
         </a>
       </div>
 
