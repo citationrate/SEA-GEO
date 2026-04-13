@@ -37,8 +37,7 @@ export async function POST(request: Request) {
     if (error) return error;
 
     const body = await request.json();
-    console.log("[API/PROJECTS] POST called, user:", user.id);
-    console.log("[API/PROJECTS] Body:", JSON.stringify(body));
+    console.log("[API/PROJECTS] POST called");
 
     const parsed = projectSchema.safeParse(body);
 

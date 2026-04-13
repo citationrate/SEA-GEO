@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /**
@@ -11,18 +12,18 @@ import { createServiceClient } from "@/lib/supabase/service";
  *   Headers: x-webhook-secret: <WEBHOOK_SECRET>
  */
 export async function POST(request: Request) {
-  // Verify webhook secret
+  // Verify webhook secret (timing-safe comparison)
   const secret = request.headers.get("x-webhook-secret");
-  const hasSecret = !!process.env.WEBHOOK_SECRET;
-  console.log("[WEBHOOK] sync-user called, secret match:", secret === process.env.WEBHOOK_SECRET, "| env var set:", hasSecret);
-  if (secret !== process.env.WEBHOOK_SECRET) {
-    console.error("[WEBHOOK] Unauthorized — received secret:", secret?.slice(0, 8) + "...", "| env var set:", hasSecret);
+  const expected = Buffer.from(process.env.WEBHOOK_SECRET || "");
+  const received = Buffer.from(secret || "");
+  if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
+    console.error("[WEBHOOK] Unauthorized — secret mismatch");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const body = await request.json();
-    console.log("[WEBHOOK] sync-user body:", JSON.stringify(body).slice(0, 500));
+    // Log event type only, not full body (contains user data)
 
     // Supabase webhook payload: { type, table, record, schema, old_record }
     const record = body.record ?? body;
@@ -66,11 +67,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: upsertError.message }, { status: 500 });
     }
 
-    console.log("[WEBHOOK] profile synced:", userId, email);
+    console.log("[WEBHOOK] profile synced:", userId);
     return NextResponse.json({ ok: true });
   } catch (err) {
+    // C8: Always return 200 to prevent retry storms. Log error server-side.
     console.error("[WEBHOOK] unhandled error:", err instanceof Error ? err.message : err);
-    console.error("[WEBHOOK] stack:", err instanceof Error ? err.stack : "N/A");
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return NextResponse.json({ received: true, error: "logged" });
   }
 }

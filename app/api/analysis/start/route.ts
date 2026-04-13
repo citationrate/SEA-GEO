@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS, DEMO_MODEL_IDS } from "@/lib/engine/models";
 import { inngest } from "@/lib/inngest";
 import { getUserPlanLimits, getCurrentUsage, getWallet } from "@/lib/usage";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const startSchema = z.object({
   project_id: z.string().uuid(),
@@ -15,6 +16,11 @@ const startSchema = z.object({
 export async function POST(request: Request) {
   const { supabase, user, error } = await requireAuth();
   if (error) return error;
+
+  // M3: Rate limit — 5 analysis starts per user per minute
+  if (!checkRateLimit(`analysis-start:${user.id}`, 5, 60_000)) {
+    return NextResponse.json({ error: "Troppo veloce, riprova tra poco" }, { status: 429 });
+  }
 
   try {
 
@@ -69,12 +75,7 @@ export async function POST(request: Request) {
     const isProPlan = userPlanId === "pro";
     const isDemoPlan = userPlanId === "demo";
 
-    console.log("[analysis/start] plan check:", {
-      userId: user.id, planId: userPlanId, promptCost,
-      browsingPrompts: plan.browsing_prompts, noBrowsingPrompts: plan.no_browsing_prompts,
-      browsingUsed: usage.browsingPromptsUsed, noBrowsingUsed: usage.noBrowsingPromptsUsed,
-      extraBrowsing: usage.extraBrowsingPrompts, extraNoBrowsing: usage.extraNoBrowsingPrompts,
-    });
+    console.log("[analysis/start] plan:", userPlanId, "promptCost:", promptCost);
 
     // Demo plan enforcement: only fixed models, no browsing
     if (isDemoPlan) {

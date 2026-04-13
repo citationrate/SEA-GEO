@@ -42,16 +42,17 @@ export async function POST(request: Request) {
   }
 
   try {
-    await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+    await handleCheckoutCompleted(event.id, event.data.object as Stripe.Checkout.Session);
   } catch (err: any) {
+    // C8: Always return 200 to prevent Stripe retry storms. Log error server-side.
     console.error(`[stripe-webhook] Error handling ${event.type}:`, err);
-    return NextResponse.json({ error: "Webhook handler error" }, { status: 500 });
+    return NextResponse.json({ received: true, error: "logged" });
   }
 
   return NextResponse.json({ received: true });
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+async function handleCheckoutCompleted(eventId: string, session: Stripe.Checkout.Session) {
   console.log("[stripe-webhook] checkout.session.completed, mode:", session.mode);
 
   // Never credit unpaid sessions (e.g. async payment methods still pending).
@@ -90,28 +91,58 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const svc = createServiceClient();
 
-  // Record purchase on seageo1.
+  // C3: Idempotency check — skip if this Stripe event was already processed.
+  const { data: existingPurchase } = await (svc.from("package_purchases") as any)
+    .select("id")
+    .eq("stripe_event_id", eventId)
+    .maybeSingle();
+  if (existingPurchase) {
+    console.log("[stripe-webhook] Duplicate event, already processed:", eventId);
+    return;
+  }
+
+  // Record purchase on seageo1 (include stripe_event_id for idempotency).
   const { error } = await (svc.from("package_purchases") as any).insert({
     user_id: userId,
     stripe_payment_intent_id: session.payment_intent as string,
+    stripe_event_id: eventId,
     queries_added: details.queries_added,
     package_type: details.package_type,
     status: "completed",
   });
-  if (error) console.error("[stripe-webhook] package_purchases insert error:", error);
+  if (error) {
+    // If insert fails due to duplicate stripe_event_id (unique constraint), it's idempotent — skip.
+    if (error.code === "23505") {
+      console.log("[stripe-webhook] Duplicate insert (unique constraint), skipping:", eventId);
+      return;
+    }
+    console.error("[stripe-webhook] package_purchases insert error:", error);
+  }
 
-  // Credit the query wallet (never expires).
+  // H2: Credit the query wallet with error handling for manual recovery.
   const pt = details.package_type;
   const isCompare = pt.startsWith("confronti");
   const isPro = pt.startsWith("queries_pro");
   const isBase = pt.startsWith("queries_base");
 
-  await addToWallet(
-    userId,
-    isPro ? details.queries_added : 0,
-    isBase ? details.queries_added : 0,
-    isCompare ? details.queries_added : 0,
-  );
-
-  console.log(`[stripe-webhook] Wallet credited: ${details.package_type} (+${details.queries_added})`);
+  try {
+    await addToWallet(
+      userId,
+      isPro ? details.queries_added : 0,
+      isBase ? details.queries_added : 0,
+      isCompare ? details.queries_added : 0,
+    );
+    console.log(`[stripe-webhook] Wallet credited: ${details.package_type} (+${details.queries_added})`);
+  } catch (walletErr) {
+    // Log all details for manual recovery — user paid but wallet credit failed.
+    console.error("[stripe-webhook] CRITICAL: Wallet credit failed after payment!", {
+      eventId,
+      userId,
+      paymentIntent: session.payment_intent,
+      packageType: details.package_type,
+      queriesAdded: details.queries_added,
+      error: walletErr instanceof Error ? walletErr.message : walletErr,
+    });
+    // Do NOT rethrow — return 200 so Stripe doesn't retry (would create duplicate purchase).
+  }
 }

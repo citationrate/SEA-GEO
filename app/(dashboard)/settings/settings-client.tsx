@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Ticket, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Send, Smartphone, Shield, Download } from "lucide-react";
+import { User, Ticket, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Send, Smartphone, Shield, Download, Camera, X } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { RestartTourButton } from "./restart-tour-button";
 import { TwoFactorModal } from "@/components/two-factor-modal";
@@ -17,6 +17,7 @@ interface SettingsClientProps {
   fullName: string;
   plan: string;
   notifyAnalysisComplete: boolean;
+  avatarUrl?: string | null;
 }
 
 async function patchProfile(data: Record<string, unknown>) {
@@ -34,6 +35,7 @@ export function SettingsClient({
   fullName: initialName,
   plan,
   notifyAnalysisComplete: initialNotifyAnalysis,
+  avatarUrl: initialAvatarUrl,
 }: SettingsClientProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -41,6 +43,10 @@ export function SettingsClient({
   const [fullName, setFullName] = useState(initialName);
   const [savingName, setSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
+
+  // Avatar
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl ?? null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Voucher
   const [voucher, setVoucher] = useState("");
@@ -194,6 +200,54 @@ export function SettingsClient({
     }
   }
 
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Only JPEG, PNG, and WebP images are allowed");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File too large (max 2 MB)");
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/profile/avatar", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Upload failed" }));
+        throw new Error(data.error || "Upload failed");
+      }
+      const data = await res.json();
+      setAvatarUrl(data.avatar_url);
+      toast.success(t("settings.avatarUploaded") || "Photo updated");
+    } catch (err: any) {
+      toast.error(err?.message || "Upload failed");
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = "";
+    }
+  }
+
+  async function handleAvatarRemove() {
+    setUploadingAvatar(true);
+    try {
+      const res = await fetch("/api/profile/avatar", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove avatar");
+      setAvatarUrl(null);
+      toast.success(t("settings.avatarRemoved") || "Photo removed");
+    } catch {
+      toast.error("Failed to remove photo");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
   return (
     <>
       {/* Tab Navigation */}
@@ -228,8 +282,50 @@ export function SettingsClient({
           <h2 className="font-display font-semibold text-foreground">{t("settings.profile")}</h2>
         </div>
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-14 h-14 rounded-[2px] flex items-center justify-center text-primary font-display text-xl shrink-0" style={{ background: "var(--primary-glow)", border: "1px solid var(--primary-hover)" }}>
-            {(fullName?.[0] ?? email?.[0] ?? "U").toUpperCase()}
+          <div className="relative group shrink-0">
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              id="avatar-upload"
+              onChange={handleAvatarUpload}
+              disabled={uploadingAvatar}
+            />
+            <label
+              htmlFor="avatar-upload"
+              className="block cursor-pointer"
+              title={t("settings.changeAvatar") || "Change photo"}
+            >
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Avatar"
+                  className="w-14 h-14 rounded-full object-cover"
+                  style={{ border: "2px solid var(--primary-hover)" }}
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-full flex items-center justify-center text-primary font-display text-xl" style={{ background: "var(--primary-glow)", border: "2px solid var(--primary-hover)" }}>
+                  {(fullName?.[0] ?? email?.[0] ?? "U").toUpperCase()}
+                </div>
+              )}
+              {/* Hover overlay */}
+              <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "rgba(0,0,0,0.5)" }}>
+                {uploadingAvatar ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-white" />
+                ) : (
+                  <Camera className="w-5 h-5 text-white" />
+                )}
+              </div>
+            </label>
+            {avatarUrl && !uploadingAvatar && (
+              <button
+                onClick={handleAvatarRemove}
+                className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center bg-destructive text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                title={t("settings.removeAvatar") || "Remove photo"}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
           <div className="min-w-0">
             <p className="text-foreground font-medium">{fullName || email}</p>

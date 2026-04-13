@@ -20,10 +20,10 @@ export default function GlobalError({
       </div>
       <div className="space-y-2 max-w-md">
         <h2 className="font-display text-xl font-bold text-foreground">
-          Qualcosa è andato storto
+          Something went wrong
         </h2>
         <p className="text-sm text-muted-foreground">
-          Si è verificato un errore imprevisto. Riprova o torna alla dashboard.
+          An unexpected error occurred. Please try again or go back to the dashboard.
         </p>
       </div>
       <div className="flex items-center gap-3">
@@ -31,13 +31,13 @@ export default function GlobalError({
           onClick={reset}
           className="px-4 py-2 rounded-[2px] border border-border text-sm text-foreground hover:bg-surface-2 transition-colors"
         >
-          Riprova
+          Try again
         </button>
         <a
           href="/dashboard"
           className="px-4 py-2 rounded-[2px] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/85 transition-colors"
         >
-          Torna alla dashboard
+          Back to dashboard
         </a>
       </div>
     </div>

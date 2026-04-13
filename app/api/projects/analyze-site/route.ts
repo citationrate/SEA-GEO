@@ -2,6 +2,67 @@ import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
+import dns from "dns/promises";
+
+/** SSRF protection: resolve hostname and block private/reserved IPs */
+async function validateUrlNotPrivate(urlString: string): Promise<void> {
+  const parsed = new URL(urlString);
+  const hostname = parsed.hostname;
+
+  // Block common metadata endpoints
+  if (hostname === "169.254.169.254" || hostname === "metadata.google.internal") {
+    throw new Error("Blocked: metadata endpoint");
+  }
+
+  // Resolve DNS
+  let addresses: string[];
+  try {
+    const result = await dns.resolve4(hostname);
+    addresses = result;
+  } catch {
+    // If DNS resolution fails, try resolve6
+    try {
+      const result6 = await dns.resolve6(hostname);
+      addresses = result6;
+    } catch {
+      // Cannot resolve — let the fetch fail naturally
+      return;
+    }
+  }
+
+  // Also try IPv6
+  try {
+    const result6 = await dns.resolve6(hostname);
+    addresses = [...addresses, ...result6];
+  } catch { /* no IPv6, that's fine */ }
+
+  for (const ip of addresses) {
+    if (isPrivateIP(ip)) {
+      throw new Error(`Blocked: private IP ${ip}`);
+    }
+  }
+}
+
+function isPrivateIP(ip: string): boolean {
+  // IPv6 loopback
+  if (ip === "::1" || ip === "0:0:0:0:0:0:0:1") return true;
+  // IPv6 private (fc00::/7)
+  if (/^f[cd]/i.test(ip)) return true;
+  // IPv6 link-local (fe80::/10)
+  if (/^fe[89ab]/i.test(ip)) return true;
+
+  // IPv4
+  const parts = ip.split(".").map(Number);
+  if (parts.length !== 4) return false;
+  const [a, b] = parts;
+  if (a === 127) return true;                          // 127.0.0.0/8
+  if (a === 10) return true;                           // 10.0.0.0/8
+  if (a === 172 && b >= 16 && b <= 31) return true;   // 172.16.0.0/12
+  if (a === 192 && b === 168) return true;             // 192.168.0.0/16
+  if (a === 169 && b === 254) return true;             // 169.254.0.0/16
+  if (a === 0) return true;                            // 0.0.0.0/8
+  return false;
+}
 
 const schema = z.object({
   url: z.string().min(1),
@@ -126,6 +187,14 @@ export async function POST(request: Request) {
     const language = parsed.data.language;
     let baseUrl = parsed.data.url.trim();
     if (!baseUrl.startsWith("http")) baseUrl = `https://${baseUrl}`;
+
+    // SSRF protection: block private/reserved IPs
+    try {
+      await validateUrlNotPrivate(baseUrl);
+    } catch (ssrfErr) {
+      console.error("[analyze-site] SSRF blocked:", ssrfErr instanceof Error ? ssrfErr.message : ssrfErr);
+      return NextResponse.json({ error: "URL non valido" }, { status: 400 });
+    }
 
     // Fetch homepage (direct fetch first, Jina Reader fallback for WAF-protected sites)
     let homepage = await fetchPageText(baseUrl);

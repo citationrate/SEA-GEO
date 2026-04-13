@@ -53,8 +53,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
+    // C8: Always return 200 to prevent PayPal retry storms. Log error server-side.
     console.error("[webhooks/paypal] error:", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return NextResponse.json({ received: true, error: "logged" });
   }
 }
 

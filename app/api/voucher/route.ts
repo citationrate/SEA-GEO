@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const svc = createServiceClient();
     const crSvc = createCitationRateServiceClient();
 
-    console.log("[voucher] Looking up code:", code.toUpperCase(), "user:", user.id);
+    console.log("[voucher] redeem attempt");
 
     // Look up voucher in DB
     const { data: voucher, error: vErr } = await (svc.from("vouchers") as any)
@@ -29,7 +29,6 @@ export async function POST(request: Request) {
       .eq("is_used", false)
       .single();
 
-    console.log("[voucher] lookup result:", JSON.stringify({ voucher: voucher?.id, type: voucher?.type, plan: voucher?.plan, error: vErr?.message }));
 
     if (vErr || !voucher) {
       return NextResponse.json({ error: "Codice voucher non valido o già utilizzato." }, { status: 400 });
@@ -107,7 +106,7 @@ export async function POST(request: Request) {
       ? messages.join(" + ") + "!"
       : "Voucher riscattato con successo!";
 
-    console.log("[voucher] Redeemed:", code, "by:", user.id, "→", message);
+    console.log("[voucher] redeemed successfully");
 
     return NextResponse.json({ message });
   } catch (err) {

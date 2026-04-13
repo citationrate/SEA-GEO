@@ -209,7 +209,19 @@ export async function POST(request: Request) {
     }
 
     const failures = log.filter((s) => !s.ok);
-    console.log(`[reset-demo] Completed for ${userId}:`, JSON.stringify(log));
+    console.log(`[reset-demo] Completed for ${userId}`);
+
+    // M5: Admin audit log
+    try {
+      await (svc.from("admin_audit_log") as any).insert({
+        admin_user_id: user.id,
+        action: "reset_demo",
+        target_user_id: userId,
+        details: { steps: log.length, failures: failures.length },
+      });
+    } catch (auditErr) {
+      console.error("[reset-demo] audit log insert failed:", auditErr);
+    }
 
     return NextResponse.json({ success: true, steps: log.length, failures: failures.length });
   } catch (err: any) {

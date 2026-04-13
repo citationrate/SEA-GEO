@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /**
@@ -18,16 +19,19 @@ import { createServiceClient } from "@/lib/supabase/service";
  *   { user_id, plan, billing_period_start? }
  */
 export async function POST(request: Request) {
-  // Verify webhook secret
+  // Verify webhook secret (timing-safe comparison)
   const secret = request.headers.get("x-webhook-secret");
-  if (secret !== process.env.WEBHOOK_SECRET) {
+  const expected = Buffer.from(process.env.WEBHOOK_SECRET || "");
+  const received = Buffer.from(secret || "");
+  if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
     console.error("[sync-plan] Unauthorized — secret mismatch");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const body = await request.json();
-    console.log("[sync-plan] payload:", JSON.stringify(body).slice(0, 500));
+    // Log type only, not full payload (may contain user data)
+    console.log("[sync-plan] event type:", body.type ?? "direct-call");
 
     // Support both Supabase webhook format and direct call format
     let userId: string;
@@ -88,7 +92,8 @@ export async function POST(request: Request) {
     console.log("[sync-plan] updated:", userId, "→", normalizedPlan, "(usage reset is owned by Stripe suite webhook)");
     return NextResponse.json({ ok: true, user_id: userId, plan: normalizedPlan });
   } catch (err) {
+    // C8: Always return 200 to prevent retry storms. Log error server-side.
     console.error("[sync-plan] error:", err instanceof Error ? err.message : err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return NextResponse.json({ received: true, error: "logged" });
   }
 }

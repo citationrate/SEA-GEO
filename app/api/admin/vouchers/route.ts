@@ -6,13 +6,13 @@ import { z } from "zod";
 // Check if user is admin
 async function requireAdmin() {
   const { supabase, user, error } = await requireAuth();
-  if (error) return { error };
+  if (error) return { error, user: null };
   const { data: profile } = await (supabase.from("profiles") as any)
     .select("is_admin")
     .eq("id", user.id)
     .single();
   const isAdmin = profile?.is_admin === true;
-  if (!isAdmin) return { error: NextResponse.json({ error: "Non autorizzato" }, { status: 403 }) };
+  if (!isAdmin) return { error: NextResponse.json({ error: "Non autorizzato" }, { status: 403 }), user: null };
   return { user, error: null };
 }
 
@@ -44,7 +44,7 @@ const createSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const { error } = await requireAdmin();
+  const { error, user } = await requireAdmin();
   if (error) return error;
 
   try {
@@ -87,6 +87,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: insertErr.message }, { status: 500 });
     }
 
+    // M5: Admin audit log
+    try {
+      await (svc.from("admin_audit_log") as any).insert({
+        admin_user_id: user!.id,
+        action: "create_voucher",
+        target_user_id: null,
+        details: { code: data.code.toUpperCase(), type: data.type, plan: data.plan },
+      });
+    } catch (auditErr) {
+      console.error("[vouchers] audit log insert failed:", auditErr);
+    }
+
     return NextResponse.json({ voucher });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? "Errore interno" }, { status: 500 });
@@ -95,7 +107,7 @@ export async function POST(request: Request) {
 
 // DELETE — delete a voucher
 export async function DELETE(request: Request) {
-  const { error } = await requireAdmin();
+  const { error, user } = await requireAdmin();
   if (error) return error;
 
   const { searchParams } = new URL(request.url);
@@ -104,6 +116,18 @@ export async function DELETE(request: Request) {
 
   const svc = createServiceClient();
   await (svc.from("vouchers") as any).delete().eq("id", id);
+
+  // M5: Admin audit log
+  try {
+    await (svc.from("admin_audit_log") as any).insert({
+      admin_user_id: user!.id,
+      action: "delete_voucher",
+      target_user_id: null,
+      details: { voucher_id: id },
+    });
+  } catch (auditErr) {
+    console.error("[vouchers] audit log insert failed:", auditErr);
+  }
 
   return NextResponse.json({ ok: true });
 }

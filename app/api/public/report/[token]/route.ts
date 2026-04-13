@@ -1,10 +1,17 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(
   _req: Request,
   { params }: { params: { token: string } },
 ) {
+  // M1: Rate limit — 10 requests per IP per minute
+  const ip = _req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (!checkRateLimit(`public-report:${ip}`, 10, 60_000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const supabase = createServiceClient();
 
   // Find run by share token

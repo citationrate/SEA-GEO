@@ -9,6 +9,14 @@ export async function GET(request: NextRequest) {
     const runId = request.nextUrl.searchParams.get("run_id");
     if (!runId) return NextResponse.json({ error: "run_id richiesto" }, { status: 400 });
 
+    // Ownership check: verify the run belongs to a project owned by the authenticated user
+    const { data: runCheck, error: ownerErr } = await (supabase.from("analysis_runs") as any)
+      .select("id, projects!inner(user_id)")
+      .eq("id", runId)
+      .eq("projects.user_id", user.id)
+      .single();
+    if (ownerErr || !runCheck) return NextResponse.json({ error: "Run non trovata" }, { status: 404 });
+
     // Fetch prompts executed for this run
     const { data: prompts, error: pErr } = await (supabase.from("prompts_executed") as any)
       .select("id, query_id, model, run_number, raw_response, executed_at, error")

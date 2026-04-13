@@ -27,6 +27,7 @@ export default async function SettingsPage() {
         fullName={p.full_name ?? ""}
         plan={p.plan ?? "demo"}
         notifyAnalysisComplete={p.notify_analysis_complete ?? true}
+        avatarUrl={p.avatar_url ?? null}
       />
     </div>
   );

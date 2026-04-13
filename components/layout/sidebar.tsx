@@ -19,7 +19,7 @@ import { useHasUnreadNews } from "@/components/ai-news-panel";
 const PRO_ROUTES = new Set(["/compare", "/datasets"]);
 
 interface SidebarProps {
-  profile: { full_name?: string | null; email?: string; plan?: string } | null;
+  profile: { full_name?: string | null; email?: string; plan?: string; avatar_url?: string | null } | null;
 }
 
 export function Sidebar({ profile }: SidebarProps) {
@@ -114,8 +114,9 @@ export function Sidebar({ profile }: SidebarProps) {
             collapsed && !mobileOpen && "mx-auto mt-0",
           )}
           title={mobileOpen ? "Chiudi" : collapsed ? t("sidebar.expandMenu") : t("sidebar.collapseMenu")}
+          aria-label={mobileOpen ? "Close menu" : collapsed ? t("sidebar.expandMenu") : t("sidebar.collapseMenu")}
         >
-          {mobileOpen ? <X className="w-4 h-4" /> : collapsed ? <PanelLeftOpen className="w-3.5 h-3.5" /> : <PanelLeftClose className="w-3.5 h-3.5" />}
+          {mobileOpen ? <X className="w-4 h-4" aria-hidden="true" /> : collapsed ? <PanelLeftOpen className="w-3.5 h-3.5" aria-hidden="true" /> : <PanelLeftClose className="w-3.5 h-3.5" aria-hidden="true" />}
         </button>
       </div>
 
@@ -168,6 +169,7 @@ export function Sidebar({ profile }: SidebarProps) {
                             locked ? "text-muted-foreground/40" : isActive(item.href) ? "text-primary" : (!hasPlanColor && !isHighlight) ? "text-muted-foreground" : undefined
                           )}
                           style={hasPlanColor || isHighlight ? { color: item.planColor } : undefined}
+                          aria-hidden="true"
                         />
                         {item.href === "/notizie" && hasUnread && collapsed && !mobileOpen && (
                           <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#D97706]" />
@@ -213,8 +215,9 @@ export function Sidebar({ profile }: SidebarProps) {
             onClick={() => setBannerDismissed(true)}
             className="absolute top-1.5 right-1.5 w-4 h-4 flex items-center justify-center rounded-sm hover:bg-black/10 transition-colors"
             style={{ color: "#555" }}
+            aria-label="Dismiss banner"
           >
-            <X className="w-3 h-3" />
+            <X className="w-3 h-3" aria-hidden="true" />
           </button>
           <p className="text-[11px] font-medium leading-snug pr-4" style={{ color: "#333" }}>
             {t("sidebar.demoBanner")}
@@ -244,7 +247,7 @@ export function Sidebar({ profile }: SidebarProps) {
           onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--c-sage)"; }}
           title={collapsed && !mobileOpen ? t("sidebar.switchTool") : undefined}
         >
-          <ExternalLink className="w-4 h-4 shrink-0" />
+          <ExternalLink className="w-4 h-4 shrink-0" aria-hidden="true" />
           {(!collapsed || mobileOpen) && <span className="text-xs font-semibold">{t("sidebar.switchTool")}</span>}
         </a>
       </div>
@@ -261,9 +264,17 @@ export function Sidebar({ profile }: SidebarProps) {
             className="flex items-center gap-2.5 min-w-0 flex-1 rounded-[2px] hover:opacity-80 transition-opacity"
             title={collapsed && !mobileOpen ? (profile?.full_name ?? profile?.email ?? t("sidebar.user")) : undefined}
           >
-            <div className="w-6 h-6 rounded-[2px] flex items-center justify-center flex-shrink-0 text-primary font-mono text-xs" style={{ background: "var(--primary-glow)" }}>
-              {(profile?.full_name?.[0] ?? profile?.email?.[0] ?? "U").toUpperCase()}
-            </div>
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt=""
+                className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-6 h-6 rounded-[2px] flex items-center justify-center flex-shrink-0 text-primary font-mono text-xs" style={{ background: "var(--primary-glow)" }}>
+                {(profile?.full_name?.[0] ?? profile?.email?.[0] ?? "U").toUpperCase()}
+              </div>
+            )}
             {(!collapsed || mobileOpen) && (
               <div className="min-w-0">
                 <p className="text-xs font-medium text-foreground truncate leading-tight font-sans">
@@ -290,7 +301,7 @@ export function Sidebar({ profile }: SidebarProps) {
               className="flex-shrink-0 p-1 rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors disabled:opacity-50"
               title={t("sidebar.logout")}
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           )}
         </div>

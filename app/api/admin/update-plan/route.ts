@@ -60,6 +60,18 @@ export async function POST(request: Request) {
       { onConflict: "user_id" },
     );
 
+    // M5: Admin audit log
+    try {
+      await (sgSvc.from("admin_audit_log") as any).insert({
+        admin_user_id: user.id,
+        action: "update_plan",
+        target_user_id: parsed.data.user_id,
+        details: { new_plan: parsed.data.plan },
+      });
+    } catch (auditErr) {
+      console.error("[update-plan] audit log insert failed:", auditErr);
+    }
+
     return NextResponse.json({ ok: true, plan: parsed.data.plan, usage_reset: true });
   } catch {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

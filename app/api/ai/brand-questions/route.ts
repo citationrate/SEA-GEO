@@ -26,10 +26,8 @@ export async function POST(request: Request) {
   const langName: Record<string, string> = { it: "Italian", en: "English", fr: "French", de: "German", es: "Spanish" };
   const outputLang = langName[lang] ?? "English";
 
-  console.log("[BRAND-QUESTIONS] ANTHROPIC_API_KEY set:", !!process.env.ANTHROPIC_API_KEY);
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    console.log("[BRAND-QUESTIONS] Calling Haiku with context:", context);
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 300,

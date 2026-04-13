@@ -646,6 +646,7 @@ async function executePrompt(
 export const runAnalysis = inngest.createFunction(
   {
     id: "run-analysis",
+    concurrency: { limit: 500 },
     retries: 3,
     onFailure: async ({ event: failEvent }) => {
       // Last-resort handler: if all retries exhausted, mark run as failed

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-helpers";
 import { createSubscriptionCheckout, createOneTimeCheckout, isPackagePrice } from "@/lib/stripe/client";
 import { z } from "zod";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   priceId: z.string().min(1),
@@ -13,6 +14,11 @@ export async function POST(request: Request) {
   try {
     const { supabase, user, error } = await requireAuth();
     if (error) return error;
+
+    // M3: Rate limit — 3 checkout sessions per user per minute
+    if (!checkRateLimit(`checkout:${user!.id}`, 3, 60_000)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
 
     const body = await request.json();
     const parsed = schema.safeParse(body);
@@ -35,8 +41,7 @@ export async function POST(request: Request) {
       .single();
     const stripeCustomerId = profile?.stripe_customer_id || undefined;
 
-    console.log("[create-checkout] resolved priceId:", priceId, "mode:", mode, "rawPriceId:", rawPriceId);
-    console.log("[create-checkout] Stripe key prefix:", process.env.STRIPE_SECRET_KEY?.substring(0, 12));
+    console.log("[create-checkout] mode:", mode);
 
     let session;
     if (mode === "subscription") {
@@ -50,10 +55,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (err: any) {
-    console.error("[create-checkout] Stripe key prefix:", process.env.STRIPE_SECRET_KEY?.substring(0, 12));
-    console.error("[create-checkout] error message:", err instanceof Error ? err.message : String(err));
-    console.error("[create-checkout] error type:", err?.type, "code:", err?.code, "statusCode:", err?.statusCode);
-    console.error("[create-checkout] full error:", JSON.stringify(err, null, 2));
+    console.error("[create-checkout] error:", err instanceof Error ? err.message : String(err));
     return NextResponse.json({ error: err.message || "Internal error" }, { status: 500 });
   }
 }

@@ -23,8 +23,7 @@ export async function POST(request: Request) {
     if (error) return error;
 
     const body = await request.json();
-    console.log("[QUERY-GEN] Request received:", JSON.stringify(body).slice(0, 500));
-    console.log("[QUERY-GEN] ANTHROPIC_API_KEY set:", !!process.env.ANTHROPIC_API_KEY);
+    // Removed: was logging user request body and API key status
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       console.log("[QUERY-GEN] Validation failed:", parsed.error.message);
@@ -276,6 +275,20 @@ function buildSiteAnalysisBlock(siteAnalysis: any): string {
   return parts.length > 1 ? parts.join("\n") + "\n\nUsa queste informazioni per generare query più precise e contestualizzate al settore del brand.\n" : "";
 }
 
+/** Sanitize user-provided input to prevent prompt injection */
+function sanitizeInput(value: string): string {
+  return value
+    .replace(/[\x00-\x1f\x7f]/g, " ")  // strip control characters
+    .replace(/\n/g, " ")                 // replace newlines with spaces
+    .trim()
+    .slice(0, 500);                      // cap length
+}
+
+/** Sanitize an array of user-provided strings */
+function sanitizeArray(arr: string[]): string[] {
+  return arr.map(sanitizeInput).filter(Boolean);
+}
+
 function buildSystemPrompt(
   project: any,
   existingTexts: string[],
@@ -300,17 +313,17 @@ function buildSystemPrompt(
     ? `\n--- CONTENUTO SITO WEB (${project.website_url}) ---\n${websiteContext}\n--- FINE CONTENUTO SITO ---\n\nUsa le informazioni estratte dal sito per capire cosa offre il brand, i suoi prodotti/servizi, il tono di comunicazione, e i punti di forza. Genera query che riflettano i temi reali del brand.\n`
     : "";
 
-  // Build user-provided context block
+  // Build user-provided context block (sanitize all user inputs to prevent prompt injection)
   const userContextParts: string[] = [];
-  if (userInputs?.categoria) userContextParts.push(`- Categoria prodotto/servizio: ${userInputs.categoria}`);
-  if (userInputs?.mercato) userContextParts.push(`- Mercato di riferimento: ${userInputs.mercato}`);
-  if (userInputs?.luogo) userContextParts.push(`- Localizzazione: ${userInputs.luogo}`);
-  if (userInputs?.punti_di_forza?.length) userContextParts.push(`- Punti di forza del brand: ${userInputs.punti_di_forza.join(", ")}`);
-  if (userInputs?.obiezioni?.length) userContextParts.push(`- Obiezioni comuni dei clienti: ${userInputs.obiezioni.join(", ")}`);
+  if (userInputs?.categoria) userContextParts.push(`- Categoria prodotto/servizio: ${sanitizeInput(userInputs.categoria)}`);
+  if (userInputs?.mercato) userContextParts.push(`- Mercato di riferimento: ${sanitizeInput(userInputs.mercato)}`);
+  if (userInputs?.luogo) userContextParts.push(`- Localizzazione: ${sanitizeInput(userInputs.luogo)}`);
+  if (userInputs?.punti_di_forza?.length) userContextParts.push(`- Punti di forza del brand: ${sanitizeArray(userInputs.punti_di_forza).join(", ")}`);
+  if (userInputs?.obiezioni?.length) userContextParts.push(`- Obiezioni comuni dei clienti: ${sanitizeArray(userInputs.obiezioni).join(", ")}`);
   if (userInputs?.personas?.length) {
     const personaDescs = userInputs.personas
       .filter((p: any) => p.name)
-      .map((p: any) => `  - ${p.name}: ${p.prompt_context || JSON.stringify(p.attributes ?? {}).slice(0, 100)}`)
+      .map((p: any) => `  - ${sanitizeInput(p.name)}: ${sanitizeInput(p.prompt_context || JSON.stringify(p.attributes ?? {}).slice(0, 100))}`)
       .join("\n");
     if (personaDescs) userContextParts.push(`- Personas target:\n${personaDescs}`);
   }
