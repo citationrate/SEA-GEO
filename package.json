@@ -19,7 +19,7 @@
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
-    "date-fns": "^3.6.0",
+    "date-fns": "^4.1.0",
     "inngest": "^3.52.6",
     "lucide-react": "^0.400.0",
     "nanoid": "^5.1.6",
