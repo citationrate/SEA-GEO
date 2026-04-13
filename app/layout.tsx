@@ -12,6 +12,11 @@ const CursorFollower = dynamic(
   { ssr: false },
 );
 
+const CookieBanner = dynamic(
+  () => import("@/components/cookie-banner"),
+  { ssr: false },
+);
+
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
   variable: "--font-display",
@@ -59,6 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <ConsultationModal />
         <CursorFollower />
+        <CookieBanner />
         </ConsultationProvider>
         <Toaster
           position="bottom-right"

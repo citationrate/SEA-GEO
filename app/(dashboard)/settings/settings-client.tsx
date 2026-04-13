@@ -2,13 +2,14 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Ticket, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Send, Smartphone } from "lucide-react";
+import { User, Ticket, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Send, Smartphone, Shield, Download } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { RestartTourButton } from "./restart-tour-button";
 import { TwoFactorModal } from "@/components/two-factor-modal";
 import { createClient as createAuthClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
-type SettingsTab = "account" | "voucher" | "supporto";
+type SettingsTab = "account" | "voucher" | "supporto" | "privacy";
 
 interface SettingsClientProps {
   userId: string;
@@ -52,6 +53,13 @@ export function SettingsClient({
   const [sendingSupport, setSendingSupport] = useState(false);
 
   const [loggingOut, setLoggingOut] = useState(false);
+
+  // Privacy tab state
+  const [consent, setConsent] = useState<Record<string, unknown> | null>(null);
+  const [cookieAnalytics, setCookieAnalytics] = useState(false);
+  const [cookieMarketing, setCookieMarketing] = useState(false);
+  const [savingCookies, setSavingCookies] = useState(false);
+  const [exportingData, setExportingData] = useState(false);
 
   // 2FA (TOTP via Supabase Auth)
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
@@ -119,7 +127,7 @@ export function SettingsClient({
   useEffect(() => {
     const readHash = () => {
       const hash = window.location.hash.replace("#", "") as SettingsTab;
-      if (["account", "voucher", "supporto"].includes(hash)) setActiveTab(hash);
+      if (["account", "voucher", "supporto", "privacy"].includes(hash)) setActiveTab(hash);
     };
     readHash();
     window.addEventListener("hashchange", readHash);
@@ -194,6 +202,7 @@ export function SettingsClient({
           { key: "account" as SettingsTab, label: "Account" },
           { key: "voucher" as SettingsTab, label: "Voucher" },
           { key: "supporto" as SettingsTab, label: t("settings.supportTab") || "Supporto" },
+          { key: "privacy" as SettingsTab, label: t("settings.privacyTab") || "Privacy" },
         ]).map((tab) => (
           <button
             key={tab.key}
@@ -464,6 +473,22 @@ export function SettingsClient({
         </div>
       )}
 
+      {/* ═══ PRIVACY ═══ */}
+      {activeTab === "privacy" && (
+        <PrivacyTab
+          consent={consent}
+          setConsent={setConsent}
+          cookieAnalytics={cookieAnalytics}
+          setCookieAnalytics={setCookieAnalytics}
+          cookieMarketing={cookieMarketing}
+          setCookieMarketing={setCookieMarketing}
+          savingCookies={savingCookies}
+          setSavingCookies={setSavingCookies}
+          exportingData={exportingData}
+          setExportingData={setExportingData}
+        />
+      )}
+
       <TwoFactorModal
         open={twoFAModalOpen}
         onClose={() => setTwoFAModalOpen(false)}
@@ -473,5 +498,219 @@ export function SettingsClient({
         }}
       />
     </>
+  );
+}
+
+/* ─── helpers for CitationRate backend calls ─── */
+
+const CR_BACKEND =
+  process.env.NEXT_PUBLIC_CR_BACKEND_URL ||
+  (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://citationrate-backend-production.up.railway.app");
+
+async function crFetch(path: string, token: string, options: RequestInit = {}) {
+  const res = await fetch(`${CR_BACKEND}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Network error" }));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+/* ─── Privacy Tab component ─── */
+
+const LEGAL_BASE = "https://suite.citationrate.com/legal/avi";
+
+function PrivacyTab({
+  consent, setConsent,
+  cookieAnalytics, setCookieAnalytics,
+  cookieMarketing, setCookieMarketing,
+  savingCookies, setSavingCookies,
+  exportingData, setExportingData,
+}: {
+  consent: Record<string, unknown> | null;
+  setConsent: (c: Record<string, unknown> | null) => void;
+  cookieAnalytics: boolean; setCookieAnalytics: (v: boolean) => void;
+  cookieMarketing: boolean; setCookieMarketing: (v: boolean) => void;
+  savingCookies: boolean; setSavingCookies: (v: boolean) => void;
+  exportingData: boolean; setExportingData: (v: boolean) => void;
+}) {
+  const { t, locale } = useTranslation();
+  const dateLocale = locale === "en" ? "en-GB" : locale === "es" ? "es-ES" : locale === "fr" ? "fr-FR" : locale === "de" ? "de-DE" : "it-IT";
+
+  // Load consent on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const sb = createAuthClient();
+        const { data: { session } } = await sb.auth.getSession();
+        if (!session || cancelled) return;
+        const data = await crFetch("/consent", session.access_token);
+        if (cancelled) return;
+        setConsent(data);
+        const prefs = (data?.cookie_preferences as { analytics?: boolean; marketing?: boolean }) || {};
+        setCookieAnalytics(!!prefs.analytics);
+        setCookieMarketing(!!prefs.marketing);
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const saveCookiePrefs = async () => {
+    setSavingCookies(true);
+    try {
+      const sb = createAuthClient();
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return;
+      await crFetch("/consent/cookies", session.access_token, {
+        method: "PUT",
+        body: JSON.stringify({ analytics: cookieAnalytics, marketing: cookieMarketing }),
+      });
+      const prefs = { necessary: true, analytics: cookieAnalytics, marketing: cookieMarketing };
+      localStorage.setItem("cookie_consent", JSON.stringify(prefs));
+      toast.success(t("settingsPrivacy.cookiePrefsSaved"));
+    } catch {
+      toast.error(t("common.error"));
+    } finally {
+      setSavingCookies(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setExportingData(true);
+    try {
+      const sb = createAuthClient();
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return;
+      const data = await crFetch("/me/export", session.access_token);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `avi_data_export_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(t("settingsPrivacy.exportSuccess"));
+    } catch {
+      toast.error(t("settingsPrivacy.exportError"));
+    } finally {
+      setExportingData(false);
+    }
+  };
+
+  const fmtDate = (d: unknown) =>
+    d ? new Date(d as string).toLocaleDateString(dateLocale, { day: "numeric", month: "long", year: "numeric" }) : null;
+
+  return (
+    <div className="space-y-4 animate-fade-in">
+      {/* Cookie Preferences */}
+      <div className="card p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Shield className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-semibold text-foreground">{t("settingsPrivacy.cookiePrefs")}</h2>
+        </div>
+        <div className="space-y-3">
+          <label className="flex items-center justify-between">
+            <div>
+              <span className="text-sm text-foreground">{t("cookie.necessary")}</span>
+              <p className="text-xs text-muted-foreground">{t("cookie.necessaryDesc")}</p>
+            </div>
+            <input type="checkbox" checked disabled className="accent-primary" />
+          </label>
+          <label className="flex items-center justify-between cursor-pointer">
+            <div>
+              <span className="text-sm text-foreground">{t("cookie.analytics")}</span>
+              <p className="text-xs text-muted-foreground">{t("cookie.analyticsDesc")}</p>
+            </div>
+            <input type="checkbox" checked={cookieAnalytics} onChange={e => setCookieAnalytics(e.target.checked)} className="accent-primary" />
+          </label>
+          <label className="flex items-center justify-between cursor-pointer">
+            <div>
+              <span className="text-sm text-foreground">{t("cookie.marketing")}</span>
+              <p className="text-xs text-muted-foreground">{t("cookie.marketingDesc")}</p>
+            </div>
+            <input type="checkbox" checked={cookieMarketing} onChange={e => setCookieMarketing(e.target.checked)} className="accent-primary" />
+          </label>
+          <button
+            onClick={saveCookiePrefs}
+            disabled={savingCookies}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center gap-1.5 mt-2"
+          >
+            {savingCookies ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+            {savingCookies ? "..." : t("cookie.save")}
+          </button>
+        </div>
+      </div>
+
+      {/* Legal Documents */}
+      <div className="card p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Shield className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-semibold text-foreground">{t("settingsPrivacy.legalDocs")}</h2>
+        </div>
+        <div className="space-y-2">
+          {[
+            { href: `${LEGAL_BASE}/privacy`, label: t("legal.privacy") },
+            { href: `${LEGAL_BASE}/terms`, label: t("legal.terms") },
+            { href: `${LEGAL_BASE}/cookies`, label: t("legal.cookies") },
+          ].map(l => (
+            <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer" className="block text-sm text-primary hover:underline transition-colors">
+              {l.label} →
+            </a>
+          ))}
+        </div>
+      </div>
+
+      {/* Consent History */}
+      <div className="card p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Shield className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-semibold text-foreground">{t("settingsPrivacy.consentHistory")}</h2>
+        </div>
+        {consent ? (
+          <div className="space-y-2">
+            {[
+              { label: t("settingsPrivacy.tosAccepted"), date: consent.tos_accepted_at },
+              { label: t("settingsPrivacy.privacyAccepted"), date: consent.privacy_accepted_at },
+              { label: t("settingsPrivacy.cookieAccepted"), date: consent.cookie_consent_at },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <span className="font-mono text-xs text-muted-foreground uppercase tracking-wide">{item.label}</span>
+                <span className="text-xs" style={{ color: item.date ? "var(--foreground)" : "var(--muted-foreground)" }}>
+                  {fmtDate(item.date) || t("settingsPrivacy.notAccepted")}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">...</p>
+        )}
+      </div>
+
+      {/* Data Export */}
+      <div className="card p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Download className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-semibold text-foreground">{t("settingsPrivacy.exportData")}</h2>
+        </div>
+        <p className="text-xs text-muted-foreground">{t("settingsPrivacy.exportDesc")}</p>
+        <button
+          onClick={handleExport}
+          disabled={exportingData}
+          className="px-4 py-2 border border-primary/40 text-primary rounded-[2px] text-sm font-medium hover:bg-primary/10 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+        >
+          {exportingData ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+          {exportingData ? t("settingsPrivacy.exporting") : t("settingsPrivacy.download")}
+        </button>
+      </div>
+    </div>
   );
 }

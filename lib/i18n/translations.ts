@@ -262,6 +262,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       supportError: "Errore nell'invio. Riprova.",
       security: "Sicurezza",
       support: "Supporto",
+      privacyTab: "Privacy",
 },
     projects: {
       title: "Progetti", subtitle: "Gestisci i tuoi brand",
@@ -990,6 +991,8 @@ export const translations: Record<Locale, Record<string, any>> = {
       tosAccepted: "Termini di Servizio accettati il", privacyAccepted: "Privacy Policy accettata il",
       saleAccepted: "Condizioni di Vendita accettate il", cookieAccepted: "Preferenze cookie aggiornate il",
       notAccepted: "Non ancora accettato",
+      exportData: "Esporta i tuoi dati", exportDesc: "Scarica tutti i tuoi dati in formato JSON (GDPR Art. 20)",
+      download: "Scarica", exporting: "Esportazione...", exportSuccess: "Dati esportati con successo", exportError: "Errore nell'esportazione",
     },
 
   },
@@ -1256,6 +1259,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       supportError: "Error sending. Try again.",
       security: "Security",
       support: "Support",
+      privacyTab: "Privacy",
 },
     projects: {
       title: "Projects", subtitle: "Manage your brands",
@@ -1982,6 +1986,8 @@ export const translations: Record<Locale, Record<string, any>> = {
       tosAccepted: "Terms of Service accepted on", privacyAccepted: "Privacy Policy accepted on",
       saleAccepted: "Terms of Sale accepted on", cookieAccepted: "Cookie preferences updated on",
       notAccepted: "Not yet accepted",
+      exportData: "Export Your Data", exportDesc: "Download all your data as JSON (GDPR Art. 20)",
+      download: "Download", exporting: "Exporting...", exportSuccess: "Data exported successfully", exportError: "Error exporting data",
     },
 
   },
@@ -2248,6 +2254,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       supportError: "Erreur d'envoi. Réessayez.",
       security: "Sécurité",
       support: "Support",
+      privacyTab: "Confidentialité",
 },
     projects: {
       title: "Projets", subtitle: "Gérez vos marques",
@@ -2873,6 +2880,8 @@ export const translations: Record<Locale, Record<string, any>> = {
       tosAccepted: "Conditions d'Utilisation acceptées le", privacyAccepted: "Politique de Confidentialité acceptée le",
       saleAccepted: "Conditions de Vente acceptées le", cookieAccepted: "Préférences de cookies mises à jour le",
       notAccepted: "Pas encore accepté",
+      exportData: "Exporter vos données", exportDesc: "Téléchargez toutes vos données au format JSON (RGPD Art. 20)",
+      download: "Télécharger", exporting: "Exportation...", exportSuccess: "Données exportées avec succès", exportError: "Erreur lors de l'exportation",
     },
 
   },
@@ -3139,6 +3148,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       supportError: "Fehler beim Senden. Versuchen Sie es erneut.",
       security: "Sicherheit",
       support: "Support",
+      privacyTab: "Datenschutz",
 },
     projects: {
       title: "Projekte", subtitle: "Verwalten Sie Ihre Marken",
@@ -3759,6 +3769,8 @@ export const translations: Record<Locale, Record<string, any>> = {
       tosAccepted: "Nutzungsbedingungen akzeptiert am", privacyAccepted: "Datenschutzerklärung akzeptiert am",
       saleAccepted: "Verkaufsbedingungen akzeptiert am", cookieAccepted: "Cookie-Einstellungen aktualisiert am",
       notAccepted: "Noch nicht akzeptiert",
+      exportData: "Ihre Daten exportieren", exportDesc: "Laden Sie alle Ihre Daten als JSON herunter (DSGVO Art. 20)",
+      download: "Herunterladen", exporting: "Exportiere...", exportSuccess: "Daten erfolgreich exportiert", exportError: "Fehler beim Exportieren",
     },
 
   },
@@ -4025,6 +4037,7 @@ export const translations: Record<Locale, Record<string, any>> = {
       supportError: "Error al enviar. Inténtalo de nuevo.",
       security: "Seguridad",
       support: "Soporte",
+      privacyTab: "Privacidad",
 },
     projects: {
       title: "Proyectos", subtitle: "Gestiona tus marcas",
@@ -4645,6 +4658,8 @@ export const translations: Record<Locale, Record<string, any>> = {
       tosAccepted: "Términos de Servicio aceptados el", privacyAccepted: "Política de Privacidad aceptada el",
       saleAccepted: "Condiciones de Venta aceptadas el", cookieAccepted: "Preferencias de cookies actualizadas el",
       notAccepted: "Aún no aceptado",
+      exportData: "Exportar tus datos", exportDesc: "Descarga todos tus datos en formato JSON (RGPD Art. 20)",
+      download: "Descargar", exporting: "Exportando...", exportSuccess: "Datos exportados con éxito", exportError: "Error al exportar",
     },
 
   },
