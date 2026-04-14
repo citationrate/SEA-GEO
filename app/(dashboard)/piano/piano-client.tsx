@@ -388,7 +388,7 @@ export function PianoClient({
                 );
 
                 return (
-                  <div className="min-w-[880px]">
+                  <div className="min-w-[880px]" style={{ paddingTop: 14 }}>
                     {/* Header row */}
                     <div className="grid" style={{ gridTemplateColumns: ROW_GRID }}>
                       <div className="p-4" />
