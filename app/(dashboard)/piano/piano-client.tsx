@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
+import { useConsultation } from "@/lib/consultation-context";
 import ScrollToAcceptModal from "@/components/scroll-to-accept-modal";
 import SaleTermsText from "@/components/sale-terms-text";
 
@@ -36,35 +37,42 @@ const PLAN_META: Record<string, { label: string; color: string }> = {
   demo: { label: "Demo", color: "var(--muted-foreground)" },
   base: { label: "Base", color: "#60a5fa" },
   pro:  { label: "Pro", color: "#c4a882" },
+  enterprise: { label: "Enterprise", color: "#a78bfa" },
 };
 
-function getAviFeatures(t: (k: string) => string) {
+type FeatureValue = boolean | string;
+interface PlanFeature {
+  label: string;
+  demo: FeatureValue;
+  base: FeatureValue;
+  pro: FeatureValue;
+  enterprise: FeatureValue;
+}
+
+function getAviFeatures(t: (k: string) => string): PlanFeature[] {
   return [
-    { label: t("piano.promptsMonth"),           demo: "40",              base: "100",            pro: "300" },
-    { label: t("piano.realtimeBrowsing"),       demo: false,             base: `30 ${t("piano.prompt")}`, pro: `90 ${t("piano.prompt")}` },
-    { label: t("piano.aiModels"),               demo: `2 ${t("piano.fixed")}`, base: `6 ${t("piano.selectable")}`, pro: t("piano.allPlusPro") },
-    { label: t("piano.maxModelsProject"),       demo: "2",               base: "3",              pro: "5" },
-    { label: t("piano.aiQueryGen"),             demo: true,              base: true,             pro: true },
-    { label: t("piano.competitiveComparisons"), demo: false,             base: false,            pro: `10${t("piano.perMonth")}` },
-    { label: t("piano.urlAnalyses"),            demo: false,             base: false,            pro: `50${t("piano.perMonth")}` },
-    { label: t("piano.aiContextAnalyses"),      demo: false,             base: false,            pro: `5${t("piano.perMonth")}` },
+    { label: t("piano.promptsMonth"),           demo: "40",                          base: "100",                       pro: "300",                        enterprise: t("piano.unlimited") },
+    { label: t("piano.realtimeBrowsing"),       demo: false,                         base: `30 ${t("piano.prompt")}`,   pro: `90 ${t("piano.prompt")}`,    enterprise: t("piano.unlimitedM") },
+    { label: t("piano.aiModels"),               demo: `2 ${t("piano.fixed")}`,       base: `6 ${t("piano.selectable")}`, pro: t("piano.allPlusPro"),       enterprise: t("piano.allPlusPro") },
+    { label: t("piano.maxModelsProject"),       demo: "2",                           base: "3",                         pro: "5",                          enterprise: "10" },
+    { label: t("piano.aiQueryGen"),             demo: true,                          base: true,                        pro: true,                         enterprise: true },
+    { label: t("piano.competitiveComparisons"), demo: false,                         base: false,                       pro: `10${t("piano.perMonth")}`,   enterprise: t("piano.unlimited") },
+    { label: t("piano.urlAnalyses"),            demo: false,                         base: false,                       pro: `50${t("piano.perMonth")}`,   enterprise: t("piano.unlimitedFem") },
+    { label: t("piano.aiContextAnalyses"),      demo: false,                         base: false,                       pro: `5${t("piano.perMonth")}`,    enterprise: `20${t("piano.perMonth")}` },
   ];
 }
 
-/**
- * Citability Score features (shared subscription).
- * Demo: 1 audit, 1 URL, only general score + per-AI score (7 AI)
- * Base: 10 audit/month, max 3 URL/audit, 10 insights to improve the score
- * Pro:  50 audit/month, max 5 URL/audit, all insights + AI-specific insights
- */
-function getCsFeatures(t: (k: string) => string) {
+function getCsFeatures(t: (k: string) => string): PlanFeature[] {
   return [
-    { label: t("piano.csAudits"),       demo: `1`,                       base: `10${t("piano.perMonth")}`, pro: `50${t("piano.perMonth")}` },
-    { label: t("piano.csMaxUrls"),      demo: `1`,                       base: `3`,                        pro: `5` },
-    { label: t("piano.csScoreOverall"), demo: true,                      base: true,                       pro: true },
-    { label: t("piano.csScorePerAi"),   demo: t("piano.csScorePerAi7"),  base: true,                       pro: true },
-    { label: t("piano.csInsights"),     demo: false,                     base: `10`,                       pro: t("piano.csInsightsAll") },
-    { label: t("piano.csInsightsPerAi"),demo: false,                     base: false,                      pro: true },
+    { label: t("piano.csAudits"),             demo: "1",                             base: `10${t("piano.perMonth")}`,  pro: `50${t("piano.perMonth")}`,   enterprise: t("piano.unlimited") },
+    { label: t("piano.csMaxUrls"),            demo: "1",                             base: "3",                         pro: "5",                          enterprise: t("piano.unlimited") },
+    { label: t("piano.csScorePerAi"),         demo: t("piano.csScorePerAi7"),        base: true,                        pro: true,                         enterprise: true },
+    { label: t("piano.csInsights"),           demo: false,                           base: "10",                        pro: t("piano.csInsightsAll"),     enterprise: t("piano.csInsightsAll") },
+    { label: t("piano.csInsightsPerAi"),      demo: false,                           base: false,                       pro: true,                         enterprise: true },
+    { label: t("piano.csWhatIf"),             demo: false,                           base: t("piano.csWhatIfPreview"),  pro: true,                         enterprise: true },
+    { label: t("piano.csCompetitor"),         demo: false,                           base: true,                        pro: true,                         enterprise: true },
+    { label: t("piano.csPdf"),                demo: false,                           base: t("piano.csPdfLimited"),     pro: t("piano.csPdfComplete"),     enterprise: t("piano.csPdfComplete") },
+    { label: t("piano.csDedicatedConsulting"),demo: false,                           base: false,                       pro: false,                        enterprise: true },
   ];
 }
 
@@ -106,6 +114,7 @@ export function PianoClient({
   const [showSaleTerms, setShowSaleTerms] = useState(false);
   const [pendingPriceEnv, setPendingPriceEnv] = useState<string | null>(null);
   const { t } = useTranslation();
+  const { openModal: openConsultation } = useConsultation();
 
   const usage = useUsage();
 
@@ -115,6 +124,7 @@ export function PianoClient({
   const isDemo = plan === "demo";
   const isBase = plan === "base";
   const isPro = plan === "pro";
+  const isEnterprise = plan === "enterprise";
 
   const liveBrowsingUsed = usage.loading ? browsingUsed : usage.browsingPromptsUsed;
   const liveNoBrowsingUsed = usage.loading ? noBrowsingUsed : usage.noBrowsingPromptsUsed;
@@ -334,127 +344,111 @@ export function PianoClient({
               </div>
             </div>
             <div className="p-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Demo */}
-            <div className="p-5 flex flex-col rounded-[2px]" style={{ border: isDemo ? "2px solid var(--primary)" : "1px solid var(--border)" }}>
-              <p className="font-display text-sm font-semibold text-foreground mb-1">Demo</p>
-              <p className="font-display text-2xl font-bold text-foreground mb-4">{t("piano.free")}</p>
-              <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground flex-1">
-                <div className="space-y-1.5 pr-3" style={{ borderRight: "1px solid var(--border)" }}>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-primary mb-1.5">{t("piano.aviHeader")}</p>
-                  {aviFeatures.map((f) => (
+          {(() => {
+            const renderFeatureCol = (
+              title: string,
+              titleColor: string,
+              features: PlanFeature[],
+              planKey: "demo" | "base" | "pro" | "enterprise",
+              accent: string,
+              withBorderRight: boolean
+            ) => (
+              <div className={`space-y-2 ${withBorderRight ? "pr-3" : ""}`} style={withBorderRight ? { borderRight: "1px solid var(--border)" } : undefined}>
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: titleColor }}>{title}</p>
+                {features.map((f) => {
+                  const v = f[planKey];
+                  return (
                     <div key={f.label} className="flex items-start gap-1.5">
-                      {f.demo === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" /> : <Check className="w-3 h-3 text-muted-foreground shrink-0 mt-0.5" />}
-                      <span className={f.demo === false ? "text-muted-foreground/40" : ""}>
-                        {f.label}{typeof f.demo === "string" ? `: ${f.demo}` : ""}
+                      {v === false ? <X className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0 mt-0.5" /> : <Check className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: accent }} />}
+                      <span className={v === false ? "text-muted-foreground/40" : "text-foreground"}>
+                        {f.label}{typeof v === "string" ? `: ${v}` : ""}
                       </span>
                     </div>
-                  ))}
-                </div>
-                <div className="space-y-1.5">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#c4a882] mb-1.5">{t("piano.csHeader")}</p>
-                  {csFeatures.map((f) => (
-                    <div key={f.label} className="flex items-start gap-1.5">
-                      {f.demo === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" /> : <Check className="w-3 h-3 text-muted-foreground shrink-0 mt-0.5" />}
-                      <span className={f.demo === false ? "text-muted-foreground/40" : ""}>
-                        {f.label}{typeof f.demo === "string" ? `: ${f.demo}` : ""}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-              {isDemo && <p className="text-xs font-medium text-primary mt-4">{t("piano.activePlan")}</p>}
-            </div>
+            );
 
-            {/* Base */}
-            <div className="p-5 flex flex-col rounded-[2px]" style={{ border: isBase ? "2px solid #3b82f6" : "1px solid var(--border)" }}>
-              <p className="font-display text-sm font-semibold text-foreground mb-1">Base</p>
-              <p className="font-display text-2xl font-bold text-foreground">
-                €{annual ? "649" : "59"}<span className="text-sm font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span>
-                <span className="text-xs font-normal text-muted-foreground ml-1">{t("piano.plusVat")}</span>
-              </p>
-              {annual && <p className="text-xs text-muted-foreground mt-1">€54,08{t("piano.perMonth")} · {t("piano.save")} €59/{t("piano.yearLabel")} · {t("piano.plusVat")}</p>}
-              <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground flex-1 mt-4">
-                <div className="space-y-1.5 pr-3" style={{ borderRight: "1px solid var(--border)" }}>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-primary mb-1.5">{t("piano.aviHeader")}</p>
-                  {aviFeatures.map((f) => (
-                    <div key={f.label} className="flex items-start gap-1.5">
-                      {f.base === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" /> : <Check className="w-3 h-3 text-[#3b82f6] shrink-0 mt-0.5" />}
-                      <span className={f.base === false ? "text-muted-foreground/40" : "text-foreground"}>
-                        {f.label}{typeof f.base === "string" ? `: ${f.base}` : ""}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div className="space-y-1.5">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#c4a882] mb-1.5">{t("piano.csHeader")}</p>
-                  {csFeatures.map((f) => (
-                    <div key={f.label} className="flex items-start gap-1.5">
-                      {f.base === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" /> : <Check className="w-3 h-3 text-[#3b82f6] shrink-0 mt-0.5" />}
-                      <span className={f.base === false ? "text-muted-foreground/40" : "text-foreground"}>
-                        {f.label}{typeof f.base === "string" ? `: ${f.base}` : ""}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+            const renderCardFeatures = (planKey: "demo" | "base" | "pro" | "enterprise", accent: string) => (
+              <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground flex-1 mt-4">
+                {renderFeatureCol(t("piano.aviHeader"), "var(--primary)", aviFeatures, planKey, accent, true)}
+                {renderFeatureCol(t("piano.csHeader"), "#c4a882", csFeatures, planKey, accent, false)}
               </div>
-              {isBase ? (
-                <p className="text-xs font-medium text-[#3b82f6] mt-4">{t("piano.activePlan")}</p>
-              ) : isDemo ? (
-                <button
-                  onClick={() => handleSubscribe(annual ? "STRIPE_PRICE_BASE_YEARLY" : "STRIPE_PRICE_BASE_MONTHLY")}
-                  disabled={!!subscribing}
-                  className="w-full mt-4 py-2.5 text-sm font-medium rounded-[2px] transition-all disabled:opacity-50"
-                  style={{ background: "#3b82f6", color: "#fff" }}
-                >{subscribing?.includes("BASE") ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t("piano.subscribe")}</button>
-              ) : null}
-            </div>
+            );
 
-            {/* Pro — Consigliato */}
-            <div className="p-5 flex flex-col rounded-[2px] relative" style={{ border: isPro ? "2px solid #c4a882" : "2px solid #c4a882" }}>
-              <div className="absolute -top-3 right-4 px-3 py-0.5 text-xs font-medium rounded-full" style={{ background: "#c4a882", color: "#1a1a1a" }}>{t("piano.recommended")}</div>
-              <p className="font-display text-sm font-semibold text-foreground mb-1">Pro</p>
-              <p className="font-display text-2xl font-bold text-foreground">
-                €{annual ? "1.719" : "159"}<span className="text-sm font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span>
-                <span className="text-xs font-normal text-muted-foreground ml-1">{t("piano.plusVat")}</span>
-              </p>
-              {annual && <p className="text-xs text-muted-foreground mt-1">€143,25{t("piano.perMonth")} · {t("piano.save")} €189/{t("piano.yearLabel")} · {t("piano.plusVat")}</p>}
-              <div className="grid grid-cols-2 gap-3 text-[11px] text-muted-foreground flex-1 mt-4">
-                <div className="space-y-1.5 pr-3" style={{ borderRight: "1px solid var(--border)" }}>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-primary mb-1.5">{t("piano.aviHeader")}</p>
-                  {aviFeatures.map((f) => (
-                    <div key={f.label} className="flex items-start gap-1.5">
-                      {f.pro === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" /> : <Check className="w-3 h-3 text-[#c4a882] shrink-0 mt-0.5" />}
-                      <span className={f.pro === false ? "text-muted-foreground/40" : "text-foreground"}>
-                        {f.label}{typeof f.pro === "string" ? `: ${f.pro}` : ""}
-                      </span>
-                    </div>
-                  ))}
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Demo */}
+                <div className="p-5 flex flex-col rounded-[4px]" style={{ border: isDemo ? "2px solid var(--primary)" : "1px solid var(--border)" }}>
+                  <p className="font-display text-base font-semibold text-foreground mb-1">Demo</p>
+                  <p className="font-display text-2xl font-bold text-foreground mb-1">{t("piano.free")}</p>
+                  <p className="text-xs text-muted-foreground">40 prompt totali</p>
+                  {renderCardFeatures("demo", "var(--muted-foreground)")}
+                  {isDemo && <p className="text-sm font-medium text-primary mt-4 text-center">{t("piano.activePlan")}</p>}
                 </div>
-                <div className="space-y-1.5">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-[#c4a882] mb-1.5">{t("piano.csHeader")}</p>
-                  {csFeatures.map((f) => (
-                    <div key={f.label} className="flex items-start gap-1.5">
-                      {f.pro === false ? <X className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" /> : <Check className="w-3 h-3 text-[#c4a882] shrink-0 mt-0.5" />}
-                      <span className={f.pro === false ? "text-muted-foreground/40" : "text-foreground"}>
-                        {f.label}{typeof f.pro === "string" ? `: ${f.pro}` : ""}
-                      </span>
-                    </div>
-                  ))}
+
+                {/* Base */}
+                <div className="p-5 flex flex-col rounded-[4px]" style={{ border: isBase ? "2px solid #3b82f6" : "1px solid var(--border)" }}>
+                  <p className="font-display text-base font-semibold text-foreground mb-1">Base</p>
+                  <p className="font-display text-2xl font-bold text-foreground">
+                    €{annual ? "649" : "59"}<span className="text-sm font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span>
+                    <span className="text-xs font-normal text-muted-foreground ml-1">{t("piano.plusVat")}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{annual ? `€54,08${t("piano.perMonth")} · ${t("piano.save")} €59` : t("piano.plusVat")}</p>
+                  {renderCardFeatures("base", "#3b82f6")}
+                  {isBase ? (
+                    <p className="text-sm font-medium text-[#3b82f6] mt-4 text-center">{t("piano.activePlan")}</p>
+                  ) : isDemo ? (
+                    <button
+                      onClick={() => handleSubscribe(annual ? "STRIPE_PRICE_BASE_YEARLY" : "STRIPE_PRICE_BASE_MONTHLY")}
+                      disabled={!!subscribing}
+                      className="w-full mt-4 py-2.5 text-sm font-medium rounded-[2px] transition-all disabled:opacity-50"
+                      style={{ background: "#3b82f6", color: "#fff" }}
+                    >{subscribing?.includes("BASE") ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t("piano.subscribe")}</button>
+                  ) : null}
+                </div>
+
+                {/* Pro — Consigliato */}
+                <div className="p-5 flex flex-col rounded-[4px] relative" style={{ border: "2px solid #c4a882" }}>
+                  <div className="absolute -top-3 right-4 px-3 py-1 text-xs font-semibold rounded-full" style={{ background: "#c4a882", color: "#1a1a1a" }}>{t("piano.recommended")}</div>
+                  <p className="font-display text-base font-semibold text-foreground mb-1">Pro</p>
+                  <p className="font-display text-2xl font-bold text-foreground">
+                    €{annual ? "1.719" : "159"}<span className="text-sm font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span>
+                    <span className="text-xs font-normal text-muted-foreground ml-1">{t("piano.plusVat")}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{annual ? `€143,25${t("piano.perMonth")} · ${t("piano.save")} €189` : t("piano.plusVat")}</p>
+                  {renderCardFeatures("pro", "#c4a882")}
+                  {isPro ? (
+                    <p className="text-sm font-medium text-[#c4a882] mt-4 text-center">{t("piano.activePlan")}</p>
+                  ) : (
+                    <button
+                      onClick={() => handleSubscribe(annual ? "STRIPE_PRICE_PRO_YEARLY" : "STRIPE_PRICE_PRO_MONTHLY")}
+                      disabled={!!subscribing}
+                      className="w-full mt-4 py-2.5 text-sm font-medium rounded-[2px] transition-all disabled:opacity-50"
+                      style={{ background: "#c4a882", color: "#1a1a1a" }}
+                    >{subscribing?.includes("PRO") ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t("piano.subscribe")}</button>
+                  )}
+                </div>
+
+                {/* Enterprise */}
+                <div className="p-5 flex flex-col rounded-[4px]" style={{ border: isEnterprise ? "2px solid #a78bfa" : "1px solid var(--border)" }}>
+                  <p className="font-display text-base font-semibold text-foreground mb-1">{t("piano.enterprise")}</p>
+                  <p className="font-display text-2xl font-bold text-foreground">{t("piano.enterpriseCustom")}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("piano.enterpriseDesc")}</p>
+                  {renderCardFeatures("enterprise", "#a78bfa")}
+                  {isEnterprise ? (
+                    <p className="text-sm font-medium text-[#a78bfa] mt-4 text-center">{t("piano.activePlan")}</p>
+                  ) : (
+                    <button
+                      onClick={openConsultation}
+                      className="w-full mt-4 py-2.5 text-sm font-medium rounded-[2px] transition-all"
+                      style={{ border: "1px solid var(--border)", color: "var(--foreground)", background: "transparent" }}
+                    >{t("piano.contactUs")}</button>
+                  )}
                 </div>
               </div>
-              {isPro ? (
-                <p className="text-xs font-medium text-[#c4a882] mt-4">{t("piano.activePlan")}</p>
-              ) : (
-                <button
-                  onClick={() => handleSubscribe(annual ? "STRIPE_PRICE_PRO_YEARLY" : "STRIPE_PRICE_PRO_MONTHLY")}
-                  disabled={!!subscribing}
-                  className="w-full mt-4 py-2.5 text-sm font-medium rounded-[2px] transition-all disabled:opacity-50"
-                  style={{ background: "#c4a882", color: "#1a1a1a" }}
-                >{subscribing?.includes("PRO") ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t("piano.subscribe")}</button>
-              )}
-            </div>
-          </div>
+            );
+          })()}
         </div>
       </section>
 
