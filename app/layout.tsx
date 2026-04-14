@@ -51,6 +51,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="icon" href="/logo.jpg" type="image/jpeg" />
         <link rel="apple-touch-icon" href="/logo.jpg" />
+        <link rel="preconnect" href="https://suite.citationrate.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://suite.citationrate.com" />
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             var t = localStorage.getItem('seageo-theme');
