@@ -86,9 +86,14 @@ export async function createSubscriptionCheckout(
     metadata: { user_id: userId },
     subscription_data: { metadata: { user_id: userId } },
     automatic_tax: { enabled: true },
+    tax_id_collection: { enabled: true },
   };
-  if (stripeCustomerId) params.customer = stripeCustomerId;
-  else params.customer_email = customerEmail;
+  if (stripeCustomerId) {
+    params.customer = stripeCustomerId;
+    params.customer_update = { address: "auto", name: "auto" };
+  } else {
+    params.customer_email = customerEmail;
+  }
   return stripe.checkout.sessions.create(params);
 }
 
@@ -108,9 +113,14 @@ export async function createOneTimeCheckout(
     cancel_url: cancelUrl,
     metadata: { user_id: userId },
     automatic_tax: { enabled: true },
+    tax_id_collection: { enabled: true },
   };
-  if (stripeCustomerId) params.customer = stripeCustomerId;
-  else params.customer_email = customerEmail;
+  if (stripeCustomerId) {
+    params.customer = stripeCustomerId;
+    params.customer_update = { address: "auto", name: "auto" };
+  } else {
+    params.customer_email = customerEmail;
+  }
   return stripe.checkout.sessions.create(params);
 }
 
