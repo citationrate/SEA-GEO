@@ -68,10 +68,10 @@ function getCsFeatures(t: (k: string) => string): PlanFeature[] {
     { label: t("piano.csMaxUrls"),            demo: "1",                             base: "3",                         pro: "5",                          enterprise: t("piano.unlimited") },
     { label: t("piano.csScorePerAi"),         demo: t("piano.csScorePerAi7"),        base: true,                        pro: true,                         enterprise: true },
     { label: t("piano.csInsights"),           demo: false,                           base: "10",                        pro: t("piano.csInsightsAll"),     enterprise: t("piano.csInsightsAll") },
-    { label: t("piano.csInsightsPerAi"),      demo: false,                           base: false,                       pro: true,                         enterprise: true },
-    { label: t("piano.csWhatIf"),             demo: false,                           base: t("piano.csWhatIfPreview"),  pro: true,                         enterprise: true },
     { label: t("piano.csCompetitor"),         demo: false,                           base: true,                        pro: true,                         enterprise: true },
     { label: t("piano.csPdf"),                demo: false,                           base: t("piano.csPdfLimited"),     pro: t("piano.csPdfComplete"),     enterprise: t("piano.csPdfComplete") },
+    { label: t("piano.csInsightsPerAi"),      demo: false,                           base: false,                       pro: true,                         enterprise: true },
+    { label: t("piano.csWhatIf"),             demo: false,                           base: false,                       pro: true,                         enterprise: true },
     { label: t("piano.csDedicatedConsulting"),demo: false,                           base: false,                       pro: false,                        enterprise: true },
   ];
 }
@@ -343,114 +343,79 @@ export function PianoClient({
                 <button onClick={() => setAnnual(true)} className="text-xs font-medium px-3 py-1.5 rounded-[3px] transition-all" style={{ background: annual ? "var(--primary)" : "transparent", color: annual ? "white" : "var(--muted-foreground)" }}>{t("piano.annual")}</button>
               </div>
             </div>
-            <div className="p-5">
-          {(() => {
-            const renderFeatureCol = (
-              title: string,
-              titleColor: string,
-              features: PlanFeature[],
-              planKey: "demo" | "base" | "pro" | "enterprise",
-              accent: string,
-              withBorderRight: boolean
-            ) => (
-              <div className={`space-y-2 ${withBorderRight ? "pr-3" : ""}`} style={withBorderRight ? { borderRight: "1px solid var(--border)" } : undefined}>
-                <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: titleColor }}>{title}</p>
-                {features.map((f) => {
-                  const v = f[planKey];
-                  return (
-                    <div key={f.label} className="flex items-start gap-1.5">
-                      {v === false ? <X className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0 mt-0.5" /> : <Check className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: accent }} />}
-                      <span className={v === false ? "text-muted-foreground/40" : "text-foreground"}>
-                        {f.label}{typeof v === "string" ? `: ${v}` : ""}
-                      </span>
+            <div className="p-5 overflow-x-auto">
+              {(() => {
+                const PLAN_COLORS = { demo: "var(--muted-foreground)", base: "#3b82f6", pro: "#c4a882", enterprise: "#a78bfa" } as const;
+                const ROW_GRID = "minmax(200px,1.6fr) repeat(4, minmax(120px, 1fr))";
+
+                const renderVal = (v: FeatureValue, accent: string) =>
+                  v === false
+                    ? <X className="w-4 h-4 mx-auto text-muted-foreground/40" />
+                    : v === true
+                      ? <Check className="w-4 h-4 mx-auto" style={{ color: accent }} />
+                      : <span className="text-sm text-foreground">{v}</span>;
+
+                const headerCell = (planKey: "demo" | "base" | "pro" | "enterprise", label: string, price: React.ReactNode, subPrice: string | null, cta: React.ReactNode, active: boolean, recommended?: boolean) => (
+                  <div className="flex flex-col items-center text-center p-4 relative" style={{ background: active ? `${PLAN_COLORS[planKey]}11` : "transparent", borderLeft: "1px solid var(--border)" }}>
+                    {recommended && (
+                      <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 text-[10px] font-semibold rounded-full whitespace-nowrap" style={{ background: PLAN_COLORS[planKey], color: "#1a1a1a" }}>
+                        {t("piano.recommended")}
+                      </div>
+                    )}
+                    <p className="font-display text-base font-semibold text-foreground mb-1">{label}</p>
+                    <div className="font-display text-xl font-bold text-foreground min-h-[2em] flex items-baseline">{price}</div>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 min-h-[1.25em]">{subPrice || ""}</p>
+                    <div className="mt-3 w-full">{cta}</div>
+                  </div>
+                );
+
+                const featureRow = (label: string, demo: FeatureValue, base: FeatureValue, pro: FeatureValue, enterprise: FeatureValue) => (
+                  <div className="grid items-center" style={{ gridTemplateColumns: ROW_GRID, borderTop: "1px solid var(--border)" }} key={label}>
+                    <div className="px-4 py-3 text-sm text-foreground">{label}</div>
+                    <div className="px-3 py-3 text-center" style={{ borderLeft: "1px solid var(--border)", background: isDemo ? `${PLAN_COLORS.demo}0A` : "transparent" }}>{renderVal(demo, PLAN_COLORS.demo)}</div>
+                    <div className="px-3 py-3 text-center" style={{ borderLeft: "1px solid var(--border)", background: isBase ? `${PLAN_COLORS.base}14` : "transparent" }}>{renderVal(base, PLAN_COLORS.base)}</div>
+                    <div className="px-3 py-3 text-center" style={{ borderLeft: "1px solid var(--border)", background: isPro ? `${PLAN_COLORS.pro}14` : "transparent" }}>{renderVal(pro, PLAN_COLORS.pro)}</div>
+                    <div className="px-3 py-3 text-center" style={{ borderLeft: "1px solid var(--border)", background: isEnterprise ? `${PLAN_COLORS.enterprise}14` : "transparent" }}>{renderVal(enterprise, PLAN_COLORS.enterprise)}</div>
+                  </div>
+                );
+
+                const sectionHeader = (title: string, accentColor: string) => (
+                  <div className="grid" style={{ gridTemplateColumns: ROW_GRID, borderTop: "1px solid var(--border)" }}>
+                    <div className="col-span-full px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest" style={{ color: accentColor, background: `${accentColor}08`, gridColumn: "1 / -1" }}>
+                      {title}
                     </div>
-                  );
-                })}
-              </div>
-            );
+                  </div>
+                );
 
-            const renderCardFeatures = (planKey: "demo" | "base" | "pro" | "enterprise", accent: string) => (
-              <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground flex-1 mt-4">
-                {renderFeatureCol(t("piano.aviHeader"), "var(--primary)", aviFeatures, planKey, accent, true)}
-                {renderFeatureCol(t("piano.csHeader"), "#c4a882", csFeatures, planKey, accent, false)}
-              </div>
-            );
+                return (
+                  <div className="min-w-[880px]">
+                    {/* Header row */}
+                    <div className="grid" style={{ gridTemplateColumns: ROW_GRID }}>
+                      <div className="p-4" />
+                      {headerCell("demo", "Demo", <span>{t("piano.free")}</span>, "40 prompt", isDemo ? <p className="text-xs font-medium" style={{ color: PLAN_COLORS.demo }}>{t("piano.activePlan")}</p> : <div className="h-[38px]" />, isDemo)}
+                      {headerCell("base", "Base", <><span>€{annual ? "649" : "59"}</span><span className="text-xs font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span></>, annual ? `€54,08${t("piano.perMonth")} · ${t("piano.save")} €59` : t("piano.plusVat"), isBase ? <p className="text-xs font-medium" style={{ color: PLAN_COLORS.base }}>{t("piano.activePlan")}</p> : isDemo ? (
+                        <button onClick={() => handleSubscribe(annual ? "STRIPE_PRICE_BASE_YEARLY" : "STRIPE_PRICE_BASE_MONTHLY")} disabled={!!subscribing} className="w-full py-2 text-xs font-semibold rounded-[2px] transition-all disabled:opacity-50" style={{ background: PLAN_COLORS.base, color: "#fff" }}>{subscribing?.includes("BASE") ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : t("piano.subscribe")}</button>
+                      ) : <div className="h-[34px]" />, isBase)}
+                      {headerCell("pro", "Pro", <><span>€{annual ? "1.719" : "159"}</span><span className="text-xs font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span></>, annual ? `€143,25${t("piano.perMonth")} · ${t("piano.save")} €189` : t("piano.plusVat"), isPro ? <p className="text-xs font-medium" style={{ color: PLAN_COLORS.pro }}>{t("piano.activePlan")}</p> : (
+                        <button onClick={() => handleSubscribe(annual ? "STRIPE_PRICE_PRO_YEARLY" : "STRIPE_PRICE_PRO_MONTHLY")} disabled={!!subscribing} className="w-full py-2 text-xs font-semibold rounded-[2px] transition-all disabled:opacity-50" style={{ background: PLAN_COLORS.pro, color: "#1a1a1a" }}>{subscribing?.includes("PRO") ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : t("piano.subscribe")}</button>
+                      ), isPro, true)}
+                      {headerCell("enterprise", t("piano.enterprise"), <span>{t("piano.enterpriseCustom")}</span>, t("piano.enterpriseDesc"), isEnterprise ? <p className="text-xs font-medium" style={{ color: PLAN_COLORS.enterprise }}>{t("piano.activePlan")}</p> : (
+                        <button onClick={openConsultation} className="w-full py-2 text-xs font-semibold rounded-[2px] transition-all" style={{ border: `1px solid ${PLAN_COLORS.enterprise}`, color: PLAN_COLORS.enterprise, background: "transparent" }}>{t("piano.contactUs")}</button>
+                      ), isEnterprise)}
+                    </div>
 
-            return (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Demo */}
-                <div className="p-5 flex flex-col rounded-[4px]" style={{ border: isDemo ? "2px solid var(--primary)" : "1px solid var(--border)" }}>
-                  <p className="font-display text-base font-semibold text-foreground mb-1">Demo</p>
-                  <p className="font-display text-2xl font-bold text-foreground mb-1">{t("piano.free")}</p>
-                  <p className="text-xs text-muted-foreground">40 prompt totali</p>
-                  {renderCardFeatures("demo", "var(--muted-foreground)")}
-                  {isDemo && <p className="text-sm font-medium text-primary mt-4 text-center">{t("piano.activePlan")}</p>}
-                </div>
+                    {/* AI VISIBILITY INDEX section */}
+                    {sectionHeader(t("piano.aviHeader"), "var(--primary)")}
+                    {aviFeatures.map((f) => featureRow(f.label, f.demo, f.base, f.pro, f.enterprise))}
 
-                {/* Base */}
-                <div className="p-5 flex flex-col rounded-[4px]" style={{ border: isBase ? "2px solid #3b82f6" : "1px solid var(--border)" }}>
-                  <p className="font-display text-base font-semibold text-foreground mb-1">Base</p>
-                  <p className="font-display text-2xl font-bold text-foreground">
-                    €{annual ? "649" : "59"}<span className="text-sm font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span>
-                    <span className="text-xs font-normal text-muted-foreground ml-1">{t("piano.plusVat")}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">{annual ? `€54,08${t("piano.perMonth")} · ${t("piano.save")} €59` : t("piano.plusVat")}</p>
-                  {renderCardFeatures("base", "#3b82f6")}
-                  {isBase ? (
-                    <p className="text-sm font-medium text-[#3b82f6] mt-4 text-center">{t("piano.activePlan")}</p>
-                  ) : isDemo ? (
-                    <button
-                      onClick={() => handleSubscribe(annual ? "STRIPE_PRICE_BASE_YEARLY" : "STRIPE_PRICE_BASE_MONTHLY")}
-                      disabled={!!subscribing}
-                      className="w-full mt-4 py-2.5 text-sm font-medium rounded-[2px] transition-all disabled:opacity-50"
-                      style={{ background: "#3b82f6", color: "#fff" }}
-                    >{subscribing?.includes("BASE") ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t("piano.subscribe")}</button>
-                  ) : null}
-                </div>
-
-                {/* Pro — Consigliato */}
-                <div className="p-5 flex flex-col rounded-[4px] relative" style={{ border: "2px solid #c4a882" }}>
-                  <div className="absolute -top-3 right-4 px-3 py-1 text-xs font-semibold rounded-full" style={{ background: "#c4a882", color: "#1a1a1a" }}>{t("piano.recommended")}</div>
-                  <p className="font-display text-base font-semibold text-foreground mb-1">Pro</p>
-                  <p className="font-display text-2xl font-bold text-foreground">
-                    €{annual ? "1.719" : "159"}<span className="text-sm font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span>
-                    <span className="text-xs font-normal text-muted-foreground ml-1">{t("piano.plusVat")}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">{annual ? `€143,25${t("piano.perMonth")} · ${t("piano.save")} €189` : t("piano.plusVat")}</p>
-                  {renderCardFeatures("pro", "#c4a882")}
-                  {isPro ? (
-                    <p className="text-sm font-medium text-[#c4a882] mt-4 text-center">{t("piano.activePlan")}</p>
-                  ) : (
-                    <button
-                      onClick={() => handleSubscribe(annual ? "STRIPE_PRICE_PRO_YEARLY" : "STRIPE_PRICE_PRO_MONTHLY")}
-                      disabled={!!subscribing}
-                      className="w-full mt-4 py-2.5 text-sm font-medium rounded-[2px] transition-all disabled:opacity-50"
-                      style={{ background: "#c4a882", color: "#1a1a1a" }}
-                    >{subscribing?.includes("PRO") ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t("piano.subscribe")}</button>
-                  )}
-                </div>
-
-                {/* Enterprise */}
-                <div className="p-5 flex flex-col rounded-[4px]" style={{ border: isEnterprise ? "2px solid #a78bfa" : "1px solid var(--border)" }}>
-                  <p className="font-display text-base font-semibold text-foreground mb-1">{t("piano.enterprise")}</p>
-                  <p className="font-display text-2xl font-bold text-foreground">{t("piano.enterpriseCustom")}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{t("piano.enterpriseDesc")}</p>
-                  {renderCardFeatures("enterprise", "#a78bfa")}
-                  {isEnterprise ? (
-                    <p className="text-sm font-medium text-[#a78bfa] mt-4 text-center">{t("piano.activePlan")}</p>
-                  ) : (
-                    <button
-                      onClick={openConsultation}
-                      className="w-full mt-4 py-2.5 text-sm font-medium rounded-[2px] transition-all"
-                      style={{ border: "1px solid var(--border)", color: "var(--foreground)", background: "transparent" }}
-                    >{t("piano.contactUs")}</button>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      </section>
+                    {/* CITABILITY SCORE section */}
+                    {sectionHeader(t("piano.csHeader"), "#c4a882")}
+                    {csFeatures.map((f) => featureRow(f.label, f.demo, f.base, f.pro, f.enterprise))}
+                  </div>
+                );
+              })()}
+            </div>
+          </section>
 
           {/* Extra packages */}
           {packages.length > 0 && (
