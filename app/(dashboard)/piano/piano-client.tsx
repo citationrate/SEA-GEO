@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
+import ScrollToAcceptModal from "@/components/scroll-to-accept-modal";
+import SaleTermsText from "@/components/sale-terms-text";
 
 interface PianoClientProps {
   plan: string;
@@ -101,6 +103,8 @@ export function PianoClient({
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [subscribing, setSubscribing] = useState<string | null>(null);
+  const [showSaleTerms, setShowSaleTerms] = useState(false);
+  const [pendingPriceEnv, setPendingPriceEnv] = useState<string | null>(null);
   const { t } = useTranslation();
 
   const usage = useUsage();
@@ -127,7 +131,15 @@ export function PianoClient({
   const comparisonsLimit = limits.comparisons + liveExtraComparisons;
   const packages = isBase ? BASE_PACKAGES : isPro ? PRO_PACKAGES : [];
 
-  async function handleSubscribe(priceEnv: string) {
+  function handleSubscribe(priceEnv: string) {
+    setPendingPriceEnv(priceEnv);
+    setShowSaleTerms(true);
+  }
+
+  async function proceedToCheckout() {
+    const priceEnv = pendingPriceEnv;
+    if (!priceEnv) return;
+    setShowSaleTerms(false);
     setSubscribing(priceEnv);
     try {
       const res = await fetch("/api/stripe/create-checkout", {
@@ -139,7 +151,7 @@ export function PianoClient({
       if (data.url) window.location.href = data.url;
       else alert(data.error || "Errore");
     } catch { alert("Errore di rete"); }
-    finally { setSubscribing(null); }
+    finally { setSubscribing(null); setPendingPriceEnv(null); }
   }
 
   async function handleBuyPackage(priceEnv: string) {
@@ -536,6 +548,15 @@ export function PianoClient({
           {/* <InvoiceHistory /> — temporarily hidden, invoices are issued manually */}
         </div>
       )}
+
+      {/* Sale terms modal */}
+      <ScrollToAcceptModal
+        open={showSaleTerms}
+        onAccept={proceedToCheckout}
+        onClose={() => { setShowSaleTerms(false); setPendingPriceEnv(null); }}
+      >
+        <SaleTermsText />
+      </ScrollToAcceptModal>
 
       {/* Cancel modal */}
       {showCancelModal && (

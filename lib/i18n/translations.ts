@@ -994,6 +994,12 @@ export const translations: Record<Locale, Record<string, any>> = {
       exportData: "Esporta i tuoi dati", exportDesc: "Scarica tutti i tuoi dati in formato JSON (GDPR Art. 20)",
       download: "Scarica", exporting: "Esportazione...", exportSuccess: "Dati esportati con successo", exportError: "Errore nell'esportazione",
     },
+    modal: {
+      saleTermsTitle: "Condizioni di Vendita",
+      scrollToAccept: "Scorri fino in fondo per accettare",
+      close: "Chiudi",
+      accept: "Accetto le condizioni",
+    },
 
   },
 
@@ -1989,6 +1995,12 @@ export const translations: Record<Locale, Record<string, any>> = {
       exportData: "Export Your Data", exportDesc: "Download all your data as JSON (GDPR Art. 20)",
       download: "Download", exporting: "Exporting...", exportSuccess: "Data exported successfully", exportError: "Error exporting data",
     },
+    modal: {
+      saleTermsTitle: "Terms of Sale",
+      scrollToAccept: "Scroll to the bottom to accept",
+      close: "Close",
+      accept: "I accept the terms",
+    },
 
   },
 
@@ -2883,6 +2895,12 @@ export const translations: Record<Locale, Record<string, any>> = {
       exportData: "Exporter vos données", exportDesc: "Téléchargez toutes vos données au format JSON (RGPD Art. 20)",
       download: "Télécharger", exporting: "Exportation...", exportSuccess: "Données exportées avec succès", exportError: "Erreur lors de l'exportation",
     },
+    modal: {
+      saleTermsTitle: "Conditions de Vente",
+      scrollToAccept: "Faites défiler jusqu'en bas pour accepter",
+      close: "Fermer",
+      accept: "J'accepte les conditions",
+    },
 
   },
 
@@ -3772,6 +3790,12 @@ export const translations: Record<Locale, Record<string, any>> = {
       exportData: "Ihre Daten exportieren", exportDesc: "Laden Sie alle Ihre Daten als JSON herunter (DSGVO Art. 20)",
       download: "Herunterladen", exporting: "Exportiere...", exportSuccess: "Daten erfolgreich exportiert", exportError: "Fehler beim Exportieren",
     },
+    modal: {
+      saleTermsTitle: "Verkaufsbedingungen",
+      scrollToAccept: "Bis zum Ende scrollen, um zu akzeptieren",
+      close: "Schließen",
+      accept: "Bedingungen akzeptieren",
+    },
 
   },
 
@@ -4660,6 +4684,12 @@ export const translations: Record<Locale, Record<string, any>> = {
       notAccepted: "Aún no aceptado",
       exportData: "Exportar tus datos", exportDesc: "Descarga todos tus datos en formato JSON (RGPD Art. 20)",
       download: "Descargar", exporting: "Exportando...", exportSuccess: "Datos exportados con éxito", exportError: "Error al exportar",
+    },
+    modal: {
+      saleTermsTitle: "Condiciones de Venta",
+      scrollToAccept: "Desplázate hasta el final para aceptar",
+      close: "Cerrar",
+      accept: "Acepto las condiciones",
     },
 
   },
