@@ -18,6 +18,12 @@ import type { EffectivePlan } from "@/lib/utils/is-pro";
  * Returns null (no DOM) when the plan does not get a bot. This keeps the
  * mount sites declarative — every page that wants the bot just renders
  * <BotMount ... /> and trusts the gating logic.
+ *
+ * A `<script>` element is rendered directly (not via `next/script`) so the
+ * browser re-evaluates the widget loader every time the page server-renders
+ * with a different context. `next/script` deduplicates by src across client
+ * navigations, which was causing the widget to disappear after moving from
+ * a page that had already loaded it to one that re-renders with new data.
  */
 export function BotMount({
   plan,
@@ -31,6 +37,7 @@ export function BotMount({
 
   return (
     <Script
+      id={`avi-bot-${context.pagina}`}
       src={botWidgetSrc(botId)}
       data-context={JSON.stringify(context)}
       strategy="afterInteractive"
