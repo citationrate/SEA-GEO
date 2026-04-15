@@ -1,5 +1,4 @@
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
-import { ProjectSelector } from "@/components/project-selector";
 import { resolveProjectId } from "@/lib/utils/resolve-project";
 import { DemoBanner } from "@/components/dashboard/demo-banner";
 
@@ -13,26 +12,36 @@ export default async function DashboardPage({
   searchParams: { projectId?: string; model?: string };
 }) {
   const auth = createServerClient();
-  const { data: { user } } = await auth.auth.getUser();
+  // Use getSession() — reads the JWT from the cookie without an Auth API
+  // round-trip. Saves ~50-100ms on every dashboard render. We trust the
+  // signed cookie because middleware.ts already gates this route.
+  const { data: { session } } = await auth.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) return <DashboardClient aviScore={null} aviTrend={null} stats={[]} trendData={[]} recentRuns={[]} competitorBarData={[]} projects={[]} />;
 
   const supabase = createDataClient();
 
-  // Get user plan
-  const { data: userProfile } = await (supabase.from("profiles") as any)
-    .select("plan")
-    .eq("id", user.id)
-    .single();
+  // ── Phase 1: independent fetches that don't depend on each other ──
+  // Plan + projects can fire in parallel — neither needs the other.
+  const [
+    profileRes,
+    projectsRes,
+  ] = await Promise.all([
+    (supabase.from("profiles") as any)
+      .select("plan")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("projects")
+      .select("id, name, target_brand, models_config")
+      .eq("user_id", user.id)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false }),
+  ]);
+  const userProfile = (profileRes as any).data;
+  const projects = (projectsRes as any).data;
+
   const userPlan = (userProfile as any)?.plan ?? "demo";
-
-  // Get all projects for this user
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("id, name, target_brand, models_config")
-    .eq("user_id", user.id)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
-
   const projectsList = (projects ?? []) as any[];
   const projectIds = projectsList.map((p: any) => p.id);
   const selectedId = resolveProjectId(searchParams, projectIds);
@@ -40,7 +49,7 @@ export default async function DashboardPage({
   const targetIds = selectedId ? [selectedId] : projectIds;
   const projectMap = new Map(projectsList.map((p: any) => [p.id, p]));
 
-  // Get all analysis runs (exclude archived)
+  // ── Phase 2: fetch all runs (needed to discover models + filter) ──
   const { data: allRuns } = targetIds.length > 0
     ? await supabase
         .from("analysis_runs")
@@ -53,9 +62,9 @@ export default async function DashboardPage({
   // Extract available models
   const modelsSet = new Set<string>();
   (allRuns ?? []).forEach((r: any) => (r.models_used ?? []).forEach((m: string) => modelsSet.add(m)));
-  // modelsSet.size is used in stats below
 
-  // Filter runs by selected model
+  // Filter runs by selected model — only re-query if a model filter is active.
+  // Otherwise reuse allRuns (saves one round-trip in the common case).
   const selectedModel = searchParams.model || null;
   let runs: any[];
   if (selectedModel && targetIds.length > 0) {
@@ -72,17 +81,78 @@ export default async function DashboardPage({
   }
 
   const runIds = runs.map((r: any) => r.id);
+  const activeProjectId = selectedId ?? projectIds[0] ?? null;
 
-  // Get AVI history filtered by run
-  const { data: aviHistory } = runIds.length > 0
-    ? await supabase
-        .from("avi_history")
-        .select("avi_score, presence_score, rank_score, sentiment_score, stability_score, computed_at, run_id")
-        .in("run_id", runIds)
-        .order("computed_at", { ascending: true })
-    : { data: [] };
+  // ── Phase 3: fan-out everything that depends on runIds / targetIds ──
+  // This is where the original code was paying ~10 sequential round-trips.
+  // All these queries are independent and read-only — Promise.all collapses
+  // them into a single network burst.
+  const [
+    aviHistoryRes,
+    totalPromptsRes,
+    competitorsCountRes,
+    sourcesCountRes,
+    promptsForCitationsRes,
+    promptsForMentionRes,
+    queryCountRes,
+    segmentCountRes,
+  ] = await Promise.all([
+    // AVI history
+    runIds.length > 0
+      ? supabase
+          .from("avi_history")
+          .select("avi_score, presence_score, rank_score, sentiment_score, stability_score, computed_at, run_id")
+          .in("run_id", runIds)
+          .order("computed_at", { ascending: true })
+      : Promise.resolve({ data: [] as any[] }),
+    // Total prompts executed
+    runIds.length > 0
+      ? supabase
+          .from("prompts_executed")
+          .select("*", { count: "exact", head: true })
+          .in("run_id", runIds)
+      : Promise.resolve({ count: 0 }),
+    // Competitors count
+    targetIds.length > 0
+      ? supabase
+          .from("competitors")
+          .select("*", { count: "exact", head: true })
+          .in("project_id", targetIds)
+      : Promise.resolve({ count: 0 }),
+    // Sources count
+    targetIds.length > 0
+      ? supabase
+          .from("sources")
+          .select("*", { count: "exact", head: true })
+          .in("project_id", targetIds)
+      : Promise.resolve({ count: 0 }),
+    // Prompts with citation_urls (for AI-consulted % later)
+    runIds.length > 0
+      ? supabase.from("prompts_executed").select("id, citation_urls").in("run_id", runIds)
+      : Promise.resolve({ data: [] as any[] }),
+    // Prompts ids (for mention rate later)
+    runIds.length > 0
+      ? supabase.from("prompts_executed").select("id").in("run_id", runIds)
+      : Promise.resolve({ data: [] as any[] }),
+    // Query count for active project
+    activeProjectId
+      ? supabase
+          .from("queries")
+          .select("*", { count: "exact", head: true })
+          .eq("project_id", activeProjectId)
+          .eq("is_active", true)
+      : Promise.resolve({ count: 0 }),
+    // Segment count for active project
+    activeProjectId
+      ? supabase
+          .from("audience_segments")
+          .select("*", { count: "exact", head: true })
+          .eq("project_id", activeProjectId)
+          .eq("is_active", true)
+      : Promise.resolve({ count: 0 }),
+  ]);
 
-  const aviList = (aviHistory ?? []) as any[];
+  const aviList = ((aviHistoryRes as any).data ?? []) as any[];
   const lastAvi = aviList.length > 0 ? aviList[aviList.length - 1] : null;
   const prevAvi = aviList.length > 1 ? aviList[aviList.length - 2] : null;
 
@@ -90,64 +160,71 @@ export default async function DashboardPage({
   const aviTrend = lastAvi && prevAvi ? lastAvi.avi_score - prevAvi.avi_score : null;
   const noBrandMentions = lastAvi != null && lastAvi.avi_score === 0 && lastAvi.presence_score === 0;
 
-  // Get total prompts executed
-  const { count: totalPrompts } = runIds.length > 0
-    ? await supabase
-        .from("prompts_executed")
-        .select("*", { count: "exact", head: true })
-        .in("run_id", runIds)
-    : { count: 0 };
+  const totalPrompts = (totalPromptsRes as any).count ?? 0;
+  const competitorsCount = (competitorsCountRes as any).count ?? 0;
+  const sourcesCount = (sourcesCountRes as any).count ?? 0;
+  const projectQueryCount = (queryCountRes as any).count ?? 0;
+  const projectSegmentCount = (segmentCountRes as any).count ?? 0;
 
-  // Get competitors count
-  const { count: competitorsCount } = targetIds.length > 0
-    ? await supabase
-        .from("competitors")
-        .select("*", { count: "exact", head: true })
-        .in("project_id", targetIds)
-    : { count: 0 };
+  const promptsForCitations = (((promptsForCitationsRes as any).data ?? []) as any[]);
+  const promptsForMention = (((promptsForMentionRes as any).data ?? []) as any[]);
 
-  // Get sources count
-  const { count: sourcesCount } = targetIds.length > 0
-    ? await supabase
-        .from("sources")
-        .select("*", { count: "exact", head: true })
-        .in("project_id", targetIds)
-    : { count: 0 };
+  // ── Phase 4: derived queries that need the prompt id sets we just got ──
+  const withCitations = promptsForCitations.filter((p: any) => p.citation_urls && p.citation_urls.length > 0);
+  const promptIdsWithCitations = withCitations.map((p: any) => p.id);
+  const promptIdsForMention = promptsForMention.map((p: any) => p.id);
 
-  // Get AI-consulted citation stats (brand domain in citations from Perplexity/Claude/Gemini)
+  // Latest completed run drives the competitor bar — find it before fan-out.
+  const latestCompletedRun = runs.find((r: any) => r.status === "completed");
+
+  const [
+    analysisRowsRes,
+    totalAnalysesRes,
+    mentionedCountRes,
+    compAviRowsRes,
+  ] = await Promise.all([
+    promptIdsWithCitations.length > 0
+      ? supabase
+          .from("response_analysis")
+          .select("brand_in_citations")
+          .in("prompt_executed_id", promptIdsWithCitations)
+      : Promise.resolve({ data: [] as any[] }),
+    promptIdsForMention.length > 0
+      ? supabase
+          .from("response_analysis")
+          .select("*", { count: "exact", head: true })
+          .in("prompt_executed_id", promptIdsForMention)
+      : Promise.resolve({ count: 0 }),
+    promptIdsForMention.length > 0
+      ? supabase
+          .from("response_analysis")
+          .select("*", { count: "exact", head: true })
+          .in("prompt_executed_id", promptIdsForMention)
+          .eq("brand_mentioned", true)
+      : Promise.resolve({ count: 0 }),
+    latestCompletedRun
+      ? (supabase.from("competitor_avi") as any)
+          .select("competitor_name, avi_score")
+          .eq("run_id", (latestCompletedRun as any).id)
+          .order("avi_score", { ascending: false })
+          .limit(6)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+
+  // AI-consulted citations percentage
   let aiConsultedPct = "--";
-  if (runIds.length > 0) {
-    const promptIdsForCitations = (await supabase.from("prompts_executed").select("id, citation_urls").in("run_id", runIds)).data ?? [];
-    const withCitations = (promptIdsForCitations as any[]).filter((p: any) => p.citation_urls && p.citation_urls.length > 0);
-    if (withCitations.length > 0) {
-      const promptIdsWithCitations = withCitations.map((p: any) => p.id);
-      const { data: analysisRows } = await supabase
-        .from("response_analysis")
-        .select("brand_in_citations")
-        .in("prompt_executed_id", promptIdsWithCitations);
-      const brandInCount = (analysisRows ?? []).filter((r: any) => r.brand_in_citations).length;
-      aiConsultedPct = `${Math.round((brandInCount / withCitations.length) * 100)}%`;
-    }
+  if (withCitations.length > 0) {
+    const analysisRows = ((analysisRowsRes as any).data ?? []) as any[];
+    const brandInCount = analysisRows.filter((r: any) => r.brand_in_citations).length;
+    aiConsultedPct = `${Math.round((brandInCount / withCitations.length) * 100)}%`;
   }
 
-  // Compute brand mention rate from response_analysis
+  // Brand mention rate
   let mentionRate = "--";
-  if (runIds.length > 0) {
-    const promptIdsForMention = (await supabase.from("prompts_executed").select("id").in("run_id", runIds)).data?.map((p: any) => p.id) ?? [];
-    if (promptIdsForMention.length > 0) {
-      const { count: totalAnalyses } = await supabase
-        .from("response_analysis")
-        .select("*", { count: "exact", head: true })
-        .in("prompt_executed_id", promptIdsForMention);
-      const { count: mentionedCount } = await supabase
-        .from("response_analysis")
-        .select("*", { count: "exact", head: true })
-        .in("prompt_executed_id", promptIdsForMention)
-        .eq("brand_mentioned", true);
-      if (totalAnalyses && totalAnalyses > 0) {
-        mentionRate = `${Math.round(((mentionedCount ?? 0) / totalAnalyses) * 100)}%`;
-      }
-    }
+  const totalAnalyses = (totalAnalysesRes as any).count ?? 0;
+  const mentionedCount = (mentionedCountRes as any).count ?? 0;
+  if (totalAnalyses > 0) {
+    mentionRate = `${Math.round((mentionedCount / totalAnalyses) * 100)}%`;
   }
 
   // Build AVI components for ring
@@ -174,6 +251,7 @@ export default async function DashboardPage({
       computed_at: a.computed_at,
     };
   });
+
   // Build recent runs
   const aviMap = new Map(aviList.map((a: any) => [a.run_id, a.avi_score]));
   const recentRuns = runs.slice(0, 5).map((r: any) => ({
@@ -196,46 +274,13 @@ export default async function DashboardPage({
     ...(aiConsultedPct !== "--" ? [{ labelKey: "dashboard.aiConsultedSources", value: aiConsultedPct, subKey: "dashboard.aiConsultedSourcesDesc" }] : []),
   ];
 
-  // Competitor bar data — use competitor_avi scores from the latest completed run
-  // Find the most recent completed run among the filtered runs
-  const latestCompletedRun = runs.find((r: any) => r.status === "completed");
-  let competitorBarData: { name: string; avi: number }[] = [];
-  if (latestCompletedRun) {
-    const { data: compAviRows } = await (supabase.from("competitor_avi") as any)
-      .select("competitor_name, avi_score")
-      .eq("run_id", (latestCompletedRun as any).id)
-      .order("avi_score", { ascending: false })
-      .limit(6);
-    competitorBarData = (compAviRows ?? []).map((c: any) => ({
-      name: c.competitor_name,
-      avi: Math.round(c.avi_score * 10) / 10,
-    }));
-  }
+  const competitorBarData: { name: string; avi: number }[] = (((compAviRowsRes as any).data ?? []) as any[]).map((c: any) => ({
+    name: c.competitor_name,
+    avi: Math.round(c.avi_score * 10) / 10,
+  }));
 
-  // Get query count + models for the selected project (for analysis launcher)
-  const activeProjectId = selectedId ?? projectIds[0] ?? null;
-  let projectQueryCount = 0;
-  let projectSegmentCount = 0;
-  let projectModelsConfig: string[] = [];
-
-  if (activeProjectId) {
-    const { count: qCount } = await supabase
-      .from("queries")
-      .select("*", { count: "exact", head: true })
-      .eq("project_id", activeProjectId)
-      .eq("is_active", true);
-    projectQueryCount = qCount ?? 0;
-
-    const { count: sCount } = await supabase
-      .from("audience_segments")
-      .select("*", { count: "exact", head: true })
-      .eq("project_id", activeProjectId)
-      .eq("is_active", true);
-    projectSegmentCount = sCount ?? 0;
-
-    const proj = projectMap.get(activeProjectId);
-    projectModelsConfig = (proj?.models_config as string[]) ?? ["gpt-5.4-mini"];
-  }
+  const proj = activeProjectId ? projectMap.get(activeProjectId) : null;
+  const projectModelsConfig: string[] = (proj?.models_config as string[]) ?? ["gpt-5.4-mini"];
 
   return (
     <>

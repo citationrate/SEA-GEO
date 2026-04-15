@@ -1,5 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Router cache: keep RSC payloads in client memory for `dynamic` seconds
+  // so back-button navigation between dashboard pages skips the SSR fetch
+  // round-trip. Big perceived-speed win on AVI where most pages are dynamic.
+  experimental: {
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
+  },
   images: {
     remotePatterns: [
       { hostname: "lh3.googleusercontent.com" },
