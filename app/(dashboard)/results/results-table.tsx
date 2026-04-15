@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -37,6 +38,7 @@ interface RunRow {
 
 export function ResultsTable({ rows }: { rows: RunRow[] }) {
   const { t, locale } = useTranslation();
+  const router = useRouter();
   const [search, setSearch] = useState("");
 
   const STATUS_LABEL: Record<string, string> = {
@@ -85,13 +87,25 @@ export function ResultsTable({ rows }: { rows: RunRow[] }) {
           <tbody>
             {filtered.map((r) => {
               const Icon = STATUS_ICON[r.status] ?? Clock;
+              const href = `/projects/${r.project_id}/runs/${r.id}`;
               return (
-                <tr key={r.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+                <tr
+                  key={r.id}
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => router.push(href)}
+                  onMouseEnter={() => router.prefetch(href)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(href);
+                    }
+                  }}
+                  className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer focus:outline-none focus:bg-muted/40"
+                >
                   <td className="py-3 px-4">
-                    <a href={`/projects/${r.project_id}/runs/${r.id}`} className="hover:text-primary transition-colors">
-                      <p className="font-medium text-foreground">{r.projectName}</p>
-                      <p className="text-xs text-muted-foreground">{r.projectBrand}</p>
-                    </a>
+                    <p className="font-medium text-foreground">{r.projectName}</p>
+                    <p className="text-xs text-muted-foreground">{r.projectBrand}</p>
                   </td>
                   <td className="py-3 px-4 text-muted-foreground">v{r.version}</td>
                   <td className="py-3 px-4">
