@@ -12,7 +12,9 @@ export default async function TopicsPage({
   searchParams: { projectId?: string; model?: string };
 }) {
   const auth = createServerClient();
-  const { data: { user } } = await auth.auth.getUser();
+  // Cookie-only auth — middleware already gates this route.
+  const { data: { session } } = await auth.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) return null;
 
   const supabase = createDataClient();
@@ -38,33 +40,65 @@ export default async function TopicsPage({
     ? (projectsList.find((p: any) => p.id === selectedId)?.target_brand ?? "Brand")
     : (projectsList[0]?.target_brand ?? "Brand");
 
-  // Get runs to extract available models + filter (exclude archived)
-  const { data: allRuns } = targetIds.length > 0
-    ? await supabase.from("analysis_runs").select("id, project_id, models_used").in("project_id", targetIds).is("deleted_at", null)
-    : { data: [] };
-
   const selectedModel = searchParams.model || null;
 
-  let filteredRunIds: string[];
-  if (selectedModel && targetIds.length > 0) {
-    const { data: filtered } = await supabase
-      .from("analysis_runs")
-      .select("id, project_id")
-      .in("project_id", targetIds)
-      .is("deleted_at", null)
-      .contains("models_used", [selectedModel]);
-    filteredRunIds = (filtered ?? []).map((r: any) => r.id);
-  } else {
-    filteredRunIds = (allRuns ?? []).map((r: any) => r.id);
+  // ── Phase 1: parallel fetch of runs (filtered + unfiltered) and queries ──
+  // analysis_runs is the source of truth for `models_used`. queries gives us
+  // the funnel_stage map needed later.
+  const [allRunsRes, filteredRunsRes, queriesRes] = await Promise.all([
+    targetIds.length > 0
+      ? supabase.from("analysis_runs").select("id, project_id, models_used").in("project_id", targetIds).is("deleted_at", null)
+      : Promise.resolve({ data: [] as any[] }),
+    selectedModel && targetIds.length > 0
+      ? supabase
+          .from("analysis_runs")
+          .select("id, project_id")
+          .in("project_id", targetIds)
+          .is("deleted_at", null)
+          .contains("models_used", [selectedModel])
+      : Promise.resolve({ data: null }),
+    targetIds.length > 0
+      ? supabase.from("queries").select("id, funnel_stage").in("project_id", targetIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+
+  const allRuns = ((allRunsRes as any).data ?? []) as any[];
+  const filteredRunIds: string[] = selectedModel
+    ? (((filteredRunsRes as any).data ?? []) as any[]).map((r: any) => r.id)
+    : allRuns.map((r: any) => r.id);
+  const allQueries = ((queriesRes as any).data ?? []) as any[];
+  const queryStageMap = new Map(allQueries.map((q: any) => [q.id, q.funnel_stage]));
+
+  // ── Phase 2: single global fetch instead of looping per-project ──
+  // The original code looped over projects and ran two queries per project
+  // (prompts_executed + response_analysis), producing N×2 round-trips.
+  // We collapse it into two global queries scoped by all the run ids we care
+  // about, then partition in JS — same data, dramatically less network.
+  let prompts: any[] = [];
+  let analyses: any[] = [];
+  if (filteredRunIds.length > 0) {
+    const [promptsRes] = await Promise.all([
+      supabase
+        .from("prompts_executed")
+        .select("id, run_id, query_id")
+        .in("run_id", filteredRunIds),
+    ]);
+    prompts = (((promptsRes as any).data ?? []) as any[]);
+    const promptIds = prompts.map((p: any) => p.id);
+    if (promptIds.length > 0) {
+      const { data: ar } = await supabase
+        .from("response_analysis")
+        .select("prompt_executed_id, topics, brand_mentioned")
+        .in("prompt_executed_id", promptIds)
+        .eq("brand_mentioned", true);
+      analyses = (ar ?? []) as any[];
+    }
   }
 
-  // Get query funnel stages for relevance weighting
-  const { data: allQueries } = targetIds.length > 0
-    ? await supabase.from("queries").select("id, funnel_stage").in("project_id", targetIds)
-    : { data: [] };
-  const queryStageMap = new Map((allQueries ?? []).map((q: any) => [q.id, q.funnel_stage]));
+  // Index the prompt → query lookup once.
+  const promptQueryMap = new Map(prompts.map((p: any) => [p.id, p.query_id]));
 
-  // Build topic stats with funnel weighting
+  // ── Aggregate topic stats globally (no per-project loop needed) ──
   interface TopicStats {
     count: number;
     tofu: number;
@@ -73,45 +107,22 @@ export default async function TopicsPage({
   }
   const globalStats = new Map<string, TopicStats>();
 
-  for (const proj of targetProjects) {
-    const projRunIds = filteredRunIds.filter((rid: string) =>
-      (allRuns ?? []).find((r: any) => r.id === rid && r.project_id === proj.id),
-    );
-    if (projRunIds.length === 0) continue;
+  analyses.forEach((a: any) => {
+    const queryId = promptQueryMap.get(a.prompt_executed_id);
+    const stage = queryId ? queryStageMap.get(queryId) : null;
 
-    const { data: prompts } = await supabase
-      .from("prompts_executed")
-      .select("id, query_id")
-      .in("run_id", projRunIds);
-
-    const promptList = (prompts ?? []) as any[];
-    const promptIds = promptList.map((p: any) => p.id);
-    const promptQueryMap = new Map(promptList.map((p: any) => [p.id, p.query_id]));
-    if (promptIds.length === 0) continue;
-
-    const { data: analyses } = await supabase
-      .from("response_analysis")
-      .select("prompt_executed_id, topics, brand_mentioned")
-      .in("prompt_executed_id", promptIds)
-      .eq("brand_mentioned", true);
-
-    (analyses ?? []).forEach((a: any) => {
-      const queryId = promptQueryMap.get(a.prompt_executed_id);
-      const stage = queryId ? queryStageMap.get(queryId) : null;
-
-      (a.topics ?? []).forEach((t: string) => {
-        let stats = globalStats.get(t);
-        if (!stats) {
-          stats = { count: 0, tofu: 0, mofu: 0, bofu: 0 };
-          globalStats.set(t, stats);
-        }
-        stats.count++;
-        if (stage === "tofu") stats.tofu++;
-        else if (stage === "mofu") stats.mofu++;
-        else if (stage === "bofu") stats.bofu++;
-      });
+    (a.topics ?? []).forEach((t: string) => {
+      let stats = globalStats.get(t);
+      if (!stats) {
+        stats = { count: 0, tofu: 0, mofu: 0, bofu: 0 };
+        globalStats.set(t, stats);
+      }
+      stats.count++;
+      if (stage === "tofu") stats.tofu++;
+      else if (stage === "mofu") stats.mofu++;
+      else if (stage === "bofu") stats.bofu++;
     });
-  }
+  });
 
   // Compute relevance_score and filter
   const topicItems = Array.from(globalStats.entries())
@@ -123,11 +134,6 @@ export default async function TopicsPage({
     }))
     .filter((t) => t.count >= 1)
     .sort((a, b) => b.relevanceScore - a.relevanceScore || b.count - a.count);
-
-  // Extract available models for filter pills
-  const availableModels = Array.from(
-    new Set((allRuns ?? []).flatMap((r: any) => r.models_used ?? [])),
-  ) as string[];
 
   return (
     <div data-tour="topics-page" className="space-y-6 max-w-[1200px] animate-fade-in">

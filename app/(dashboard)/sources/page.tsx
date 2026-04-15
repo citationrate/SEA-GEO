@@ -23,7 +23,9 @@ export default async function SourcesPage({
   searchParams: { projectId?: string; model?: string };
 }) {
   const auth = createServerClient();
-  const { data: { user } } = await auth.auth.getUser();
+  // Cookie-only auth — middleware already gates this route.
+  const { data: { session } } = await auth.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) return null;
 
   const supabase = createDataClient();
@@ -42,30 +44,31 @@ export default async function SourcesPage({
   const selectedProject = projectsList.find((p: any) => p.id === selectedId);
   const brand = selectedProject?.target_brand ?? projectsList[0]?.target_brand ?? "";
 
-  // Get runs to extract available models + filter (exclude archived)
-  const { data: allRuns } = targetIds.length > 0
-    ? await supabase.from("analysis_runs").select("id, models_used").in("project_id", targetIds).is("deleted_at", null)
-    : { data: [] };
-
-
   const selectedModel = searchParams.model || null;
 
-  // Filter runs by model at DB level if selected
-  let filteredRunIds: string[];
-  if (selectedModel && targetIds.length > 0) {
-    const { data: filtered } = await supabase
-      .from("analysis_runs")
-      .select("id")
-      .in("project_id", targetIds)
-      .is("deleted_at", null)
-      .contains("models_used", [selectedModel]);
-    filteredRunIds = (filtered ?? []).map((r: any) => r.id);
-  } else {
-    filteredRunIds = (allRuns ?? []).map((r: any) => r.id);
-  }
+  // ── Phase 1: parallel run lookups (filtered + unfiltered) ──
+  // The model-filtered list and the full active-runs list are both queried
+  // off the same project set; firing them in parallel halves the wait.
+  const [allRunsRes, filteredRunsRes] = await Promise.all([
+    targetIds.length > 0
+      ? supabase.from("analysis_runs").select("id, models_used").in("project_id", targetIds).is("deleted_at", null)
+      : Promise.resolve({ data: [] as any[] }),
+    selectedModel && targetIds.length > 0
+      ? supabase
+          .from("analysis_runs")
+          .select("id")
+          .in("project_id", targetIds)
+          .is("deleted_at", null)
+          .contains("models_used", [selectedModel])
+      : Promise.resolve({ data: null }),
+  ]);
+  const allRuns = ((allRunsRes as any).data ?? []) as any[];
+  const activeRunIds = allRuns.map((r: any) => r.id);
+  const filteredRunIds = selectedModel
+    ? (((filteredRunsRes as any).data ?? []) as any[]).map((r: any) => r.id)
+    : activeRunIds;
 
-  // Get sources filtered by active run IDs only
-  const activeRunIds = (allRuns ?? []).map((r: any) => r.id);
+  // ── Phase 2: sources fetch (depends on the run id set we just resolved) ──
   let sourcesList: any[] = [];
   if (filteredRunIds.length > 0) {
     const { data: sources } = await supabase
@@ -74,17 +77,9 @@ export default async function SourcesPage({
       .in("project_id", targetIds)
       .in("run_id", filteredRunIds);
     sourcesList = (sources ?? []) as any[];
-  } else if (!selectedModel && activeRunIds.length > 0) {
-    // No model filter — show sources from active runs only
-    const { data: sources } = await supabase
-      .from("sources")
-      .select("*")
-      .in("project_id", targetIds)
-      .in("run_id", activeRunIds);
-    sourcesList = (sources ?? []) as any[];
   }
 
-  // Group by domain
+  // ── Group by domain ──
   const domainMap = new Map<string, SourceDomain>();
 
   for (const s of sourcesList) {
@@ -96,7 +91,6 @@ export default async function SourcesPage({
     if (existing) {
       existing.citations += (s.citation_count ?? 1);
       if (s.is_brand_owned) existing.isBrandOwned = true;
-      // Promote to ai_consulted if any row has it
       if (s.source_origin === "ai_consulted") existing.sourceOrigin = "ai_consulted";
       if (s.url && !existing.urls.includes(s.url)) existing.urls.push(s.url);
       if (context && !existing.contexts.includes(context)) existing.contexts.push(context);

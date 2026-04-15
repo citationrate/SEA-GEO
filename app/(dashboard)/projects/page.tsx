@@ -7,7 +7,9 @@ export const metadata = { title: "Progetti" };
 
 export default async function ProjectsPage() {
   const auth = createServerClient();
-  const { data: { user } } = await auth.auth.getUser();
+  // Cookie-only auth — middleware already gates this route.
+  const { data: { session } } = await auth.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) redirect("/login");
 
   const supabase = createDataClient();

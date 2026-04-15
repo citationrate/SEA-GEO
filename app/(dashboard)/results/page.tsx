@@ -7,19 +7,27 @@ export const metadata = { title: "Risultati" };
 
 export default async function ResultsPage() {
   const auth = createServerClient();
-  const { data: { user } } = await auth.auth.getUser();
+  // Cookie-only auth — middleware already gates this route.
+  const { data: { session } } = await auth.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) redirect("/login");
 
   const supabase = createDataClient();
 
-  // Get user's projects first, then filter runs by those projects
+  // ── Phase 1: get user's projects (we'll reuse this list to map names) ──
+  // Original code re-queried projects a second time after fetching runs to
+  // get the project names — wasteful, since we already have every project
+  // the user owns right here.
   const { data: userProjects } = await supabase
     .from("projects")
-    .select("id")
+    .select("id, name, target_brand")
     .eq("user_id", user.id)
     .is("deleted_at", null);
-  const userProjectIds = (userProjects ?? []).map((p: any) => p.id);
+  const projectsList = (userProjects ?? []) as any[];
+  const userProjectIds = projectsList.map((p: any) => p.id);
+  const projectMap = new Map(projectsList.map((p: any) => [p.id, p]));
 
+  // ── Phase 2: runs (depends on projectIds) ──
   const { data: runs } = userProjectIds.length > 0
     ? await supabase
         .from("analysis_runs")
@@ -27,20 +35,13 @@ export default async function ResultsPage() {
         .in("project_id", userProjectIds)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
-    : { data: [] };
+    : { data: [] as any[] };
 
-  const projectIds = Array.from(new Set((runs ?? []).map((r: any) => r.project_id)));
-  const { data: projects } = projectIds.length > 0
-    ? await supabase.from("projects").select("id, name, target_brand").in("id", projectIds)
-    : { data: [] };
-
-  const projectMap = new Map((projects ?? []).map((p: any) => [p.id, p]));
-
+  // ── Phase 3: AVI scores for those runs (one query, reused project map) ──
   const runIds = (runs ?? []).map((r: any) => r.id);
   const { data: aviRows } = runIds.length > 0
     ? await supabase.from("avi_history").select("run_id, avi_score").in("run_id", runIds)
-    : { data: [] };
-
+    : { data: [] as any[] };
   const aviMap = new Map((aviRows ?? []).map((a: any) => [a.run_id, a.avi_score]));
 
   const rows = (runs ?? []).map((r: any) => {

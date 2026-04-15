@@ -12,15 +12,30 @@ export default async function ComparePage({
   searchParams: { upgrade?: string; projectId?: string };
 }) {
   const auth = createServerClient();
-  const { data: { user } } = await auth.auth.getUser();
+  // Cookie-only auth — middleware already gates this route.
+  const { data: { session } } = await auth.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) redirect("/login");
 
   const supabase = createDataClient();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("plan")
-    .eq("id", user.id)
-    .single();
+  // Profile + projects can fan out — neither depends on the other. The
+  // paywall check below short-circuits if the profile says non-Pro,
+  // discarding the projects result; that's fine — the work was overlapped
+  // with the network round-trip anyway.
+  const [profileRes, projectsRes] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("projects")
+      .select("id, name")
+      .eq("user_id", user.id)
+      .is("deleted_at", null),
+  ]);
+  const profile = (profileRes as any).data;
+  const projects = (projectsRes as any).data;
 
   const isPro = isProUser(profile as any);
 
@@ -28,13 +43,6 @@ export default async function ComparePage({
   if (!isPro) {
     return <ComparePaywall />;
   }
-
-  // Fetch all projects for reference
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("id, name")
-    .eq("user_id", user.id)
-    .is("deleted_at", null);
 
   const projectsList = (projects ?? []) as any[];
   const projectIds = projectsList.map((p: any) => p.id);

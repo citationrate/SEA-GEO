@@ -1,9 +1,22 @@
 "use client";
 
-import { AVIRing, StatsRow, AVITrend, CompetitorBar, RecentRuns } from "@/components/dashboard/index";
+import dynamic from "next/dynamic";
+import { AVIRing, StatsRow, RecentRuns } from "@/components/dashboard/index";
 import { ProjectSelector } from "@/components/project-selector";
 import { AnalysisLauncher } from "@/app/(dashboard)/projects/[id]/analysis-launcher";
 import { useTranslation } from "@/lib/i18n/context";
+
+// Recharts is the heavy chunk on this page (~50KB gzip). Both chart
+// components live in their own files now and we lazy-load them so the
+// initial dashboard JS payload ships without the chart library.
+const AVITrend = dynamic(() => import("@/components/dashboard/avi-trend"), {
+  ssr: false,
+  loading: () => <div className="card p-5 h-[230px] animate-pulse bg-muted/30" />,
+});
+const CompetitorBar = dynamic(() => import("@/components/dashboard/competitor-bar"), {
+  ssr: false,
+  loading: () => <div className="card p-5 h-[200px] animate-pulse bg-muted/30" />,
+});
 
 interface DashboardClientProps {
   aviScore: number | null;
