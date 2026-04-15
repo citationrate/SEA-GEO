@@ -7,7 +7,7 @@ export function isProUser(
   profile: { plan?: string } | null,
 ): boolean {
   const plan = profile?.plan;
-  return plan === "pro";
+  return plan === "pro" || plan === "enterprise";
 }
 
 /** Check if user is on the demo (free) plan */
@@ -18,9 +18,11 @@ export function isDemoUser(
   return !plan || plan === "demo";
 }
 
+export type EffectivePlan = "demo" | "base" | "pro" | "enterprise";
+
 /** Get effective plan ID */
-export function getEffectivePlanId(plan?: string | null): "demo" | "base" | "pro" {
+export function getEffectivePlanId(plan?: string | null): EffectivePlan {
   if (!plan || plan === "demo") return "demo";
-  if (plan === "base" || plan === "pro") return plan;
+  if (plan === "base" || plan === "pro" || plan === "enterprise") return plan;
   return "demo";
 }

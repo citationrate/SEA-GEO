@@ -1,5 +1,6 @@
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Cpu, Settings, Sparkles } from "lucide-react";
 import { AnalysisLauncher } from "./analysis-launcher";
 import { ProjectAVITrend } from "./project-avi-trend";
@@ -8,14 +9,20 @@ import { OpenAnalysisButton } from "./open-analysis-button";
 import { ArchivedRunsSection } from "./archived-runs-section";
 import { AutoLaunch } from "./auto-launch";
 import { T } from "@/components/translated-label";
+import { BotMount } from "@/components/BotMount";
+import { buildProjectContext, normalizeLang } from "@/lib/bot-context";
+import { getEffectivePlanId } from "@/lib/utils/is-pro";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const auth = createServerClient();
-  const { data: { user } } = await auth.auth.getUser();
+  // Cookie-only auth — middleware already gates this route.
+  const { data: { session } } = await auth.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) redirect("/login");
 
   const supabase = createDataClient();
 
+  // ── Phase 1: project itself (everything else hangs off its existence) ──
   const { data: project } = await supabase
     .from("projects")
     .select("*")
@@ -25,47 +32,47 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
   if (!project) notFound();
 
-  const { data: queries } = await supabase
-    .from("queries")
-    .select("*")
-    .eq("project_id", params.id)
-    .eq("is_active", true)
-    .order("created_at", { ascending: false });
-
-  const { data: segments } = await supabase
-    .from("audience_segments")
-    .select("*")
-    .eq("project_id", params.id)
-    .eq("is_active", true)
-    .order("created_at", { ascending: true });
-
-  // Fetch all runs (active + archived)
-  const { data: allRunsRaw } = await supabase
-    .from("analysis_runs")
-    .select("*")
-    .eq("project_id", params.id)
-    .order("created_at", { ascending: false });
+  // ── Phase 2: queries / segments / runs all depend only on params.id ──
+  // The original code awaited them strictly in series. They are independent
+  // reads on different tables — Promise.all collapses 3 round-trips into 1.
+  // Profile fetch (for bot plan gating) is folded in to keep this one round-trip.
+  const [queriesRes, segmentsRes, allRunsRawRes, profileRes] = await Promise.all([
+    supabase
+      .from("queries")
+      .select("*")
+      .eq("project_id", params.id)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("audience_segments")
+      .select("*")
+      .eq("project_id", params.id)
+      .eq("is_active", true)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("analysis_runs")
+      .select("*")
+      .eq("project_id", params.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .single(),
+  ]);
+  const queries = (queriesRes as any).data;
+  const segments = (segmentsRes as any).data;
+  const allRunsRaw = (allRunsRawRes as any).data;
+  const userPlan = getEffectivePlanId(((profileRes as any).data as { plan?: string } | null)?.plan);
 
   const allRuns = (allRunsRaw ?? []).filter((r: any) => !r.deleted_at);
   const archivedRuns = (allRunsRaw ?? []).filter((r: any) => r.deleted_at);
-
   const lastRun = allRuns[0] ?? null;
-
-  // AVI history: only from active runs
   const activeRunIds = allRuns.map((r: any) => r.id);
 
-  const { data: lastAvi } = activeRunIds.length > 0
-    ? await supabase
-        .from("avi_history")
-        .select("*")
-        .eq("project_id", params.id)
-        .in("run_id", activeRunIds)
-        .order("computed_at", { ascending: false })
-        .limit(1)
-        .single()
-    : { data: null };
-
-  // Fetch AVI history for trend chart (only active runs)
+  // ── Phase 3: AVI history. Original code issued TWO queries on this table
+  // (one for the latest score, one for the full trend). They read from the
+  // same row set — fetch ascending once, and pick the latest in JS. ──
   const { data: aviHistory } = activeRunIds.length > 0
     ? await supabase
         .from("avi_history")
@@ -73,15 +80,17 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         .eq("project_id", params.id)
         .in("run_id", activeRunIds)
         .order("computed_at", { ascending: true })
-    : { data: [] };
+    : { data: [] as any[] };
 
-  const aviMap = new Map((aviHistory ?? []).map((a: any) => [a.run_id, a.avi_score]));
+  const aviList = (aviHistory ?? []) as any[];
+  const lastAvi = aviList.length > 0 ? aviList[aviList.length - 1] : null;
+  const aviMap = new Map(aviList.map((a: any) => [a.run_id, a.avi_score]));
 
   // Get all unique models across runs
-  const allModels = Array.from(new Set(allRuns.flatMap((r: any) => r.models_used ?? [])));
+  const allModels = Array.from(new Set(allRuns.flatMap((r: any) => r.models_used ?? []))) as string[];
 
   // Build trend data for chart
-  const trendData = (aviHistory ?? []).map((a: any, i: number) => ({
+  const trendData = aviList.map((a: any, i: number) => ({
     version: `v${i + 1}`,
     avi: Math.round(a.avi_score * 10) / 10,
     presence: Math.round(a.presence_score),
@@ -93,6 +102,20 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const mofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "mofu");
 
   const proj = project as any;
+
+  // ── Bot context: ownership is already enforced by the project query above
+  // (.eq user_id). Plan + locale gate the actual mount inside <BotMount />.
+  const cookieStore = cookies();
+  const lang = normalizeLang(cookieStore.get("avi-locale")?.value);
+  const botContext = buildProjectContext({
+    plan: userPlan,
+    lang,
+    project: proj,
+    lastAvi: lastAvi as any,
+    lastRun: lastRun as any,
+    totalRuns: allRuns.length,
+    totalQueries: (queries ?? []).length,
+  });
 
   return (
     <div className="space-y-6 max-w-[1400px] animate-fade-in">
@@ -373,6 +396,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         <DeleteProjectButton projectId={params.id} projectName={proj.name} />
       </div>
 
+      <BotMount plan={userPlan} context={botContext} />
     </div>
   );
 }

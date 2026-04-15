@@ -1,6 +1,10 @@
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { CompetitiveResults } from "./competitive-results";
+import { BotMount } from "@/components/BotMount";
+import { buildCompareContext, normalizeLang } from "@/lib/bot-context";
+import { getEffectivePlanId } from "@/lib/utils/is-pro";
 
 export default async function CompetitiveResultsPage({
   params,
@@ -18,6 +22,13 @@ export default async function CompetitiveResultsPage({
     .single();
 
   if (!analysis) notFound();
+
+  // Bot ownership gate: competitive_analyses has a user_id column. The page
+  // itself does not block non-owners (kept that way to avoid changing existing
+  // behavior), but the bot is shown only to the analysis owner.
+  const isOwner =
+    typeof (analysis as { user_id?: unknown }).user_id === "string" &&
+    (analysis as { user_id?: unknown }).user_id === user.id;
 
   const { data: prompts } = await (supabase.from("competitive_prompts") as any)
     .select("*")
@@ -58,12 +69,34 @@ export default async function CompetitiveResultsPage({
     comp_score_a: numOrNull(h.comp_score_a),
   }));
 
+  // Build bot context only for the owner.
+  let botPlan: ReturnType<typeof getEffectivePlanId> = "demo";
+  let botContext: ReturnType<typeof buildCompareContext> | null = null;
+  if (isOwner) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .single();
+    botPlan = getEffectivePlanId((profile as { plan?: string } | null)?.plan);
+    const cookieStore = cookies();
+    const lang = normalizeLang(cookieStore.get("avi-locale")?.value);
+    botContext = buildCompareContext({
+      plan: botPlan,
+      lang,
+      analysis: normalizedAnalysis as any,
+    });
+  }
+
   return (
-    <CompetitiveResults
-      analysis={normalizedAnalysis}
-      prompts={normalizedPrompts as any[]}
-      historicalAnalyses={normalizedHistory as any[]}
-      currentAnalysisId={params.analysisId}
-    />
+    <>
+      <CompetitiveResults
+        analysis={normalizedAnalysis}
+        prompts={normalizedPrompts as any[]}
+        historicalAnalyses={normalizedHistory as any[]}
+        currentAnalysisId={params.analysisId}
+      />
+      {botContext && <BotMount plan={botPlan} context={botContext} />}
+    </>
   );
 }

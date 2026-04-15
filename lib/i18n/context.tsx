@@ -12,16 +12,38 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 const LS_KEY = "seageo-lang";
+const COOKIE_KEY = "avi-locale";
+// One year, in seconds. Server components read this cookie to know the user's
+// locale (the localStorage value is invisible to SSR).
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
+function writeLocaleCookie(l: Locale) {
+  if (typeof document === "undefined") return;
+  document.cookie = `${COOKIE_KEY}=${l}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+}
+
+function readLocaleCookie(): Locale | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(
+    new RegExp(`(?:^|; )${COOKIE_KEY}=([^;]*)`),
+  );
+  const v = match?.[1];
+  return v && v in translations ? (v as Locale) : null;
+}
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("it");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(LS_KEY) as Locale | null;
+    const stored =
+      (localStorage.getItem(LS_KEY) as Locale | null) || readLocaleCookie();
     if (stored && stored in translations) {
       setLocaleState(stored);
       document.documentElement.lang = stored;
+      // Backfill cookie if the user only had localStorage (returning user
+      // before this change shipped).
+      writeLocaleCookie(stored);
     }
     setMounted(true);
   }, []);
@@ -29,6 +51,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
     localStorage.setItem(LS_KEY, l);
+    writeLocaleCookie(l);
     document.documentElement.lang = l;
   }, []);
 

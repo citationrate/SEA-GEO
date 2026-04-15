@@ -74,7 +74,7 @@ export default function NewProjectPage() {
   const [error, setError] = useState("");
   const [existingProjectCount, setExistingProjectCount] = useState<number | null>(null);
   const [isPro, setIsPro] = useState(false);
-  const [planId, setPlanId] = useState<"demo" | "base" | "pro">("demo");
+  const [planId, setPlanId] = useState<"demo" | "base" | "pro" | "enterprise">("demo");
 
   const AVAILABLE_PROVIDERS: ProviderOption[] = PROVIDER_GROUPS.map((g) => ({
     id: g.id,
@@ -127,7 +127,7 @@ export default function NewProjectPage() {
       .then((p) => {
         const ePlan = getEffectivePlanId(p?.plan);
         setPlanId(ePlan);
-        setIsPro(ePlan === "pro");
+        setIsPro(ePlan === "pro" || ePlan === "enterprise");
       })
       .catch(() => {});
   }, []);

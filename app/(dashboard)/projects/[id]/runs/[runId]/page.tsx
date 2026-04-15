@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { ArrowLeft, CheckCircle, XCircle, Clock, Loader2, Archive } from "lucide-react";
 import { ExportButtons } from "./export-buttons";
 import { RunAutoRefresh } from "./run-auto-refresh";
@@ -10,6 +11,9 @@ import { ShareButton } from "./share-button";
 import { TranslatedStatus, TranslatedLabel } from "./run-i18n";
 import { RunDetailClient } from "./run-detail-client";
 import { GalacticSiegeGame } from "@/components/galactic-siege-game";
+import { BotMount } from "@/components/BotMount";
+import { buildRunContext, normalizeLang } from "@/lib/bot-context";
+import { getEffectivePlanId } from "@/lib/utils/is-pro";
 
 const STATUS_MAP: Record<string, { label: string; class: string; icon: any }> = {
   pending:   { label: "In attesa",   class: "badge-muted",    icon: Clock },
@@ -167,6 +171,48 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
   const proj = project as any;
   const aviData = avi as any;
 
+  // ── Bot mount: only if user owns the project (project query above filters
+  // by user_id, so non-owners get null). Plan + locale gate the mount.
+  let botPlan: ReturnType<typeof getEffectivePlanId> = "demo";
+  let botContext: ReturnType<typeof buildRunContext> | null = null;
+  if (proj) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .single();
+    botPlan = getEffectivePlanId((profile as { plan?: string } | null)?.plan);
+
+    const cookieStore = cookies();
+    const lang = normalizeLang(cookieStore.get("avi-locale")?.value);
+
+    const competitorTop = (competitorAviData ?? [])
+      .map((c: any) => ({
+        name: String(c.competitor_name ?? ""),
+        avi: c.avi_score != null ? Number(c.avi_score) : null,
+      }))
+      .filter((c: { name: string }) => c.name)
+      .sort(
+        (a: { avi: number | null }, b: { avi: number | null }) =>
+          (b.avi ?? -1) - (a.avi ?? -1),
+      );
+
+    const topicTop = ((topics ?? []) as any[])
+      .map((t: any) => String(t.topic ?? t.name ?? ""))
+      .filter((t: string) => t);
+
+    botContext = buildRunContext({
+      plan: botPlan,
+      lang,
+      brand: String(proj.target_brand ?? ""),
+      projectName: String(proj.name ?? ""),
+      run: r,
+      avi: aviData,
+      competitorTop,
+      topicTop,
+    });
+  }
+
   return (
     <div className="space-y-6 max-w-[1400px] animate-fade-in">
       <RunAutoRefresh status={r.status} />
@@ -291,6 +337,8 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         segments={(segments ?? []) as any[]}
         runCount={runCount}
       />
+
+      {botContext && <BotMount plan={botPlan} context={botContext} />}
     </div>
   );
 }
