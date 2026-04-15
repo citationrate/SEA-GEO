@@ -28,7 +28,7 @@ const nextConfig = {
           { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co https://citationrate-backend-production.up.railway.app https://challenges.cloudflare.com https://raw.githubusercontent.com; frame-src https://challenges.cloudflare.com https://js.stripe.com;"
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://sdbaichatbot.com https://*.sdbaichatbot.com; style-src 'self' 'unsafe-inline' https://sdbaichatbot.com https://*.sdbaichatbot.com; img-src 'self' data: blob: https://*.supabase.co https://sdbaichatbot.com https://*.sdbaichatbot.com; connect-src 'self' https://*.supabase.co https://citationrate-backend-production.up.railway.app https://challenges.cloudflare.com https://raw.githubusercontent.com https://sdbaichatbot.com https://*.sdbaichatbot.com wss://sdbaichatbot.com wss://*.sdbaichatbot.com; frame-src https://challenges.cloudflare.com https://js.stripe.com https://sdbaichatbot.com https://*.sdbaichatbot.com; font-src 'self' data: https://sdbaichatbot.com https://*.sdbaichatbot.com;"
           },
         ],
       },
