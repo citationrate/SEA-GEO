@@ -270,14 +270,18 @@ export default function NewProjectPage() {
       .map((p) => selectedModelPerProvider[p.id] ?? p.models[0].id);
   }
 
-  function handleCompetitorKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-    const value = competitorInput.trim();
-    if (value && !competitors.includes(value)) {
-      setCompetitors([...competitors, value]);
+  function addCompetitorsFromRaw(raw: string) {
+    const names = raw.split(/[,;\n]+/).map((s) => s.trim()).filter((s) => s && !competitors.includes(s));
+    if (names.length > 0) {
+      setCompetitors((prev) => [...prev, ...names]);
     }
     setCompetitorInput("");
+  }
+
+  function handleCompetitorKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter" && e.key !== ",") return;
+    e.preventDefault();
+    addCompetitorsFromRaw(competitorInput);
   }
 
   function removeCompetitor(name: string) {
@@ -503,7 +507,11 @@ export default function NewProjectPage() {
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">{t("projects.knownCompetitors")}</label>
           <input type="text" value={competitorInput} onChange={(e) => setCompetitorInput(e.target.value)}
-            onKeyDown={handleCompetitorKeyDown} placeholder={t("projects.competitorPlaceholder")} className="input-base" />
+            onKeyDown={handleCompetitorKeyDown}
+            onBlur={() => { if (competitorInput.trim()) addCompetitorsFromRaw(competitorInput); }}
+            onPaste={(e) => { const text = e.clipboardData?.getData("text"); if (text && (text.includes(",") || text.includes(";"))) { e.preventDefault(); addCompetitorsFromRaw(text); } }}
+            placeholder={t("projects.competitorPlaceholder")} className="input-base" />
+          <p className="text-xs text-muted-foreground mt-1">{t("projects.competitorHint")}</p>
           {competitors.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
               {competitors.map((c) => (
@@ -597,7 +605,7 @@ export default function NewProjectPage() {
           {planId === "demo" ? (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">
-                Il piano Demo include 2 modelli fissi. Passa al piano Base o Pro per scegliere i modelli.
+                {t("projects.demoModelsDesc")}
               </p>
               <div className="flex flex-wrap gap-2">
                 {DEMO_MODEL_IDS.map((modelId) => (
