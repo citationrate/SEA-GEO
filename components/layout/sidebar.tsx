@@ -11,7 +11,7 @@ import {
   Users, Link2, Tag, GitCompare, Settings,
   Database, ChevronRight, Plus,
   PanelLeftClose, PanelLeftOpen,
-  ExternalLink, X, Newspaper, CreditCard, Sparkles, LogOut,
+  ExternalLink, X, Newspaper, CreditCard, Sparkles, LogOut, BookOpen,
 } from "lucide-react";
 import { useMobileNav } from "./mobile-nav-context";
 import { useHasUnreadNews } from "@/components/ai-news-panel";
@@ -232,6 +232,28 @@ export function Sidebar({ profile }: SidebarProps) {
           </a>
         </div>
       )}
+
+      {/* Review Tutorial — desktop only */}
+      <div className="hidden md:block px-2 pb-1 flex-shrink-0">
+        <button
+          onClick={() => {
+            localStorage.removeItem("seageo_onboarding_done");
+            window.dispatchEvent(new Event("restart-onboarding-tour"));
+            closeMobile();
+          }}
+          className={cn(
+            "w-full flex items-center gap-2 rounded-[2px] transition-colors",
+            collapsed && !mobileOpen ? "justify-center py-2" : "py-2 px-3",
+          )}
+          style={{ color: "var(--muted-foreground)" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--primary-glow)"; e.currentTarget.style.color = "var(--foreground)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--muted-foreground)"; }}
+          title={collapsed && !mobileOpen ? t("sidebar.reviewTutorial") : undefined}
+        >
+          <BookOpen className="w-4 h-4 shrink-0" aria-hidden="true" />
+          {(!collapsed || mobileOpen) && <span className="text-sm">{t("sidebar.reviewTutorial")}</span>}
+        </button>
+      </div>
 
       {/* Switch to Citability Score (CS) — bottom of sidebar */}
       <div className="px-2 pb-2 flex-shrink-0">

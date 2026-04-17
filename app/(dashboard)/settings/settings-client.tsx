@@ -348,10 +348,6 @@ export function SettingsClient({
             <p className="text-sm text-foreground bg-muted/30 rounded-[2px] px-3 py-2">{email}</p>
           </div>
         </div>
-        <div>
-          <label className="text-xs text-muted-foreground uppercase tracking-wide">{t("settings.userId")}</label>
-          <p className="mt-1 text-sm text-foreground bg-muted/30 rounded-[2px] px-3 py-2 font-mono text-xs truncate">{userId}</p>
-        </div>
       </div>
 
       {/* Modifica password */}

@@ -424,7 +424,8 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
     }
   }
 
-  if (!active || !mounted) return null;
+  // Desktop only — hide on mobile/tablet
+  if (!active || !mounted || viewportSize.vw < 768) return null;
 
   const vw = viewportSize.vw;
   const vh = viewportSize.vh;
@@ -507,20 +508,58 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
         }}
       />
 
-      {/* Tooltip — fixed bottom-right, never moves */}
-      {!navigating && (
+      {/* Tooltip — positioned near the highlighted element or centered */}
+      {!navigating && (() => {
+        const isCentered = !rect || step.tooltipPosition === "center";
+        let tooltipStyle: React.CSSProperties = {};
+        if (rect && !isCentered) {
+          const pad = 16;
+          const tH = 280;
+          switch (step.tooltipPosition) {
+            case "right":
+              tooltipStyle = {
+                top: Math.min(Math.max(pad, rect.y), vh - tH - pad),
+                left: Math.min(rect.x + rect.width + pad, vw - tooltipW - pad),
+              };
+              break;
+            case "bottom-right":
+              tooltipStyle = {
+                top: Math.min(rect.y + rect.height + pad, vh - tH - pad),
+                left: Math.max(pad, rect.x),
+              };
+              break;
+            case "bottom-left":
+              tooltipStyle = {
+                top: Math.min(rect.y + rect.height + pad, vh - tH - pad),
+                left: Math.max(pad, rect.x - tooltipW / 2),
+              };
+              break;
+            case "top-right":
+              tooltipStyle = {
+                top: Math.max(pad, rect.y - tH),
+                left: Math.min(rect.x + rect.width + pad, vw - tooltipW - pad),
+              };
+              break;
+          }
+        }
+        return (
         <div
-          className="fixed animate-fade-in sm:!left-auto"
+          className={isCentered ? "fixed inset-0 flex items-center justify-center" : ""}
           style={{
             zIndex: 110,
-            bottom: 16,
-            right: 16,
-            left: 16,
-            width: "auto",
-            maxWidth: 440,
-            pointerEvents: "auto",
+            pointerEvents: isCentered ? "auto" : "none",
           }}
         >
+          <div
+            className="animate-fade-in"
+            style={{
+              position: isCentered ? undefined : "fixed",
+              width: tooltipW,
+              maxWidth: "calc(100vw - 32px)",
+              pointerEvents: "auto",
+              ...(!isCentered ? tooltipStyle : {}),
+            }}
+          >
           <div
             className="rounded-lg p-4 sm:p-5 space-y-3 shadow-2xl max-w-[440px]"
             style={{
@@ -600,7 +639,9 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
             </div>
           </div>
         </div>
-      )}
+        </div>
+        );
+      })()}
     </>
   );
 }
