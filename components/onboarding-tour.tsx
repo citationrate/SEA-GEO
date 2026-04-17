@@ -365,7 +365,7 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
     if (!navigating) return;
     const timeout = setTimeout(() => {
       setNavigating(false);
-    }, 400);
+    }, 700);
     return () => clearTimeout(timeout);
   }, [navigating, pathname]);
 
@@ -424,8 +424,8 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
     }
   }
 
-  // Desktop only — hide on mobile/tablet
-  if (!active || !mounted || viewportSize.vw < 768) return null;
+  if (!active || !mounted) return null;
+  const isMobile = viewportSize.vw < 768;
 
   const vw = viewportSize.vw;
   const vh = viewportSize.vh;
@@ -439,8 +439,8 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
 
   return (
     <>
-      {/* SVG overlay with spotlight mask */}
-      <svg
+      {/* SVG overlay with spotlight mask — desktop only (mobile uses centered modal) */}
+      {!isMobile && <svg
         className="fixed inset-0"
         style={{ zIndex: 100, pointerEvents: "none" }}
         width={vw}
@@ -471,8 +471,10 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
         />
       </svg>
 
+}
+
       {/* Clickthrough passthrough for highlighted element */}
-      {rect && (
+      {!isMobile && rect && (
         <div
           className="fixed"
           style={{
@@ -486,8 +488,8 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
         />
       )}
 
-      {/* Click blocker for non-highlighted areas */}
-      <div
+      {/* Click blocker for non-highlighted areas — desktop only */}
+      {!isMobile && <div
         className="fixed inset-0"
         style={{ zIndex: 101, pointerEvents: "auto" }}
         onClick={(e) => {
@@ -506,11 +508,11 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
           e.stopPropagation();
           e.preventDefault();
         }}
-      />
+      />}
 
       {/* Tooltip — positioned near the highlighted element or centered */}
       {!navigating && (() => {
-        const isCentered = !rect || step.tooltipPosition === "center";
+        const isCentered = isMobile || !rect || step.tooltipPosition === "center";
         let tooltipStyle: React.CSSProperties = {};
         if (rect && !isCentered) {
           const pad = 16;
@@ -554,9 +556,10 @@ export function OnboardingTour({ onboardingCompleted = false }: { onboardingComp
             className="animate-fade-in"
             style={{
               position: isCentered ? undefined : "fixed",
-              width: tooltipW,
+              width: isMobile ? "auto" : tooltipW,
               maxWidth: "calc(100vw - 32px)",
               pointerEvents: "auto",
+              transition: "top 0.3s ease, left 0.3s ease, opacity 0.3s ease",
               ...(!isCentered ? tooltipStyle : {}),
             }}
           >
