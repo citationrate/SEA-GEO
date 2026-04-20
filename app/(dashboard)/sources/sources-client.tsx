@@ -271,12 +271,11 @@ export function SourcesClient({
   );
 }
 
-/* ─── Domain Favicon (fallback chain: Google S2 → DuckDuckGo → initial avatar) ─── */
+/* ─── Domain Favicon (internal proxy /api/favicon → initial-letter avatar fallback) ─── */
 function DomainFavicon({ domain, size = 20 }: { domain: string; size?: number }) {
   const [attempt, setAttempt] = useState(0);
   const sources = [
-    `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
-    `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+    `/api/favicon?domain=${encodeURIComponent(domain)}`,
   ];
 
   if (attempt >= sources.length) {
