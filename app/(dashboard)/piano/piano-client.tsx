@@ -113,6 +113,7 @@ export function PianoClient({
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const [showSaleTerms, setShowSaleTerms] = useState(false);
   const [pendingPriceEnv, setPendingPriceEnv] = useState<string | null>(null);
+  const [purchaseResult, setPurchaseResult] = useState<"success" | "cancel" | null>(null);
   const { t } = useTranslation();
   const { openModal: openConsultation } = useConsultation();
 
@@ -205,6 +206,18 @@ export function PianoClient({
     readHash();
     window.addEventListener("hashchange", readHash);
     return () => window.removeEventListener("hashchange", readHash);
+  }, []);
+
+  // Stripe redirects back with ?success=true or ?cancelled=true — show result modal
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success") === "true") {
+      setPurchaseResult("success");
+      window.history.replaceState({}, "", "/piano#fatture");
+    } else if (params.get("cancelled") === "true") {
+      setPurchaseResult("cancel");
+      window.history.replaceState({}, "", "/piano#piani");
+    }
   }, []);
 
   return (
@@ -516,6 +529,34 @@ export function PianoClient({
       >
         <SaleTermsText />
       </ScrollToAcceptModal>
+
+      {/* Purchase result modal (Stripe return) */}
+      {purchaseResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => { const wasSuccess = purchaseResult === "success"; setPurchaseResult(null); if (wasSuccess) window.location.reload(); }}>
+          <div className="bg-ink border border-border rounded-[4px] p-8 w-[420px] text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="text-4xl mb-4" style={{ color: purchaseResult === "success" ? "#22c55e" : "#ef4444" }}>
+              {purchaseResult === "success" ? "✓" : "✕"}
+            </div>
+            <h3 className="text-xl font-semibold mb-3" style={{ color: purchaseResult === "success" ? "#22c55e" : "#ef4444" }}>
+              {purchaseResult === "success" ? "Acquisto completato!" : "Acquisto annullato"}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              {purchaseResult === "success"
+                ? "Il tuo piano è stato aggiornato con successo."
+                : "Nessun addebito è stato effettuato."}
+            </p>
+            <button
+              onClick={() => { const wasSuccess = purchaseResult === "success"; setPurchaseResult(null); if (wasSuccess) window.location.reload(); }}
+              className="px-8 py-2.5 text-sm font-semibold rounded-[3px] transition-all"
+              style={{
+                background: purchaseResult === "success" ? "#22c55e" : "var(--surface)",
+                color: purchaseResult === "success" ? "#000" : "var(--foreground)",
+                border: purchaseResult === "success" ? "none" : "1px solid var(--border)",
+              }}
+            >OK</button>
+          </div>
+        </div>
+      )}
 
       {/* Cancel modal */}
       {showCancelModal && (
