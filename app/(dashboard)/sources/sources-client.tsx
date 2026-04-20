@@ -271,6 +271,39 @@ export function SourcesClient({
   );
 }
 
+/* ─── Domain Favicon (fallback chain: Google S2 → DuckDuckGo → initial avatar) ─── */
+function DomainFavicon({ domain, size = 20 }: { domain: string; size?: number }) {
+  const [attempt, setAttempt] = useState(0);
+  const sources = [
+    `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
+    `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+  ];
+
+  if (attempt >= sources.length) {
+    return (
+      <div
+        style={{ width: size, height: size, fontSize: Math.round(size * 0.55) }}
+        className="rounded bg-primary/20 text-primary flex items-center justify-center font-bold shrink-0"
+        aria-hidden
+      >
+        {domain[0]?.toUpperCase() ?? "?"}
+      </div>
+    );
+  }
+
+  return (
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img
+      src={sources[attempt]}
+      alt=""
+      width={size}
+      height={size}
+      className="rounded shrink-0"
+      onError={() => setAttempt((a) => a + 1)}
+    />
+  );
+}
+
 /* ─── Stat Card ─── */
 function StatCard({ value, label, highlight }: { value: string; label: string; highlight?: boolean }) {
   return (
@@ -292,14 +325,7 @@ function DomainCard({ domain: d, onAnalyze, isPro }: { domain: SourceDomain; onA
       {/* Header: favicon + domain + type badge */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`https://www.google.com/s2/favicons?domain=${d.domain}&sz=32`}
-            alt=""
-            width={20}
-            height={20}
-            className="rounded shrink-0"
-          />
+          <DomainFavicon domain={d.domain} size={20} />
           <h3 className="font-display font-bold text-foreground truncate">{d.domain}</h3>
         </div>
         <span className={`badge border text-[12px] shrink-0 ${cfg.cls}`}>
@@ -438,14 +464,7 @@ function AnalyzeDrawer({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[rgba(255,255,255,0.08)] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`https://www.google.com/s2/favicons?domain=${d.domain}&sz=32`}
-              alt=""
-              width={24}
-              height={24}
-              className="rounded shrink-0"
-            />
+            <DomainFavicon domain={d.domain} size={24} />
             <div className="min-w-0">
               <h2 className="font-display font-bold text-lg text-foreground truncate">{d.domain}</h2>
               <span className={`badge border text-[12px] ${cfg.cls}`}>
