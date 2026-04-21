@@ -166,6 +166,7 @@ export default function NewProjectPage() {
   const [siteAnalysis, setSiteAnalysis] = useState<any>(null);
   const [siteAnalysisLoading, setSiteAnalysisLoading] = useState(false);
   const [siteAnalysisError, setSiteAnalysisError] = useState("");
+  const [suggestedCompetitors, setSuggestedCompetitors] = useState<string[]>([]);
   const analyzedUrlRef = useRef("");
 
   const analyzeSite = useCallback(async (url: string) => {
@@ -177,6 +178,7 @@ export default function NewProjectPage() {
     setSiteAnalysisLoading(true);
     setSiteAnalysisError("");
     setSiteAnalysis(null);
+    setSuggestedCompetitors([]);
     try {
       const res = await fetch("/api/projects/analyze-site", {
         method: "POST",
@@ -191,16 +193,20 @@ export default function NewProjectPage() {
       const { analysis } = await res.json();
       setSiteAnalysis(analysis);
 
-      // Pre-fill competitor suggestions if user hasn't entered any
-      if (analysis.competitor_signals?.length > 0 && competitors.length === 0) {
-        setCompetitors(analysis.competitor_signals.slice(0, 5));
+      // Expose competitor_signals as opt-in suggestions (not auto-applied to the form)
+      if (Array.isArray(analysis.competitor_signals) && analysis.competitor_signals.length > 0) {
+        setSuggestedCompetitors((prev) => {
+          const already = new Set([...competitors, ...prev]);
+          const fresh = analysis.competitor_signals.filter((c: string) => c && !already.has(c));
+          return [...prev, ...fresh].slice(0, 5);
+        });
       }
     } catch {
       setSiteAnalysisError(t("projects.siteAnalysisError"));
     } finally {
       setSiteAnalysisLoading(false);
     }
-  }, [competitors.length, language, t]);
+  }, [competitors, language, t]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -286,6 +292,15 @@ export default function NewProjectPage() {
 
   function removeCompetitor(name: string) {
     setCompetitors(competitors.filter((c) => c !== name));
+  }
+
+  function acceptSuggestedCompetitor(name: string) {
+    setCompetitors((prev) => (prev.includes(name) ? prev : [...prev, name]));
+    setSuggestedCompetitors((prev) => prev.filter((s) => s !== name));
+  }
+
+  function dismissAllSuggestions() {
+    setSuggestedCompetitors([]);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -522,6 +537,37 @@ export default function NewProjectPage() {
                   </button>
                 </span>
               ))}
+            </div>
+          )}
+          {suggestedCompetitors.length > 0 && (
+            <div className="mt-3 rounded-[2px] border border-primary/30 bg-primary/5 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <p className="text-xs font-semibold text-foreground truncate">{t("projects.suggestedCompetitorsTitle")}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={dismissAllSuggestions}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                >
+                  {t("projects.suggestionsDismissAll")}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("projects.suggestedCompetitorsHint")}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {suggestedCompetitors.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => acceptSuggestedCompetitor(name)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border border-primary/30 bg-transparent text-foreground hover:bg-primary/10 transition-colors"
+                  >
+                    <span aria-hidden>+</span>
+                    {name}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

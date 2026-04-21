@@ -251,7 +251,17 @@ Extract (ALL text values MUST be in ${l.name}):
 2. target_audience: Who are the customers? (B2B/B2C, demographics, profession, in ${l.name})
 3. value_proposition: What makes this brand unique? (1-2 sentences, in ${l.name})
 4. sector_keywords: 5-10 keywords that describe the sector (array of strings, in ${l.name})
-5. competitor_signals: Any competitors or similar brands mentioned on the site (array of company names, empty if none found)
+5. competitor_signals: THIRD-PARTY COMPETING companies only. Follow these rules strictly:
+   - First, identify the TARGET BRAND (from the domain, page titles, and site copy).
+   - Then extract ONLY external companies that COMPETE with the target brand on the same market.
+   - EXCLUDE: the target brand's own sub-brands, product lines, subsidiaries, owned brands, internal divisions, or brands in its own portfolio.
+   - EXCLUDE: any brand presented as "our product", "by us", "part of our group", or similar.
+   - If the site only showcases its own portfolio without mentioning external competitors, return [].
+   WRONG examples to avoid:
+   - nestle.com → MUST NOT return KitKat, Nespresso, Nescafé (those are Nestlé-owned sub-brands). Valid competitors: Mondelez, Unilever, Danone.
+   - apple.com → MUST NOT return iPhone, iPad, MacBook (product lines, not competitors). Valid competitors: Samsung, Google, Microsoft.
+   - unilever.com → MUST NOT return Dove, Knorr, Magnum (owned brands). Valid competitors: Procter & Gamble, Nestlé, Colgate-Palmolive.
+   Output: array of company names, max 5, empty [] if uncertain or if only owned brands are found.
 6. tone: One of: ${l.tones}
 7. geography: One of: ${l.geos}
 
