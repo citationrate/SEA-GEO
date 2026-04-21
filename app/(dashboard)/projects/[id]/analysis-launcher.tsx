@@ -19,12 +19,14 @@ export function AnalysisLauncher({
   queryCount,
   segmentCount,
   modelsConfig,
+  mofuCount = 0,
 }: {
   projectId: string;
   hasQueries: boolean;
   queryCount: number;
   segmentCount: number;
   modelsConfig: string[];
+  mofuCount?: number;
 }) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -405,6 +407,20 @@ export function AnalysisLauncher({
                 </div>
               </div>
             )}
+            {/* Soft pre-flight warnings (not blocking) */}
+            {profileLoaded && !wouldExceed && queryCount < 3 && queryCount > 0 && (
+              <div className="flex items-start gap-2.5 rounded-[2px] border border-[#c4a882]/30 bg-[#c4a882]/5 px-4 py-3">
+                <AlertTriangle className="w-4 h-4 text-[#c4a882] shrink-0 mt-0.5" />
+                <p className="text-xs text-[#c4a882]">{t("analysisLauncher.warnFewQueries")}</p>
+              </div>
+            )}
+            {profileLoaded && !wouldExceed && queryCount >= 2 && mofuCount === 0 && (
+              <div className="flex items-start gap-2.5 rounded-[2px] border border-[#c4a882]/30 bg-[#c4a882]/5 px-4 py-3">
+                <AlertTriangle className="w-4 h-4 text-[#c4a882] shrink-0 mt-0.5" />
+                <p className="text-xs text-[#c4a882]">{t("analysisLauncher.warnNoMofu")}</p>
+              </div>
+            )}
+
             {profileLoaded && modelsExceed && (
               <div className="flex items-start gap-2.5 rounded-[2px] border border-destructive/30 bg-destructive/10 px-4 py-3">
                 <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />

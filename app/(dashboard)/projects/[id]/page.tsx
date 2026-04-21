@@ -153,6 +153,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               queryCount={(queries ?? []).length}
               segmentCount={(segments ?? []).length}
               modelsConfig={(proj.models_config as string[]) ?? ["gpt-5.4-mini"]}
+              mofuCount={mofuQueries.length}
             />
           </div>
         </div>
