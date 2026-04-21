@@ -10,6 +10,7 @@ import { DeleteRunButton, RestoreRunButton } from "./run-actions";
 import { ShareButton } from "./share-button";
 import { TranslatedStatus, TranslatedLabel } from "./run-i18n";
 import { RunDetailClient } from "./run-detail-client";
+import { BrandNarrative } from "./brand-narrative";
 import { GalacticSiegeGame } from "@/components/galactic-siege-game";
 import { BotMount } from "@/components/BotMount";
 import { buildRunContext, normalizeLang } from "@/lib/bot-context";
@@ -293,6 +294,32 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         {r.started_at && <div><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.startLabel" />:</span>{" "}<span className="text-foreground" suppressHydrationWarning>{new Date(r.started_at).toLocaleString("it-IT")}</span></div>}
         {r.completed_at && <div><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.endLabel" />:</span>{" "}<span className="text-foreground" suppressHydrationWarning>{new Date(r.completed_at).toLocaleString("it-IT")}</span></div>}
       </div>
+
+      {/* AI Brand Narrative — template + one-liner insight */}
+      {r.status === "completed" && aviData && (() => {
+        const sortedCompetitors = (competitorAviData ?? [])
+          .map((c: any) => ({
+            name: String(c.competitor_name ?? ""),
+            avi: c.avi_score != null ? Number(c.avi_score) : null,
+          }))
+          .filter((c: { name: string; avi: number | null }) => c.name && c.avi != null)
+          .sort((a: { avi: number | null }, b: { avi: number | null }) => (b.avi ?? -1) - (a.avi ?? -1));
+        const topC = sortedCompetitors[0] ?? null;
+        const narrativeLocale = normalizeLang(cookies().get("avi-locale")?.value);
+        return (
+          <BrandNarrative
+            runId={params.runId}
+            targetBrand={String(proj?.target_brand ?? "")}
+            aviScore={aviData.avi_score != null ? Number(aviData.avi_score) : null}
+            presenceScore={aviData.presence_score != null ? Number(aviData.presence_score) : null}
+            rankScore={aviData.rank_score != null ? Number(aviData.rank_score) : null}
+            sentimentScore={aviData.sentiment_score != null ? Number(aviData.sentiment_score) : null}
+            topCompetitor={topC?.name ?? null}
+            topCompetitorAvi={topC?.avi ?? null}
+            locale={narrativeLocale}
+          />
+        );
+      })()}
 
       {/* Progress bar when running */}
       {r.status === "running" && (
