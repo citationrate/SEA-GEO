@@ -8,6 +8,7 @@ import { DeleteProjectButton } from "./delete-project-button";
 import { OpenAnalysisButton } from "./open-analysis-button";
 import { ArchivedRunsSection } from "./archived-runs-section";
 import { AutoLaunch } from "./auto-launch";
+import { ProjectOnboardingChecklist } from "./onboarding-checklist";
 import { T } from "@/components/translated-label";
 import { BotMount } from "@/components/BotMount";
 import { buildProjectContext, normalizeLang } from "@/lib/bot-context";
@@ -156,6 +157,15 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           </div>
         </div>
       </div>
+
+      {/* Onboarding checklist: only when no analyses have been run yet */}
+      {allRuns.length === 0 && (
+        <ProjectOnboardingChecklist
+          projectId={params.id}
+          queryCount={(queries ?? []).length}
+          segmentCount={(segments ?? []).length}
+        />
+      )}
 
       {/* Modelli AI configurati */}
       <div className="flex items-center gap-2 flex-wrap">
