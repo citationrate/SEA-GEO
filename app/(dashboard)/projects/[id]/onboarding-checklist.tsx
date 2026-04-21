@@ -1,25 +1,33 @@
 "use client";
 
-import { MessageSquare, Users, Play, Check, Sparkles } from "lucide-react";
+import { MessageSquare, Users, Play, Check, Sparkles, BarChart3, TrendingUp } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 
 export function ProjectOnboardingChecklist({
   projectId,
   queryCount,
   segmentCount,
+  runsCount = 0,
 }: {
   projectId: string;
   queryCount: number;
   segmentCount: number;
+  runsCount?: number;
 }) {
   const { t } = useTranslation();
 
   const step1Done = queryCount >= 2;
   const step2Done = segmentCount > 0;
   const step3Ready = step1Done;
+  const step4Done = runsCount >= 1;
+  const step5Done = runsCount >= 3;
 
-  const completedSteps = (step1Done ? 1 : 0) + (step2Done ? 1 : 0);
-  const progress = Math.round((completedSteps / 2) * 100);
+  const totalMilestones = 5;
+  const completedMilestones = [step1Done, step2Done, step4Done, step5Done].filter(Boolean).length
+    + (step3Ready ? 1 : 0);
+  const progress = Math.round((completedMilestones / totalMilestones) * 100);
+
+  const allComplete = completedMilestones === totalMilestones;
 
   function handleLaunch() {
     window.dispatchEvent(new CustomEvent("open-analysis-modal"));
@@ -33,6 +41,20 @@ export function ProjectOnboardingChecklist({
 
   const step2Cta = step2Done ? t("projectDetail.setupstep2DoneCta") : t("projectDetail.setupstep2Cta");
 
+  // Compact mode: all milestones done → single-line confirmation
+  if (allComplete) {
+    return (
+      <div className="card px-5 py-3 flex items-center justify-between border border-sage/40 bg-sage/5">
+        <div className="flex items-center gap-2">
+          <Check className="w-4 h-4 text-sage" />
+          <p className="text-sm font-medium text-foreground">{t("projectDetail.setupCompleteTitle")}</p>
+          <span className="text-xs text-muted-foreground">· {t("projectDetail.setupCompleteDesc")}</span>
+        </div>
+        <span className="text-xs text-sage font-mono font-bold">{totalMilestones}/{totalMilestones}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="card p-5 space-y-4 border border-primary/40 bg-primary/5">
       <div className="flex items-center gap-2 justify-between">
@@ -40,7 +62,7 @@ export function ProjectOnboardingChecklist({
           <Sparkles className="w-4 h-4 text-primary" />
           <h2 className="font-display font-semibold text-foreground">{t("projectDetail.setuptitle")}</h2>
         </div>
-        <span className="text-xs text-muted-foreground font-mono">{completedSteps}/2 · {progress}%</span>
+        <span className="text-xs text-muted-foreground font-mono">{completedMilestones}/{totalMilestones} · {progress}%</span>
       </div>
 
       <p className="text-xs text-muted-foreground">{t("projectDetail.setupsubtitle")}</p>
@@ -120,6 +142,42 @@ export function ProjectOnboardingChecklist({
             <Play className="w-3.5 h-3.5" />
             {t("projectDetail.setupstep3Cta")}
           </button>
+        </div>
+      </div>
+
+      {/* Post-launch milestones: first analysis + trend */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+        <div className={`flex items-center gap-2.5 rounded-[2px] border p-3 ${
+          step4Done ? "border-sage/40 bg-sage/5" : "border-border bg-muted/10"
+        }`}>
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+            step4Done ? "bg-sage text-background" : "bg-muted text-muted-foreground"
+          }`}>
+            {step4Done ? <Check className="w-3.5 h-3.5" /> : "4"}
+          </div>
+          <BarChart3 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground truncate">{t("projectDetail.setupstep4Title")}</p>
+            <p className="text-[11px] text-muted-foreground truncate">{t("projectDetail.setupstep4Desc")}</p>
+          </div>
+        </div>
+        <div className={`flex items-center gap-2.5 rounded-[2px] border p-3 ${
+          step5Done ? "border-sage/40 bg-sage/5" : "border-border bg-muted/10"
+        }`}>
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+            step5Done ? "bg-sage text-background" : "bg-muted text-muted-foreground"
+          }`}>
+            {step5Done ? <Check className="w-3.5 h-3.5" /> : "5"}
+          </div>
+          <TrendingUp className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground truncate">{t("projectDetail.setupstep5Title")}</p>
+            <p className="text-[11px] text-muted-foreground truncate">
+              {runsCount > 0 && runsCount < 3
+                ? t("projectDetail.setupstep5DescPartial").replace("{n}", String(runsCount))
+                : t("projectDetail.setupstep5Desc")}
+            </p>
+          </div>
         </div>
       </div>
     </div>

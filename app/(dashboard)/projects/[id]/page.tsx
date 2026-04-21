@@ -159,14 +159,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         </div>
       </div>
 
-      {/* Onboarding checklist: only when no analyses have been run yet */}
-      {allRuns.length === 0 && (
-        <ProjectOnboardingChecklist
-          projectId={params.id}
-          queryCount={(queries ?? []).length}
-          segmentCount={(segments ?? []).length}
-        />
-      )}
+      {/* Project maturity / onboarding checklist — always visible */}
+      <ProjectOnboardingChecklist
+        projectId={params.id}
+        queryCount={(queries ?? []).length}
+        segmentCount={(segments ?? []).length}
+        runsCount={allRuns.length}
+      />
 
       {/* Modelli AI configurati */}
       <div className="flex items-center gap-2 flex-wrap">
