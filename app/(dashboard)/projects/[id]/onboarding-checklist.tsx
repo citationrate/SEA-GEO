@@ -55,6 +55,9 @@ export function ProjectOnboardingChecklist({
     );
   }
 
+  // Quick Start: shown only before the first analysis, as the fastest path
+  const showQuickStart = runsCount === 0;
+
   return (
     <div className="card p-5 space-y-4 border border-primary/40 bg-primary/5">
       <div className="flex items-center gap-2 justify-between">
@@ -70,6 +73,24 @@ export function ProjectOnboardingChecklist({
       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
         <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} />
       </div>
+
+      {showQuickStart && !step1Done && (
+        <a
+          href={`/projects/${projectId}/queries/generate`}
+          className="flex items-center justify-between gap-3 rounded-[2px] border border-primary bg-primary/10 p-3 hover:bg-primary/15 transition-colors"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">{t("projectDetail.quickStartTitle")}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{t("projectDetail.quickStartDesc")}</p>
+            </div>
+          </div>
+          <span className="text-xs font-semibold text-primary shrink-0">{t("projectDetail.quickStartCta")} →</span>
+        </a>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Step 1: Queries */}

@@ -773,6 +773,9 @@ export const translations: Record<Locale, Record<string, any>> = {
       setupstep5DescPartial: "{n}/3 completate — continua per vedere il trend.",
       setupCompleteTitle: "Progetto completo",
       setupCompleteDesc: "Tutte le milestone raggiunte. Continua a lanciare analisi periodiche per monitorare il trend.",
+      quickStartTitle: "Avvia Analisi Rapida con AI",
+      quickStartDesc: "Ci pensiamo noi: generiamo 4 query bilanciate TOFU/MOFU dal tuo brand e sito.",
+      quickStartCta: "Vai",
     },
     competitiveForm: {
       project: "Progetto",
@@ -1825,6 +1828,9 @@ export const translations: Record<Locale, Record<string, any>> = {
       setupstep5DescPartial: "{n}/3 completed — keep going to see the trend.",
       setupCompleteTitle: "Project complete",
       setupCompleteDesc: "All milestones reached. Keep running periodic analyses to monitor the trend.",
+      quickStartTitle: "Start Quick AI Analysis",
+      quickStartDesc: "We handle it: we generate 4 balanced TOFU/MOFU queries from your brand and site.",
+      quickStartCta: "Go",
     },
     competitiveForm: {
       project: "Project",
