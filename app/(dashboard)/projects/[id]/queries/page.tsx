@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, Loader2, MessageSquare, Sparkles, AlertTriangle, ToggleLeft, ToggleRight, CheckSquare, Square, Power, PowerOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslation } from "@/lib/i18n/context";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 interface Query {
   id: string;
@@ -339,6 +340,7 @@ export default function QueriesPage() {
           <div className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-primary" />
             <h2 className="font-display font-semibold text-foreground">TOFU</h2>
+            <InfoTooltip text={t("queries.tofuTooltip")} />
             <span className="badge badge-muted text-[12px]">{tofuQueries.length}</span>
           </div>
           <p className="text-xs text-muted-foreground">{t("queries.tofuDesc")}</p>
@@ -378,6 +380,7 @@ export default function QueriesPage() {
           <div className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-accent" />
             <h2 className="font-display font-semibold text-foreground">MOFU</h2>
+            <InfoTooltip text={t("queries.mofuTooltip")} />
             <span className="badge badge-muted text-[12px]">{mofuQueries.length}</span>
           </div>
           <p className="text-xs text-muted-foreground">{t("queries.mofuDesc")}</p>
