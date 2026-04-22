@@ -41,6 +41,7 @@ export function Sidebar({ profile }: SidebarProps) {
   const isPro = profile?.plan === "pro";
   const isDemo = !profile?.plan || profile.plan === "demo";
   const isBase = profile?.plan === "base";
+  const isEnterprise = profile?.plan === "enterprise";
   const [collapsed, setCollapsed] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const { t } = useTranslation();
@@ -78,7 +79,7 @@ export function Sidebar({ profile }: SidebarProps) {
     {
       group: t("sidebar.system"),
       items: [
-        { href: "/piano",       icon: isDemo ? Sparkles : CreditCard, label: `${t("sidebar.piano")} · ${isDemo ? "Demo" : isBase ? "Base" : isPro ? "Pro" : (profile?.plan ?? "Demo")}`, highlight: false, planColor: isBase ? "#60a5fa" : isPro ? "#c4a882" : undefined },
+        { href: "/piano",       icon: isDemo ? Sparkles : CreditCard, label: `${t("sidebar.piano")} · ${isDemo ? "Demo" : isBase ? "Base" : isPro ? "Pro" : isEnterprise ? "Enterprise" : (profile?.plan ?? "Demo")}`, highlight: false, planColor: isBase ? "#60a5fa" : isPro || isEnterprise ? "#c4a882" : undefined },
         { href: "/notizie",     icon: Newspaper,       label: t("sidebar.aiNews") },
         { href: "/settings",    icon: Settings,        label: t("sidebar.settings") },
       ],
@@ -304,13 +305,16 @@ export function Sidebar({ profile }: SidebarProps) {
                 </p>
                 <div className="flex items-center gap-1.5">
                   <p className="font-mono text-[0.75rem] text-muted-foreground uppercase tracking-wide">
-                    {t("sidebar.plan")} {isDemo ? "Demo" : isBase ? "" : isPro ? "" : profile?.plan}
+                    {t("sidebar.plan")} {isDemo ? "Demo" : isBase || isPro || isEnterprise ? "" : profile?.plan}
                   </p>
                   {isBase && (
                     <span className="font-mono text-[0.625rem] tracking-wide px-1 py-0.5 rounded-[2px]" style={{ background: "linear-gradient(135deg, #C0C0C0, #E8E8E8)", color: "#333" }}>BASE</span>
                   )}
                   {isPro && (
                     <span className="font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">PRO</span>
+                  )}
+                  {isEnterprise && (
+                    <span className="font-mono text-[0.5rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0 rounded-[2px]">ENTERPRISE</span>
                   )}
                 </div>
               </div>
