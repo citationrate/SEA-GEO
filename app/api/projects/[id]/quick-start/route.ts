@@ -7,6 +7,7 @@ import { checkAndIncrementHaikuLimit, HAIKU_DAILY_LIMIT } from "@/lib/haiku-rate
 
 const previewSchema = z.object({
   action: z.literal("preview"),
+  language: z.enum(["it", "en", "fr", "de", "es"]).optional(),
 });
 
 const confirmSchema = z.object({
@@ -108,13 +109,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   if (parsed.data.action === "preview") {
-    return handlePreview(p, user.id);
+    return handlePreview(p, user.id, parsed.data.language);
   }
   return handleConfirm(p, parsed.data.queries, parsed.data.competitors ?? []);
 }
 
-async function handlePreview(project: any, userId: string) {
-  const lang = project.language || "it";
+async function handlePreview(project: any, userId: string, uiLanguage?: string) {
+  // UI language (from the caller) takes priority over the project's target
+  // market language so the queries render in the language the user is
+  // reading. Matches the behavior of /api/queries/ai-generate.
+  const lang = uiLanguage || project.language || "it";
   const langLabel = LANG_LABEL[lang] ?? "English";
 
   // Rate limit Haiku before any API call.
@@ -150,10 +154,11 @@ Brand context:
 - Known competitors: ${[...knownCompetitors, ...siteCompetitors].slice(0, 8).join(", ") || "none detected"}
 
 Task:
-1) Generate exactly 4 realistic queries in ${langLabel} that a potential customer would type into ChatGPT / Gemini / Perplexity when looking for a provider in this sector.
+1) Generate exactly 4 realistic queries a potential customer would type into ChatGPT / Gemini / Perplexity when looking for a provider in this sector.
    - 2 TOFU queries: generic, unbranded, asking WHICH COMPANIES / WHO PROVIDES this service. DO NOT mention "${brand}" or any competitor.
    - 2 MOFU queries: describe a concrete customer need that "${brand}" could solve, and ask WHICH COMPANY / WHO can help. Still unbranded (no brand name), but specific enough that a good AI assistant might surface "${brand}".
    - Avoid generic "what is" questions. Always steer toward commercial providers, not public entities or general info.
+   - LANGUAGE REQUIREMENT: ALL 4 queries MUST be written entirely in ${langLabel}. This is non-negotiable. Even if the brand originates from a different country (e.g. ${brand} is Italian), the queries must still be in ${langLabel}. Do not mix languages. Do not output queries in Italian or any other language unless ${langLabel} is that language.
 2) Suggest 3 to 5 realistic third-party competitors (company names only) that genuinely compete with "${brand}" in this sector.
    - EXCLUDE any sub-brand, product line, subsidiary, or brand in "${brand}"'s own portfolio.
    - Return a plausible list even if uncertain — the user will review and edit.

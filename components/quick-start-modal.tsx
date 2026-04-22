@@ -17,7 +17,7 @@ export function QuickStartModal({
   projectId: string;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
@@ -35,6 +35,16 @@ export function QuickStartModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  // Lock body scroll while the modal is open — prevents the page scrollbar
+  // from appearing/disappearing behind the backdrop, which would otherwise
+  // shift the page ~15px and cause visible jitter on hover/scroll.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
   // Auto-preview on open.
   useEffect(() => {
     if (!open) return;
@@ -46,7 +56,7 @@ export function QuickStartModal({
     fetch(`/api/projects/${projectId}/quick-start`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "preview" }),
+      body: JSON.stringify({ action: "preview", language: locale }),
     })
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
@@ -71,7 +81,7 @@ export function QuickStartModal({
       });
 
     return () => { cancelled = true; };
-  }, [open, projectId, t]);
+  }, [open, projectId, locale, t]);
 
   function updateQueryText(i: number, text: string) {
     setQueries((prev) => prev.map((q, idx) => (idx === i ? { ...q, text } : q)));
