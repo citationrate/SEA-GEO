@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { X, Loader2, Sparkles, Plus, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ export function QuickStartModal({
   const { t, locale } = useTranslation();
   const router = useRouter();
 
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [queries, setQueries] = useState<Query[]>([]);
@@ -28,6 +30,9 @@ export function QuickStartModal({
   const [fallback, setFallback] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // createPortal requires document — mount flag defers rendering to client.
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
@@ -35,19 +40,38 @@ export function QuickStartModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // Lock body scroll while the modal is open AND compensate for the disappearing
-  // scrollbar by adding equivalent padding-right, otherwise the page content
-  // underneath shifts ~15px when the modal mounts.
+  // Aggressive body scroll lock: freeze the page at its current scroll
+  // position using `position: fixed`. Compensates for the disappearing
+  // scrollbar via padding-right so the page underneath doesn't shift.
   useEffect(() => {
     if (!open) return;
-    const prevOverflow = document.body.style.overflow;
-    const prevPadding = document.body.style.paddingRight;
+    const scrollY = window.scrollY;
     const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    const prev = {
+      bodyOverflow: document.body.style.overflow,
+      bodyPosition: document.body.style.position,
+      bodyTop: document.body.style.top,
+      bodyWidth: document.body.style.width,
+      bodyPadding: document.body.style.paddingRight,
+      htmlOverflow: document.documentElement.style.overflow,
+    };
+
     document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
     if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+    document.documentElement.style.overflow = "hidden";
+
     return () => {
-      document.body.style.overflow = prevOverflow;
-      document.body.style.paddingRight = prevPadding;
+      document.body.style.overflow = prev.bodyOverflow;
+      document.body.style.position = prev.bodyPosition;
+      document.body.style.top = prev.bodyTop;
+      document.body.style.width = prev.bodyWidth;
+      document.body.style.paddingRight = prev.bodyPadding;
+      document.documentElement.style.overflow = prev.htmlOverflow;
+      window.scrollTo(0, scrollY);
     };
   }, [open]);
 
@@ -154,18 +178,19 @@ export function QuickStartModal({
     }
   }
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const validCount = queries.filter((q) => q.text.trim().length >= 5).length;
 
-  return (
+  const content = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+      style={{ contain: "layout paint", isolation: "isolate" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="card w-full max-w-2xl max-h-[90vh] min-h-[400px] flex flex-col border border-primary/40 bg-background"
-        style={{ overscrollBehavior: "contain" }}
+        className="card w-full max-w-2xl max-h-[90vh] min-h-[500px] flex flex-col border border-primary/40 bg-background"
+        style={{ overscrollBehavior: "contain", transform: "translateZ(0)", willChange: "transform" }}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
@@ -321,4 +346,6 @@ export function QuickStartModal({
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 }
