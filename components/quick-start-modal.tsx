@@ -35,14 +35,20 @@ export function QuickStartModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // Lock body scroll while the modal is open — prevents the page scrollbar
-  // from appearing/disappearing behind the backdrop, which would otherwise
-  // shift the page ~15px and cause visible jitter on hover/scroll.
+  // Lock body scroll while the modal is open AND compensate for the disappearing
+  // scrollbar by adding equivalent padding-right, otherwise the page content
+  // underneath shifts ~15px when the modal mounts.
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
+    const prevOverflow = document.body.style.overflow;
+    const prevPadding = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPadding;
+    };
   }, [open]);
 
   // Auto-preview on open.
@@ -154,10 +160,13 @@ export function QuickStartModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="card w-full max-w-2xl max-h-[90vh] flex flex-col border border-primary/40 bg-background">
+      <div
+        className="card w-full max-w-2xl max-h-[90vh] min-h-[400px] flex flex-col border border-primary/40 bg-background"
+        style={{ overscrollBehavior: "contain" }}
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
@@ -170,7 +179,10 @@ export function QuickStartModal({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <div
+          className="flex-1 overflow-y-auto p-5 space-y-5"
+          style={{ overscrollBehavior: "contain", scrollbarGutter: "stable" }}
+        >
           {loading && (
             <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
