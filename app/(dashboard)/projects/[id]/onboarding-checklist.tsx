@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { MessageSquare, Users, Play, Check, Sparkles, BarChart3, TrendingUp } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
+import { QuickStartModal } from "@/components/quick-start-modal";
 
 export function ProjectOnboardingChecklist({
   projectId,
@@ -15,6 +17,7 @@ export function ProjectOnboardingChecklist({
   runsCount?: number;
 }) {
   const { t } = useTranslation();
+  const [quickStartOpen, setQuickStartOpen] = useState(false);
 
   const step1Done = queryCount >= 2;
   const step2Done = segmentCount > 0;
@@ -75,9 +78,10 @@ export function ProjectOnboardingChecklist({
       </div>
 
       {showQuickStart && !step1Done && (
-        <a
-          href={`/projects/${projectId}/queries/generate`}
-          className="flex items-center justify-between gap-3 rounded-[2px] border border-primary bg-primary/10 p-3 hover:bg-primary/15 transition-colors"
+        <button
+          type="button"
+          onClick={() => setQuickStartOpen(true)}
+          className="w-full flex items-center justify-between gap-3 rounded-[2px] border border-primary bg-primary/10 p-3 hover:bg-primary/15 transition-colors text-left"
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
@@ -89,8 +93,14 @@ export function ProjectOnboardingChecklist({
             </div>
           </div>
           <span className="text-xs font-semibold text-primary shrink-0">{t("projectDetail.quickStartCta")} →</span>
-        </a>
+        </button>
       )}
+
+      <QuickStartModal
+        open={quickStartOpen}
+        projectId={projectId}
+        onClose={() => setQuickStartOpen(false)}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Step 1: Queries */}

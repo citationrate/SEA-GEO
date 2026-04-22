@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import dns from "dns/promises";
+import { createDataClient } from "@/lib/supabase/server";
+import { checkAndIncrementHaikuLimit, HAIKU_DAILY_LIMIT } from "@/lib/haiku-rate-limit";
 
 /** SSRF protection: resolve hostname and block private/reserved IPs */
 async function validateUrlNotPrivate(urlString: string): Promise<void> {
@@ -176,13 +178,22 @@ async function fetchViaJina(pageUrl: string): Promise<{ title: string; descripti
 }
 
 export async function POST(request: Request) {
-  const { error } = await requireAuth();
+  const { user, error } = await requireAuth();
   if (error) return error;
 
   try {
     const body = await request.json();
     const parsed = schema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "URL non valido" }, { status: 400 });
+
+    // Haiku daily quota — consumed pre-call regardless of fetch success.
+    const limit = await checkAndIncrementHaikuLimit(createDataClient(), user.id);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Daily AI limit reached", limit: HAIKU_DAILY_LIMIT },
+        { status: 429 },
+      );
+    }
 
     const language = parsed.data.language;
     let baseUrl = parsed.data.url.trim();

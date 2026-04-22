@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { createDataClient } from "@/lib/supabase/server";
+import { checkAndIncrementHaikuLimit, HAIKU_DAILY_LIMIT } from "@/lib/haiku-rate-limit";
 
 const schema = z.object({
   target_brand: z.string().min(1).max(200),
@@ -53,6 +54,27 @@ export async function POST(request: Request, { params }: { params: { runId: stri
   if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
 
   const d = parsed.data;
+
+  // Cache lookup: narrative for a completed run × language is stable, so we
+  // serve from DB on any subsequent open.
+  const { data: cached } = await (supabase.from("run_narratives") as any)
+    .select("insight_text")
+    .eq("run_id", params.runId)
+    .eq("language", d.locale)
+    .maybeSingle();
+  if (cached?.insight_text) {
+    return NextResponse.json({ insight: cached.insight_text, cached: true });
+  }
+
+  // Not cached — count against the daily Haiku quota before calling.
+  const limit = await checkAndIncrementHaikuLimit(supabase, user.id);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Daily AI insight limit reached", limit: HAIKU_DAILY_LIMIT },
+      { status: 429 },
+    );
+  }
+
   const langName = LANG_NAMES[d.locale] ?? LANG_NAMES.en;
 
   try {
@@ -90,7 +112,23 @@ Return ONLY JSON: {"insight": "..."}`,
     const parsedJson = JSON.parse(jsonMatch?.[0] ?? cleaned);
     const insight = typeof parsedJson?.insight === "string" ? parsedJson.insight.trim() : null;
     if (!insight) return NextResponse.json({ error: "No insight generated" }, { status: 500 });
-    return NextResponse.json({ insight });
+
+    // Persist to cache (best-effort — if the upsert fails we still return the
+    // freshly generated insight so the user sees something).
+    const { error: upsertErr } = await (supabase.from("run_narratives") as any).upsert(
+      {
+        run_id: params.runId,
+        language: d.locale,
+        insight_text: insight,
+        generated_at: new Date().toISOString(),
+      },
+      { onConflict: "run_id,language" },
+    );
+    if (upsertErr) {
+      console.error("[runs/narrative] cache upsert failed:", upsertErr.message);
+    }
+
+    return NextResponse.json({ insight, cached: false });
   } catch (err) {
     console.error("[runs/narrative] error:", err);
     return NextResponse.json({ error: "Narrative generation failed" }, { status: 500 });
