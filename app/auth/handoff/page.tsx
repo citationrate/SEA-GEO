@@ -18,6 +18,14 @@ function HandoffInner() {
       return;
     }
 
+    // Optional deep-link target. Must be a same-origin path ("/..." with no
+    // protocol-relative slashes) — everything else falls back to /dashboard.
+    const rawNext = params.get("next");
+    const safeNext =
+      rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
+        ? rawNext
+        : null;
+
     // Use the same singleton client the whole app uses
     const supabase = createClient();
 
@@ -28,9 +36,9 @@ function HandoffInner() {
           setError("Sessione non valida. Riprova il login.");
           return;
         }
-        console.log("[handoff] Session set OK, redirecting to dashboard");
+        console.log("[handoff] Session set OK, redirecting to", safeNext || "/dashboard");
         // Use window.location for a full page load (not client-side navigation)
-        window.location.href = "/dashboard";
+        window.location.href = safeNext || "/dashboard";
       });
   }, [params, router]);
 

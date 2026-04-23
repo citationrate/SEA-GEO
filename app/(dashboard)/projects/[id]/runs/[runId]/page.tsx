@@ -11,6 +11,7 @@ import { ShareButton } from "./share-button";
 import { TranslatedStatus, TranslatedLabel } from "./run-i18n";
 import { RunDetailClient } from "./run-detail-client";
 import { BrandNarrative } from "./brand-narrative";
+import { LowScoreBridge } from "./low-score-bridge";
 import { GalacticSiegeGame } from "@/components/galactic-siege-game";
 import { BotMount } from "@/components/BotMount";
 import { buildRunContext, normalizeLang } from "@/lib/bot-context";
@@ -44,7 +45,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
 
   const { data: project } = await supabase
     .from("projects")
-    .select("name, target_brand")
+    .select("name, target_brand, website_url")
     .eq("id", params.id)
     .eq("user_id", user.id)
     .single();
@@ -294,6 +295,18 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         {r.started_at && <div><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.startLabel" />:</span>{" "}<span className="text-foreground" suppressHydrationWarning>{new Date(r.started_at).toLocaleString("it-IT")}</span></div>}
         {r.completed_at && <div><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.endLabel" />:</span>{" "}<span className="text-foreground" suppressHydrationWarning>{new Date(r.completed_at).toLocaleString("it-IT")}</span></div>}
       </div>
+
+      {/* AVI→CS bridge — surfaces the Citability Score audit when a completed
+          run ends up below 40/100. The suite cookie is shared across the
+          .citationrate.com domain, so the deep link works without a custom
+          handoff. */}
+      {r.status === "completed" && aviData && Number(aviData.avi_score) < 40 && (
+        <LowScoreBridge
+          brand={String(proj?.target_brand ?? "")}
+          websiteUrl={String(proj?.website_url ?? "")}
+          score={Number(aviData.avi_score)}
+        />
+      )}
 
       {/* AI Brand Narrative — template + one-liner insight */}
       {r.status === "completed" && aviData && (() => {

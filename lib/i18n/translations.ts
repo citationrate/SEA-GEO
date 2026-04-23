@@ -618,6 +618,9 @@ export const translations: Record<Locale, Record<string, any>> = {
       startLabel: "Inizio",
       endLabel: "Fine",
       analysisInProgress: "Analisi in corso...",
+      lowScoreBannerTitle: "Il tuo brand è poco visibile sui modelli AI",
+      lowScoreBannerBody: "Con un AVI score sotto 40, meno della metà dei prompt chiave ti cita. Il Citability Score analizza i fattori tecnici che rendono un brand citabile: avvia un audit per scoprire cosa migliorare.",
+      lowScoreBannerCta: "Avvia un audit CS",
     },
     analysisLauncher: {
       launchAnalysis: "Lancia Analisi",
@@ -1706,6 +1709,9 @@ export const translations: Record<Locale, Record<string, any>> = {
       startLabel: "Start",
       endLabel: "End",
       analysisInProgress: "Analysis in progress...",
+      lowScoreBannerTitle: "Your brand is poorly visible on AI models",
+      lowScoreBannerBody: "With an AVI score below 40, fewer than half of your key prompts mention you. The Citability Score analyzes the technical factors that make a brand citable: run an audit to find out what to improve.",
+      lowScoreBannerCta: "Run a CS audit",
     },
     analysisLauncher: {
       launchAnalysis: "Launch Analysis",
@@ -2794,6 +2800,9 @@ export const translations: Record<Locale, Record<string, any>> = {
       startLabel: "Début",
       endLabel: "Fin",
       analysisInProgress: "Analyse en cours...",
+      lowScoreBannerTitle: "Votre marque est peu visible sur les modèles IA",
+      lowScoreBannerBody: "Avec un score AVI inférieur à 40, moins de la moitié des prompts clés vous mentionnent. Le Citability Score analyse les facteurs techniques qui rendent une marque citable : lancez un audit pour découvrir ce qu'il faut améliorer.",
+      lowScoreBannerCta: "Lancer un audit CS",
     },
     analysisLauncher: {
       launchAnalysis: "Lancer l'analyse", startAnalysis: "D\u00e9marrer l'analyse",
@@ -3781,6 +3790,9 @@ export const translations: Record<Locale, Record<string, any>> = {
       startLabel: "Start",
       endLabel: "Ende",
       analysisInProgress: "Analyse l\u00e4uft...",
+      lowScoreBannerTitle: "Ihre Marke ist auf KI-Modellen kaum sichtbar",
+      lowScoreBannerBody: "Bei einem AVI-Score unter 40 erw\u00e4hnen weniger als die H\u00e4lfte der wichtigsten Prompts Ihre Marke. Der Citability Score analysiert die technischen Faktoren, die eine Marke zitierbar machen: Starten Sie einen Audit, um herauszufinden, was zu verbessern ist.",
+      lowScoreBannerCta: "CS-Audit starten",
     },
     analysisLauncher: {
       launchAnalysis: "Analyse starten", startAnalysis: "Analyse starten",
@@ -4763,6 +4775,9 @@ export const translations: Record<Locale, Record<string, any>> = {
       startLabel: "Inicio",
       endLabel: "Fin",
       analysisInProgress: "An\u00e1lisis en curso...",
+      lowScoreBannerTitle: "Tu marca tiene poca visibilidad en los modelos de IA",
+      lowScoreBannerBody: "Con un AVI score por debajo de 40, menos de la mitad de los prompts clave te mencionan. El Citability Score analiza los factores t\u00e9cnicos que hacen que una marca sea citable: inicia una auditor\u00eda para descubrir qu\u00e9 mejorar.",
+      lowScoreBannerCta: "Iniciar una auditor\u00eda CS",
     },
     analysisLauncher: {
       launchAnalysis: "Lanzar an\u00e1lisis", startAnalysis: "Iniciar an\u00e1lisis",

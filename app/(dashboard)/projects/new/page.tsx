@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, X, Loader2, Lock, Check, Search, ChevronDown, Globe, Sparkles } from "lucide-react";
 import { PROVIDER_GROUPS, DEMO_MODEL_IDS } from "@/lib/engine/models";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
@@ -56,6 +56,7 @@ const BASE_MODEL_LIMIT = 3;
 
 export default function NewProjectPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t, locale } = useTranslation();
 
   const localeMap: Record<string, string> = { it: "it", en: "en", fr: "fr", de: "de", es: "es" };
@@ -217,6 +218,26 @@ export default function NewProjectPage() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  // Prefill from query string — used by the CS→AVI bridge on the suite audit
+  // detail page ("misura l'impatto dei fix"). Runs once on mount.
+  // We intentionally skip `sector`: the CS 15-sector taxonomy doesn't map 1:1
+  // to AVI's 10 sectors, so the user picks it here.
+  useEffect(() => {
+    const brandParam = searchParams.get("brand")?.trim();
+    const urlParam = searchParams.get("url")?.trim();
+    if (brandParam) {
+      setTargetBrand(brandParam);
+      setName(brandParam);
+    }
+    if (urlParam) {
+      setWebsiteUrl(urlParam);
+      analyzeSite(urlParam);
+    }
+    // Depend only on search params — analyzeSite is stable enough for this
+    // one-shot prefill and including it triggers a re-run on competitor edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const filteredCountries = COUNTRIES.filter((c) =>
     c.toLowerCase().includes(countrySearch.toLowerCase())
