@@ -4,6 +4,7 @@ import { z } from "zod";
 import { inngest } from "@/lib/inngest";
 import { COMPARISON_MODEL_IDS } from "@/lib/engine/models";
 import { getUserPlanLimits, getCurrentUsage, getWallet, consumeWalletConfronti, incrementComparisonsUsed, incrementNoBrowsingPromptsUsed } from "@/lib/usage";
+import { resolvePlanLimit, isUnlimitedLimit } from "@/lib/plan-limits";
 
 const startSchema = z.object({
   project_id: z.string().uuid(),
@@ -40,14 +41,21 @@ export async function POST(request: Request) {
       if (!plan.can_access_comparisons) {
         return NextResponse.json({ error: "I confronti AI sono disponibili dal piano Pro." }, { status: 403 });
       }
-      const totalComparisonsAvailable = plan.max_comparisons + usage.extraComparisons;
+      // NULL = unlimited (Enterprise). See lib/plan-limits.ts.
+      const comparisonsBase = resolvePlanLimit((plan as any).max_comparisons, 0);
+      const totalComparisonsAvailable = isUnlimitedLimit(comparisonsBase)
+        ? comparisonsBase
+        : comparisonsBase + Number(usage.extraComparisons || 0);
       if (usage.comparisonsUsed >= totalComparisonsAvailable) {
         return NextResponse.json({ error: `Hai raggiunto il limite di ${totalComparisonsAvailable} confronti mensili.` }, { status: 403 });
       }
 
       // Comparison prompts count against no_browsing_prompts_used
       const comparisonPromptCost = 3;
-      const totalNoBrowsingAvailable = Number(plan.no_browsing_prompts) + usage.extraNoBrowsingPrompts;
+      const noBrowsingBase = resolvePlanLimit((plan as any).no_browsing_prompts, 0);
+      const totalNoBrowsingAvailable = isUnlimitedLimit(noBrowsingBase)
+        ? noBrowsingBase
+        : noBrowsingBase + Number(usage.extraNoBrowsingPrompts || 0);
       if (usage.noBrowsingPromptsUsed + comparisonPromptCost > totalNoBrowsingAvailable) {
         return NextResponse.json({
           error: "Non hai abbastanza prompt senza browsing disponibili per questo confronto.",

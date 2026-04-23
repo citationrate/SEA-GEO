@@ -4,6 +4,7 @@ import { z } from "zod";
 import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS, DEMO_MODEL_IDS } from "@/lib/engine/models";
 import { inngest } from "@/lib/inngest";
 import { getUserPlanLimits, getCurrentUsage, getWallet } from "@/lib/usage";
+import { resolvePlanLimit, isUnlimitedLimit } from "@/lib/plan-limits";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 const startSchema = z.object({
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
     const segmentCount = Math.max((segments?.length ?? 0), 1);
     const promptCost = queries.length * validModels.length * segmentCount * run_count;
     const userPlanId = (plan as any).id ?? "demo";
-    const isProPlan = userPlanId === "pro";
+    const isProPlan = userPlanId === "pro" || userPlanId === "enterprise";
     const isDemoPlan = userPlanId === "demo";
 
     console.log("[analysis/start] plan:", userPlanId, "promptCost:", promptCost);
@@ -115,8 +116,17 @@ export async function POST(request: Request) {
         }, { status: 403 });
       }
     } else {
-      const totalBrowsingAvailable = Number(plan.browsing_prompts || 0) + Number(usage.extraBrowsingPrompts || 0);
-      const totalNoBrowsingAvailable = Number(plan.no_browsing_prompts || 0) + Number(usage.extraNoBrowsingPrompts || 0);
+      // NULL on the plan limit columns = unlimited (Enterprise convention,
+      // see lib/plan-limits.ts). resolvePlanLimit collapses NULL to a large
+      // finite sentinel, so we can compare as usual.
+      const browsingBase = resolvePlanLimit((plan as any).browsing_prompts, 0);
+      const noBrowsingBase = resolvePlanLimit((plan as any).no_browsing_prompts, 0);
+      const totalBrowsingAvailable = isUnlimitedLimit(browsingBase)
+        ? browsingBase
+        : browsingBase + Number(usage.extraBrowsingPrompts || 0);
+      const totalNoBrowsingAvailable = isUnlimitedLimit(noBrowsingBase)
+        ? noBrowsingBase
+        : noBrowsingBase + Number(usage.extraNoBrowsingPrompts || 0);
 
       if (browsing) {
         const remaining = totalBrowsingAvailable - Number(usage.browsingPromptsUsed || 0);

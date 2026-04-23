@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { getUserPlanLimits, getCurrentUsage, incrementContextAnalysesUsed } from "@/lib/usage";
+import { resolvePlanLimit, isProOrEnterprise } from "@/lib/plan-limits";
 
 // Hobby plan cap is 300s. The real fix for the previous timeout is the
 // parallel batching below — 100 competitors now finish in ~45s instead of
@@ -32,14 +33,15 @@ export async function POST(request: Request) {
     const rawProjectId = parsed.data.project_id;
     const projectIdsArray = Array.isArray(rawProjectId) ? rawProjectId : [rawProjectId];
 
-    // Pro plan check + usage limit
+    // Pro plan check + usage limit (Enterprise: max_context_analyses=100 on
+    // CR, not NULL — so the cap still applies but at a higher ceiling).
     const plan = await getUserPlanLimits(user.id);
     const planId = plan.id ?? "demo";
-    if (planId !== "pro") {
+    if (!isProOrEnterprise(planId)) {
       return NextResponse.json({ error: "Questa funzione è disponibile dal piano Pro.", code: "PRO_REQUIRED" }, { status: 403 });
     }
     const usage = await getCurrentUsage(user.id);
-    const maxContextAnalyses = Number((plan as any).max_context_analyses) || 5;
+    const maxContextAnalyses = resolvePlanLimit((plan as any).max_context_analyses, 5);
     if (usage.contextAnalysesUsed >= maxContextAnalyses) {
       return NextResponse.json({ error: `Hai raggiunto il limite di ${maxContextAnalyses} analisi contesti questo mese.`, code: "LIMIT_REACHED" }, { status: 403 });
     }

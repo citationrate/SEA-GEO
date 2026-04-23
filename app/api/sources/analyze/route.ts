@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
 import { getUserPlanLimits, getCurrentUsage, incrementUrlAnalysesUsed } from "@/lib/usage";
+import { resolvePlanLimit, isProOrEnterprise } from "@/lib/plan-limits";
 
 const bodySchema = z.object({
   domain: z.string().min(1),
@@ -45,14 +46,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ cached: false });
     }
 
-    // Pro plan check + usage limit
+    // Pro plan check + usage limit (Enterprise has unlimited URL analyses
+    // via NULL in the plans table — resolvePlanLimit maps that to a large
+    // sentinel so the >= check below never fires).
     const plan = await getUserPlanLimits(user.id);
     const planId = plan.id ?? "demo";
-    if (planId !== "pro") {
+    if (!isProOrEnterprise(planId)) {
       return NextResponse.json({ error: "Questa funzione è disponibile dal piano Pro.", code: "PRO_REQUIRED" }, { status: 403 });
     }
     const usage = await getCurrentUsage(user.id);
-    const maxUrlAnalyses = Number((plan as any).max_url_analyses) || 50;
+    const maxUrlAnalyses = resolvePlanLimit((plan as any).max_url_analyses, 50);
     if (usage.urlAnalysesUsed >= maxUrlAnalyses) {
       return NextResponse.json({ error: `Hai raggiunto il limite di ${maxUrlAnalyses} analisi URL questo mese.`, code: "LIMIT_REACHED" }, { status: 403 });
     }

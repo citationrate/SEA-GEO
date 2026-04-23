@@ -119,6 +119,14 @@ export function AnalysisLauncher({
   const nextMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1)
     .toLocaleDateString("it-IT", { day: "numeric", month: "long" });
 
+  // Render helpers for Enterprise (unlimited) counters. When a counter is
+  // unlimited the API still returns a large finite number (see
+  // lib/plan-limits.ts UNLIMITED_LIMIT), so we hide it behind "∞" and skip
+  // any progress-bar fill.
+  const fmtCount = (n: number, unlimited: boolean) => (unlimited ? "∞" : String(n));
+  const barPct = (used: number, limit: number, unlimited: boolean) =>
+    unlimited || limit <= 0 ? 0 : Math.min((used / limit) * 100, 100);
+
   return (
     <>
       <button
@@ -285,7 +293,10 @@ export function AnalysisLauncher({
                   >
                     <p className="text-sm font-medium text-foreground">{t("piano.querySourcePlan")}</p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {effectiveBrowsing ? `${browsingRemaining} browsing` : `${noBrowsingRemaining} no-browsing`} {t("piano.remaining")}
+                      {effectiveBrowsing
+                        ? `${fmtCount(browsingRemaining, usage.browsingUnlimited)} browsing`
+                        : `${fmtCount(noBrowsingRemaining, usage.noBrowsingUnlimited)} no-browsing`}{" "}
+                      {t("piano.remaining")}
                     </p>
                   </button>
                   <button
@@ -335,14 +346,14 @@ export function AnalysisLauncher({
                         <Globe className="w-3 h-3" /> Browsing
                       </span>
                       <span className="text-foreground font-medium">
-                        {usage.browsingPromptsUsed}/{usage.browsingPromptsLimit}
-                        {usage.extraBrowsingPrompts > 0 && <span className="text-primary ml-1">(+{usage.extraBrowsingPrompts})</span>}
+                        {usage.browsingPromptsUsed}/{fmtCount(usage.browsingPromptsLimit, usage.browsingUnlimited)}
+                        {!usage.browsingUnlimited && usage.extraBrowsingPrompts > 0 && <span className="text-primary ml-1">(+{usage.extraBrowsingPrompts})</span>}
                       </span>
                     </div>
                     <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                       <div
                         className="h-full rounded-full bg-primary transition-all"
-                        style={{ width: `${usage.browsingPromptsLimit > 0 ? Math.min((usage.browsingPromptsUsed / usage.browsingPromptsLimit) * 100, 100) : 0}%` }}
+                        style={{ width: `${barPct(usage.browsingPromptsUsed, usage.browsingPromptsLimit, usage.browsingUnlimited)}%` }}
                       />
                     </div>
                   </div>
@@ -353,14 +364,14 @@ export function AnalysisLauncher({
                         <Cpu className="w-3 h-3" /> No browsing
                       </span>
                       <span className="text-foreground font-medium">
-                        {usage.noBrowsingPromptsUsed}/{usage.noBrowsingPromptsLimit}
-                        {usage.extraNoBrowsingPrompts > 0 && <span className="text-primary ml-1">(+{usage.extraNoBrowsingPrompts})</span>}
+                        {usage.noBrowsingPromptsUsed}/{fmtCount(usage.noBrowsingPromptsLimit, usage.noBrowsingUnlimited)}
+                        {!usage.noBrowsingUnlimited && usage.extraNoBrowsingPrompts > 0 && <span className="text-primary ml-1">(+{usage.extraNoBrowsingPrompts})</span>}
                       </span>
                     </div>
                     <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                       <div
                         className="h-full rounded-full bg-primary transition-all"
-                        style={{ width: `${usage.noBrowsingPromptsLimit > 0 ? Math.min((usage.noBrowsingPromptsUsed / usage.noBrowsingPromptsLimit) * 100, 100) : 0}%` }}
+                        style={{ width: `${barPct(usage.noBrowsingPromptsUsed, usage.noBrowsingPromptsLimit, usage.noBrowsingUnlimited)}%` }}
                       />
                     </div>
                   </div>
@@ -371,12 +382,12 @@ export function AnalysisLauncher({
                 <div className="space-y-1 pt-2 border-t border-border mt-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Prompt</span>
-                    <span className="text-foreground font-medium">{usage.noBrowsingPromptsUsed} / {usage.noBrowsingPromptsLimit}</span>
+                    <span className="text-foreground font-medium">{usage.noBrowsingPromptsUsed} / {fmtCount(usage.noBrowsingPromptsLimit, usage.noBrowsingUnlimited)}</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                     <div
                       className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${usage.noBrowsingPromptsLimit > 0 ? Math.min((usage.noBrowsingPromptsUsed / usage.noBrowsingPromptsLimit) * 100, 100) : 0}%` }}
+                      style={{ width: `${barPct(usage.noBrowsingPromptsUsed, usage.noBrowsingPromptsLimit, usage.noBrowsingUnlimited)}%` }}
                     />
                   </div>
                 </div>

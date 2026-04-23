@@ -8,27 +8,34 @@ interface UsageData {
   browsingPromptsUsed: number;
   browsingPromptsLimit: number;
   browsingPromptsRemaining: number;
+  browsingUnlimited: boolean;
   noBrowsingPromptsUsed: number;
   noBrowsingPromptsLimit: number;
   noBrowsingPromptsRemaining: number;
+  noBrowsingUnlimited: boolean;
   comparisonsUsed: number;
   comparisonsLimit: number;
   comparisonsRemaining: number;
+  comparisonsUnlimited: boolean;
   extraBrowsingPrompts: number;
   extraNoBrowsingPrompts: number;
   extraComparisons: number;
   urlAnalysesUsed: number;
   urlAnalysesLimit: number;
   urlAnalysesRemaining: number;
+  urlAnalysesUnlimited: boolean;
   contextAnalysesUsed: number;
   contextAnalysesLimit: number;
   contextAnalysesRemaining: number;
+  contextAnalysesUnlimited: boolean;
   canGenerateQueries: boolean;
   canAccessDataset: boolean;
   canAccessComparisons: boolean;
   maxModelsPerProject: number;
   isDemo: boolean;
   isPro: boolean;
+  isEnterprise: boolean;
+  hasProFeatures: boolean;
   loading: boolean;
   wallet: { browsingQueries: number; noBrowsingQueries: number; confronti: number };
   // Legacy compat
@@ -41,16 +48,16 @@ interface UsageData {
 const DEFAULTS: UsageData = {
   plan: null,
   planId: "demo",
-  browsingPromptsUsed: 0, browsingPromptsLimit: 0, browsingPromptsRemaining: 0,
-  noBrowsingPromptsUsed: 0, noBrowsingPromptsLimit: 40, noBrowsingPromptsRemaining: 40,
-  comparisonsUsed: 0, comparisonsLimit: 0, comparisonsRemaining: 0,
+  browsingPromptsUsed: 0, browsingPromptsLimit: 0, browsingPromptsRemaining: 0, browsingUnlimited: false,
+  noBrowsingPromptsUsed: 0, noBrowsingPromptsLimit: 40, noBrowsingPromptsRemaining: 40, noBrowsingUnlimited: false,
+  comparisonsUsed: 0, comparisonsLimit: 0, comparisonsRemaining: 0, comparisonsUnlimited: false,
   extraBrowsingPrompts: 0, extraNoBrowsingPrompts: 0, extraComparisons: 0,
-  urlAnalysesUsed: 0, urlAnalysesLimit: 0, urlAnalysesRemaining: 0,
-  contextAnalysesUsed: 0, contextAnalysesLimit: 0, contextAnalysesRemaining: 0,
+  urlAnalysesUsed: 0, urlAnalysesLimit: 0, urlAnalysesRemaining: 0, urlAnalysesUnlimited: false,
+  contextAnalysesUsed: 0, contextAnalysesLimit: 0, contextAnalysesRemaining: 0, contextAnalysesUnlimited: false,
   canGenerateQueries: false, canAccessDataset: false, canAccessComparisons: false,
   maxModelsPerProject: 2,
   wallet: { browsingQueries: 0, noBrowsingQueries: 0, confronti: 0 },
-  isDemo: true, isPro: false, loading: true,
+  isDemo: true, isPro: false, isEnterprise: false, hasProFeatures: false, loading: true,
   promptsUsed: 0, promptsLimit: 40, promptsRemaining: 40,
   refetch: async () => {},
 };
@@ -77,21 +84,26 @@ export function useUsage(): UsageData {
         browsingPromptsUsed: json.browsingPromptsUsed ?? 0,
         browsingPromptsLimit: json.browsingPromptsLimit ?? 0,
         browsingPromptsRemaining: json.browsingPromptsRemaining ?? 0,
+        browsingUnlimited: json.browsingUnlimited ?? false,
         noBrowsingPromptsUsed: json.noBrowsingPromptsUsed ?? 0,
         noBrowsingPromptsLimit: json.noBrowsingPromptsLimit ?? 0,
         noBrowsingPromptsRemaining: json.noBrowsingPromptsRemaining ?? 0,
+        noBrowsingUnlimited: json.noBrowsingUnlimited ?? false,
         comparisonsUsed: json.comparisonsUsed ?? 0,
         comparisonsLimit: json.comparisonsLimit ?? 0,
         comparisonsRemaining: json.comparisonsRemaining ?? 0,
+        comparisonsUnlimited: json.comparisonsUnlimited ?? false,
         extraBrowsingPrompts: json.extraBrowsingPrompts ?? 0,
         extraNoBrowsingPrompts: json.extraNoBrowsingPrompts ?? 0,
         extraComparisons: json.extraComparisons ?? 0,
         urlAnalysesUsed: json.urlAnalysesUsed ?? 0,
         urlAnalysesLimit: json.urlAnalysesLimit ?? 0,
         urlAnalysesRemaining: json.urlAnalysesRemaining ?? 0,
+        urlAnalysesUnlimited: json.urlAnalysesUnlimited ?? false,
         contextAnalysesUsed: json.contextAnalysesUsed ?? 0,
         contextAnalysesLimit: json.contextAnalysesLimit ?? 0,
         contextAnalysesRemaining: json.contextAnalysesRemaining ?? 0,
+        contextAnalysesUnlimited: json.contextAnalysesUnlimited ?? false,
         canGenerateQueries: json.canGenerateQueries ?? false,
         canAccessDataset: json.canAccessDataset ?? false,
         canAccessComparisons: json.canAccessComparisons ?? false,
@@ -103,6 +115,8 @@ export function useUsage(): UsageData {
           confronti: json.wallet?.confronti ?? 0,
         },
         isPro: json.isPro ?? false,
+        isEnterprise: json.isEnterprise ?? false,
+        hasProFeatures: json.hasProFeatures ?? (json.isPro ?? false),
         loading: false,
         promptsUsed: totalUsed,
         promptsLimit: totalLimit,
