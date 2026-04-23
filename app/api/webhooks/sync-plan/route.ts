@@ -61,15 +61,15 @@ export async function POST(request: Request) {
 
     // Normalize CitationRate plan → AVI plan_id
     // Keep legacy mappings for safety during transition
-    // seageo1 user_plan enum does not include "enterprise" — map to "pro"
-    // (functionally equivalent: is-pro.ts treats both as Pro-tier).
+    // Requires ALTER TYPE public.user_plan ADD VALUE 'enterprise' applied on
+    // the seageo1 project before this line will succeed for enterprise users.
     const PLAN_MAP: Record<string, string> = {
       demo: "demo",
       free: "demo",
       base: "base",
       pro: "pro",
       agency: "pro",
-      enterprise: "pro",
+      enterprise: "enterprise",
     };
     const normalizedPlan = PLAN_MAP[newPlan];
     if (!normalizedPlan) {

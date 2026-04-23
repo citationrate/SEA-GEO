@@ -27,10 +27,15 @@ interface PianoClientProps {
 
 /* ─── Constants ─── */
 
+// 999999 stands in for "unlimited" on the Enterprise tier — the DB stores NULL
+// for these columns (see usage.ts), but the UI counters need a finite number
+// so UsageBar doesn't produce Infinity/NaN. 100 is the explicit cap we set
+// for Enterprise context analyses (the one non-unlimited Enterprise limit).
 const LIMITS: Record<string, { totalPrompts: number; browsing: number; comparisons: number; urlAnalyses: number; contextAnalyses: number }> = {
-  demo:   { totalPrompts: 40, browsing: 0, comparisons: 0, urlAnalyses: 0, contextAnalyses: 0 },
-  base:   { totalPrompts: 100, browsing: 30, comparisons: 0, urlAnalyses: 0, contextAnalyses: 0 },
-  pro:    { totalPrompts: 300, browsing: 90, comparisons: 10, urlAnalyses: 50, contextAnalyses: 5 },
+  demo:       { totalPrompts: 40,     browsing: 0,      comparisons: 0,      urlAnalyses: 0,      contextAnalyses: 0   },
+  base:       { totalPrompts: 100,    browsing: 30,     comparisons: 0,      urlAnalyses: 0,      contextAnalyses: 0   },
+  pro:        { totalPrompts: 300,    browsing: 90,     comparisons: 10,     urlAnalyses: 50,     contextAnalyses: 5   },
+  enterprise: { totalPrompts: 999999, browsing: 999999, comparisons: 999999, urlAnalyses: 999999, contextAnalyses: 100 },
 };
 
 const PLAN_META: Record<string, { label: string; color: string }> = {
@@ -58,7 +63,7 @@ function getAviFeatures(t: (k: string) => string): PlanFeature[] {
     { label: t("piano.aiQueryGen"),             demo: true,                          base: true,                        pro: true,                         enterprise: true },
     { label: t("piano.competitiveComparisons"), demo: false,                         base: false,                       pro: `10${t("piano.perMonth")}`,   enterprise: t("piano.unlimited") },
     { label: t("piano.urlAnalyses"),            demo: false,                         base: false,                       pro: `50${t("piano.perMonth")}`,   enterprise: t("piano.unlimitedFem") },
-    { label: t("piano.aiContextAnalyses"),      demo: false,                         base: false,                       pro: `5${t("piano.perMonth")}`,    enterprise: `20${t("piano.perMonth")}` },
+    { label: t("piano.aiContextAnalyses"),      demo: false,                         base: false,                       pro: `5${t("piano.perMonth")}`,    enterprise: `100${t("piano.perMonth")}` },
   ];
 }
 
