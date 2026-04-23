@@ -120,7 +120,7 @@ export function CompetitorsClient({
   const [drawerTheme, setDrawerTheme] = useState<{ compName: string; theme: MacroTheme } | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const usage = useUsage();
-  const isPro = usage.isPro;
+  const isPro = usage.hasProFeatures;
   const [showProGate, setShowProGate] = useState(false);
 
   const filteredRows = typeFilter ? rows.filter((r) => r.competitorType === typeFilter) : rows;

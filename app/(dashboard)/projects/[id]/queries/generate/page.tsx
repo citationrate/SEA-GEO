@@ -68,8 +68,8 @@ export default function GenerateQueriesPage() {
   useEffect(() => {
     fetch("/api/profile").then((r) => r.json()).then((p) => {
       const plan = p?.plan ?? "demo";
-      setPlanId(plan === "demo" ? "demo" : plan === "base" ? "base" : plan === "pro" ? "pro" : "demo");
-      setIsPro(plan === "pro");
+      setPlanId(plan === "demo" ? "demo" : plan === "base" ? "base" : plan === "pro" ? "pro" : plan === "enterprise" ? "pro" : "demo");
+      setIsPro(plan === "pro" || plan === "enterprise");
     }).catch(() => {}).finally(() => setProfileLoaded(true));
 
     fetch(`/api/queries?project_id=${projectId}`).then((r) => r.json()).then((qs) => {
@@ -77,6 +77,7 @@ export default function GenerateQueriesPage() {
     }).catch(() => {});
   }, [projectId]);
 
+  // Enterprise users are collapsed to "pro" in planId above, so this covers them.
   const monthlyLimit = planId === "pro" ? 500 : planId === "base" ? 100 : 40;
   const usedThisMonth = existingQueryCount;
 

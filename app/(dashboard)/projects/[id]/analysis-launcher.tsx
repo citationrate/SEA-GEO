@@ -405,7 +405,7 @@ export function AnalysisLauncher({
                       ? t("analysisLauncher.insufficientBrowsing").replace("{count}", String(totalPrompts)).replace("{remaining}", String(browsingRemaining))
                       : t("analysisLauncher.insufficientNoBrowsing").replace("{count}", String(totalPrompts)).replace("{remaining}", String(noBrowsingRemaining))}
                   </p>
-                  {!usage.isPro && (
+                  {!usage.hasProFeatures && (
                     <a
                       href="/piano#piani"
                       className="mt-2 inline-flex items-center justify-center gap-1.5 bg-[#c4a882] text-background font-semibold text-xs px-4 py-2 rounded-sm shadow-sm shadow-[#c4a882]/20 hover:bg-[#c4a882]/85 hover:shadow-md hover:shadow-[#c4a882]/30 transition-all"

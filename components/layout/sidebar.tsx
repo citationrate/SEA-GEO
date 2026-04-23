@@ -42,6 +42,8 @@ export function Sidebar({ profile }: SidebarProps) {
   const isDemo = !profile?.plan || profile.plan === "demo";
   const isBase = profile?.plan === "base";
   const isEnterprise = profile?.plan === "enterprise";
+  // Unlock PRO_ROUTES for Enterprise too (Enterprise = Pro-tier-or-better).
+  const hasProFeatures = isPro || isEnterprise;
   const [collapsed, setCollapsed] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const { t } = useTranslation();
@@ -133,7 +135,7 @@ export function Sidebar({ profile }: SidebarProps) {
             <ul className="space-y-0.5">
               {items.map((item: any) => {
                 const needsPro = PRO_ROUTES.has(item.href);
-                const locked = needsPro && !isPro;
+                const locked = needsPro && !hasProFeatures;
                 const isHighlight = item.highlight && !isActive(item.href);
                 const hasPlanColor = item.planColor && !isActive(item.href) && !locked;
 

@@ -139,7 +139,7 @@ export function SourcesClient({
       </div>
 
       {/* URL analyses counter (Pro) */}
-      {usage.isPro && !usage.loading && usage.urlAnalysesLimit > 0 && (
+      {usage.hasProFeatures && !usage.loading && usage.urlAnalysesLimit > 0 && (
         <div className="card px-4 py-2.5 max-w-xs">
           <div className="space-y-1">
             <div className="flex items-center justify-between text-xs">
@@ -249,7 +249,7 @@ export function SourcesClient({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((d) => (
-            <DomainCard key={d.domain} domain={d} onAnalyze={() => setDrawerDomain(d)} isPro={usage.isPro} />
+            <DomainCard key={d.domain} domain={d} onAnalyze={() => setDrawerDomain(d)} isPro={usage.hasProFeatures} />
           ))}
         </div>
       )}
@@ -261,7 +261,7 @@ export function SourcesClient({
           brand={brand}
           projectId={projectId}
           onClose={() => setDrawerDomain(null)}
-          isPro={usage.isPro}
+          isPro={usage.hasProFeatures}
           urlAnalysesRemaining={effectiveUrlRemaining}
           urlAnalysesLimit={usage.urlAnalysesLimit}
           onAnalysisComplete={onAnalysisComplete}

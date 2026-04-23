@@ -653,7 +653,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                         </td>
                         <td className="py-2">
                           {p.raw_response && (
-                            usage.isPro ? (
+                            usage.hasProFeatures ? (
                               <button
                                 onClick={() => setModalPrompt({ prompt: p, analysis, query })}
                                 className="text-muted-foreground hover:text-primary transition-colors"
