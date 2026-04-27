@@ -37,12 +37,16 @@ function getModelColor(model: string): string {
 
 function shortModelName(model: string): string {
   return model
+    .replace("gpt-5.5-pro", "GPT-5.5 Pro")
+    .replace("gpt-5.5", "GPT-5.5")
     .replace("gpt-5.4-mini", "GPT-5.4 mini")
     .replace("gpt-4o-mini", "GPT-4o mini")
     .replace("gpt-4o", "GPT-4o")
     .replace("gpt-4.1-mini", "GPT-4.1 mini")
     .replace("gpt-4.1", "GPT-4.1")
     .replace(/claude-.*sonnet.*/, "Claude Sonnet")
+    .replace(/claude-opus.*/, "Claude Opus")
+    .replace(/claude-haiku.*/, "Claude Haiku")
     .replace(/gemini-2\.0-flash/, "Gemini Flash")
     .replace(/gemini-2\.5-flash.*/, "Gemini 2.5 Flash")
     .replace(/grok-.*/, "Grok");

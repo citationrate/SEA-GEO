@@ -11,15 +11,19 @@ export const AI_MODELS: AIModel[] = [
   // OpenAI
   { id: "gpt-5.4-mini", label: "GPT-5.4 Mini",       desc: "Veloce, risposte concise",                    provider: "openai" },
   { id: "gpt-4o",       label: "GPT-4o",             desc: "Preciso, risposte elaborate",                 provider: "openai" },
-  { id: "gpt-5.4",      label: "GPT-5.4",            desc: "Ultimo modello OpenAI, massima qualità",      provider: "openai" },
+  { id: "gpt-5.4",      label: "GPT-5.4",            desc: "Generazione precedente, alta qualità",        provider: "openai" },
+  { id: "gpt-5.5",      label: "GPT-5.5",            desc: "Ultimo modello OpenAI, contesto 1M token",    provider: "openai" },
+  { id: "gpt-5.5-pro",  label: "GPT-5.5 Pro",        desc: "Massima accuratezza, ragionamento esteso",    provider: "openai", expensive: true },
   // Anthropic (short IDs — canonical)
   { id: "claude-haiku",   label: "Claude Haiku 4.5",   desc: "Veloce e diretto",                          provider: "anthropic" },
   { id: "claude-sonnet",  label: "Claude Sonnet 4.6",  desc: "Bilanciato e preciso",                      provider: "anthropic" },
-  { id: "claude-opus",    label: "Claude Opus 4.6",    desc: "Massima qualità",                           provider: "anthropic", expensive: true },
+  { id: "claude-opus",    label: "Claude Opus 4.7",    desc: "Massima qualità, agenti long-horizon",      provider: "anthropic", expensive: true },
   // Anthropic (legacy full IDs — kept for backward compat with existing DB data, hidden from UI)
   { id: "claude-haiku-4-5-20251001",  label: "Claude Haiku 4.5",  desc: "Veloce e diretto",              provider: "anthropic" },
   { id: "claude-sonnet-4-5", label: "Claude Sonnet 4.5", desc: "Bilanciato e preciso",                   provider: "anthropic" },
   { id: "claude-opus-4-5",   label: "Claude Opus 4.5",   desc: "Massima qualità",                        provider: "anthropic" },
+  { id: "claude-opus-4-6",   label: "Claude Opus 4.6",   desc: "Massima qualità",                        provider: "anthropic" },
+  { id: "claude-opus-4-7",   label: "Claude Opus 4.7",   desc: "Massima qualità",                        provider: "anthropic" },
   // Google
   { id: "gemini-2.5-flash",   label: "Gemini 2.5 Flash",   desc: "Veloce, aggiornato",                   provider: "google" },
   // Legacy model IDs — kept for backward compat with existing DB data, hidden from UI
@@ -55,6 +59,8 @@ const LEGACY_MODEL_IDS = new Set([
   "claude-haiku-4-5-20251001",
   "claude-sonnet-4-5",
   "claude-opus-4-5",
+  "claude-opus-4-6",
+  "claude-opus-4-7",
   "gemini-2.5-pro",
   "gpt-4o-mini",
 ]);
@@ -107,7 +113,9 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
     models: [
       { id: "gpt-5.4-mini", label: "GPT-5.4 Mini", descriptionKey: "modelDescriptions.gpt-54-mini" },
       { id: "gpt-4o", label: "GPT-4o", descriptionKey: "modelDescriptions.gpt-4o" },
-      { id: "gpt-5.4", label: "GPT-5.4", descriptionKey: "modelDescriptions.gpt-54", proOnly: true },
+      { id: "gpt-5.4", label: "GPT-5.4", descriptionKey: "modelDescriptions.gpt-54" },
+      { id: "gpt-5.5", label: "GPT-5.5", descriptionKey: "modelDescriptions.gpt-55" },
+      { id: "gpt-5.5-pro", label: "GPT-5.5 Pro", descriptionKey: "modelDescriptions.gpt-55-pro", expensive: true, proOnly: true },
     ],
   },
   {
@@ -122,7 +130,7 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
     models: [
       { id: "claude-haiku", label: "Claude Haiku 4.5", descriptionKey: "modelDescriptions.claude-haiku" },
       { id: "claude-sonnet", label: "Claude Sonnet 4.6", descriptionKey: "modelDescriptions.claude-sonnet-46" },
-      { id: "claude-opus", label: "Claude Opus 4.6", descriptionKey: "modelDescriptions.claude-opus-46", expensive: true, proOnly: true },
+      { id: "claude-opus", label: "Claude Opus 4.7", descriptionKey: "modelDescriptions.claude-opus-47", expensive: true, proOnly: true },
     ],
   },
   {

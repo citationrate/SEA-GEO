@@ -140,8 +140,8 @@ User triggers analysis → Inngest function starts
 | Monthly price | €0 | €59 | €159 |
 | Annual price | €0 | €649 (8.3% off) | €1,719 (10% off) |
 
-**Base models (selectable in AVI):** GPT-5.4 Mini, Gemini 2.5 Flash, Grok 3 Mini, Claude Haiku, Perplexity Sonar, Claude Sonnet 4.6
-**Pro-only models:** Claude Opus 4.6, GPT-5.4, Grok 3, Perplexity Sonar Pro, Gemini 3.1 Pro
+**Base models (selectable in AVI):** GPT-5.4 Mini, GPT-4o, GPT-5.4, GPT-5.5, Gemini 2.5 Flash, Grok 3 Mini, Claude Haiku, Claude Sonnet 4.6, Perplexity Sonar
+**Pro-only models:** Claude Opus 4.7, GPT-5.5 Pro, Grok 3, Perplexity Sonar Pro, Gemini 3.1 Pro
 **Comparison models (fixed, Pro only):** Claude Haiku, GPT-5.4 Mini, Gemini 2.5 Flash, Grok 3 Mini, Perplexity Sonar
 
 ### How Prompts Are Counted
