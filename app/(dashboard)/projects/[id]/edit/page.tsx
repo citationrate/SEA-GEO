@@ -2,10 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Loader2, Cpu, Info } from "lucide-react";
+import { ArrowLeft, Loader2, Cpu, Info, Lock, Check } from "lucide-react";
 import { toast } from "sonner";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
+import { PROVIDER_GROUPS, MODEL_MAP } from "@/lib/engine/models";
+import { getEffectivePlanId } from "@/lib/utils/is-pro";
+
+const BASE_MODEL_LIMIT = 3;
+const PRO_MODEL_LIMIT = 5;
 
 const SECTOR_OPTIONS = [
   "Turismo",
@@ -49,17 +54,28 @@ export default function EditProjectPage() {
   const [marketContext, setMarketContext] = useState("");
   const [language, setLanguage] = useState<"it" | "en">("it");
   const [country, setCountry] = useState("");
-  const [modelsConfig, setModelsConfig] = useState<string[]>([]);
+  const [initialModels, setInitialModels] = useState<string[]>([]);
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  const [planId, setPlanId] = useState<"demo" | "base" | "pro" | "enterprise">("demo");
   const { t } = useTranslation();
+
+  const isProPlan = planId === "pro" || planId === "enterprise";
+  const isDemoPlan = planId === "demo";
+  const modelCap = isProPlan ? PRO_MODEL_LIMIT : BASE_MODEL_LIMIT;
+  const dirtyModels = JSON.stringify([...selectedModels].sort()) !== JSON.stringify([...initialModels].sort());
+
   useEffect(() => {
     async function load() {
-      const res = await fetch(`/api/projects/${projectId}`);
-      if (!res.ok) {
+      const [projRes, profRes] = await Promise.all([
+        fetch(`/api/projects/${projectId}`),
+        fetch("/api/profile"),
+      ]);
+      if (!projRes.ok) {
         setError(t("editProject.loadError"));
         setLoading(false);
         return;
       }
-      const project = await res.json();
+      const project = await projRes.json();
       setName(project.name ?? "");
       setTargetBrand(project.target_brand ?? "");
       setWebsiteUrl(project.website_url ?? "");
@@ -68,11 +84,29 @@ export default function EditProjectPage() {
       setMarketContext(project.market_context ?? "");
       setLanguage(project.language ?? "it");
       setCountry(project.country ?? "");
-      setModelsConfig(project.models_config ?? []);
+      const models = (project.models_config ?? []) as string[];
+      setInitialModels(models);
+      setSelectedModels(models);
+      if (profRes.ok) {
+        const prof = await profRes.json();
+        setPlanId(getEffectivePlanId(prof?.plan));
+      }
       setLoading(false);
     }
     load();
   }, [projectId]);
+
+  function toggleModel(modelId: string) {
+    // Locked models (already in the project) can never be removed
+    if (initialModels.includes(modelId)) return;
+    setSelectedModels((prev) => {
+      if (prev.includes(modelId)) {
+        return prev.filter((m) => m !== modelId);
+      }
+      if (prev.length >= modelCap) return prev;
+      return [...prev, modelId];
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -92,6 +126,7 @@ export default function EditProjectPage() {
           market_context: marketContext || null,
           language,
           country: country || null,
+          ...(dirtyModels ? { models_config: selectedModels } : {}),
         }),
       });
 
@@ -252,25 +287,98 @@ export default function EditProjectPage() {
           />
         </div>
 
-        {/* Modelli AI — read-only */}
-        <div className="space-y-1.5">
+        {/* Modelli AI — picker (additions only, no removals) */}
+        <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">{t("projects.aiModels")}</label>
-          <div className="flex items-start gap-2 flex-wrap bg-muted/50 border border-border rounded-[2px] px-4 py-3">
-            <Cpu className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
-            {modelsConfig.length > 0 ? (
-              modelsConfig.map((m) => (
-                <span key={m} className="badge badge-primary text-[12px]">{m}</span>
-              ))
-            ) : (
-              <span className="text-xs text-muted-foreground">{t("editProject.noModelConfigured")}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-1.5 mt-1">
-            <Info className="w-3 h-3 text-muted-foreground shrink-0" />
-            <p className="text-xs text-muted-foreground">
-              {t("editProject.modelsFixed")}
-            </p>
-          </div>
+
+          {isDemoPlan ? (
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 flex-wrap bg-muted/50 border border-border rounded-[2px] px-4 py-3">
+                <Cpu className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                {initialModels.length > 0 ? (
+                  initialModels.map((m) => (
+                    <span key={m} className="badge badge-primary text-[12px]">{MODEL_MAP.get(m)?.label ?? m}</span>
+                  ))
+                ) : (
+                  <span className="text-xs text-muted-foreground">{t("editProject.noModelConfigured")}</span>
+                )}
+              </div>
+              <div className="flex items-start gap-2">
+                <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">{t("editProject.modelsFixed")}</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground">
+                Aggiungi nuovi modelli al progetto. I modelli esistenti restano fissi (servono per i trend storici comparabili).
+              </p>
+              <div className="space-y-2">
+                {PROVIDER_GROUPS.map((provider) => {
+                  const isSoon = !!provider.comingSoon;
+                  return (
+                    <div key={provider.id} className={`rounded-sm border ${isSoon ? "border-border opacity-50" : "border-border"}`}>
+                      <div className="px-4 py-3 flex items-center gap-3">
+                        <span className={`text-sm font-semibold ${isSoon ? "text-muted-foreground" : provider.color}`}>{provider.label}</span>
+                        <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{provider.badge}</span>
+                        {isSoon && (
+                          <span className="font-mono text-[0.69rem] tracking-wide text-amber-500 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded-[2px] ml-auto">SOON</span>
+                        )}
+                      </div>
+                      {!isSoon && (
+                        <div className="px-4 pb-3 pt-0 space-y-0.5">
+                          {provider.models.map((model) => {
+                            const isLocked = initialModels.includes(model.id);
+                            const isSelected = selectedModels.includes(model.id);
+                            const isProGated = !!model.proOnly && !isProPlan;
+                            const atCap = !isSelected && selectedModels.length >= modelCap;
+                            const disabled = isLocked || isProGated || atCap;
+                            return (
+                              <label key={model.id} onClick={() => !disabled && toggleModel(model.id)}
+                                className={`flex items-center gap-2 p-2 rounded-[2px] transition-colors ${
+                                  isLocked ? "bg-muted/40 cursor-default"
+                                    : isProGated ? "opacity-60 cursor-not-allowed"
+                                    : atCap ? "opacity-50 cursor-not-allowed"
+                                    : isSelected ? "bg-primary/10 cursor-pointer"
+                                    : "hover:bg-muted/30 cursor-pointer"
+                                }`}
+                                title={isLocked ? "Modello storico — non rimovibile" : isProGated ? "Disponibile solo dal piano Pro" : atCap ? `Limite del piano: max ${modelCap} modelli` : undefined}>
+                                <div className={`w-3.5 h-3.5 rounded-[2px] border-2 flex items-center justify-center shrink-0 ${
+                                  isSelected ? "border-primary bg-primary" : "border-muted-foreground"
+                                }`}>
+                                  {isSelected && (
+                                    <Check className="w-2.5 h-2.5 text-primary-foreground" strokeWidth={3} />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`text-sm font-medium ${isProGated ? "text-muted-foreground" : isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
+                                    {isLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
+                                    {isProGated && <span className="font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">PRO</span>}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">{t(model.descriptionKey)}</p>
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <Info className="w-3 h-3 shrink-0" />
+                  <span>I modelli storici restano sempre attivi.</span>
+                </div>
+                <span>
+                  <span className="text-foreground font-bold">{selectedModels.length}</span>
+                  {" / "}{modelCap} modelli
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
         {error && (

@@ -112,8 +112,6 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
     id: "openai", label: "OpenAI", badge: "ChatGPT", color: "text-green-500",
     models: [
       { id: "gpt-5.4-mini", label: "GPT-5.4 Mini", descriptionKey: "modelDescriptions.gpt-54-mini" },
-      { id: "gpt-4o", label: "GPT-4o", descriptionKey: "modelDescriptions.gpt-4o" },
-      { id: "gpt-5.4", label: "GPT-5.4", descriptionKey: "modelDescriptions.gpt-54" },
       { id: "gpt-5.5", label: "GPT-5.5", descriptionKey: "modelDescriptions.gpt-55" },
       { id: "gpt-5.5-pro", label: "GPT-5.5 Pro", descriptionKey: "modelDescriptions.gpt-55-pro", expensive: true, proOnly: true },
     ],

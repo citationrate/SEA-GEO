@@ -1,6 +1,9 @@
 import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS, DEMO_MODEL_IDS } from "@/lib/engine/models";
+import { getUserPlanLimits } from "@/lib/usage";
+import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
 
 export async function GET(
   _request: Request,
@@ -30,6 +33,7 @@ const updateSchema = z.object({
   market_context: z.string().nullable().default(null),
   language: z.enum(["it", "en", "fr", "de", "es"]),
   country: z.string().nullable().default(null),
+  models_config: z.array(z.string()).min(1).optional(),
 });
 
 export async function PATCH(
@@ -41,7 +45,7 @@ export async function PATCH(
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, user_id")
+    .select("id, user_id, models_config")
     .eq("id", params.id)
     .single();
 
@@ -63,6 +67,57 @@ export async function PATCH(
   if (!parsed.success) {
     const msg = parsed.error.errors.map((e) => e.message).join(", ");
     return NextResponse.json({ error: msg }, { status: 400 });
+  }
+
+  // If models_config is being updated, enforce plan limits, no-removals, and
+  // valid IDs. Historical models can't be removed (preserves AVI trend
+  // comparability); the user can only add new ones up to the plan cap.
+  if (parsed.data.models_config) {
+    const currentModels = ((project as any).models_config as string[]) ?? [];
+    const newModels = Array.from(new Set(parsed.data.models_config));
+
+    const removed = currentModels.filter((m) => !newModels.includes(m));
+    if (removed.length > 0) {
+      return NextResponse.json(
+        { error: `I modelli storici non possono essere rimossi: ${removed.join(", ")}. Servono per garantire trend comparabili.` },
+        { status: 400 }
+      );
+    }
+
+    const validIds = new Set(ALL_MODEL_IDS as readonly string[]);
+    const invalid = newModels.filter((m) => !validIds.has(m));
+    if (invalid.length > 0) {
+      return NextResponse.json({ error: `Modelli sconosciuti: ${invalid.join(", ")}` }, { status: 400 });
+    }
+
+    // Read user plan id (the limits view returns the resolved plan id).
+    const cr = createCitationRateServiceClient();
+    const { data: profile } = await cr.from("profiles").select("plan").eq("id", user.id).single();
+    const planId = ((profile as any)?.plan ?? "demo") as string;
+    const isDemoPlan = !planId || planId === "demo" || planId === "free";
+    const isProPlan = planId === "pro" || planId === "enterprise";
+
+    if (isDemoPlan) {
+      return NextResponse.json({ error: "Il piano Demo non consente modifiche dei modelli." }, { status: 403 });
+    }
+
+    if (!isProPlan) {
+      const proUsed = newModels.filter((id) => PRO_ONLY_MODEL_IDS.has(id));
+      // Allow Demo's pre-seeded pro models (gemini-3.1-pro) to remain on Base
+      // if they were already in the project — they're whitelisted at create time.
+      const proAdded = proUsed.filter((id) => !currentModels.includes(id));
+      if (proAdded.length > 0) {
+        return NextResponse.json({ error: `${proAdded.join(", ")} disponibile solo dal piano Pro.` }, { status: 403 });
+      }
+    }
+
+    const plan = await getUserPlanLimits(user.id);
+    const cap = (plan as any)?.max_models_per_project ?? (isProPlan ? 5 : 3);
+    if (newModels.length > cap) {
+      return NextResponse.json({ error: `Il tuo piano supporta max ${cap} modelli per progetto.` }, { status: 403 });
+    }
+
+    parsed.data.models_config = newModels;
   }
 
   const { error: dbError } = await (supabase.from("projects") as any)
