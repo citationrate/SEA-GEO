@@ -108,6 +108,16 @@ export default function EditProjectPage() {
     });
   }
 
+  // Auto-scroll to the models section when arriving with #models in the URL.
+  // Runs after the form has rendered (post-loading) so the anchor exists.
+  useEffect(() => {
+    if (loading) return;
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#models") return;
+    const el = document.getElementById("models");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [loading]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -288,7 +298,7 @@ export default function EditProjectPage() {
         </div>
 
         {/* Modelli AI — picker (additions only, no removals) */}
-        <div className="space-y-2">
+        <div id="models" className="space-y-2 scroll-mt-6">
           <label className="text-sm font-medium text-foreground">{t("projects.aiModels")}</label>
 
           {isDemoPlan ? (
@@ -377,6 +387,24 @@ export default function EditProjectPage() {
                   {" / "}{modelCap} modelli
                 </span>
               </div>
+
+              {/* CTA upgrade: shown to Base when at-cap or there are pro-only models on the table */}
+              {!isProPlan && (selectedModels.length >= modelCap || PROVIDER_GROUPS.some((g) => g.models.some((m) => m.proOnly))) && (
+                <a
+                  href="/piano"
+                  className="flex items-center justify-between gap-3 px-4 py-3 rounded-[3px] border border-[#c4a882]/30 bg-[#c4a882]/5 hover:bg-[#c4a882]/10 hover:border-[#c4a882]/50 transition-colors"
+                >
+                  <div className="text-sm">
+                    <p className="font-semibold text-foreground">
+                      {selectedModels.length >= modelCap ? "Hai raggiunto il limite del piano" : "Vuoi accesso ai modelli Pro?"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Passa a Pro per usare fino a 5 modelli e sbloccare Opus 4.7, GPT-5.5 Pro, Gemini 3.1 Pro, Sonar Pro e Grok 3.
+                    </p>
+                  </div>
+                  <span className="text-xs font-mono tracking-wide text-[#c4a882] whitespace-nowrap">PASSA A PRO →</span>
+                </a>
+              )}
             </>
           )}
         </div>

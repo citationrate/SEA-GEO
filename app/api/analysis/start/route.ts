@@ -49,7 +49,7 @@ export async function POST(request: Request) {
 
     // Read models from project config
     const models_used: string[] = (project as any).models_config ?? ["gpt-5.4-mini"];
-    const validModels = models_used.filter((id: string) => ALL_MODEL_IDS.includes(id));
+    let validModels = models_used.filter((id: string) => ALL_MODEL_IDS.includes(id));
     if (!validModels.length) return NextResponse.json({ error: "Nessun modello valido configurato" }, { status: 400 });
 
     // Fetch only active queries and active segments
@@ -71,12 +71,9 @@ export async function POST(request: Request) {
     const plan = await getUserPlanLimits(user.id);
     const usage = await getCurrentUsage(user.id);
     const segmentCount = Math.max((segments?.length ?? 0), 1);
-    const promptCost = queries.length * validModels.length * segmentCount * run_count;
     const userPlanId = (plan as any).id ?? "demo";
     const isProPlan = userPlanId === "pro" || userPlanId === "enterprise";
     const isDemoPlan = userPlanId === "demo";
-
-    console.log("[analysis/start] plan:", userPlanId, "promptCost:", promptCost);
 
     // Demo plan enforcement: only fixed models, no browsing
     if (isDemoPlan) {
@@ -90,17 +87,27 @@ export async function POST(request: Request) {
     // Browsing enforcement: demo plan cannot use browsing
     const browsing = isDemoPlan ? false : requestedBrowsing;
 
-    // Check for Pro-only models on non-Pro plans
-    if (!isProPlan) {
-      const proModelsUsed = validModels.filter((id: string) => PRO_ONLY_MODEL_IDS.has(id));
-      // Demo has gemini-3.1-pro which is normally pro-only, but allowed for demo
-      const filteredProModels = isDemoPlan
-        ? proModelsUsed.filter((id: string) => !(DEMO_MODEL_IDS as readonly string[]).includes(id))
-        : proModelsUsed;
-      if (filteredProModels.length > 0) {
-        return NextResponse.json({ error: `${filteredProModels.join(", ")} disponibile solo dal piano Pro.` }, { status: 403 });
+    // Pro-only models on non-Pro plans:
+    //   - Demo: hard-blocked above already (only DEMO_MODEL_IDS allowed).
+    //   - Base (post-downgrade or legacy): SOFT SKIP — silently exclude pro-only
+    //     from this run so the user isn't stuck. Historical scores remain in the
+    //     project, the project page surfaces a banner with the upgrade CTA.
+    if (!isProPlan && !isDemoPlan) {
+      const proInProject = validModels.filter((id: string) => PRO_ONLY_MODEL_IDS.has(id));
+      if (proInProject.length > 0) {
+        console.warn(`[analysis/start] Base plan — skipping pro-only models: ${proInProject.join(", ")}`);
+        validModels = validModels.filter((id: string) => !PRO_ONLY_MODEL_IDS.has(id));
+        if (!validModels.length) {
+          return NextResponse.json(
+            { error: "Tutti i modelli del progetto richiedono il piano Pro. Passa a Pro o aggiungi un modello compatibile." },
+            { status: 403 }
+          );
+        }
       }
     }
+
+    const promptCost = queries.length * validModels.length * segmentCount * run_count;
+    console.log("[analysis/start] plan:", userPlanId, "promptCost:", promptCost);
 
     if (validModels.length > plan.max_models_per_project) {
       return NextResponse.json({ error: `Il tuo piano supporta max ${plan.max_models_per_project} modelli per progetto.` }, { status: 403 });

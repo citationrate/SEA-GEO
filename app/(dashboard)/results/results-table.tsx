@@ -71,17 +71,17 @@ export function ResultsTable({ rows }: { rows: RunRow[] }) {
         />
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="overflow-hidden">
+        <table className="w-full text-sm border-separate border-spacing-y-2">
           <thead>
-            <tr className="border-b border-border text-xs text-muted-foreground bg-muted/30">
-              <th className="text-left py-3 px-4 font-medium">{t("results.project")}</th>
-              <th className="text-left py-3 px-4 font-medium">{t("results.version")}</th>
-              <th className="text-left py-3 px-4 font-medium">{t("results.models")}</th>
-              <th className="text-left py-3 px-4 font-medium">{t("results.prompt")}</th>
-              <th className="text-left py-3 px-4 font-medium">{t("results.avi")}</th>
-              <th className="text-left py-3 px-4 font-medium">{t("results.status")}</th>
-              <th className="text-left py-3 px-4 font-medium">{t("results.date")}</th>
+            <tr className="text-xs text-muted-foreground">
+              <th className="text-left py-2 px-4 font-medium">{t("results.project")}</th>
+              <th className="text-left py-2 px-4 font-medium">{t("results.version")}</th>
+              <th className="text-left py-2 px-4 font-medium">{t("results.models")}</th>
+              <th className="text-left py-2 px-4 font-medium">{t("results.prompt")}</th>
+              <th className="text-left py-2 px-4 font-medium">{t("results.avi")}</th>
+              <th className="text-left py-2 px-4 font-medium">{t("results.status")}</th>
+              <th className="text-left py-2 px-4 font-medium">{t("results.date")}</th>
             </tr>
           </thead>
           <tbody>
@@ -101,9 +101,9 @@ export function ResultsTable({ rows }: { rows: RunRow[] }) {
                       router.push(href);
                     }
                   }}
-                  className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer focus:outline-none focus:bg-muted/40"
+                  className="bg-surface border border-border hover:border-primary/30 hover:bg-muted/30 transition-colors cursor-pointer focus:outline-none focus:bg-muted/40 focus:border-primary/40 group"
                 >
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 rounded-l-[3px] border-r border-transparent group-hover:border-r-border/40">
                     <p className="font-medium text-foreground">{r.projectName}</p>
                     <p className="text-xs text-muted-foreground">{r.projectBrand}</p>
                   </td>
@@ -129,7 +129,7 @@ export function ResultsTable({ rows }: { rows: RunRow[] }) {
                       {STATUS_LABEL[r.status] ?? r.status}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-muted-foreground text-xs">
+                  <td className="py-3 px-4 text-muted-foreground text-xs rounded-r-[3px]">
                     {new Date(r.completed_at ?? r.created_at).toLocaleString(locale)}
                   </td>
                 </tr>
@@ -137,7 +137,7 @@ export function ResultsTable({ rows }: { rows: RunRow[] }) {
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
+                <td colSpan={7} className="py-8 text-center text-sm text-muted-foreground border border-border bg-surface rounded-[3px]">
                   {t("results.noResultFound")}
                 </td>
               </tr>

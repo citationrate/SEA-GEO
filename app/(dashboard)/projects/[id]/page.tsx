@@ -1,7 +1,7 @@
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Cpu, Settings, Sparkles } from "lucide-react";
+import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Cpu, Settings, Sparkles, Info } from "lucide-react";
 import { AnalysisLauncher } from "./analysis-launcher";
 import { ProjectAVITrend } from "./project-avi-trend";
 import { DeleteProjectButton } from "./delete-project-button";
@@ -13,6 +13,7 @@ import { T } from "@/components/translated-label";
 import { BotMount } from "@/components/BotMount";
 import { buildProjectContext, normalizeLang } from "@/lib/bot-context";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
+import { PROVIDER_GROUPS, PRO_ONLY_MODEL_IDS, MODEL_MAP } from "@/lib/engine/models";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const auth = createServerClient();
@@ -104,6 +105,30 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
   const proj = project as any;
 
+  // ── Models awareness banners (additions + soft-skip) ─────────────────────
+  // currentModels: what the project is configured to run
+  // newModels:     models the user could ADD given their plan (max 3 shown)
+  // lockedProModels: models in the project that the current plan can no longer use
+  //                  (typically after a Pro→Base downgrade) — soft-skipped at run-time
+  const currentModels: string[] = (proj.models_config as string[]) ?? [];
+  const isProPlan = userPlan === "pro" || userPlan === "enterprise";
+  const isDemoPlan = userPlan === "demo";
+  const modelCap = isProPlan ? 5 : 3;
+
+  const allSelectableModels = PROVIDER_GROUPS.flatMap((g) =>
+    g.comingSoon ? [] : g.models.map((m) => ({ id: m.id, label: m.label, proOnly: !!m.proOnly }))
+  );
+  const newModels = allSelectableModels.filter((m) => {
+    if (currentModels.includes(m.id)) return false;
+    if (m.proOnly && !isProPlan) return false;
+    return true;
+  });
+  const canAddMore = !isDemoPlan && currentModels.length < modelCap && newModels.length > 0;
+
+  const lockedProModels = !isProPlan
+    ? currentModels.filter((id) => PRO_ONLY_MODEL_IDS.has(id))
+    : [];
+
   // ── Bot context: ownership is already enforced by the project query above
   // (.eq user_id). Plan + locale gate the actual mount inside <BotMount />.
   const cookieStore = cookies();
@@ -171,10 +196,74 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       <div className="flex items-center gap-2 flex-wrap">
         <Cpu className="w-3.5 h-3.5 text-cream-dim" />
         <span className="font-mono text-[13px] text-cream-dim"><T k="projectDetail.aiModels" /></span>
-        {((proj.models_config as string[]) ?? ["gpt-5.4-mini"]).map((m: string) => (
-          <span key={m} className="badge badge-primary text-[12px]">{m}</span>
-        ))}
+        {((proj.models_config as string[]) ?? ["gpt-5.4-mini"]).map((m: string) => {
+          const isLockedPro = lockedProModels.includes(m);
+          return (
+            <span
+              key={m}
+              className={`badge text-[12px] ${isLockedPro ? "badge-muted text-amber-500 border-amber-500/30 bg-amber-500/10" : "badge-primary"}`}
+              title={isLockedPro ? "Pro-only — escluso dalle prossime analisi finché non passi a Pro" : undefined}
+            >
+              {MODEL_MAP.get(m)?.label ?? m}
+            </span>
+          );
+        })}
+        {canAddMore && (
+          <a
+            href={`/projects/${params.id}/edit#models`}
+            className="inline-flex items-center gap-1 text-[12px] font-mono text-primary hover:text-primary/80 border border-primary/30 hover:border-primary/60 bg-primary/5 hover:bg-primary/10 px-2 py-0.5 rounded-[2px] transition-colors"
+          >
+            <Plus className="w-3 h-3" />
+            Aggiungi modello
+          </a>
+        )}
       </div>
+
+      {/* Banner: nuovi modelli disponibili nel piano */}
+      {canAddMore && (
+        <div className="flex items-start gap-2.5 px-4 py-3 rounded-[3px] border border-primary/20 bg-primary/5">
+          <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm">
+            <p className="text-foreground">
+              <span className="font-semibold">Modelli AI nuovi disponibili</span>
+              {" — "}
+              <span className="text-muted-foreground">{newModels.slice(0, 3).map((m) => m.label).join(", ")}{newModels.length > 3 ? ` +${newModels.length - 3}` : ""}</span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Aggiungili al progetto per misurare la tua presenza anche su queste AI. Lo storico esistente non cambia.
+            </p>
+          </div>
+          <a
+            href={`/projects/${params.id}/edit#models`}
+            className="text-xs font-medium text-primary hover:text-primary/80 whitespace-nowrap shrink-0"
+          >
+            Aggiungi →
+          </a>
+        </div>
+      )}
+
+      {/* Banner: modelli pro-only ereditati (soft skip) */}
+      {lockedProModels.length > 0 && (
+        <div className="flex items-start gap-2.5 px-4 py-3 rounded-[3px] border border-amber-500/30 bg-amber-500/5">
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm">
+            <p className="text-foreground">
+              <span className="font-semibold">Alcuni modelli richiedono il piano Pro</span>
+              {" — "}
+              <span className="text-muted-foreground">{lockedProModels.map((id) => MODEL_MAP.get(id)?.label ?? id).join(", ")}</span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Le prossime analisi useranno solo i modelli compatibili con il tuo piano. Lo storico precedente resta consultabile nei grafici.
+            </p>
+          </div>
+          <a
+            href="/piano"
+            className="text-xs font-medium text-amber-500 hover:text-amber-400 whitespace-nowrap shrink-0"
+          >
+            Passa a Pro →
+          </a>
+        </div>
+      )}
 
       {/* AVI Score + Last Run */}
       {lastAvi && (
