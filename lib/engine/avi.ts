@@ -3,6 +3,8 @@ export interface AVIComponents {
   rank_score: number;
   sentiment_score: number;
   stability_score: number;
+  /** Mean brand_rank across prompts where brand was mentioned. NULL if 0 mentions. */
+  avg_brand_rank: number | null;
 }
 
 export interface AVIResult {
@@ -38,7 +40,7 @@ export function calculateAVI(analyses: AnalysisRow[]): AVIResult {
   if (analyses.length === 0) {
     return {
       avi_score: 0,
-      components: { presence_score: 0, rank_score: 0, sentiment_score: 0, stability_score: 0 },
+      components: { presence_score: 0, rank_score: 0, sentiment_score: 0, stability_score: 0, avg_brand_rank: null },
     };
   }
 
@@ -59,6 +61,7 @@ export function calculateAVI(analyses: AnalysisRow[]): AVIResult {
         rank_score: 0,
         sentiment_score: 0,
         stability_score: Math.round(stability_score * 100) / 100,
+        avg_brand_rank: null,
       },
     };
   }
@@ -81,6 +84,16 @@ export function calculateAVI(analyses: AnalysisRow[]): AVIResult {
   });
   const sentiment_score = sentimentValues.reduce((s, v) => s + v, 0) / sentimentValues.length;
 
+  // --- Posizione media (raw): media di brand_rank sui prompt che lo menzionano.
+  // Diversa da rank_score (normalizzato 0-100, con 0 per i non-menzionanti).
+  // Serve a rispondere alla domanda "quando vengo citato, in che posizione sono?".
+  const ranksWhenCited = analyses
+    .filter((a) => a.brand_mentioned && a.brand_rank !== null && a.brand_rank > 0)
+    .map((a) => a.brand_rank as number);
+  const avg_brand_rank = ranksWhenCited.length > 0
+    ? Math.round((ranksWhenCited.reduce((s, v) => s + v, 0) / ranksWhenCited.length) * 10) / 10
+    : null;
+
   // --- AVI composito: Presenza 40% + Posizione 35% + Sentiment 25% ---
   const avi_score = Math.round(
     (presence_score * 0.40 +
@@ -95,6 +108,7 @@ export function calculateAVI(analyses: AnalysisRow[]): AVIResult {
       rank_score: Math.round(rank_score * 100) / 100,
       sentiment_score: Math.round(sentiment_score * 100) / 100,
       stability_score: Math.round(stability_score * 100) / 100,
+      avg_brand_rank,
     },
   };
 }

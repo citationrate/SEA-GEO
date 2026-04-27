@@ -12,7 +12,7 @@ import { useTranslation } from "@/lib/i18n/context";
 interface AVIRingProps {
   score: number | null;
   trend: number | null;
-  components?: { label: string; labelKey?: string; v: number | null }[];
+  components?: { label: string; labelKey?: string; v: number | null; avgRank?: number | null }[];
   noBrandMentions?: boolean;
   hideComponents?: boolean;
 }
@@ -100,6 +100,15 @@ export function AVIRing({ score, trend, components, noBrandMentions, hideCompone
         <div className="w-full space-y-2.5 pt-2 border-t border-border">
           {comps.map(c => {
             const key = c.labelKey ?? "";
+            const isPosition = key === "dashboard.position";
+            // Position uses score-based color (red/amber/green); other components keep their fixed accent.
+            const barColor = isPosition && c.v != null ? scoreToColor(c.v) : (COMP_COLORS[key] ?? "var(--sage)");
+            // Qualitative descriptor for Position only — gives a glanceable verdict.
+            const qualifier = isPosition && c.v != null
+              ? c.v >= 70 ? t("dashboard.qualityHigh")
+                : c.v >= 40 ? t("dashboard.qualityMedium")
+                : t("dashboard.qualityLow")
+              : null;
             return (
               <div key={key || c.label}>
                 <div className="flex items-center justify-between mb-1">
@@ -107,12 +116,20 @@ export function AVIRing({ score, trend, components, noBrandMentions, hideCompone
                     {c.label}
                     {tooltipMap[key] && <InfoTooltip text={tooltipMap[key]} />}
                   </span>
-                  <span className="font-mono text-[12px] text-cream-dim">{c.v != null ? Math.round(c.v) : "--"}</span>
+                  <span className="font-mono text-[12px] text-cream-dim">
+                    {c.v != null ? (isPosition ? `${Math.round(c.v)}/100` : Math.round(c.v)) : "--"}
+                    {qualifier && <span className="ml-1 text-[10px] opacity-70">· {qualifier}</span>}
+                  </span>
                 </div>
                 <div className="w-full h-1 bg-ink-3 rounded-sm overflow-hidden">
                   <div className="h-full rounded-sm transition-all duration-700"
-                    style={{ width: c.v != null ? `${c.v}%` : "0%", backgroundColor: COMP_COLORS[key] ?? "var(--sage)" }} />
+                    style={{ width: c.v != null ? `${c.v}%` : "0%", backgroundColor: barColor }} />
                 </div>
+                {isPosition && c.avgRank != null && c.avgRank > 0 && (
+                  <p className="font-mono text-[10px] text-cream-dim mt-1 opacity-80">
+                    ↳ {t("dashboard.positionWhenCited").replace("{n}", String(Math.round(c.avgRank)))}
+                  </p>
+                )}
               </div>
             );
           })}

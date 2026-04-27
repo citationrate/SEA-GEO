@@ -193,6 +193,7 @@ async function computeAndSaveAVI(
       rank_score: result.components.rank_score,
       sentiment_score: result.components.sentiment_score,
       stability_score: result.components.stability_score,
+      avg_brand_rank: result.components.avg_brand_rank,
       computed_at: new Date().toISOString(),
     }, { onConflict: "project_id,run_id" });
 

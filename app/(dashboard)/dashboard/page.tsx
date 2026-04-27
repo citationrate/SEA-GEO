@@ -101,7 +101,7 @@ export default async function DashboardPage({
     runIds.length > 0
       ? supabase
           .from("avi_history")
-          .select("avi_score, presence_score, rank_score, sentiment_score, stability_score, computed_at, run_id")
+          .select("avi_score, presence_score, rank_score, sentiment_score, stability_score, avg_brand_rank, computed_at, run_id")
           .in("run_id", runIds)
           .order("computed_at", { ascending: true })
       : Promise.resolve({ data: [] as any[] }),
@@ -230,7 +230,7 @@ export default async function DashboardPage({
   // Build AVI components for ring
   const aviComponents = lastAvi ? [
     { labelKey: "dashboard.presence",    v: lastAvi.presence_score != null ? Math.round(lastAvi.presence_score) : null },
-    { labelKey: "dashboard.position",    v: lastAvi.rank_score != null ? Math.round(lastAvi.rank_score) : null },
+    { labelKey: "dashboard.position",    v: lastAvi.rank_score != null ? Math.round(lastAvi.rank_score) : null, avgRank: lastAvi.avg_brand_rank != null ? Number(lastAvi.avg_brand_rank) : null },
     { labelKey: "dashboard.sentiment",   v: lastAvi.sentiment_score != null ? Math.round(lastAvi.sentiment_score) : null },
     { labelKey: "dashboard.reliability", v: lastAvi.stability_score != null ? Math.round(lastAvi.stability_score) : null },
   ] : undefined;
