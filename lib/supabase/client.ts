@@ -30,9 +30,12 @@ export function createClient() {
   );
 
   // Redirect to suite login on sign-out or missing session — prevents infinite refresh loops
-  // Skip on /auth/ pages (handoff in progress) and public pages
+  // Skip on /auth/ pages (handoff in progress) and public pages.
+  // INITIAL_SESSION fires synchronously during init, so guard against SSR
+  // where `window` is undefined (would crash Vercel prerender).
   _authClient.auth.onAuthStateChange((event, session) => {
     if (event === "TOKEN_REFRESHED") return;
+    if (typeof window === "undefined") return;
     const path = window.location.pathname;
     if (path.startsWith("/auth/") || path.startsWith("/share/") || path === "/") return;
     if (event === "SIGNED_OUT" || (!session && event === "INITIAL_SESSION")) {
