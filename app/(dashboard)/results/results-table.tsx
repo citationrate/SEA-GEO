@@ -101,10 +101,10 @@ export function ResultsTable({ rows }: { rows: RunRow[] }) {
                       router.push(href);
                     }
                   }}
-                  className="bg-surface border border-border hover:border-primary/30 hover:bg-muted/30 transition-colors cursor-pointer focus:outline-none focus:bg-muted/40 focus:border-primary/40 group"
+                  className="bg-surface border border-border hover:border-primary hover:bg-primary/[0.06] hover:shadow-[0_0_0_1px_rgb(var(--primary-rgb,123_184_154)/0.5)] transition-all cursor-pointer focus:outline-none focus:bg-primary/[0.08] focus:border-primary group"
                 >
-                  <td className="py-3 px-4 rounded-l-[3px] border-r border-transparent group-hover:border-r-border/40">
-                    <p className="font-medium text-foreground">{r.projectName}</p>
+                  <td className="py-3 px-4 rounded-l-[3px]">
+                    <p className="font-medium text-foreground group-hover:text-primary transition-colors">{r.projectName}</p>
                     <p className="text-xs text-muted-foreground">{r.projectBrand}</p>
                   </td>
                   <td className="py-3 px-4 text-muted-foreground">v{r.version}</td>
