@@ -31,6 +31,13 @@ export function truncateResponse(text: string | null | undefined): {
   return { body: text.slice(0, RESPONSE_CHAR_CAP), truncated: true };
 }
 
+export function cleanPromptForDisplay(text: string | null | undefined): string {
+  if (!text) return "";
+  return text
+    .replace(/^\s*IMPORTANT:\s*You MUST respond ONLY in[^\n]*\.\s*\n+/i, "")
+    .trim();
+}
+
 export interface KpiCell {
   val: string | number;
   label: string;
@@ -190,7 +197,7 @@ export function renderTranscriptAppendix(
           <div class="transcript-meta">${meta.join(" ")}</div>
           <div class="transcript-prompt">
             <span class="lbl">${escapeHtml(s.promptLabel)}</span>
-            ${escapeHtml(it.fullPrompt)}
+            ${escapeHtml(cleanPromptForDisplay(it.fullPrompt))}
           </div>
           <div class="transcript-response">
             <span class="lbl">${escapeHtml(s.responseLabel)}</span>
