@@ -51,11 +51,10 @@ export function ExportButtons({ runId, projectId }: ExportButtonsProps) {
     try {
       switch (type) {
         case "pdf":
-          // Single run PDF — open in new tab for print
-          window.open(`/api/export/${runId}/pdf`, "_blank");
+          await downloadBlob(`/api/export/${runId}/pdf`, `AVI-Report-${runId.slice(0, 8)}.pdf`);
           break;
         case "project-pdf":
-          await downloadBlob(`/api/export/project/${projectId}/pdf`, `AVI-Project-Report.html`);
+          await downloadBlob(`/api/export/project/${projectId}/pdf`, `AVI-Project-Report.pdf`);
           break;
         case "excel":
           await downloadBlob(`/api/export/${runId}/excel`, `AVI-Export-${runId.slice(0, 8)}.xlsx`);

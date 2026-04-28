@@ -1,6 +1,27 @@
 import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { getServerTranslator, getLocaleFromRequest } from "@/lib/i18n/server";
+import { isProUser } from "@/lib/utils/is-pro";
+import { htmlToPdf } from "@/lib/pdf/render";
+import { STYLES, PDF_FOOTER_HTML, PALETTE, scoreToColor, scoreVerdict } from "@/lib/pdf/styles";
+import {
+  buildDocument,
+  renderKpiRow,
+  renderBars,
+  renderTable,
+  renderChips,
+  renderEmpty,
+  renderTranscriptAppendix,
+  getTranscriptStrings,
+  getLocaleStrings,
+  escapeHtml,
+  type TranscriptItem,
+} from "@/lib/pdf/templates";
+
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
+const MAX_TRANSCRIPT_ITEMS_PROJECT = 800;
 
 export async function GET(
   request: Request,
@@ -12,15 +33,24 @@ export async function GET(
   const projectId = params.projectId;
   const locale = getLocaleFromRequest(request);
   const t = getServerTranslator(locale);
+  const ls = getLocaleStrings(locale);
+
+  let isPro = false;
+  if (user) {
+    const { data: profile } = await (supabase.from("profiles") as any)
+      .select("plan")
+      .eq("id", user.id)
+      .single();
+    isPro = isProUser(profile);
+  }
 
   const url = new URL(request.url);
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
 
-  // Fetch project
   const { data: project } = await supabase
     .from("projects")
-    .select("name, target_brand, user_id")
+    .select("name, target_brand, sector, urls, user_id")
     .eq("id", projectId)
     .single();
   const proj = project as any;
@@ -28,7 +58,6 @@ export async function GET(
     return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
   }
 
-  // Fetch all completed runs for this project
   let runsQuery = supabase
     .from("analysis_runs")
     .select("*")
@@ -47,8 +76,8 @@ export async function GET(
   }
 
   const runIds = allRuns.map((r) => r.id);
+  const runMap = new Map(allRuns.map((r) => [r.id, r]));
 
-  // Fetch AVI history for all runs
   const { data: aviHistory } = await supabase
     .from("avi_history")
     .select("*")
@@ -57,134 +86,211 @@ export async function GET(
   const aviList = (aviHistory ?? []) as any[];
   const aviMap = new Map(aviList.map((a) => [a.run_id, a]));
 
-  // Fetch all prompts for all runs
   const { data: prompts } = await supabase
     .from("prompts_executed")
     .select("*")
-    .in("run_id", runIds);
-  const promptIds = (prompts ?? []).map((p: any) => p.id);
+    .in("run_id", runIds)
+    .order("created_at", { ascending: true });
+  const promptsList = (prompts ?? []) as any[];
+  const promptIds = promptsList.map((p) => p.id);
 
-  // Fetch analyses
   const { data: analyses } = promptIds.length > 0
     ? await supabase.from("response_analysis").select("*").in("prompt_executed_id", promptIds)
     : { data: [] };
   const analysesList = (analyses ?? []) as any[];
+  const analysisMap = new Map(analysesList.map((x: any) => [x.prompt_executed_id, x]));
 
-  // Aggregate competitors across all runs
   const compMap = new Map<string, number>();
   analysesList.forEach((x) =>
     (x.competitors_found ?? []).forEach((c: string) => compMap.set(c, (compMap.get(c) ?? 0) + 1))
   );
   const compList = Array.from(compMap.entries()).sort((a, b) => b[1] - a[1]);
 
-  // Aggregate topics
   const topicMap = new Map<string, number>();
   analysesList.forEach((x) =>
     (x.topics ?? []).forEach((tp: string) => topicMap.set(tp, (topicMap.get(tp) ?? 0) + 1))
   );
   const topicList = Array.from(topicMap.entries()).sort((a, b) => b[1] - a[1]);
 
-  // Overall stats
   const totalMentioned = analysesList.filter((x) => x.brand_mentioned).length;
   const mentionRate = analysesList.length > 0 ? Math.round((totalMentioned / analysesList.length) * 100) : 0;
   const latestAvi = aviList.length > 0 ? aviList[aviList.length - 1] : null;
+  const latestAviScore = Number(latestAvi?.avi_score ?? 0);
+  const aviScoreColor = scoreToColor(latestAviScore);
+  const verdict = scoreVerdict(latestAviScore, locale);
 
+  const todayStr = new Date().toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "numeric" });
   const dateRange = from || to
     ? `${from ?? "..."} → ${to ?? "..."}`
     : `${allRuns[0].completed_at ? new Date(allRuns[0].completed_at).toLocaleDateString(locale) : ""} → ${allRuns[allRuns.length - 1].completed_at ? new Date(allRuns[allRuns.length - 1].completed_at).toLocaleDateString(locale) : ""}`;
 
-  // Build AVI trend rows
-  const trendRows = allRuns.map((r) => {
-    const a = aviMap.get(r.id);
-    const date = r.completed_at ? new Date(r.completed_at).toLocaleDateString(locale, { day: "2-digit", month: "short" }) : `v${r.version}`;
-    return { version: `v${r.version}`, date, avi: a?.avi_score ?? "—", presence: a?.presence_score ?? "—", sentiment: a?.sentiment_score ?? "—" };
+  const projectUrl = Array.isArray(proj?.urls) && proj.urls.length > 0 ? proj.urls[0] : null;
+
+  const headerBlock = `
+    <div class="header">
+      <div class="brand-title">AI Visibility Index</div>
+      <div class="brand-subtitle">${escapeHtml(ls.projectReportSubtitle)}</div>
+    </div>
+
+    <div class="project-name">${escapeHtml(proj?.name ?? proj?.target_brand ?? "")}</div>
+    <div class="project-meta">
+      ${proj?.target_brand ? `Brand: ${escapeHtml(proj.target_brand)}` : ""}${proj?.target_brand && proj?.sector ? " · " : ""}${proj?.sector ? `${escapeHtml(ls.sector)}: ${escapeHtml(proj.sector)}` : ""}
+      ${projectUrl ? `<br>${escapeHtml(projectUrl)}` : ""}
+      <br>${allRuns.length} ${escapeHtml(t("results.analyses"))} · ${escapeHtml(dateRange)}
+    </div>
+
+    <div class="big-score-row">
+      <span class="big-score-num" style="color:${aviScoreColor}">${latestAviScore.toFixed(latestAviScore % 1 === 0 ? 0 : 1)}</span>
+      <span class="big-score-suffix">/ 100</span>
+    </div>
+    <div class="big-score-label">
+      <span class="verdict" style="color:${aviScoreColor}">${escapeHtml(verdict)}</span>
+      <span> — AVI Score (${escapeHtml(ls.latest)})</span>
+    </div>
+  `;
+
+  const kpiBlock = renderKpiRow([
+    { val: latestAviScore.toFixed(latestAviScore % 1 === 0 ? 0 : 1), label: "AVI Score", color: aviScoreColor },
+    { val: `${mentionRate}%`, label: t("dashboard.brandMentions") },
+    { val: allRuns.length, label: t("results.analyses") },
+    { val: compList.length, label: t("sidebar.competitors") },
+  ]);
+
+  const trendBlock = `
+    <h2 class="section">AVI Trend (${allRuns.length})</h2>
+    ${renderTable(
+      [
+        { label: "Version" },
+        { label: t("results.date") },
+        { label: "AVI", align: "right" },
+        { label: t("dashboard.presence"), align: "right" },
+        { label: t("dashboard.position"), align: "right" },
+        { label: t("dashboard.sentiment"), align: "right" },
+      ],
+      allRuns.map((r) => {
+        const ah = aviMap.get(r.id) as any;
+        const date = r.completed_at
+          ? new Date(r.completed_at).toLocaleDateString(locale, { day: "2-digit", month: "short" })
+          : `v${r.version}`;
+        return [
+          `v${r.version}`,
+          date,
+          ah?.avi_score != null ? Number(ah.avi_score).toFixed(1) : "—",
+          ah?.presence_score != null ? Math.round(Number(ah.presence_score)) : "—",
+          ah?.rank_score != null ? Math.round(Number(ah.rank_score)) : "—",
+          ah?.sentiment_score != null ? Math.round(Number(ah.sentiment_score)) : "—",
+        ];
+      }),
+      { alternating: true }
+    )}
+  `;
+
+  const componentsBlock = latestAvi ? `
+    <h2 class="section">${escapeHtml(t("runDetail.aviComparison"))} — ${escapeHtml(ls.latest)}</h2>
+    ${renderBars([
+      { label: t("dashboard.presence"), value: Number(latestAvi.presence_score ?? 0), color: PALETTE.presence },
+      { label: t("dashboard.position"), value: Number(latestAvi.rank_score ?? 0), color: scoreToColor(Number(latestAvi.rank_score ?? 0)) },
+      { label: t("dashboard.sentiment"), value: Number(latestAvi.sentiment_score ?? 0), color: PALETTE.sentiment },
+    ])}
+  ` : "";
+
+  const competitorBlock = `
+    <h2 class="section">${escapeHtml(t("sidebar.competitors"))} (${compList.length})</h2>
+    ${compList.length > 0
+      ? renderTable(
+          [
+            { label: t("sidebar.competitors") },
+            { label: t("sources.citationsLabel"), align: "right" },
+          ],
+          compList.slice(0, 80).map(([name, count]) => [name, count]),
+          { alternating: true }
+        )
+      : renderEmpty(t("dashboard.noCompetitorFound"))}
+  `;
+
+  const topicBlock = topicList.length > 0 ? `
+    <h2 class="section">Topic (${topicList.length})</h2>
+    ${renderChips(topicList.slice(0, 80).map(([name, count]) => ({ name, count })))}
+  ` : "";
+
+  let transcriptBlock = "";
+  if (isPro && promptsList.length > 0) {
+    const tStrings = getTranscriptStrings(locale);
+
+    const sortedPrompts = [...promptsList].sort((a, b) => {
+      const ra = runMap.get(a.run_id) as any;
+      const rb = runMap.get(b.run_id) as any;
+      const ta = ra?.completed_at ? new Date(ra.completed_at).getTime() : 0;
+      const tb = rb?.completed_at ? new Date(rb.completed_at).getTime() : 0;
+      if (ta !== tb) return ta - tb;
+      const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return da - db;
+    });
+
+    const cap = MAX_TRANSCRIPT_ITEMS_PROJECT;
+    const capped = sortedPrompts.slice(0, cap);
+    const truncated = sortedPrompts.length > cap;
+
+    const items: TranscriptItem[] = capped.map((p, i) => {
+      const x = analysisMap.get(p.id) as any;
+      const r = runMap.get(p.run_id) as any;
+      return {
+        index: i + 1,
+        model: p.model,
+        brand: x?.brand_mentioned ? "yes" : "",
+        rank: x?.brand_rank ?? null,
+        fullPrompt: p.full_prompt_text ?? "",
+        rawResponse: p.raw_response ?? null,
+        runVersion: r?.version ?? null,
+        runDate: r?.completed_at
+          ? new Date(r.completed_at).toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "numeric" })
+          : null,
+      };
+    });
+
+    transcriptBlock = renderTranscriptAppendix(items, tStrings);
+    if (truncated) {
+      transcriptBlock += `<p style="color:${PALETTE.textMuted};font-size:8.5pt;font-style:italic;margin-top:12pt">${escapeHtml(`(${sortedPrompts.length - cap}+ ${ls.transcriptOmitted})`)}</p>`;
+    }
+  }
+
+  const bodyHtml = `
+    ${headerBlock}
+    ${kpiBlock}
+    ${trendBlock}
+    ${componentsBlock}
+    ${competitorBlock}
+    ${topicBlock}
+    ${transcriptBlock}
+  `;
+
+  const html = buildDocument({
+    title: `AVI Project Report - ${proj?.name ?? ""}`,
+    bodyHtml,
+    styles: STYLES,
+    lang: locale,
   });
 
-  const brandName = (proj?.target_brand ?? proj?.name ?? "project").replace(/[^a-zA-Z0-9]/g, "-");
-  const todayStr = new Date().toISOString().split("T")[0];
+  const footerLabel = `AI Visibility Index · ${proj?.name ?? ""} · Project Report`;
+  const pdfBuffer = await htmlToPdf(html, {
+    footerHTML: PDF_FOOTER_HTML(footerLabel, todayStr, "avi.citationrate.com"),
+    headerHTML: "<span></span>",
+    displayHeaderFooter: true,
+    margin: { top: "12mm", right: "14mm", bottom: "16mm", left: "14mm" },
+  });
 
-  const html = `<!DOCTYPE html>
-<html lang="${locale}">
-<head>
-<meta charset="utf-8">
-<title>AVI Project Report - ${proj?.name ?? ""}</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Inter', sans-serif; color: #f5f5f0; background: #0a0a0a; padding: 48px; font-size: 13px; line-height: 1.6; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .header { margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid #4ade80; }
-  .header h1 { font-size: 28px; font-weight: 500; letter-spacing: -0.02em; color: #f5f5f0; margin-bottom: 6px; }
-  .header .subtitle { font-family: 'JetBrains Mono', monospace; color: #888; font-size: 12px; letter-spacing: 0.02em; }
-  h2 { font-size: 14px; font-weight: 500; color: #f5f5f0; margin: 32px 0 14px; padding-bottom: 8px; border-bottom: 1px solid #4ade80; }
-  h2 .count { font-family: 'JetBrains Mono', monospace; color: #888; font-weight: 400; font-size: 12px; }
-  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
-  .stat { background: #111; border: 1px solid #1f1f1f; border-radius: 2px; padding: 16px; text-align: center; }
-  .stat .val { font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 600; color: #f5f5f0; }
-  .stat .val.avi-val { color: #4ade80; }
-  .stat .lbl { font-size: 10px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.12em; margin-top: 4px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
-  th { text-align: left; padding: 8px 12px; background: #111; border-bottom: 1px solid #1f1f1f; color: #888; font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; }
-  td { padding: 7px 12px; border-bottom: 1px solid #1f1f1f; color: #f5f5f0; }
-  tr:nth-child(even) td { background: #0d0d0d; }
-  tr:nth-child(odd) td { background: #0a0a0a; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip { padding: 4px 10px; border-radius: 2px; background: #111; border: 1px solid #1f1f1f; font-size: 11px; font-weight: 500; color: #f5f5f0; }
-  .chip-count { font-family: 'JetBrains Mono', monospace; color: #888; font-size: 10px; margin-left: 4px; }
-  .footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #1f1f1f; font-family: 'JetBrains Mono', monospace; color: #333; font-size: 10px; text-align: center; }
-  .mono { font-family: 'JetBrains Mono', monospace; }
-  @media print { body { padding: 24px; } h2 { break-after: avoid; } }
-</style>
-</head>
-<body>
+  const safeBrand = String(proj?.target_brand ?? proj?.name ?? "project").replace(/[^a-zA-Z0-9]+/g, "-");
+  const todayFile = new Date().toISOString().split("T")[0];
+  const filename = `AVI-Project-Report-${safeBrand}-${todayFile}.pdf`;
 
-<div class="header">
-  <h1>AI Visibility Index — Project Report</h1>
-  <p class="subtitle">${proj?.name ?? ""} · ${proj?.target_brand ?? ""} · ${allRuns.length} ${t("results.analyses")} · ${dateRange}</p>
-</div>
-
-<div class="grid">
-  <div class="stat"><div class="val avi-val">${latestAvi?.avi_score ?? "—"}</div><div class="lbl">AVI Score (latest)</div></div>
-  <div class="stat"><div class="val">${mentionRate}%</div><div class="lbl">${t("dashboard.brandMentions")}</div></div>
-  <div class="stat"><div class="val">${allRuns.length}</div><div class="lbl">${t("results.analyses")}</div></div>
-  <div class="stat"><div class="val">${compList.length}</div><div class="lbl">${t("sidebar.competitors")}</div></div>
-</div>
-
-<h2>AVI Trend <span class="count">(${trendRows.length} runs)</span></h2>
-<table>
-  <thead><tr><th>Version</th><th>${t("results.date")}</th><th>AVI</th><th>${t("dashboard.presence")}</th><th>${t("dashboard.sentiment")}</th></tr></thead>
-  <tbody>${trendRows.map((r) => `<tr>
-    <td class="mono">${r.version}</td>
-    <td class="mono" style="color:#888">${r.date}</td>
-    <td class="mono" style="color:#4ade80;font-weight:600">${typeof r.avi === "number" ? Math.round(r.avi * 10) / 10 : r.avi}</td>
-    <td class="mono">${typeof r.presence === "number" ? Math.round(r.presence) : r.presence}</td>
-    <td class="mono">${typeof r.sentiment === "number" ? Math.round(r.sentiment) : r.sentiment}</td>
-  </tr>`).join("")}</tbody>
-</table>
-
-<h2>${t("sidebar.competitors")} <span class="count">(${compList.length})</span></h2>
-${compList.length > 0 ? `
-<table>
-  <thead><tr><th>${t("sidebar.competitors")}</th><th>${t("sources.citationsLabel")}</th></tr></thead>
-  <tbody>${compList.slice(0, 30).map(([name, count]) => `<tr><td>${name}</td><td class="mono">${count}</td></tr>`).join("")}</tbody>
-</table>` : `<p style="color:#888;padding:16px 0">${t("dashboard.noCompetitorFound")}</p>`}
-
-<h2>Topic <span class="count">(${topicList.length})</span></h2>
-<div class="chips">
-  ${topicList.slice(0, 40).map(([name, count]) => `<span class="chip">${name}<span class="chip-count">(${count})</span></span>`).join("")}
-</div>
-
-<div class="footer">
-  AI Visibility Index · Project Report · ${new Date().toLocaleDateString(locale)} · ai.citationrate.com
-</div>
-
-</body>
-</html>`;
-
-  return new NextResponse(html, {
+  return new NextResponse(new Uint8Array(pdfBuffer), {
     status: 200,
     headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      "Content-Disposition": `attachment; filename="AVI-Project-Report-${brandName}-${todayStr}.html"`,
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Length": String(pdfBuffer.length),
+      "Cache-Control": "private, no-cache, no-store, must-revalidate",
     },
   });
 }
