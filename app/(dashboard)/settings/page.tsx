@@ -2,6 +2,8 @@ import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { SettingsClient } from "./settings-client";
 import { SettingsHeader } from "./settings-sections";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export const metadata = { title: "Impostazioni" };
 
 export default async function SettingsPage() {

@@ -118,15 +118,15 @@ export async function middleware(request: NextRequest) {
   // --- Protected routes: check cookie directly (read-only, never deletes cookies) ---
   const session = getSessionFromCookies(request);
 
-  if (session && !session.expired) {
-    // Valid session — allow through
-    return NextResponse.next();
-  }
-
-  // Even if token is expired, allow through if cookie exists
-  // (client-side will refresh the token)
-  if (session && session.expired) {
-    return NextResponse.next();
+  if (session) {
+    // Valid (or expiring — client will refresh) session: allow through.
+    // CRITICAL: protected pages must NEVER be cached cross-user. Without
+    // these headers, Chrome bfcache / Vercel CDN can serve a previous
+    // user's HTML to a freshly-logged-in different user on the same browser.
+    const res = NextResponse.next();
+    res.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
+    res.headers.set("Pragma", "no-cache");
+    return res;
   }
 
   // No session cookie at all — redirect to login

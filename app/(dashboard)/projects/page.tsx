@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { ProjectsList } from "./projects-list";
 import { ProjectsHeader } from "./projects-header";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export const metadata = { title: "Progetti" };
 
 export default async function ProjectsPage() {

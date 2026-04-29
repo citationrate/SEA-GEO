@@ -32,7 +32,12 @@ export function Sidebar({ profile }: SidebarProps) {
     setLoggingOut(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/login");
+      // Wipe any local app state so the next user on this browser starts fresh.
+      // (Auth cookies are HttpOnly + handled by the server signOut above.)
+      try { window.localStorage.clear(); } catch {}
+      try { window.sessionStorage.clear(); } catch {}
+      // Hard redirect (full reload) — bypasses bfcache and forces a clean SSR.
+      window.location.href = "/login";
     } finally {
       setLoggingOut(false);
       setShowLogoutConfirm(false);
