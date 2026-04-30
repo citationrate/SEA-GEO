@@ -35,8 +35,8 @@ function withUtm(url: string, emailType: EmailType): string {
 
 const URL_AUDIT = "https://suite.citationrate.com/audit/new";
 const URL_AVI = "https://avi.citationrate.com";
-const URL_UPGRADE_BASE_CS = "https://suite.citationrate.com/upgrade?plan=base";
-const URL_UPGRADE_BASE_AVI = "https://avi.citationrate.com/upgrade?plan=base";
+const URL_UPGRADE_BASE_CS = "https://suite.citationrate.com/piano#piani";
+const URL_UPGRADE_BASE_AVI = "https://avi.citationrate.com/piano#piani";
 
 function nameOrDefault(name: string | null | undefined, lang: SupportedLang): string {
   if (name && name.trim()) return name.trim();
