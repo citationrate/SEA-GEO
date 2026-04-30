@@ -234,6 +234,24 @@ export default function NewProjectPage() {
     if (urlParam) {
       setWebsiteUrl(urlParam);
       analyzeSite(urlParam);
+    } else if (typeof document !== "undefined") {
+      // Cross-subdomain landing carry-over: consume `landing_website` cookie
+      // if present. One-shot — clear after reading.
+      const m = document.cookie.match(/(?:^|; )landing_website=([^;]+)/);
+      if (m) {
+        try {
+          const decoded = decodeURIComponent(m[1]);
+          if (decoded) {
+            setWebsiteUrl(decoded);
+            analyzeSite(decoded);
+          }
+        } catch {
+          // Malformed cookie — ignore.
+        }
+        const isProd = window.location.hostname.endsWith("citationrate.com");
+        const domainAttr = isProd ? "; domain=.citationrate.com" : "";
+        document.cookie = `landing_website=; path=/; max-age=0${domainAttr}; SameSite=Lax${isProd ? "; Secure" : ""}`;
+      }
     }
     // Depend only on search params — analyzeSite is stable enough for this
     // one-shot prefill and including it triggers a re-run on competitor edits.

@@ -41,6 +41,20 @@ export default function AttributionCapture() {
       const payload = encodeURIComponent(JSON.stringify({ ...utm, ts: Date.now() }));
       document.cookie = `attribution_first_touch=${payload}; path=/; max-age=${ninetyDays}${domainAttr}; SameSite=Lax${secureAttr}`;
     }
+
+    // Cross-subdomain landing website carry-over: the suite register flow
+    // already wrote `landing_website` for us; we just leave it in place so
+    // projects/new can consume it on AVI as well.
+    const websiteParam = params.get("website");
+    if (websiteParam) {
+      try {
+        const u = new URL(websiteParam.includes("://") ? websiteParam : `https://${websiteParam}`);
+        const safe = u.toString();
+        document.cookie = `landing_website=${encodeURIComponent(safe)}; path=/; max-age=${ninetyDays}${domainAttr}; SameSite=Lax${secureAttr}`;
+      } catch {
+        // Malformed URL — silently ignore.
+      }
+    }
   }, []);
 
   return null;
