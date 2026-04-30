@@ -318,7 +318,18 @@ export async function callAIModel(
     if (!process.env.OPENAI_API_KEY) {
       return { text: "", sources: [], error: `[${model}] SKIPPED: OPENAI_API_KEY non configurata` };
     }
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    // 240s ceiling so a stuck reasoning call (gpt-5.5-pro can wander) raises
+    // a catchable error before Vercel's 300s function cap kicks in. Without
+    // this the SDK's 600s default lets the platform kill the lambda first,
+    // which leaves the prompts_executed row orphaned (no error, no response)
+    // — exactly the bug seen on run 085c96a1 (30/04). maxRetries=0 because
+    // the Inngest step already retries 3x; double retry just multiplies the
+    // wall time and hits maxDuration faster.
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      timeout: 240_000,
+      maxRetries: 0,
+    });
 
     // GPT-5.4 and similar models: try Responses API first, then fallback to Chat Completions
     const useResponsesApi = RESPONSES_API_MODELS.has(model);

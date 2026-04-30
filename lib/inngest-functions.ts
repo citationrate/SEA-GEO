@@ -9,6 +9,7 @@ import {
   canonicalizeCompetitorName,
   extractBrandOnly,
   filterAvailableModels,
+  MODEL_MAP,
 } from "@citationrate/llm-client";
 import { calculateAVI } from "./engine/avi";
 import { consumeWalletQueries, incrementBrowsingPromptsUsed, incrementNoBrowsingPromptsUsed } from "./usage";
@@ -810,9 +811,21 @@ export const runAnalysis = inngest.createFunction(
       }
     }
 
-    // Step 2: execute prompts in batches
-    const batchSize = browsing ? 3 : 15;
-    const batches = chunk(allTasks, batchSize);
+    // Step 2: execute prompts in batches.
+    //
+    // Reasoning models (`expensive: true` in models.ts) — gpt-5.5-pro,
+    // claude-opus — can take 30-90s per call, so packing them with cheap
+    // models in the same batch will blow past Vercel's 300s maxDuration.
+    // Split: cheap tasks keep the original throughput, expensive tasks run
+    // one-per-step so each step is bounded by a single AI call + extractor.
+    const isExpensive = (modelId: string) => MODEL_MAP.get(modelId)?.expensive === true;
+    const cheapTasks = allTasks.filter((t) => !isExpensive(t.model));
+    const expensiveTasks = allTasks.filter((t) => isExpensive(t.model));
+    const cheapBatchSize = browsing ? 3 : 15;
+    const batches = [
+      ...chunk(cheapTasks, cheapBatchSize),
+      ...chunk(expensiveTasks, 1),
+    ];
     const normCache = new Map<string, string | null>();
 
     for (let i = 0; i < batches.length; i++) {
