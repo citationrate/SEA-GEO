@@ -34,6 +34,68 @@ const VALID_SOURCE_TYPES = ["brand_owned", "competitor", "media", "review", "soc
 /* ─── Brand mention detection ─── */
 
 /** Strip accents: "Caffè" → "Caffe", "Ménard" → "Menard" */
+/**
+ * Single source of truth for "brand-name words too generic to use as a
+ * standalone partial match". Used by both buildBrandVariants (to skip
+ * first-word partials) and isGenericBrandName (to flag full names that are
+ * entirely generic). Keep lowercase, stripped of accents.
+ */
+const BRAND_GENERIC_WORDS = new Set<string>([
+  // Articles & prepositions
+  "il", "la", "le", "lo", "i", "gli", "un", "una", "the", "a", "an",
+  "di", "del", "della", "dei", "delle", "of", "de",
+  // Common prefixes / corporate boilerplate
+  "san", "saint", "new", "old", "gran", "grande", "big", "prima", "primo",
+  "gruppo", "group", "societa", "company", "brand", "studio", "studi",
+  // Generic business words (IT)
+  "soluzione", "soluzioni", "centro", "servizio", "servizi",
+  "agenzia", "consulenza", "sistema", "sistemi", "rete", "punto", "casa",
+  "mondo", "terra", "verde", "blu", "rosso", "oro", "luce", "sole",
+  "facile", "veloce", "smart", "top", "best", "pro", "plus", "extra",
+  "digital", "tech", "web", "net", "online", "global", "express",
+  // Generic business words (EN)
+  "solution", "solutions", "service", "services", "agency", "consulting",
+  "center", "system", "systems", "network", "point", "home", "world",
+  "easy", "fast", "quick", "direct", "blue", "green", "red", "gold",
+  "base",
+  // Legal / insurance / finance
+  "risarcimento", "danni", "danno", "sinistri", "sinistro", "gestione",
+  "assicurazione", "assicurazioni", "polizza", "polizze", "perizia", "perizie",
+  "fiscale", "fiscali", "tasse", "tributario", "contabile", "contabilita",
+  "legale", "legali", "avvocato", "avvocati", "notaio", "notarile",
+  "immobiliare", "immobiliari", "edilizia", "costruzioni",
+  "medico", "medica", "clinica", "dentale", "odontoiatrico",
+  "insurance", "claims", "damage", "damages", "legal", "tax", "taxes",
+  "accounting", "dental", "medical", "clinic",
+  // Health / wellness / care
+  "health", "salute", "beauty", "bellezza", "care", "cura",
+  "wellness", "benessere", "life", "vita", "fit", "fitness",
+  "body", "corpo", "mind", "mente",
+  // Family / demographics
+  "woman", "women", "donna", "donne", "man", "men", "uomo", "uomini",
+  "kids", "bambini", "baby", "family", "famiglia", "mom", "mamma",
+  // Dental / medical (extra)
+  "dentista", "dentisti", "dentist", "dentists",
+  "odontoiatra", "odontoiatri",
+  "doctor", "dottore", "dottori", "clinics", "cliniche",
+  // Food / drink
+  "food", "drink", "bar", "cafe", "coffee",
+  "wine", "vino", "beer", "birra",
+  // Tech / data / metrics (common in AI/SaaS taxonomy)
+  "citation", "citations", "data", "analytics", "insights", "metrics",
+  "ai", "tracker", "monitor", "score", "rate", "index",
+  "report", "reports", "platform", "app", "software",
+  // Style / industry common
+  "fashion", "style", "design", "art", "villa", "palazzo",
+  "news", "media", "tv", "radio", "journal", "magazine", "press",
+  // Common first names (prevent "Antonio Lupi" matching "Antonio Citterio")
+  "antonio", "mario", "luigi", "giovanni", "francesco", "marco",
+  "paolo", "andrea", "matteo", "alessandro", "stefano", "roberto",
+  "anna", "maria", "laura", "giulia", "sara", "elena", "francesca",
+  "john", "james", "robert", "michael", "william", "david", "richard",
+  "mary", "patricia", "jennifer", "linda",
+]);
+
 function stripAccents(s: string): string {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
@@ -79,35 +141,10 @@ function buildBrandVariants(brand: string): string[] {
     }
   }
 
-  // First distinctive word for multi-word brands
-  // Skip generic words that would produce too many false positives when matched alone
-  const GENERIC_WORDS = new Set([
-    // Articles & prepositions
-    "il", "la", "le", "lo", "i", "gli", "un", "una", "the", "a", "an",
-    "di", "del", "della", "dei", "delle", "of", "de",
-    // Common prefixes
-    "san", "saint", "new", "old", "gran", "grande", "big", "prima", "primo",
-    "gruppo", "group", "società", "company", "brand",
-    // Generic business words (IT)
-    "soluzione", "soluzioni", "studio", "studi", "centro", "servizio", "servizi",
-    "agenzia", "consulenza", "sistema", "sistemi", "rete", "punto", "casa",
-    "mondo", "terra", "verde", "blu", "rosso", "oro", "luce", "sole",
-    "facile", "veloce", "smart", "top", "best", "pro", "plus", "extra",
-    "digital", "tech", "web", "net", "online", "global", "express",
-    // Generic business words (EN)
-    "solution", "solutions", "service", "services", "agency", "consulting",
-    "center", "system", "systems", "network", "point", "home", "world",
-    "easy", "fast", "quick", "direct", "blue", "green", "red", "gold",
-    // Legal / insurance / finance category words (IT + EN)
-    "risarcimento", "danni", "danno", "sinistri", "sinistro", "gestione",
-    "assicurazione", "assicurazioni", "polizza", "polizze", "perizia", "perizie",
-    "fiscale", "fiscali", "tasse", "tributario", "contabile", "contabilità",
-    "legale", "legali", "avvocato", "avvocati", "notaio", "notarile",
-    "immobiliare", "immobiliari", "edilizia", "costruzioni",
-    "medico", "medica", "clinica", "dentale", "odontoiatrico",
-    "insurance", "claims", "damage", "damages", "legal", "tax", "taxes",
-    "accounting", "dental", "medical", "clinic", "real estate",
-  ]);
+  // First distinctive word for multi-word brands.
+  // Skip generic words (shared list with isGenericBrandName) to avoid
+  // first-word partial matches like "Health & Her" -> "health".
+  const GENERIC_WORDS = BRAND_GENERIC_WORDS;
 
   const words = clean.split(/\s+/);
   if (words.length >= 2) {
@@ -144,6 +181,10 @@ interface BrandDetection {
   mentioned: boolean;
   occurrences: number;
   matchedVariant: string | null;
+  /** "full" = full-name (or swap variant) matched; "partial" = only first-word matched.
+   *  Used by extractFromResponse to apply weaker trust to partial matches when
+   *  Haiku explicitly denies the brand presence. "none" when not matched. */
+  matchType: "full" | "partial" | "none";
 }
 
 /** Strip markdown and HTML formatting to get plain text for brand matching */
@@ -186,6 +227,16 @@ function stripMarkdown(s: string): string {
  * bold/italic brand names (e.g. **Lattebusche**).
  */
 function detectBrandMention(response: string, targetBrand: string): BrandDetection {
+  const cleanBrand = targetBrand.trim();
+  const brandWordCount = cleanBrand.split(/\s+/).filter(Boolean).length;
+  const classifyMatch = (variant: string): "full" | "partial" => {
+    // Full match: the variant has at least as many words as the brand,
+    // or it equals one of the swap-variants (Crociere<->Cruises etc.).
+    // Single-word brands always land here (count >= 1).
+    return variant.split(/\s+/).filter(Boolean).length >= brandWordCount
+      ? "full"
+      : "partial";
+  };
   const cleaned = stripMarkdown(response);
   const responseLower = cleaned.toLowerCase();
   const responseNorm = stripAccents(responseLower);
@@ -206,7 +257,7 @@ function detectBrandMention(response: string, targetBrand: string): BrandDetecti
     const pattern = new RegExp(`\\b${escapeRegex(variantNorm)}\\b`, "gi");
     const matches = responseNorm.match(pattern);
     if (matches && matches.length > 0) {
-      return { mentioned: true, occurrences: matches.length, matchedVariant: variant };
+      return { mentioned: true, occurrences: matches.length, matchedVariant: variant, matchType: classifyMatch(variant) };
     }
   }
 
@@ -219,39 +270,16 @@ function detectBrandMention(response: string, targetBrand: string): BrandDetecti
     const pattern = new RegExp(`(?:^|[^a-z0-9])${escapeRegex(variantNorm)}(?:[^a-z0-9]|$)`, "gi");
     const matches = rawLower.match(pattern);
     if (matches && matches.length > 0) {
-      return { mentioned: true, occurrences: matches.length, matchedVariant: variant };
+      return { mentioned: true, occurrences: matches.length, matchedVariant: variant, matchType: classifyMatch(variant) };
     }
   }
 
-  return { mentioned: false, occurrences: 0, matchedVariant: null };
+  return { mentioned: false, occurrences: 0, matchedVariant: null, matchType: "none" };
 }
 
 /** Check if a brand name is composed of generic/common words that could cause false positives */
 function isGenericBrandName(brand: string): boolean {
-  const GENERIC = new Set([
-    "soluzione", "soluzioni", "solution", "solutions",
-    "studio", "studi", "centro", "center",
-    "servizio", "servizi", "service", "services",
-    "agenzia", "agency", "consulenza", "consulting",
-    "sistema", "sistemi", "system", "systems",
-    "rete", "network", "punto", "point",
-    "casa", "home", "mondo", "world",
-    "gruppo", "group", "digital", "tech", "web", "online",
-    "tasse", "tax", "taxes", "legale", "legal",
-    "salute", "health", "verde", "green", "blu", "blue",
-    "facile", "easy", "veloce", "fast", "smart", "express",
-    "prima", "first", "top", "best", "pro", "plus",
-    "energia", "energy", "luce", "light",
-    "sport", "food", "design", "lab", "arte", "art",
-    // Legal / insurance / finance
-    "risarcimento", "danni", "danno", "sinistri", "sinistro", "gestione",
-    "assicurazione", "assicurazioni", "polizza", "perizia",
-    "fiscale", "fiscali", "tributario", "contabile",
-    "immobiliare", "immobiliari", "edilizia",
-    "medico", "medica", "clinica", "dentale",
-    "insurance", "claims", "damage", "damages", "accounting",
-    "dental", "medical", "clinic",
-  ]);
+  const GENERIC = BRAND_GENERIC_WORDS;
   const words = brand.toLowerCase().trim().split(/\s+/);
   // If ALL words in the brand name are generic, it's a generic name
   return words.length >= 1 && words.every((w) => GENERIC.has(w) || w.length <= 2);
@@ -739,8 +767,19 @@ source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(jsonMatch?.[0] ?? cleaned);
 
-    // Use robust detection result for brand_mentioned
-    const brandMentioned = detection.mentioned;
+    // Use robust detection result for brand_mentioned, but trust Haiku's
+    // semantic denial when our regex match is only a weak partial (first-word
+    // only). This eliminates FP like "Health & Her" matching every "health"
+    // in a wellness response while preserving recall on legitimate brands
+    // whose first word is distinctive (e.g. "Pitagora s.p.a." -> "Pitagora").
+    const haikuExplicitlyDenied = parsed.brand_mentioned === false;
+    const isWeakPartialMatch = detection.matchType === "partial";
+    const brandMentioned = (isWeakPartialMatch && haikuExplicitlyDenied)
+      ? false
+      : detection.mentioned;
+    if (detection.mentioned && !brandMentioned) {
+      console.log(`[extractor] FIX#3 override: regex partial-match "${detection.matchedVariant}" rejected by Haiku denial for brand="${targetBrand}"`);
+    }
 
     // Enforce brand_rank when brand is mentioned
     let brandRank: number | null = parsed.brand_rank != null ? Number(parsed.brand_rank) : null;
