@@ -1,6 +1,7 @@
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { resolveProjectId } from "@/lib/utils/resolve-project";
 import { DemoBanner } from "@/components/dashboard/demo-banner";
+import { MetaPageTrack } from "@/components/meta-page-track";
 
 import { DashboardClient } from "./dashboard-client";
 
@@ -284,6 +285,7 @@ export default async function DashboardPage({
 
   return (
     <>
+    <MetaPageTrack variant="dashboard" />
     <DemoBanner plan={userPlan} />
     <DashboardClient
       aviScore={aviScore}

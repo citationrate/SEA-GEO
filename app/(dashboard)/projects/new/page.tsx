@@ -7,6 +7,7 @@ import { PROVIDER_GROUPS, DEMO_MODEL_IDS } from "@citationrate/llm-client";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
+import { trackAviStartTrialOnce } from "@/lib/meta-track";
 
 interface ModelOption {
   id: string;
@@ -356,6 +357,11 @@ export default function NewProjectPage() {
       if (!res.ok) {
         throw new Error(data.error || t("projects.saveError"));
       }
+
+      // Demo user creating their first AVI project — fire StartTrial for Meta
+      // top-of-funnel optimisation. Internally a no-op for non-demo plans and
+      // dedupes via sessionStorage so re-creating doesn't double-fire.
+      void trackAviStartTrialOnce(planId);
 
       router.push(`/projects/${data.id}`);
       router.refresh();

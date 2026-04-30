@@ -17,6 +17,11 @@ const CookieBanner = dynamic(
   { ssr: false },
 );
 
+const AttributionCapture = dynamic(
+  () => import("@/components/attribution-capture"),
+  { ssr: false },
+);
+
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
   variable: "--font-display",
@@ -67,6 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ConsultationModal />
         <CursorFollower />
         <CookieBanner />
+        <AttributionCapture />
         </ConsultationProvider>
         <Toaster
           position="bottom-right"

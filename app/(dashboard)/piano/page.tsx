@@ -2,6 +2,7 @@ import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
 import { getCurrentUsage } from "@/lib/usage";
 import { PianoClient } from "./piano-client";
+import { MetaPageTrack } from "@/components/meta-page-track";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Piano — AVI" };
@@ -45,6 +46,8 @@ export default async function PianoPage() {
   const usage = await getCurrentUsage(user.id);
 
   return (
+    <>
+    <MetaPageTrack variant="pricing" />
     <PianoClient
       plan={plan}
       subscriptionStatus={billing.subscription_status || "inactive"}
@@ -57,5 +60,6 @@ export default async function PianoPage() {
       extraNoBrowsing={usage.extraNoBrowsingPrompts}
       extraComparisons={usage.extraComparisons}
     />
+    </>
   );
 }

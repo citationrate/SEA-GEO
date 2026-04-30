@@ -2,6 +2,7 @@ import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ProjectsList } from "./projects-list";
 import { ProjectsHeader } from "./projects-header";
+import { MetaPageTrack } from "@/components/meta-page-track";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -30,6 +31,7 @@ export default async function ProjectsPage() {
 
   return (
     <div className="space-y-6 max-w-[1400px]">
+      <MetaPageTrack variant="projects" />
       <ProjectsHeader />
       <ProjectsList projects={items} />
     </div>

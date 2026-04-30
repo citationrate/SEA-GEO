@@ -217,7 +217,15 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
 
   return (
     <div className="space-y-6 max-w-[1400px] animate-fade-in">
-      <RunAutoRefresh status={r.status} />
+      <RunAutoRefresh
+        status={r.status}
+        runId={params.runId}
+        projectId={params.id}
+        aviScore={(() => {
+          const score = (avi as unknown as { avi_score?: unknown } | null)?.avi_score;
+          return typeof score === "number" ? score : undefined;
+        })()}
+      />
 
       {/* Archived banner */}
       {r.deleted_at && (
