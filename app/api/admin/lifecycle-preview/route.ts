@@ -39,11 +39,13 @@ const FROM_NAME = "Team CitationRate";
 const REPLY_TO = "hello@aicitationrate.com";
 
 function authorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
+  const secret = (process.env.CRON_SECRET || "").trim();
   if (!secret) return false;
-  if (request.headers.get("authorization") === `Bearer ${secret}`) return true;
+  const headerToken = (request.headers.get("authorization") || "").trim();
+  if (headerToken === `Bearer ${secret}`) return true;
   const url = new URL(request.url);
-  return url.searchParams.get("secret") === secret;
+  const querySecret = (url.searchParams.get("secret") || "").trim();
+  return querySecret === secret;
 }
 
 function fakeAuditScores() {

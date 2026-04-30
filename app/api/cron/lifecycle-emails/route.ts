@@ -35,15 +35,16 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 function authorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
+  const secret = (process.env.CRON_SECRET || "").trim();
   if (!secret) {
     console.error("[lifecycle-cron] CRON_SECRET not set — refusing");
     return false;
   }
-  const authHeader = request.headers.get("authorization");
+  const authHeader = (request.headers.get("authorization") || "").trim();
   if (authHeader === `Bearer ${secret}`) return true;
   const url = new URL(request.url);
-  if (url.searchParams.get("secret") === secret) return true;
+  const querySecret = (url.searchParams.get("secret") || "").trim();
+  if (querySecret === secret) return true;
   return false;
 }
 
