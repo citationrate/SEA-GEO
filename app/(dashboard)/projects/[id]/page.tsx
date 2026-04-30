@@ -13,7 +13,7 @@ import { T } from "@/components/translated-label";
 import { BotMount } from "@/components/BotMount";
 import { buildProjectContext, normalizeLang } from "@/lib/bot-context";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
-import { PROVIDER_GROUPS, PRO_ONLY_MODEL_IDS, MODEL_MAP } from "@/lib/engine/models";
+import { PROVIDER_GROUPS, PRO_ONLY_MODEL_IDS, MODEL_MAP } from "@citationrate/llm-client";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const auth = createServerClient();

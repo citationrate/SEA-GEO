@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS, DEMO_MODEL_IDS } from "@/lib/engine/models";
+import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS, DEMO_MODEL_IDS } from "@citationrate/llm-client";
 import { inngest } from "@/lib/inngest";
 import { getUserPlanLimits, getCurrentUsage, getWallet } from "@/lib/usage";
 import { resolvePlanLimit, isUnlimitedLimit } from "@/lib/plan-limits";

@@ -1,11 +1,16 @@
 import { inngest } from "./inngest";
 import { createServiceClient } from "./supabase/service";
-import { extractFromResponse } from "./engine/extractor";
+import {
+  callAIModel,
+  type AIModelResult,
+  extractFromResponse,
+  type ExtractedSource,
+  mergeSources,
+  canonicalizeCompetitorName,
+  extractBrandOnly,
+  filterAvailableModels,
+} from "@citationrate/llm-client";
 import { calculateAVI } from "./engine/avi";
-import { type ExtractedSource, mergeSources } from "./engine/sources-extractor";
-import { canonicalizeCompetitorName, extractBrandOnly } from "./engine/competitor-names";
-import { callAIModel, type AIModelResult } from "./engine/prompt-runner";
-import { filterAvailableModels } from "./engine/models";
 import { consumeWalletQueries, incrementBrowsingPromptsUsed, incrementNoBrowsingPromptsUsed } from "./usage";
 import type { SupabaseClient } from "@supabase/supabase-js";
 

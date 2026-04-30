@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2, Cpu, Info, Lock, Check } from "lucide-react";
 import { toast } from "sonner";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
-import { PROVIDER_GROUPS, MODEL_MAP } from "@/lib/engine/models";
+import { PROVIDER_GROUPS, MODEL_MAP } from "@citationrate/llm-client";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
 
 const BASE_MODEL_LIMIT = 3;

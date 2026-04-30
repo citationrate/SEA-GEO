@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Play, Sparkles, RefreshCw, Wallet } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
-import { COMPARISON_MODEL_IDS, PROVIDER_GROUPS } from "@/lib/engine/models";
+import { COMPARISON_MODEL_IDS, PROVIDER_GROUPS } from "@citationrate/llm-client";
 import { useUsage } from "@/lib/hooks/useUsage";
 
 const RUNS_PER_QUERY = 3;

@@ -2,7 +2,7 @@ import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { inngest } from "@/lib/inngest";
-import { COMPARISON_MODEL_IDS } from "@/lib/engine/models";
+import { COMPARISON_MODEL_IDS } from "@citationrate/llm-client";
 import { getUserPlanLimits, getCurrentUsage, getWallet, consumeWalletConfronti, incrementComparisonsUsed, incrementNoBrowsingPromptsUsed } from "@/lib/usage";
 import { resolvePlanLimit, isUnlimitedLimit } from "@/lib/plan-limits";
 

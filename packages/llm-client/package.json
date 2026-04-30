@@ -1,0 +1,23 @@
+{
+  "name": "@citationrate/llm-client",
+  "version": "1.0.0",
+  "description": "Multi-provider LLM client and Haiku-based response extractor, shared across CitationRate Suite tools (AVI, Brand Profile).",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "@google/generative-ai": "^0.24.1",
+    "openai": "^6.27.0"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  },
+  "sideEffects": false
+}

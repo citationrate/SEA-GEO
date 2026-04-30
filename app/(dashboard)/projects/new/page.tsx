@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, X, Loader2, Lock, Check, Search, ChevronDown, Globe, Sparkles } from "lucide-react";
-import { PROVIDER_GROUPS, DEMO_MODEL_IDS } from "@/lib/engine/models";
+import { PROVIDER_GROUPS, DEMO_MODEL_IDS } from "@citationrate/llm-client";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";

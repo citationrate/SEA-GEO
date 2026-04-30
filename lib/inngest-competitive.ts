@@ -1,7 +1,7 @@
 import { inngest } from "./inngest";
 import { createServiceClient } from "./supabase/service";
 import Anthropic from "@anthropic-ai/sdk";
-import { callAIModel } from "./engine/prompt-runner";
+import { callAIModel } from "@citationrate/llm-client";
 
 /* ─── Helpers ─── */
 

@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Workspace packages — transpile their TS source so we can ship without a build step
+  transpilePackages: ["@citationrate/llm-client"],
   // Router cache: keep RSC payloads in client memory for `dynamic` seconds
   // so back-button navigation between dashboard pages skips the SSR fetch
   // round-trip. Big perceived-speed win on AVI where most pages are dynamic.
