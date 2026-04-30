@@ -48,6 +48,11 @@ export const metadata: Metadata = {
   },
   description:
     "Misura la visibilità del tuo brand nelle risposte AI. Analisi per audience segment, competitor discovery, AVI score.",
+  verification: {
+    other: {
+      "facebook-domain-verification": "ig2spsymlvf7f1th6hj2uymffhxs3z",
+    },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
