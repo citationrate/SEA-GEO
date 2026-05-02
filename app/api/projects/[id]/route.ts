@@ -69,20 +69,14 @@ export async function PATCH(
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  // If models_config is being updated, enforce plan limits, no-removals, and
-  // valid IDs. Historical models can't be removed (preserves AVI trend
-  // comparability); the user can only add new ones up to the plan cap.
+  // If models_config is being updated, enforce plan limits + valid IDs.
+  // Models can be added or removed at any time. Historical run data remains
+  // queryable per-model in avi_history/prompts_executed; the trend chart
+  // uses each run's self-contained AVI score (already normalised 0-100), so
+  // editing the active model set doesn't break comparability.
   if (parsed.data.models_config) {
     const currentModels = ((project as any).models_config as string[]) ?? [];
     const newModels = Array.from(new Set(parsed.data.models_config));
-
-    const removed = currentModels.filter((m) => !newModels.includes(m));
-    if (removed.length > 0) {
-      return NextResponse.json(
-        { error: `I modelli storici non possono essere rimossi: ${removed.join(", ")}. Servono per garantire trend comparabili.` },
-        { status: 400 }
-      );
-    }
 
     const validIds = new Set(ALL_MODEL_IDS as readonly string[]);
     const invalid = newModels.filter((m) => !validIds.has(m));

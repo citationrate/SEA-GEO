@@ -5,12 +5,15 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from "recharts";
 import { useTranslation } from "@/lib/i18n/context";
+import { MODEL_MAP } from "@citationrate/llm-client";
 
 interface TrendDataPoint {
   run: string;
   avi: number | null;
   prominence: number | null;
   sentiment: number | null;
+  models_used?: string[];
+  models_changed?: boolean;
   [key: string]: any;
 }
 
@@ -64,9 +67,52 @@ function getTimeRangeCutoff(range: TimeRange): Date | null {
   return now;
 }
 
+function CustomTooltip({ active, payload, label }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const point = payload[0]?.payload as TrendDataPoint | undefined;
+  const models = point?.models_used ?? [];
+  const modelLabels = models.map((m) => MODEL_MAP.get(m)?.label ?? m);
+  return (
+    <div style={TOOLTIP_STYLE} className="px-3 py-2 space-y-1">
+      <div className="font-mono text-[12px] font-semibold">{label}</div>
+      {payload
+        .filter((p: any) => p.dataKey === "avi" || p.dataKey === "prominence" || p.dataKey === "sentiment")
+        .map((p: any) => (
+          <div key={p.dataKey} className="flex items-center gap-2 text-[11px]">
+            <span className="w-2 h-2 rounded-sm inline-block" style={{ background: p.color }} />
+            <span style={{ color: "var(--cream-dim)" }}>{p.name ?? p.dataKey}</span>
+            <span className="font-semibold ml-auto">{p.value ?? "-"}</span>
+          </div>
+        ))}
+      {modelLabels.length > 0 && (
+        <div className="pt-1 mt-1 border-t border-[var(--line)]">
+          <div className="text-[10px] uppercase tracking-wide" style={{ color: "var(--cream-dim)" }}>
+            {modelLabels.length} {modelLabels.length === 1 ? "modello" : "modelli"}
+            {point?.models_changed ? " · set modificato" : ""}
+          </div>
+          <div className="text-[11px] leading-snug" style={{ color: "var(--white)" }}>
+            {modelLabels.join(", ")}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AVITrend({ data, models }: { data?: TrendDataPoint[]; models?: string[] }) {
   const { t } = useTranslation();
-  const trendData = data ?? [];
+  const rawData = data ?? [];
+  const trendData: TrendDataPoint[] = useMemo(() => {
+    let prev: string[] | null = null;
+    return rawData.map((d): TrendDataPoint => {
+      const cur = (d.models_used ?? []).slice().sort();
+      const changed = prev !== null && (
+        cur.length !== prev.length || cur.some((m, i) => m !== prev![i])
+      );
+      prev = cur;
+      return { ...d, models_changed: changed };
+    });
+  }, [rawData]);
   const modelKeys = (models ?? []).filter((m) => trendData.some((d) => d[m] != null));
   const showModels = modelKeys.length > 1;
 
@@ -164,9 +210,30 @@ export default function AVITrend({ data, models }: { data?: TrendDataPoint[]; mo
           <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false}/>
           <XAxis dataKey="run" tick={{ fontSize: 11, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false}/>
           <YAxis domain={[0,100]} tick={{ fontSize: 11, fill: "var(--cream-dim)" }} axisLine={false} tickLine={false}/>
-          <Tooltip contentStyle={TOOLTIP_STYLE}/>
+          <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--line)", strokeWidth: 1 }}/>
           {active.has("avi") && (
-            <Line type="monotone" dataKey="avi" stroke="#7eb89a" strokeWidth={3} dot={{ r: 5, fill: "#7eb89a" }} connectNulls activeDot={{ r: 7 }}/>
+            <Line
+              type="monotone"
+              dataKey="avi"
+              stroke="#7eb89a"
+              strokeWidth={3}
+              dot={(props: any) => {
+                const changed = props.payload?.models_changed;
+                return (
+                  <circle
+                    key={`dot-avi-${props.index}`}
+                    cx={props.cx}
+                    cy={props.cy}
+                    r={changed ? 6 : 5}
+                    fill={changed ? "#c4a882" : "#7eb89a"}
+                    stroke={changed ? "#7eb89a" : "none"}
+                    strokeWidth={changed ? 2 : 0}
+                  />
+                );
+              }}
+              connectNulls
+              activeDot={{ r: 7 }}
+            />
           )}
           {active.has("prominence") && (
             <Line type="monotone" dataKey="prominence" stroke="#e8956d" strokeWidth={1.5} dot={{ r: 3, fill: "#e8956d" }} connectNulls activeDot={{ r: 5 }}/>

@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useTranslation } from "@/lib/i18n/context";
+import { MODEL_MAP } from "@citationrate/llm-client";
 
 interface TrendPoint {
   version: string;
@@ -10,7 +11,10 @@ interface TrendPoint {
   presence: number;
   sentiment: number;
   computed_at?: string;
-  [key: string]: string | number | undefined;
+  models_used?: string[];
+  models_changed?: boolean;
+  // Per-model AVI lines may be added by the page, indexed by model id.
+  [key: string]: string | number | boolean | string[] | undefined;
 }
 
 const MODEL_COLORS: Record<string, string> = {
@@ -74,9 +78,53 @@ function getTimeRangeCutoff(range: TimeRange): Date | null {
   return now;
 }
 
+function CustomTooltip({ active, payload, label }: any) {
+  if (!active || !payload || payload.length === 0) return null;
+  const point = payload[0]?.payload as TrendPoint | undefined;
+  const models = point?.models_used ?? [];
+  const modelLabels = models.map((m) => MODEL_MAP.get(m)?.label ?? m);
+  return (
+    <div
+      style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8 }}
+      className="px-3 py-2 space-y-1"
+    >
+      <div className="font-mono text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>{label}</div>
+      {payload.map((p: any) => (
+        <div key={p.dataKey} className="flex items-center gap-2 text-[11px]">
+          <span className="w-2 h-2 rounded-sm inline-block" style={{ background: p.color }} />
+          <span style={{ color: "var(--muted-foreground)" }}>{p.name ?? p.dataKey}</span>
+          <span className="font-semibold ml-auto" style={{ color: "var(--foreground)" }}>{p.value ?? "-"}</span>
+        </div>
+      ))}
+      {modelLabels.length > 0 && (
+        <div className="pt-1 mt-1 border-t" style={{ borderColor: "var(--border)" }}>
+          <div className="text-[10px] uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>
+            {modelLabels.length} {modelLabels.length === 1 ? "modello interpellato" : "modelli interpellati"}
+            {point?.models_changed ? " · set modificato" : ""}
+          </div>
+          <div className="text-[11px] leading-snug" style={{ color: "var(--foreground)" }}>
+            {modelLabels.join(", ")}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProjectAVITrend({ data, models }: { data: TrendPoint[]; models?: string[] }) {
   const { t } = useTranslation();
-  const modelKeys = (models ?? []).filter((m) => data.some((d) => d[m] != null));
+  const enriched: TrendPoint[] = useMemo(() => {
+    let prev: string[] | null = null;
+    return data.map((d): TrendPoint => {
+      const cur = (d.models_used ?? []).slice().sort();
+      const changed = prev !== null && (
+        cur.length !== prev.length || cur.some((m, i) => m !== prev![i])
+      );
+      prev = cur;
+      return { ...d, models_changed: changed };
+    });
+  }, [data]);
+  const modelKeys = (models ?? []).filter((m) => enriched.some((d) => d[m] != null));
   const showModels = modelKeys.length > 1;
 
   const allSeries = [
@@ -89,12 +137,12 @@ export function ProjectAVITrend({ data, models }: { data: TrendPoint[]; models?:
 
   const filteredData = useMemo(() => {
     const cutoff = getTimeRangeCutoff(timeRange);
-    if (!cutoff) return data;
-    return data.filter((d) => {
-      if (!d.computed_at) return true;
+    if (!cutoff) return enriched;
+    return enriched.filter((d) => {
+      if (!d.computed_at || typeof d.computed_at !== "string") return true;
       return new Date(d.computed_at) >= cutoff;
     });
-  }, [data, timeRange]);
+  }, [enriched, timeRange]);
 
   function toggle(key: string) {
     setActive((prev) => {
@@ -160,12 +208,30 @@ export function ProjectAVITrend({ data, models }: { data: TrendPoint[]; models?:
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis dataKey="version" tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} />
             <YAxis domain={[0, 100]} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} />
-            <Tooltip
-              contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8 }}
-              labelStyle={{ color: "var(--foreground)" }}
-            />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "var(--border)" }} />
             {active.has("avi") && (
-              <Line type="monotone" dataKey="avi" name="AVI" stroke="#7eb89a" strokeWidth={2.5} dot={{ r: 4 }} connectNulls />
+              <Line
+                type="monotone"
+                dataKey="avi"
+                name="AVI"
+                stroke="#7eb89a"
+                strokeWidth={2.5}
+                dot={(props: any) => {
+                  const changed = props.payload?.models_changed;
+                  return (
+                    <circle
+                      key={`dot-avi-${props.index}`}
+                      cx={props.cx}
+                      cy={props.cy}
+                      r={changed ? 5 : 4}
+                      fill={changed ? "#c4a882" : "#7eb89a"}
+                      stroke={changed ? "#7eb89a" : "none"}
+                      strokeWidth={changed ? 2 : 0}
+                    />
+                  );
+                }}
+                connectNulls
+              />
             )}
             {showModels && modelKeys.map((m) =>
               active.has(m) ? (

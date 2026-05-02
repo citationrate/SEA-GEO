@@ -91,14 +91,21 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // Get all unique models across runs
   const allModels = Array.from(new Set(allRuns.flatMap((r: any) => r.models_used ?? []))) as string[];
 
-  // Build trend data for chart
-  const trendData = aviList.map((a: any, i: number) => ({
-    version: `v${i + 1}`,
-    avi: Math.round(a.avi_score * 10) / 10,
-    presence: Math.round(a.presence_score),
-    sentiment: Math.round(a.sentiment_score),
-    computed_at: a.computed_at,
-  }));
+  // Build trend data for chart. Attach `models_used` from the matching run so
+  // the tooltip can show which models were active when each AVI was computed —
+  // post-edit context where the model set varies across runs.
+  const runsById = new Map(allRuns.map((r: any) => [r.id, r]));
+  const trendData = aviList.map((a: any, i: number) => {
+    const run = runsById.get(a.run_id) as any | undefined;
+    return {
+      version: `v${i + 1}`,
+      avi: Math.round(a.avi_score * 10) / 10,
+      presence: Math.round(a.presence_score),
+      sentiment: Math.round(a.sentiment_score),
+      computed_at: a.computed_at,
+      models_used: (run?.models_used ?? []) as string[],
+    };
+  });
 
   const tofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "tofu");
   const mofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "mofu");

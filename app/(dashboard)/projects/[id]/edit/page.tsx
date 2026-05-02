@@ -97,8 +97,6 @@ export default function EditProjectPage() {
   }, [projectId]);
 
   function toggleModel(modelId: string) {
-    // Locked models (already in the project) can never be removed
-    if (initialModels.includes(modelId)) return;
     setSelectedModels((prev) => {
       if (prev.includes(modelId)) {
         return prev.filter((m) => m !== modelId);
@@ -297,7 +295,7 @@ export default function EditProjectPage() {
           />
         </div>
 
-        {/* Modelli AI — picker (additions only, no removals) */}
+        {/* Modelli AI — picker (free add/remove, plan cap enforced) */}
         <div id="models" className="space-y-2 scroll-mt-6">
           <label className="text-sm font-medium text-foreground">{t("projects.aiModels")}</label>
 
@@ -321,7 +319,7 @@ export default function EditProjectPage() {
           ) : (
             <>
               <p className="text-xs text-muted-foreground">
-                Aggiungi nuovi modelli al progetto. I modelli esistenti restano fissi (servono per i trend storici comparabili).
+                Aggiungi o rimuovi modelli in qualsiasi momento. Le analisi storiche restano consultabili per ogni modello, anche quando non è più attivo.
               </p>
               <div className="space-y-2">
                 {PROVIDER_GROUPS.map((provider) => {
@@ -338,21 +336,19 @@ export default function EditProjectPage() {
                       {!isSoon && (
                         <div className="px-4 pb-3 pt-0 space-y-0.5">
                           {provider.models.map((model) => {
-                            const isLocked = initialModels.includes(model.id);
                             const isSelected = selectedModels.includes(model.id);
                             const isProGated = !!model.proOnly && !isProPlan;
                             const atCap = !isSelected && selectedModels.length >= modelCap;
-                            const disabled = isLocked || isProGated || atCap;
+                            const disabled = isProGated || atCap;
                             return (
                               <label key={model.id} onClick={() => !disabled && toggleModel(model.id)}
                                 className={`flex items-center gap-2 p-2 rounded-[2px] transition-colors ${
-                                  isLocked ? "bg-muted/40 cursor-default"
-                                    : isProGated ? "opacity-60 cursor-not-allowed"
+                                  isProGated ? "opacity-60 cursor-not-allowed"
                                     : atCap ? "opacity-50 cursor-not-allowed"
                                     : isSelected ? "bg-primary/10 cursor-pointer"
                                     : "hover:bg-muted/30 cursor-pointer"
                                 }`}
-                                title={isLocked ? "Modello storico — non rimovibile" : isProGated ? "Disponibile solo dal piano Pro" : atCap ? `Limite del piano: max ${modelCap} modelli` : undefined}>
+                                title={isProGated ? "Disponibile solo dal piano Pro" : atCap ? `Limite del piano: max ${modelCap} modelli` : undefined}>
                                 <div className={`w-3.5 h-3.5 rounded-[2px] border-2 flex items-center justify-center shrink-0 ${
                                   isSelected ? "border-primary bg-primary" : "border-muted-foreground"
                                 }`}>
@@ -363,7 +359,6 @@ export default function EditProjectPage() {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5">
                                     <span className={`text-sm font-medium ${isProGated ? "text-muted-foreground" : isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
-                                    {isLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
                                     {isProGated && <span className="font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">PRO</span>}
                                   </div>
                                   <p className="text-xs text-muted-foreground">{t(model.descriptionKey)}</p>
@@ -380,7 +375,7 @@ export default function EditProjectPage() {
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <Info className="w-3 h-3 shrink-0" />
-                  <span>I modelli storici restano sempre attivi.</span>
+                  <span>I dati delle analisi precedenti restano consultabili anche dopo le modifiche.</span>
                 </div>
                 <span>
                   <span className="text-foreground font-bold">{selectedModels.length}</span>
