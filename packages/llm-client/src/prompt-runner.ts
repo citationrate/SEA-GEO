@@ -318,17 +318,16 @@ export async function callAIModel(
     if (!process.env.OPENAI_API_KEY) {
       return { text: "", sources: [], error: `[${model}] SKIPPED: OPENAI_API_KEY non configurata` };
     }
-    // 240s ceiling so a stuck reasoning call (gpt-5.5-pro can wander) raises
-    // a catchable error before Vercel's 300s function cap kicks in. Without
-    // this the SDK's 600s default lets the platform kill the lambda first,
-    // which leaves the prompts_executed row orphaned (no error, no response)
-    // — exactly the bug seen on run 085c96a1 (30/04). maxRetries=0 because
-    // the Inngest step already retries 3x; double retry just multiplies the
-    // wall time and hits maxDuration faster.
+    // gpt-5.5-pro is a deep reasoning model: a single call with web_search
+    // routinely overruns 240s and the Vercel 300s lambda cap. Last run hit
+    // 100% timeout on the 16 gpt-5.5-pro prompts. Disable browsing for it
+    // (reasoning quality is the value prop, not freshness) and lift the
+    // ceiling closer to the 300s cap. Other models keep the original budget.
+    const isPro55 = model === "gpt-5.5-pro";
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
-      timeout: 240_000,
-      maxRetries: 0,
+      timeout: isPro55 ? 280_000 : 240_000,
+      maxRetries: isPro55 ? 1 : 0,
     });
 
     // GPT-5.4 and similar models: try Responses API first, then fallback to Chat Completions
@@ -338,7 +337,7 @@ export async function callAIModel(
       const isGpt54 = model === "gpt-5.4";
       if (isGpt54) console.log(`[GPT-5.4 CALLAI] Entered Responses API path. browsing=${browsing}, apiModel=${apiModel}`);
       try {
-        const useSearch = browsing;
+        const useSearch = browsing && !isPro55;
         const tools = useSearch ? [{ type: "web_search_preview" as const }] : undefined;
         if (isGpt54) console.log(`[GPT-5.4 CALLAI] Calling openai.responses.create with${useSearch ? "" : "out"} tools`);
         const response = await openai.responses.create({
@@ -359,7 +358,7 @@ export async function callAIModel(
         const errMsg = err instanceof Error ? err.message : String(err);
         const errStatus = (err as any)?.status ?? "unknown";
         if (isGpt54) console.error(`[GPT-5.4 CALLAI] CAUGHT ERROR: status=${errStatus}, message=${errMsg}`);
-        else console.error(`[OpenAI] model=${model} responses failed:`, errMsg);
+        else console.error(`[OpenAI] model=${model} responses failed: status=${errStatus} msg=${errMsg}`);
         return { text: "", sources: [], error: `[${model}] ${errMsg}` };
       }
     }
