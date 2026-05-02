@@ -58,10 +58,6 @@ const PLAN_AUDIT_LIMITS: Record<string, number> = {
  */
 export async function findCandidatesD1(): Promise<CandidateBase[]> {
   const cr = createCitationRateServiceClient();
-  const { data, error } = await (cr.rpc as any)("__noop_dummy__", {}).catch(() => ({ data: null, error: null }));
-  void data;
-  void error;
-  // raw SQL via REST: usiamo .from() chain
   const { data: users } = await (cr.from("profiles") as any)
     .select("id, full_name, plan, lang, audit_used")
     .gt("created_at", new Date(Date.now() - 26 * 3600_000).toISOString())

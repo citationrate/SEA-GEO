@@ -53,8 +53,10 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
     };
   }
 
-  // 2. Recipient override (testing)
-  const override = process.env.LIFECYCLE_RECIPIENT_OVERRIDE;
+  // 2. Recipient override (testing). Trimmed because Vercel env vars copy-pasted
+  // from a terminal often carry a trailing newline, and Resend rejects an
+  // address that ends with whitespace — silently dropping every cron run.
+  const override = process.env.LIFECYCLE_RECIPIENT_OVERRIDE?.trim() || undefined;
   const isTest = !!override;
   const finalRecipient = override || input.recipientEmail;
   const finalSubject = isTest
