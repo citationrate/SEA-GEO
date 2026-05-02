@@ -128,7 +128,29 @@ export function SettingsClient({
     }
   }
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>("account");
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmText !== "DELETE" || deletingAccount) return;
+    setDeletingAccount(true);
+    try {
+      const res = await fetch("/api/account/delete", { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Errore durante l'eliminazione");
+        setDeletingAccount(false);
+        return;
+      }
+      try { await createAuthClient().auth.signOut(); } catch {}
+      toast.success("Account eliminato");
+      router.push("/");
+    } catch {
+      toast.error("Errore durante l'eliminazione");
+      setDeletingAccount(false);
+    }
+  }
 
   useEffect(() => {
     const readHash = () => {
@@ -451,20 +473,49 @@ export function SettingsClient({
           </div>
           <a href="/settings/deleted-projects" className="px-4 py-2 border border-destructive/30 text-destructive rounded-[2px] text-sm font-medium hover:bg-destructive/10 transition-colors shrink-0">{t("common.manage")}</a>
         </div>
-        <div className="flex items-center justify-between bg-destructive/5 rounded-[2px] px-4 py-3 border border-destructive/20">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
-            <div>
-              <p className="text-sm text-foreground font-medium">{t("settings.deleteAccount")}</p>
-              <p className="text-xs text-muted-foreground">{t("settings.deleteWarning")}</p>
+        <div className="bg-destructive/5 rounded-[2px] px-4 py-3 border border-destructive/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+              <div>
+                <p className="text-sm text-foreground font-medium">{t("settings.deleteAccount")}</p>
+                <p className="text-xs text-muted-foreground">{t("settings.deleteWarning")}</p>
+              </div>
             </div>
+            {!showDeleteAccount && (
+              <button onClick={() => setShowDeleteAccount(true)} className="px-4 py-2 bg-destructive text-white rounded-[2px] text-sm font-medium hover:bg-destructive/80 transition-colors shrink-0">{t("common.delete")}</button>
+            )}
           </div>
-          {!showDeleteAccount ? (
-            <button onClick={() => setShowDeleteAccount(true)} className="px-4 py-2 bg-destructive text-white rounded-[2px] text-sm font-medium hover:bg-destructive/80 transition-colors shrink-0">{t("common.delete")}</button>
-          ) : (
-            <div className="flex items-center gap-2 shrink-0">
-              <button onClick={() => setShowDeleteAccount(false)} className="px-3 py-2 border border-border text-foreground rounded-[2px] text-sm hover:bg-muted/30 transition-colors">{t("common.cancel")}</button>
-              <button className="px-3 py-2 bg-destructive text-white rounded-[2px] text-sm font-medium opacity-50 cursor-not-allowed" disabled title={t("settings.comingSoon")}>{t("common.confirm")}</button>
+          {showDeleteAccount && (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Per confermare digita <code className="font-mono text-foreground">DELETE</code>. Verranno cancellati definitivamente tutti i tuoi progetti AVI, le analisi storiche, gli audit della suite CS e il profilo.
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                  className="input-base flex-1 font-mono uppercase tracking-wider"
+                  autoFocus
+                />
+                <button
+                  onClick={() => { setShowDeleteAccount(false); setDeleteConfirmText(""); }}
+                  disabled={deletingAccount}
+                  className="px-3 py-2 border border-border text-foreground rounded-[2px] text-sm hover:bg-muted/30 transition-colors"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmText !== "DELETE" || deletingAccount}
+                  className="px-3 py-2 bg-destructive text-white rounded-[2px] text-sm font-medium hover:bg-destructive/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  {deletingAccount && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  {t("common.confirm")}
+                </button>
+              </div>
             </div>
           )}
         </div>
