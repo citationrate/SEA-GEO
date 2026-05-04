@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS, ENTERPRISE_ONLY_MODEL_IDS, DEMO_MODEL_IDS } from "@citationrate/llm-client";
+import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS, ENTERPRISE_ONLY_MODEL_IDS, VISIBLE_MODEL_IDS, DEMO_MODEL_IDS } from "@citationrate/llm-client";
 import { getUserPlanLimits } from "@/lib/usage";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
 
@@ -122,7 +122,20 @@ export async function PATCH(
       return NextResponse.json({ error: `Il tuo piano supporta max ${cap} modelli per progetto.` }, { status: 403 });
     }
 
-    parsed.data.models_config = newModels;
+    // Sanitize: drop legacy/orphan IDs that no longer appear in the public
+    // selectors (e.g. "gpt-5.4" carried over from before the OpenAI list was
+    // reshuffled). The IDs are still valid for backward-compat reads, but they
+    // shouldn't persist on a fresh write — they confuse the run modal which
+    // reads models_config raw. Only filter when the result keeps at least one
+    // visible model, so projects whose entire config is legacy aren't wiped.
+    const cleaned = newModels.filter((id) => VISIBLE_MODEL_IDS.has(id));
+    if (cleaned.length > 0 && cleaned.length < newModels.length) {
+      const dropped = newModels.filter((id) => !VISIBLE_MODEL_IDS.has(id));
+      console.log(`[projects/${params.id}] sanitized models_config — dropped legacy IDs: ${dropped.join(", ")}`);
+      parsed.data.models_config = cleaned;
+    } else {
+      parsed.data.models_config = newModels;
+    }
   }
 
   const { error: dbError } = await (supabase.from("projects") as any)

@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2, Cpu, Info, Lock, Check } from "lucide-react";
 import { toast } from "sonner";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
-import { PROVIDER_GROUPS, MODEL_MAP } from "@citationrate/llm-client";
+import { PROVIDER_GROUPS, MODEL_MAP, VISIBLE_MODEL_IDS } from "@citationrate/llm-client";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
 
 const BASE_MODEL_LIMIT = 3;
@@ -86,9 +86,16 @@ export default function EditProjectPage() {
       setMarketContext(project.market_context ?? "");
       setLanguage(project.language ?? "it");
       setCountry(project.country ?? "");
-      const models = (project.models_config ?? []) as string[];
-      setInitialModels(models);
-      setSelectedModels(models);
+      // Strip orphan/legacy IDs that aren't in the public selectors anymore
+      // (e.g. "gpt-5.4" from before the OpenAI list was reshuffled) from the
+      // current selection — there's no checkbox for them, so the user can't
+      // see or untick them. Keep `initialModels` as the raw DB value so the
+      // dirty check picks up the implicit cleanup and persists it on the
+      // very next save. Same filter runs server-side as belt-and-braces.
+      const rawModels = (project.models_config ?? []) as string[];
+      const visibleModels = rawModels.filter((id: string) => VISIBLE_MODEL_IDS.has(id));
+      setInitialModels(rawModels);
+      setSelectedModels(visibleModels);
       if (profRes.ok) {
         const prof = await profRes.json();
         setPlanId(getEffectivePlanId(prof?.plan));

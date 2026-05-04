@@ -168,6 +168,15 @@ export const ENTERPRISE_ONLY_MODEL_IDS = new Set(
   PROVIDER_GROUPS.flatMap((g) => g.models.filter((m) => m.enterpriseOnly).map((m) => m.id))
 );
 
+/** Models currently exposed in user-facing selectors (excludes coming-soon
+ * groups + legacy IDs kept only for read compat with old DB rows). Used to
+ * sanitize models_config at write time so orphan/legacy IDs (e.g. "gpt-5.4"
+ * from before the OpenAI selector was reshuffled into Mini/5.5/5.5-Pro) are
+ * silently dropped on the next project edit. */
+export const VISIBLE_MODEL_IDS = new Set(
+  PROVIDER_GROUPS.filter((g) => !g.comingSoon).flatMap((g) => g.models.map((m) => m.id))
+);
+
 /** Demo plan: fixed models, not selectable */
 export const DEMO_MODEL_IDS = ["gpt-5.4-mini", "gemini-2.5-flash"] as const;
 
