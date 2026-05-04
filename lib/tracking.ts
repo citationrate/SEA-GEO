@@ -24,7 +24,7 @@ export async function trackEvent(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    await supabase.from("user_events" as any).insert({
+    await (supabase.from("user_events" as any) as any).insert({
       user_id: user.id,
       event_type: eventType,
       tool: tool || null,
