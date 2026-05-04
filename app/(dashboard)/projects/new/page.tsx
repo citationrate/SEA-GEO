@@ -773,7 +773,7 @@ export default function NewProjectPage() {
                 </p>
               </div>
 
-              {atLimit && (
+              {atLimit && planId !== "enterprise" && (
                 <p className="text-xs text-[#c4a882]">
                   {t("projects.modelLimitReached").replace("{n}", String(modelCap))}
                 </p>
