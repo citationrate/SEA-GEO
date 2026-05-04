@@ -13,7 +13,7 @@ import { T } from "@/components/translated-label";
 import { BotMount } from "@/components/BotMount";
 import { buildProjectContext, normalizeLang } from "@/lib/bot-context";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
-import { PROVIDER_GROUPS, PRO_ONLY_MODEL_IDS, MODEL_MAP } from "@citationrate/llm-client";
+import { PROVIDER_GROUPS, PRO_ONLY_MODEL_IDS, ENTERPRISE_ONLY_MODEL_IDS, MODEL_MAP } from "@citationrate/llm-client";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const auth = createServerClient();
@@ -119,21 +119,33 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   //                  (typically after a Pro→Base downgrade) — soft-skipped at run-time
   const currentModels: string[] = (proj.models_config as string[]) ?? [];
   const isProPlan = userPlan === "pro" || userPlan === "enterprise";
+  const isEnterprisePlan = userPlan === "enterprise";
   const isDemoPlan = userPlan === "demo";
   const modelCap = isProPlan ? 5 : 3;
 
   const allSelectableModels = PROVIDER_GROUPS.flatMap((g) =>
-    g.comingSoon ? [] : g.models.map((m) => ({ id: m.id, label: m.label, proOnly: !!m.proOnly }))
+    g.comingSoon ? [] : g.models.map((m) => ({
+      id: m.id,
+      label: m.label,
+      proOnly: !!m.proOnly,
+      enterpriseOnly: !!m.enterpriseOnly,
+    }))
   );
   const newModels = allSelectableModels.filter((m) => {
     if (currentModels.includes(m.id)) return false;
     if (m.proOnly && !isProPlan) return false;
+    if (m.enterpriseOnly && !isEnterprisePlan) return false;
     return true;
   });
   const canAddMore = !isDemoPlan && currentModels.length < modelCap && newModels.length > 0;
 
+  // Models in the project that the current plan can no longer run — soft-skipped
+  // at run-time, surfaced to the user as a banner with the upgrade CTA.
   const lockedProModels = !isProPlan
     ? currentModels.filter((id) => PRO_ONLY_MODEL_IDS.has(id))
+    : [];
+  const lockedEnterpriseModels = !isEnterprisePlan
+    ? currentModels.filter((id) => ENTERPRISE_ONLY_MODEL_IDS.has(id))
     : [];
 
   // ── Bot context: ownership is already enforced by the project query above
@@ -205,11 +217,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         <span className="font-mono text-[13px] text-cream-dim"><T k="projectDetail.aiModels" /></span>
         {((proj.models_config as string[]) ?? ["gpt-5.4-mini"]).map((m: string) => {
           const isLockedPro = lockedProModels.includes(m);
+          const isLockedEnterprise = lockedEnterpriseModels.includes(m);
+          const isLocked = isLockedPro || isLockedEnterprise;
+          const lockTitle = isLockedEnterprise
+            ? "Enterprise-only — escluso dalle prossime analisi finché non passi a Enterprise"
+            : isLockedPro ? "Pro-only — escluso dalle prossime analisi finché non passi a Pro" : undefined;
           return (
             <span
               key={m}
-              className={`badge text-[12px] ${isLockedPro ? "badge-muted text-amber-500 border-amber-500/30 bg-amber-500/10" : "badge-primary"}`}
-              title={isLockedPro ? "Pro-only — escluso dalle prossime analisi finché non passi a Pro" : undefined}
+              className={`badge text-[12px] ${isLocked ? "badge-muted text-amber-500 border-amber-500/30 bg-amber-500/10" : "badge-primary"}`}
+              title={lockTitle}
             >
               {MODEL_MAP.get(m)?.label ?? m}
             </span>
@@ -268,6 +285,29 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             className="text-xs font-medium text-amber-500 hover:text-amber-400 whitespace-nowrap shrink-0"
           >
             Passa a Pro →
+          </a>
+        </div>
+      )}
+
+      {/* Banner: modelli enterprise-only ereditati (soft skip) */}
+      {lockedEnterpriseModels.length > 0 && (
+        <div className="flex items-start gap-2.5 px-4 py-3 rounded-[3px] border border-amber-500/30 bg-amber-500/5">
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm">
+            <p className="text-foreground">
+              <span className="font-semibold">Alcuni modelli richiedono il piano Enterprise</span>
+              {" — "}
+              <span className="text-muted-foreground">{lockedEnterpriseModels.map((id) => MODEL_MAP.get(id)?.label ?? id).join(", ")}</span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Le prossime analisi useranno solo i modelli compatibili con il tuo piano. Lo storico precedente resta consultabile nei grafici.
+            </p>
+          </div>
+          <a
+            href="/piano"
+            className="text-xs font-medium text-amber-500 hover:text-amber-400 whitespace-nowrap shrink-0"
+          >
+            Contattaci →
           </a>
         </div>
       )}

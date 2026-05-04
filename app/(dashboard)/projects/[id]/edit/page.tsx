@@ -339,18 +339,24 @@ export default function EditProjectPage() {
                         <div className="px-4 pb-3 pt-0 space-y-0.5">
                           {provider.models.map((model) => {
                             const isSelected = selectedModels.includes(model.id);
+                            const isEnterpriseGated = !!model.enterpriseOnly && !isEnterprisePlan;
                             const isProGated = !!model.proOnly && !isProPlan;
+                            const isLocked = isEnterpriseGated || isProGated;
                             const atCap = !isSelected && selectedModels.length >= modelCap;
-                            const disabled = isProGated || atCap;
+                            const disabled = isLocked || atCap;
+                            const lockBadge = isEnterpriseGated ? "ENT" : isProGated ? "PRO" : null;
+                            const lockTitle = isEnterpriseGated
+                              ? "Disponibile solo dal piano Enterprise"
+                              : isProGated ? "Disponibile solo dal piano Pro" : undefined;
                             return (
                               <label key={model.id} onClick={() => !disabled && toggleModel(model.id)}
                                 className={`flex items-center gap-2 p-2 rounded-[2px] transition-colors ${
-                                  isProGated ? "opacity-60 cursor-not-allowed"
+                                  isLocked ? "opacity-60 cursor-not-allowed"
                                     : atCap ? "opacity-50 cursor-not-allowed"
                                     : isSelected ? "bg-primary/10 cursor-pointer"
                                     : "hover:bg-muted/30 cursor-pointer"
                                 }`}
-                                title={isProGated ? "Disponibile solo dal piano Pro" : atCap ? `Limite del piano: max ${modelCap} modelli` : undefined}>
+                                title={lockTitle ?? (atCap ? `Limite del piano: max ${modelCap} modelli` : undefined)}>
                                 <div className={`w-3.5 h-3.5 rounded-[2px] border-2 flex items-center justify-center shrink-0 ${
                                   isSelected ? "border-primary bg-primary" : "border-muted-foreground"
                                 }`}>
@@ -360,8 +366,8 @@ export default function EditProjectPage() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5">
-                                    <span className={`text-sm font-medium ${isProGated ? "text-muted-foreground" : isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
-                                    {isProGated && <span className="font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">PRO</span>}
+                                    <span className={`text-sm font-medium ${isLocked ? "text-muted-foreground" : isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
+                                    {lockBadge && <span className="font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">{lockBadge}</span>}
                                   </div>
                                   <p className="text-xs text-muted-foreground">{t(model.descriptionKey)}</p>
                                 </div>

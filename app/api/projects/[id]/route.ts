@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS, DEMO_MODEL_IDS } from "@citationrate/llm-client";
+import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS, ENTERPRISE_ONLY_MODEL_IDS, DEMO_MODEL_IDS } from "@citationrate/llm-client";
 import { getUserPlanLimits } from "@/lib/usage";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
 
@@ -102,6 +102,17 @@ export async function PATCH(
       const proAdded = proUsed.filter((id) => !currentModels.includes(id));
       if (proAdded.length > 0) {
         return NextResponse.json({ error: `${proAdded.join(", ")} disponibile solo dal piano Pro.` }, { status: 403 });
+      }
+    }
+
+    // Enterprise-only models can only be ADDED by Enterprise users. Pro users
+    // who already have an enterprise model in the project (e.g. legacy or
+    // post-downgrade) keep it, but new ones cannot slip in via PATCH.
+    if (planId !== "enterprise") {
+      const entUsed = newModels.filter((id) => ENTERPRISE_ONLY_MODEL_IDS.has(id));
+      const entAdded = entUsed.filter((id) => !currentModels.includes(id));
+      if (entAdded.length > 0) {
+        return NextResponse.json({ error: `${entAdded.join(", ")} disponibile solo nel piano Enterprise.` }, { status: 403 });
       }
     }
 

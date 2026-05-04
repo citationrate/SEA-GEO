@@ -5,6 +5,10 @@ export interface AIModel {
   provider: "openai" | "anthropic" | "google" | "xai" | "perplexity" | "azure";
   /** High token consumption — shows cost warning in UI */
   expensive?: boolean;
+  /** Reasoning effort budget for OpenAI reasoning models. Lower = faster + cheaper,
+   * higher = deeper analysis but slower. Ignored by non-reasoning providers and by
+   * non-reasoning OpenAI models (gpt-5.4, gpt-5.5). */
+  reasoningEffort?: "low" | "medium" | "high";
 }
 
 export const AI_MODELS: AIModel[] = [
@@ -13,7 +17,7 @@ export const AI_MODELS: AIModel[] = [
   { id: "gpt-4o",       label: "GPT-4o",             desc: "Preciso, risposte elaborate",                 provider: "openai" },
   { id: "gpt-5.4",      label: "GPT-5.4",            desc: "Generazione precedente, alta qualità",        provider: "openai" },
   { id: "gpt-5.5",      label: "GPT-5.5",            desc: "Ultimo modello OpenAI, contesto 1M token",    provider: "openai" },
-  { id: "gpt-5.5-pro",  label: "GPT-5.5 Pro",        desc: "Massima accuratezza, ragionamento esteso",    provider: "openai", expensive: true },
+  { id: "gpt-5.5-pro",  label: "GPT-5.5 Pro",        desc: "Massima accuratezza, ragionamento esteso",    provider: "openai", expensive: true, reasoningEffort: "medium" },
   // Anthropic (short IDs — canonical)
   { id: "claude-haiku",   label: "Claude Haiku 4.5",   desc: "Veloce e diretto",                          provider: "anthropic" },
   { id: "claude-sonnet",  label: "Claude Sonnet 4.6",  desc: "Bilanciato e preciso",                      provider: "anthropic" },
@@ -103,7 +107,7 @@ export interface ProviderGroup {
   label: string;
   badge: string;
   color: string;
-  models: { id: string; label: string; descriptionKey: string; expensive?: boolean; proOnly?: boolean }[];
+  models: { id: string; label: string; descriptionKey: string; expensive?: boolean; proOnly?: boolean; enterpriseOnly?: boolean }[];
   comingSoon?: boolean;
 }
 
@@ -113,7 +117,7 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
     models: [
       { id: "gpt-5.4-mini", label: "GPT-5.4 Mini", descriptionKey: "modelDescriptions.gpt-54-mini" },
       { id: "gpt-5.5", label: "GPT-5.5", descriptionKey: "modelDescriptions.gpt-55" },
-      { id: "gpt-5.5-pro", label: "GPT-5.5 Pro", descriptionKey: "modelDescriptions.gpt-55-pro", expensive: true, proOnly: true },
+      { id: "gpt-5.5-pro", label: "GPT-5.5 Pro", descriptionKey: "modelDescriptions.gpt-55-pro", expensive: true, enterpriseOnly: true },
     ],
   },
   {
@@ -156,6 +160,12 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
 /** Models that require a Pro subscription */
 export const PRO_ONLY_MODEL_IDS = new Set(
   PROVIDER_GROUPS.flatMap((g) => g.models.filter((m) => m.proOnly).map((m) => m.id))
+);
+
+/** Models that require an Enterprise subscription. Disjoint from PRO_ONLY_MODEL_IDS:
+ * a model is gated either at Pro or at Enterprise, never both. */
+export const ENTERPRISE_ONLY_MODEL_IDS = new Set(
+  PROVIDER_GROUPS.flatMap((g) => g.models.filter((m) => m.enterpriseOnly).map((m) => m.id))
 );
 
 /** Demo plan: fixed models, not selectable */

@@ -407,14 +407,28 @@ interface PromptTask {
   sectorKeywords: string[];
 }
 
-async function executePrompt(
+/** Result of a single AI call, serializable so it can travel between Inngest steps. */
+interface AICallResult {
+  promptId: string;
+  rawText: string;
+  citationSources: string[];
+  aiSources: ExtractedSource[];
+}
+
+/**
+ * Phase 1: insert the prompts_executed row, call the AI model, write the
+ * raw response back. Returns the data needed by phase 2 (extractor).
+ *
+ * Split out from executePrompt so expensive reasoning models can run this
+ * phase in its own Inngest step — the Vercel lambda has the full maxDuration
+ * dedicated to one call, instead of sharing it with the Haiku follow-up.
+ */
+async function executeAICall(
   supabase: SupabaseClient,
   task: PromptTask,
-  normCache: Map<string, string | null>,
-) {
+): Promise<AICallResult | null> {
   const promptText = buildPrompt(task.queryText, task.segmentContext, task.language);
 
-  // Insert prompt_executed record
   const { data: promptRecord } = await (supabase.from("prompts_executed") as any)
     .insert({
       run_id: task.runId,
@@ -431,23 +445,21 @@ async function executePrompt(
     .select("id")
     .single();
 
-  if (!promptRecord) return;
+  if (!promptRecord) return null;
 
   let aiResult: AIModelResult;
   try {
     aiResult = await callAIModel(promptText, task.model, task.browsing, task.brandDomain);
   } catch (e: any) {
     const crashMsg = e?.message ?? String(e);
-    console.error("[executePrompt] callAIModel crashed:", crashMsg);
+    console.error("[executeAICall] callAIModel crashed:", crashMsg);
     aiResult = { text: "", sources: [], error: `[${task.model}] ${crashMsg}` };
   }
 
   const rawText = aiResult.text;
   const citationSources: string[] = aiResult.citationSources ?? [];
-  const isSkipped = aiResult.error?.includes("SKIPPED");
   const promptError: string | null = rawText ? null : (aiResult.error ?? "Risposta vuota dal modello");
 
-  // Update prompt with response + save raw citation URLs
   await (supabase.from("prompts_executed") as any)
     .update({
       raw_response: rawText || null,
@@ -458,6 +470,28 @@ async function executePrompt(
     })
     .eq("id", promptRecord.id);
 
+  return {
+    promptId: promptRecord.id as string,
+    rawText,
+    citationSources,
+    aiSources: aiResult.sources,
+  };
+}
+
+/**
+ * Phase 2: run the Haiku extractor on the raw response and persist
+ * response_analysis + competitor_mentions + sources + topics.
+ *
+ * No-op when rawText is empty (caller should skip). Designed to run in its
+ * own Inngest step for expensive models.
+ */
+async function extractAndPersist(
+  supabase: SupabaseClient,
+  task: PromptTask,
+  normCache: Map<string, string | null>,
+  callResult: AICallResult,
+) {
+  const { promptId, rawText, citationSources, aiSources } = callResult;
   if (!rawText) return;
 
   // Enrich sector with site_analysis keywords for better extraction
@@ -467,14 +501,14 @@ async function executePrompt(
   const extraction = await extractFromResponse(rawText, task.targetBrand, enrichedSector, task.brandType ?? undefined, task.language ?? undefined, task.brandDomain);
 
   // Detailed extraction logging
-  console.log(`[executePrompt] model=${task.model} brand="${task.targetBrand}" brand_mentioned=${extraction.brand_mentioned} competitors_raw=${extraction.competitors_found.length} topics=${extraction.topics.length} responseLen=${rawText.length}`);
+  console.log(`[extractAndPersist] model=${task.model} brand="${task.targetBrand}" brand_mentioned=${extraction.brand_mentioned} competitors_raw=${extraction.competitors_found.length} topics=${extraction.topics.length} responseLen=${rawText.length}`);
   if (extraction.competitors_found.length > 0) {
-    console.log(`[executePrompt] competitors extracted: ${extraction.competitors_found.map(c => `"${c.name}" (${c.type})`).join(", ")}`);
+    console.log(`[extractAndPersist] competitors extracted: ${extraction.competitors_found.map(c => `"${c.name}" (${c.type})`).join(", ")}`);
   }
 
   // Validation: warn if long response but no brand/competitors detected
   if (rawText.length > 100 && !extraction.brand_mentioned && extraction.competitors_found.length === 0) {
-    console.warn(`[executePrompt] EXTRACTION WARNING: model=${task.model} brand="${task.targetBrand}" text=${rawText.length}chars but brand_mentioned=false, competitors=0. First 300 chars: ${rawText.slice(0, 300)}`);
+    console.warn(`[extractAndPersist] EXTRACTION WARNING: model=${task.model} brand="${task.targetBrand}" text=${rawText.length}chars but brand_mentioned=false, competitors=0. First 300 chars: ${rawText.slice(0, 300)}`);
   }
 
   // Save response_analysis (normalize competitor names consistently + institutional filter)
@@ -482,20 +516,20 @@ async function executePrompt(
     .map(c => {
       const n = normalizeCompetitorName(c.name, task.targetBrand, normCache);
       if (!n) {
-        console.log(`[executePrompt] competitor FILTERED by normalization: "${c.name}"`);
+        console.log(`[extractAndPersist] competitor FILTERED by normalization: "${c.name}"`);
       }
       return n ? canonicalizeCompetitorName(extractBrandOnly(n)) : null;
     })
     .filter((n): n is string => n != null && n !== task.targetBrand)
     .filter(n => {
       if (isInstitutional(n)) {
-        console.log(`[executePrompt] competitor FILTERED by institutional blocklist: "${n}"`);
+        console.log(`[extractAndPersist] competitor FILTERED by institutional blocklist: "${n}"`);
         return false;
       }
       return true;
     });
   if (normalizedCompNames.length < extraction.competitors_found.length) {
-    console.log(`[executePrompt] competitors after normalization+filter: ${normalizedCompNames.length}/${extraction.competitors_found.length} kept: [${normalizedCompNames.join(", ")}]`);
+    console.log(`[extractAndPersist] competitors after normalization+filter: ${normalizedCompNames.length}/${extraction.competitors_found.length} kept: [${normalizedCompNames.join(", ")}]`);
   }
 
   // Check if brand domain appears in AI-consulted citation URLs (any provider)
@@ -511,7 +545,7 @@ async function executePrompt(
 
   await (supabase.from("response_analysis") as any)
     .insert({
-      prompt_executed_id: promptRecord.id,
+      prompt_executed_id: promptId,
       brand_mentioned: extraction.brand_mentioned,
       brand_rank: extraction.brand_rank,
       brand_occurrences: extraction.brand_occurrences,
@@ -539,7 +573,7 @@ async function executePrompt(
           run_id: task.runId,
           project_id: task.projectId,
           competitor_name: canonical,
-          prompt_executed_id: promptRecord.id,
+          prompt_executed_id: promptId,
           rank: c.rank ?? null,
           sentiment: c.sentiment ?? null,
           recommendation: c.recommendation ?? null,
@@ -574,7 +608,7 @@ async function executePrompt(
     source_origin: "text_mention" as const,
     context: s.context,
   }));
-  const mergedSources = mergeSources(aiResult.sources, extractorSources);
+  const mergedSources = mergeSources(aiSources, extractorSources);
 
   // Batch upsert sources (source_origin preserved from ExtractedSource via mergeSources)
   const sourceRows = mergedSources
@@ -640,11 +674,45 @@ async function executePrompt(
     await (supabase.from("topics") as any)
       .upsert(topicRows, { onConflict: "project_id,name", ignoreDuplicates: false });
     // Batch-increment frequency for all topics in one RPC call
-    const topicNames = topicRows.map(t => t.name);
+    const topicNamesList = topicRows.map(t => t.name);
     await (supabase.rpc as any)("batch_increment_topic_frequency", {
       p_project_id: task.projectId,
-      p_names: topicNames,
+      p_names: topicNamesList,
     });
+  }
+}
+
+/**
+ * Cheap-path wrapper: AI call + extractor in one flow. Used for fast models
+ * batched together — the Inngest step covers both phases comfortably.
+ */
+async function executePrompt(
+  supabase: SupabaseClient,
+  task: PromptTask,
+  normCache: Map<string, string | null>,
+) {
+  const callResult = await executeAICall(supabase, task);
+  if (callResult?.rawText) {
+    await extractAndPersist(supabase, task, normCache, callResult);
+  }
+}
+
+/**
+ * Update the run's `completed_prompts` counter, counting only rows whose
+ * AI call succeeded (`error IS NULL`). Without the filter the counter
+ * would tick up on 429s and other failures, marking partially-broken runs
+ * as 100% complete.
+ */
+async function updateRunProgress(supabase: SupabaseClient, runId: string, totalTasks: number) {
+  const { count } = await supabase
+    .from("prompts_executed")
+    .select("*", { count: "exact", head: true })
+    .eq("run_id", runId)
+    .is("error", null);
+  if (typeof count === "number") {
+    await (supabase.from("analysis_runs") as any)
+      .update({ completed_prompts: Math.min(count, totalTasks) })
+      .eq("id", runId);
   }
 }
 
@@ -811,41 +879,57 @@ export const runAnalysis = inngest.createFunction(
       }
     }
 
-    // Step 2: execute prompts in batches.
+    // Step 2: execute prompts.
     //
-    // Reasoning models (`expensive: true` in models.ts) — gpt-5.5-pro,
-    // claude-opus — can take 30-90s per call, so packing them with cheap
-    // models in the same batch will blow past Vercel's 300s maxDuration.
-    // Split: cheap tasks keep the original throughput, expensive tasks run
-    // one-per-step so each step is bounded by a single AI call + extractor.
+    // Cheap models (gpt-5.4-mini, gemini-2.5-flash, sonar, etc.) batch fine in
+    // a single step — the calls are short and the Haiku follow-up is cheap.
+    //
+    // Expensive reasoning models (`expensive: true` in models.ts — today
+    // gpt-5.5-pro, claude-opus) routinely sit on a slow call for 1-2 min, then
+    // need another ~10-30s for the Haiku extractor. Putting both in the same
+    // step is risky: a slow AI call can use up most of the 600s budget and
+    // leave the extractor to die mid-flight, losing the response we already
+    // paid for. So expensive tasks split into TWO sequential steps per task:
+    //   1. exp-call  — INSERT row + AI call + UPDATE response (own 600s)
+    //   2. exp-extract — Haiku extractor + persist analysis (own 600s)
+    // The first step's return travels via Inngest memoization to the second
+    // step, so an extractor crash never re-triggers the (paid) AI call.
     const isExpensive = (modelId: string) => MODEL_MAP.get(modelId)?.expensive === true;
     const cheapTasks = allTasks.filter((t) => !isExpensive(t.model));
     const expensiveTasks = allTasks.filter((t) => isExpensive(t.model));
     const cheapBatchSize = browsing ? 3 : 15;
-    const batches = [
-      ...chunk(cheapTasks, cheapBatchSize),
-      ...chunk(expensiveTasks, 1),
-    ];
-    const normCache = new Map<string, string | null>();
+    const cheapBatches = chunk(cheapTasks, cheapBatchSize);
 
-    for (let i = 0; i < batches.length; i++) {
+    for (let i = 0; i < cheapBatches.length; i++) {
       await step.run(`batch-${i}`, async () => {
         const supabase = createServiceClient();
-        for (const task of batches[i]) {
+        const normCache = new Map<string, string | null>();
+        for (const task of cheapBatches[i]) {
           await executePrompt(supabase, task, normCache);
-          // Update progress dopo OGNI prompt (non solo a fine batch) usando il
-          // count reale di prompts_executed → idempotente rispetto ai retry
-          // di Inngest e niente "salti" da 15 nella barra del client.
-          const { count } = await supabase
-            .from("prompts_executed")
-            .select("*", { count: "exact", head: true })
-            .eq("run_id", runId);
-          if (typeof count === "number") {
-            await (supabase.from("analysis_runs") as any)
-              .update({ completed_prompts: Math.min(count, allTasks.length) })
-              .eq("id", runId);
-          }
+          await updateRunProgress(supabase, runId, allTasks.length);
         }
+      });
+    }
+
+    for (let j = 0; j < expensiveTasks.length; j++) {
+      const task = expensiveTasks[j];
+      // Step name encodes task identity — must be stable across Inngest retries
+      // so memoization picks up the same step result, never re-firing the AI call.
+      const stepKey = `${task.queryId}-${task.runNumber}-${task.model}-${task.segmentId ?? "_"}`;
+      const callResult = await step.run(`exp-call-${stepKey}`, async () => {
+        const supabase = createServiceClient();
+        return await executeAICall(supabase, task);
+      });
+      if (callResult?.rawText) {
+        await step.run(`exp-extract-${stepKey}`, async () => {
+          const supabase = createServiceClient();
+          const normCache = new Map<string, string | null>();
+          await extractAndPersist(supabase, task, normCache, callResult);
+        });
+      }
+      await step.run(`exp-progress-${stepKey}`, async () => {
+        const supabase = createServiceClient();
+        await updateRunProgress(supabase, runId, allTasks.length);
       });
     }
 

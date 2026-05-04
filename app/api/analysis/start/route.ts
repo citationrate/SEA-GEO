@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS, DEMO_MODEL_IDS } from "@citationrate/llm-client";
+import { ALL_MODEL_IDS, PRO_ONLY_MODEL_IDS, ENTERPRISE_ONLY_MODEL_IDS, DEMO_MODEL_IDS } from "@citationrate/llm-client";
 import { inngest } from "@/lib/inngest";
 import { getUserPlanLimits, getCurrentUsage, getWallet } from "@/lib/usage";
 import { resolvePlanLimit, isUnlimitedLimit } from "@/lib/plan-limits";
@@ -100,6 +100,24 @@ export async function POST(request: Request) {
         if (!validModels.length) {
           return NextResponse.json(
             { error: "Tutti i modelli del progetto richiedono il piano Pro. Passa a Pro o aggiungi un modello compatibile." },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
+    // Enterprise-only models (today: gpt-5.5-pro) on non-Enterprise plans —
+    // soft skip with the same rationale as Pro-gated above. Pro users get the
+    // rest of the project's models; if every selected model is enterprise-only,
+    // hard-fail with a clear message instead of running an empty analysis.
+    if (userPlanId !== "enterprise") {
+      const entInProject = validModels.filter((id: string) => ENTERPRISE_ONLY_MODEL_IDS.has(id));
+      if (entInProject.length > 0) {
+        console.warn(`[analysis/start] non-enterprise plan (${userPlanId}) — skipping enterprise-only models: ${entInProject.join(", ")}`);
+        validModels = validModels.filter((id: string) => !ENTERPRISE_ONLY_MODEL_IDS.has(id));
+        if (!validModels.length) {
+          return NextResponse.json(
+            { error: "Tutti i modelli del progetto richiedono il piano Enterprise. Aggiungi un modello compatibile o contattaci per l'upgrade." },
             { status: 403 }
           );
         }

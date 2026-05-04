@@ -318,16 +318,17 @@ export async function callAIModel(
     if (!process.env.OPENAI_API_KEY) {
       return { text: "", sources: [], error: `[${model}] SKIPPED: OPENAI_API_KEY non configurata` };
     }
-    // gpt-5.5-pro is a deep reasoning model: a single call with web_search
-    // routinely overruns 240s and the Vercel 300s lambda cap. Last run hit
-    // 100% timeout on the 16 gpt-5.5-pro prompts. Disable browsing for it
-    // (reasoning quality is the value prop, not freshness) and lift the
-    // ceiling closer to the 300s cap. Other models keep the original budget.
-    const isPro55 = model === "gpt-5.5-pro";
+    // Reasoning models (today: gpt-5.5-pro) carry a `reasoningEffort` budget set
+    // in models.ts. With effort=medium a call returns in ~2 min; web_search adds
+    // unpredictable latency on top so we disable it for reasoning models — their
+    // value comes from depth of analysis, not freshness. The 240s SDK timeout +
+    // 0 retries fits comfortably inside the lambda budget for any effort level.
+    const reasoningEffort = MODEL_MAP.get(model)?.reasoningEffort;
+    const isReasoning = !!reasoningEffort;
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
-      timeout: isPro55 ? 280_000 : 240_000,
-      maxRetries: isPro55 ? 1 : 0,
+      timeout: 240_000,
+      maxRetries: 0,
     });
 
     // GPT-5.4 and similar models: try Responses API first, then fallback to Chat Completions
@@ -337,13 +338,14 @@ export async function callAIModel(
       const isGpt54 = model === "gpt-5.4";
       if (isGpt54) console.log(`[GPT-5.4 CALLAI] Entered Responses API path. browsing=${browsing}, apiModel=${apiModel}`);
       try {
-        const useSearch = browsing && !isPro55;
+        const useSearch = browsing && !isReasoning;
         const tools = useSearch ? [{ type: "web_search_preview" as const }] : undefined;
         if (isGpt54) console.log(`[GPT-5.4 CALLAI] Calling openai.responses.create with${useSearch ? "" : "out"} tools`);
         const response = await openai.responses.create({
           model: apiModel,
           input: prompt,
           ...(tools ? { tools } : {}),
+          ...(reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
         });
         const text = response.output_text || "";
         if (isGpt54) console.log(`[GPT-5.4 CALLAI] Response received: text_len=${text.length}, output_items=${response.output?.length ?? 0}, raw=${JSON.stringify(response).slice(0, 300)}`);

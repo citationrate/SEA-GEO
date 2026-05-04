@@ -15,6 +15,7 @@ interface ModelOption {
   description: string;
   expensive?: boolean;
   proOnly?: boolean;
+  enterpriseOnly?: boolean;
 }
 
 interface ProviderOption {
@@ -92,6 +93,7 @@ export default function NewProjectPage() {
       description: t(m.descriptionKey),
       expensive: m.expensive,
       proOnly: m.proOnly,
+      enterpriseOnly: m.enterpriseOnly,
     })),
   }));
 
@@ -718,9 +720,15 @@ export default function NewProjectPage() {
                         <div className="px-4 pb-3 pt-0 space-y-0.5">
                           {provider.models.map((model) => {
                             const isSelected = selectedModels.includes(model.id);
-                            const locked = model.proOnly && !isPro;
+                            const enterpriseLocked = !!model.enterpriseOnly && planId !== "enterprise";
+                            const proLocked = !!model.proOnly && !isPro;
+                            const locked = enterpriseLocked || proLocked;
                             const capReached = !isSelected && atLimit;
                             const disabled = locked || capReached;
+                            const lockBadge = enterpriseLocked ? "ENT" : proLocked ? "PRO" : null;
+                            const lockTitle = enterpriseLocked
+                              ? "Disponibile solo dal piano Enterprise"
+                              : proLocked ? `${t("compare.proOnly")} — €159${t("piano.perMonth")} ${t("piano.plusVat")}` : undefined;
                             return (
                               <label key={model.id} onClick={() => !disabled && toggleModel(model.id)}
                                 className={`flex items-center gap-2 p-2 rounded-[2px] transition-colors ${
@@ -729,11 +737,7 @@ export default function NewProjectPage() {
                                     : isSelected ? "bg-primary/10 cursor-pointer"
                                     : "hover:bg-muted/30 cursor-pointer"
                                 }`}
-                                title={
-                                  locked ? `${t("compare.proOnly")} — €159${t("piano.perMonth")} ${t("piano.plusVat")}`
-                                    : capReached ? t("projects.modelLimitReached").replace("{n}", String(modelCap))
-                                    : undefined
-                                }>
+                                title={lockTitle ?? (capReached ? t("projects.modelLimitReached").replace("{n}", String(modelCap)) : undefined)}>
                                 <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 ${
                                   locked ? "border-muted-foreground/40"
                                     : isSelected ? "border-primary bg-primary"
@@ -748,7 +752,7 @@ export default function NewProjectPage() {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5">
                                     <span className={`text-sm font-medium ${locked ? "text-muted-foreground" : isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
-                                    {locked && <span className="font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">PRO</span>}
+                                    {lockBadge && <span className="font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">{lockBadge}</span>}
                                   </div>
                                   <p className="text-xs text-muted-foreground">{model.description}</p>
                                 </div>
