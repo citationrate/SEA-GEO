@@ -532,7 +532,7 @@ export default function GenerateQueriesPage() {
               <div className="text-xs text-destructive space-y-1">
                 <p className="font-semibold">{t("generateQueries.limitReached")}</p>
                 <p>{t("generateQueries.reduceOrUpgrade")}</p>
-                {planId !== "pro" && (
+                {planId !== "pro" && planId !== "enterprise" && (
                   <a href="/piano#piani" className="inline-flex items-center gap-1 text-[#c4a882] hover:underline font-medium">
                     {planId === "demo" ? "Passa a Base o Pro →" : "Passa a Pro →"}
                   </a>
