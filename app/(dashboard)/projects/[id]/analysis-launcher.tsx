@@ -82,9 +82,32 @@ export function AnalysisLauncher({
   // Full-screen upgrade modal for demo users who exhausted prompts
   const demoExhausted = isDemo && noBrowsingRemaining <= 0 && profileLoaded;
 
+  // Track feature gate hit when demo user sees upgrade modal
+  useEffect(() => {
+    if (demoExhausted && open) {
+      import("@/lib/tracking").then(({ trackEvent }) =>
+        trackEvent("feature_gate_hit", "avi", {
+          feature: "analysis_prompts_exhausted",
+          current_plan: "demo",
+        })
+      ).catch(() => {});
+    }
+  }, [demoExhausted, open]);
+
   async function startAnalysis() {
     setLoading(true);
     setError("");
+
+    // Track analysis start
+    try {
+      const { markAnalysisStart, trackEvent } = await import("@/lib/tracking");
+      markAnalysisStart();
+      trackEvent("analysis_started", "avi", {
+        project_id: projectId,
+        run_count: runCount,
+        browsing: effectiveBrowsing,
+      });
+    } catch {}
 
     try {
       const res = await fetch("/api/analysis/start", {
@@ -101,6 +124,16 @@ export function AnalysisLauncher({
       const data = await res.json();
       const runId = data.run_id ?? data.runId;
       setOpen(false);
+
+      // Track analysis completed (run created successfully)
+      try {
+        const { trackEvent, getAnalysisDuration } = await import("@/lib/tracking");
+        trackEvent("analysis_completed", "avi", {
+          project_id: projectId,
+          run_id: runId,
+        }, getAnalysisDuration());
+      } catch {}
+
       if (runId) {
         router.push(`/projects/${projectId}/runs/${runId}`);
       } else {

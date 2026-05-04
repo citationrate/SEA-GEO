@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
 import { OnboardingTour } from "@/components/onboarding-tour";
 import { MobileNavProvider } from "@/components/layout/mobile-nav-context";
+import { TrackingInit } from "@/components/tracking-init";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const auth = createServerClient();
@@ -49,6 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </main>
         </div>
         <OnboardingTour onboardingCompleted={!!(profile as any)?.onboarding_completed} />
+        <TrackingInit userId={user.id} />
       </div>
     </MobileNavProvider>
   );

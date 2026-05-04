@@ -124,6 +124,13 @@ export function PianoClient({
 
   const usage = useUsage();
 
+  // Track pricing page view
+  useEffect(() => {
+    import("@/lib/tracking").then(({ trackEvent }) =>
+      trackEvent("pricing_viewed", null, { current_plan: plan })
+    ).catch(() => {});
+  }, [plan]);
+
   const limits = LIMITS[plan] || LIMITS.demo;
   const planMeta = PLAN_META[plan] || PLAN_META.demo;
   const isActive = subscriptionStatus === "active";
