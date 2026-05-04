@@ -11,6 +11,7 @@ import { getEffectivePlanId } from "@/lib/utils/is-pro";
 
 const BASE_MODEL_LIMIT = 3;
 const PRO_MODEL_LIMIT = 5;
+const ENTERPRISE_MODEL_LIMIT = 10;
 
 const SECTOR_OPTIONS = [
   "Turismo",
@@ -60,8 +61,9 @@ export default function EditProjectPage() {
   const { t } = useTranslation();
 
   const isProPlan = planId === "pro" || planId === "enterprise";
+  const isEnterprisePlan = planId === "enterprise";
   const isDemoPlan = planId === "demo";
-  const modelCap = isProPlan ? PRO_MODEL_LIMIT : BASE_MODEL_LIMIT;
+  const modelCap = isEnterprisePlan ? ENTERPRISE_MODEL_LIMIT : planId === "pro" ? PRO_MODEL_LIMIT : BASE_MODEL_LIMIT;
   const dirtyModels = JSON.stringify([...selectedModels].sort()) !== JSON.stringify([...initialModels].sort());
 
   useEffect(() => {

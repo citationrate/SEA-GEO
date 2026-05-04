@@ -54,6 +54,8 @@ const COUNTRY_CODES = [
 ];
 
 const BASE_MODEL_LIMIT = 3;
+const PRO_MODEL_LIMIT = 5;
+const ENTERPRISE_MODEL_LIMIT = 10;
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -262,58 +264,28 @@ export default function NewProjectPage() {
     c.toLowerCase().includes(countrySearch.toLowerCase())
   );
 
-  const [activeProviders, setActiveProviders] = useState<Set<string>>(new Set(["openai"]));
-  const [selectedModelPerProvider, setSelectedModelPerProvider] = useState<Record<string, string>>({
-    openai: "gpt-5.4-mini",
-  });
+  // Plan-aware cap: 10 for Enterprise, 5 for Pro, 3 for Base.
+  // Multiple models per provider are allowed (e.g. all 3 OpenAI models).
+  const modelCap = planId === "enterprise" ? ENTERPRISE_MODEL_LIMIT
+    : planId === "pro" ? PRO_MODEL_LIMIT
+    : BASE_MODEL_LIMIT;
 
-  const modelLimit = isPro ? Infinity : BASE_MODEL_LIMIT;
-  const atLimit = !isPro && activeProviders.size >= modelLimit;
+  const [selectedModels, setSelectedModels] = useState<string[]>(["gpt-5.4-mini"]);
+  const atLimit = selectedModels.length >= modelCap;
 
-  function toggleProvider(provider: ProviderOption) {
-    setActiveProviders((prev) => {
-      const next = new Set(prev);
-      if (next.has(provider.id)) {
-        next.delete(provider.id);
-        setSelectedModelPerProvider((m) => {
-          const copy = { ...m };
-          delete copy[provider.id];
-          return copy;
-        });
-      } else {
-        if (!isPro && next.size >= BASE_MODEL_LIMIT) return prev;
-        next.add(provider.id);
-        if (!selectedModelPerProvider[provider.id]) {
-          setSelectedModelPerProvider((m) => ({ ...m, [provider.id]: provider.models[0].id }));
-        }
+  function toggleModel(modelId: string) {
+    setSelectedModels((prev) => {
+      if (prev.includes(modelId)) {
+        return prev.filter((m) => m !== modelId);
       }
-      return next;
+      if (prev.length >= modelCap) return prev;
+      return [...prev, modelId];
     });
-  }
-
-  function selectModel(providerId: string, modelId: string) {
-    const currentModel = selectedModelPerProvider[providerId];
-    if (currentModel === modelId) {
-      setActiveProviders((prev) => {
-        const next = new Set(prev);
-        next.delete(providerId);
-        return next;
-      });
-      setSelectedModelPerProvider((prev) => {
-        const copy = { ...prev };
-        delete copy[providerId];
-        return copy;
-      });
-    } else {
-      setSelectedModelPerProvider((prev) => ({ ...prev, [providerId]: modelId }));
-    }
   }
 
   function getModelsConfig(): string[] {
     if (planId === "demo") return [...DEMO_MODEL_IDS];
-    return AVAILABLE_PROVIDERS
-      .filter((p) => activeProviders.has(p.id))
-      .map((p) => selectedModelPerProvider[p.id] ?? p.models[0].id);
+    return selectedModels;
   }
 
   function addCompetitorsFromRaw(raw: string) {
@@ -345,7 +317,7 @@ export default function NewProjectPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (activeProviders.size === 0) {
+    if (planId !== "demo" && selectedModels.length === 0) {
       setError(t("projects.selectAtLeastOne"));
       return;
     }
@@ -715,56 +687,63 @@ export default function NewProjectPage() {
             <>
               <p className="text-xs text-muted-foreground">
                 {t("projects.selectProviderModel")}
-                {!isPro && ` (${t("projects.maxModels").replace("{n}", String(BASE_MODEL_LIMIT))})`}
+                {` (${t("projects.maxModels").replace("{n}", String(modelCap))})`}
               </p>
               <div className="space-y-2">
                 {AVAILABLE_PROVIDERS.map((provider) => {
                   const isSoon = !!provider.comingSoon;
-                  const isActive = !isSoon && activeProviders.has(provider.id);
-                  const currentModel = selectedModelPerProvider[provider.id] ?? provider.models[0].id;
-                  const isDisabled = isSoon || (!isActive && atLimit);
+                  const providerSelectedCount = provider.models.filter((m) => selectedModels.includes(m.id)).length;
 
                   return (
                     <div key={provider.id}
                       className={`rounded-sm border transition-all ${
                         isSoon ? "border-border opacity-50"
-                          : isActive ? "border-primary/50 bg-primary/5"
-                          : isDisabled ? "border-border opacity-40"
+                          : providerSelectedCount > 0 ? "border-primary/50 bg-primary/5"
                           : "border-border"
                       }`}>
-                      <button type="button" onClick={() => !isDisabled && toggleProvider(provider)} disabled={isDisabled}
-                        className={`w-full flex items-center gap-3 px-4 py-3 text-left ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
-                        <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${
-                          isActive ? "border-primary bg-primary" : "border-muted-foreground"
-                        }`}>
-                          {isActive && (
-                            <svg className="w-2.5 h-2.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                        </div>
+                      <div className={`w-full flex items-center gap-3 px-4 py-3 text-left ${isSoon ? "cursor-not-allowed" : ""}`}>
                         <span className={`text-sm font-semibold ${isSoon ? "text-muted-foreground" : provider.color}`}>{provider.label}</span>
                         <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{provider.badge}</span>
+                        {!isSoon && providerSelectedCount > 0 && (
+                          <span className="font-mono text-[0.625rem] tracking-wide text-primary ml-auto">
+                            {providerSelectedCount}/{provider.models.length}
+                          </span>
+                        )}
                         {isSoon && (
                           <span className="font-mono text-[0.69rem] tracking-wide text-amber-500 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded-[2px] ml-auto">SOON</span>
                         )}
-                      </button>
+                      </div>
 
-                      {isActive && (
+                      {!isSoon && (
                         <div className="px-4 pb-3 pt-0 space-y-0.5">
                           {provider.models.map((model) => {
-                            const isSelected = currentModel === model.id;
+                            const isSelected = selectedModels.includes(model.id);
                             const locked = model.proOnly && !isPro;
+                            const capReached = !isSelected && atLimit;
+                            const disabled = locked || capReached;
                             return (
-                              <label key={model.id} onClick={() => !locked && selectModel(provider.id, model.id)}
+                              <label key={model.id} onClick={() => !disabled && toggleModel(model.id)}
                                 className={`flex items-center gap-2 p-2 rounded-[2px] transition-colors ${
-                                  locked ? "opacity-70 cursor-not-allowed" : isSelected ? "bg-primary/10 cursor-pointer" : "hover:bg-muted/30 cursor-pointer"
+                                  locked ? "opacity-70 cursor-not-allowed"
+                                    : capReached ? "opacity-50 cursor-not-allowed"
+                                    : isSelected ? "bg-primary/10 cursor-pointer"
+                                    : "hover:bg-muted/30 cursor-pointer"
                                 }`}
-                                title={locked ? `${t("compare.proOnly")} — €159${t("piano.perMonth")} ${t("piano.plusVat")}` : undefined}>
-                                <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                                  locked ? "border-muted-foreground/40" : isSelected ? "border-primary" : "border-muted-foreground"
+                                title={
+                                  locked ? `${t("compare.proOnly")} — €159${t("piano.perMonth")} ${t("piano.plusVat")}`
+                                    : capReached ? t("projects.modelLimitReached").replace("{n}", String(modelCap))
+                                    : undefined
+                                }>
+                                <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 ${
+                                  locked ? "border-muted-foreground/40"
+                                    : isSelected ? "border-primary bg-primary"
+                                    : "border-muted-foreground"
                                 }`}>
-                                  {isSelected && !locked && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                                  {isSelected && !locked && (
+                                    <svg className="w-2 h-2 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5">
@@ -789,14 +768,14 @@ export default function NewProjectPage() {
                   <p className="text-xs text-muted-foreground">{t("projects.modelsFixed")}</p>
                 </div>
                 <p className="text-xs text-muted-foreground shrink-0 ml-4">
-                  <span className="text-foreground font-bold">{activeProviders.size}</span>
-                  {isPro ? ` ${t("projects.modelsSelected")}` : ` / ${BASE_MODEL_LIMIT} ${t("projects.modelsOf")}`}
+                  <span className="text-foreground font-bold">{selectedModels.length}</span>
+                  {` / ${modelCap} ${t("projects.modelsOf")}`}
                 </p>
               </div>
 
               {atLimit && (
                 <p className="text-xs text-[#c4a882]">
-                  {t("projects.modelLimitReached").replace("{n}", String(BASE_MODEL_LIMIT))}
+                  {t("projects.modelLimitReached").replace("{n}", String(modelCap))}
                 </p>
               )}
             </>
@@ -805,7 +784,7 @@ export default function NewProjectPage() {
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <button type="submit" disabled={loading || (planId !== "demo" && activeProviders.size === 0)}
+        <button type="submit" disabled={loading || (planId !== "demo" && selectedModels.length === 0)}
           className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50">
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           {loading ? t("common.saving") : t("projects.createProject")}
