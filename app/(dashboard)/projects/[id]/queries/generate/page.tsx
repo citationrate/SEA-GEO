@@ -68,7 +68,7 @@ export default function GenerateQueriesPage() {
   useEffect(() => {
     fetch("/api/profile").then((r) => r.json()).then((p) => {
       const plan = p?.plan ?? "demo";
-      setPlanId(plan === "demo" ? "demo" : plan === "base" ? "base" : plan === "pro" ? "pro" : plan === "enterprise" ? "pro" : "demo");
+      setPlanId(plan === "demo" ? "demo" : plan === "base" ? "base" : plan === "pro" ? "pro" : plan === "enterprise" ? "enterprise" : "demo");
       setIsPro(plan === "pro" || plan === "enterprise");
     }).catch(() => {}).finally(() => setProfileLoaded(true));
 
@@ -77,8 +77,9 @@ export default function GenerateQueriesPage() {
     }).catch(() => {});
   }, [projectId]);
 
-  // Enterprise users are collapsed to "pro" in planId above, so this covers them.
-  const monthlyLimit = planId === "pro" ? 500 : planId === "base" ? 100 : 40;
+  // Enterprise: effectively unlimited per Piano table ("Generazione query AI" = ✓).
+  // Cap at 9999 just to keep the math finite (backend has no monthly limit).
+  const monthlyLimit = planId === "enterprise" ? 9999 : planId === "pro" ? 500 : planId === "base" ? 100 : 40;
   const usedThisMonth = existingQueryCount;
 
   function buildInputs(): GenerationInputs {
