@@ -1,12 +1,16 @@
 /**
- * User event tracking — inserts into public.user_events on CitationRate Supabase.
- * Used for product analytics: tool selection, analysis lifecycle, page views.
- *
+ * User event tracking — dual: Supabase (user_events) + GA4 (gtag).
  * All tracking is fire-and-forget (no await needed in UI code).
  * Errors are silently logged — never block the user.
  */
 
 import { createClient } from "@/lib/supabase/client";
+
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void;
+  }
+}
 
 export async function trackEvent(
   eventType: string,
@@ -14,6 +18,7 @@ export async function trackEvent(
   metadata?: Record<string, unknown>,
   durationSeconds?: number | null,
 ) {
+  // 1. Supabase
   try {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -27,9 +32,19 @@ export async function trackEvent(
       duration_seconds: durationSeconds || null,
     });
   } catch (e) {
-    // Silent fail — tracking should never break the app
     console.warn("[tracking]", eventType, e);
   }
+
+  // 2. GA4
+  try {
+    if (typeof window !== "undefined" && window.gtag) {
+      window.gtag("event", eventType, {
+        tool: tool || undefined,
+        duration_seconds: durationSeconds || undefined,
+        ...metadata,
+      });
+    }
+  } catch {}
 }
 
 /**

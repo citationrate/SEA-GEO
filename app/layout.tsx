@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Syne, DM_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import dynamic from "next/dynamic";
+import Script from "next/script";
+
+const GA_MEASUREMENT_ID = "G-9GGN16KTRJ";
 import { LanguageProvider } from "@/lib/i18n/context";
 import { ConsultationProvider } from "@/lib/consultation-context";
 import { ConsultationModal } from "@/components/consultation-modal";
@@ -71,6 +74,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}} />
       </head>
       <body className={`${cormorant.variable} ${syne.variable} ${dmMono.variable} font-sans antialiased`}>
+        <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} strategy="afterInteractive" />
+        <Script id="ga4-init" strategy="afterInteractive">
+          {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_MEASUREMENT_ID}',{anonymize_ip:true});`}
+        </Script>
         <LanguageProvider>
         <ConsultationProvider>
         {children}
