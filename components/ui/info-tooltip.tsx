@@ -50,7 +50,7 @@ export function InfoTooltip({ text }: { text: string | undefined }) {
       </button>
       {show && pos && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed z-[9999] w-64 px-3 py-2 rounded-[2px] border border-border bg-surface shadow-lg text-xs text-foreground leading-relaxed pointer-events-none"
+          className="fixed z-[9999] w-72 px-3 py-2 rounded-[2px] border border-border bg-surface shadow-lg text-xs text-foreground leading-relaxed pointer-events-none whitespace-pre-line"
           style={{
             top: pos.top,
             left: pos.left,

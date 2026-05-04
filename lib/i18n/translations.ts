@@ -181,7 +181,16 @@ export const translations: Record<Locale, Record<string, any>> = {
       presence: "Presenza", position: "Posizione media", sentiment: "Sentiment",
       reliability: "Affidabilità",
       presenceTooltip: "% risposte AI in cui il brand viene citato",
-      positionTooltip: "Punteggio 0–100 che premia le citazioni in alto. 1° posto vale 100, 2° vale 80, 3° vale 60, oltre il 5° vale 0. La media include anche i prompt dove il brand non è menzionato.",
+      positionTooltip: `Quanto in alto compare il tuo brand nelle risposte AI (0–100).
+
+• 100 → sempre al 1° posto
+• 80 → mediamente 2°
+• 60 → mediamente 3°
+• 40 → mediamente 4°
+• 20 → mediamente 5°
+• < 20 → mediamente oltre il 5°
+
+La media tiene conto anche dei prompt in cui il brand non viene citato.`,
       sentimentTooltip: "Tono delle citazioni mediato su tutti i prompt",
       positionWhenCited: "quando citato, sei mediamente al {n}° posto",
       qualityHigh: "alta", qualityMedium: "media", qualityLow: "bassa",
@@ -1279,7 +1288,16 @@ export const translations: Record<Locale, Record<string, any>> = {
       presence: "Presence", position: "Average position", sentiment: "Sentiment",
       reliability: "Reliability",
       presenceTooltip: "% of AI responses mentioning the brand",
-      positionTooltip: "0–100 score that rewards top citations. 1st = 100, 2nd = 80, 3rd = 60, beyond 5th = 0. The average includes prompts where the brand is not mentioned.",
+      positionTooltip: `How high your brand appears in AI answers (0–100).
+
+• 100 → always 1st
+• 80 → on average 2nd
+• 60 → on average 3rd
+• 40 → on average 4th
+• 20 → on average 5th
+• < 20 → on average below 5th
+
+The average also includes prompts where the brand is not cited.`,
       sentimentTooltip: "Citation tone averaged across all prompts",
       positionWhenCited: "when cited, you're on average in #{n}",
       qualityHigh: "high", qualityMedium: "medium", qualityLow: "low",
@@ -2375,7 +2393,16 @@ export const translations: Record<Locale, Record<string, any>> = {
       presence: "Présence", position: "Position moyenne", sentiment: "Sentiment",
       reliability: "Fiabilité",
       presenceTooltip: "% de réponses IA mentionnant la marque",
-      positionTooltip: "Score 0–100 qui récompense les citations en haut. 1er = 100, 2e = 80, 3e = 60, au-delà du 5e = 0. La moyenne inclut aussi les prompts sans mention de la marque.",
+      positionTooltip: `À quel point votre marque apparaît en haut des réponses IA (0–100).
+
+• 100 → toujours 1ʳᵉ position
+• 80 → en moyenne 2ᵉ
+• 60 → en moyenne 3ᵉ
+• 40 → en moyenne 4ᵉ
+• 20 → en moyenne 5ᵉ
+• < 20 → en moyenne au-delà de la 5ᵉ
+
+La moyenne inclut aussi les prompts sans mention de la marque.`,
       positionWhenCited: "quand cité, vous êtes en moyenne en {n}e position",
       qualityHigh: "haute", qualityMedium: "moyenne", qualityLow: "basse",
       sentimentTooltip: "Ton des citations moyenné sur tous les prompts",
@@ -3370,7 +3397,16 @@ export const translations: Record<Locale, Record<string, any>> = {
       presence: "Präsenz", position: "Durchschnittsposition", sentiment: "Sentiment",
       reliability: "Zuverlässigkeit",
       presenceTooltip: "% der KI-Antworten, die die Marke erwähnen",
-      positionTooltip: "0–100-Score, der Top-Zitate belohnt. 1. Platz = 100, 2. = 80, 3. = 60, jenseits des 5. = 0. Der Durchschnitt enthält auch Prompts ohne Markennennung.",
+      positionTooltip: `Wie weit oben Ihre Marke in KI-Antworten erscheint (0–100).
+
+• 100 → immer 1. Platz
+• 80 → durchschnittlich 2.
+• 60 → durchschnittlich 3.
+• 40 → durchschnittlich 4.
+• 20 → durchschnittlich 5.
+• < 20 → durchschnittlich jenseits des 5.
+
+Der Durchschnitt umfasst auch Prompts ohne Markennennung.`,
       positionWhenCited: "wenn zitiert, im Durchschnitt auf Platz {n}",
       qualityHigh: "hoch", qualityMedium: "mittel", qualityLow: "niedrig",
       sentimentTooltip: "Tonalität der Erwähnungen über alle Prompts",
@@ -4360,7 +4396,16 @@ export const translations: Record<Locale, Record<string, any>> = {
       presence: "Presencia", position: "Posición media", sentiment: "Sentimiento",
       reliability: "Fiabilidad",
       presenceTooltip: "% de respuestas IA que mencionan la marca",
-      positionTooltip: "Puntaje 0–100 que premia las citas en lo alto. 1° = 100, 2° = 80, 3° = 60, más allá del 5° = 0. La media incluye también los prompts donde la marca no es mencionada.",
+      positionTooltip: `Qué tan arriba aparece tu marca en las respuestas IA (0–100).
+
+• 100 → siempre 1° puesto
+• 80 → en promedio 2°
+• 60 → en promedio 3°
+• 40 → en promedio 4°
+• 20 → en promedio 5°
+• < 20 → en promedio más allá del 5°
+
+La media incluye también los prompts donde la marca no es mencionada.`,
       positionWhenCited: "cuando citado, en promedio estás en la posición #{n}",
       qualityHigh: "alta", qualityMedium: "media", qualityLow: "baja",
       sentimentTooltip: "Tono de las citas promediado en todos los prompts",
