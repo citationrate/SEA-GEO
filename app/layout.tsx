@@ -4,7 +4,7 @@ import { Toaster } from "sonner";
 import dynamic from "next/dynamic";
 import Script from "next/script";
 
-const GA_MEASUREMENT_ID = "G-9GGN16KTRJ";
+const GA_IDS = ["G-9GGN16KTRJ", "G-2FT65PHRXJ"];
 import { LanguageProvider } from "@/lib/i18n/context";
 import { ConsultationProvider } from "@/lib/consultation-context";
 import { ConsultationModal } from "@/components/consultation-modal";
@@ -74,9 +74,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}} />
       </head>
       <body className={`${cormorant.variable} ${syne.variable} ${dmMono.variable} font-sans antialiased`}>
-        <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} strategy="afterInteractive" />
+        <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_IDS[0]}`} strategy="afterInteractive" />
         <Script id="ga4-init" strategy="afterInteractive">
-          {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_MEASUREMENT_ID}',{anonymize_ip:true});`}
+          {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());${GA_IDS.map(id => `gtag('config','${id}',{anonymize_ip:true});`).join("")}`}
         </Script>
         <LanguageProvider>
         <ConsultationProvider>
