@@ -14,7 +14,7 @@ const PLAN_RUN_LIMITS: Record<string, number> = {
   base: 1,
   pro: 3,
   agency: 3,
-  enterprise: 10,
+  enterprise: 999,
 };
 
 const PLAN_MODEL_CAPS: Record<string, number> = {
