@@ -9,9 +9,10 @@ import { runCompetitiveAnalysis } from "@/lib/inngest-competitive";
 // reasoning models. With expensive tasks split into a dedicated AI-call step
 // and a separate extractor step (see inngest-functions.ts), each step needs
 // to comfortably hold one slow call: gpt-5.5-pro at effort=medium is ~2 min,
-// claude-opus with web search ~1-2 min. 600s on Vercel Pro gives 3-5x margin
-// against runaway calls before the lambda is killed.
-export const maxDuration = 600;
+// claude-opus with web search ~1-2 min. 300s is the cap on the current
+// Vercel plan (raising to 600 was rejected silently at "Deploying outputs"
+// post-build); split-step memoization absorbs anything that overruns.
+export const maxDuration = 300;
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
