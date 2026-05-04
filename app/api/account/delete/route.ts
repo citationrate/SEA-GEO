@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createAuthServiceClient, createDataClient } from "@/lib/supabase/server";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Permanent account deletion (GDPR Art. 17). Wipes:
  *   - seageo1 (AVI): projects + cascading runs/prompts/responses/avi_history,

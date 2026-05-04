@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-helpers";
 import { getSubscription } from "@/lib/stripe/client";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const { supabase, user, error } = await requireAuth();
