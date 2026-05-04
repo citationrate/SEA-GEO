@@ -283,7 +283,7 @@ export function Sidebar({ profile }: SidebarProps) {
       </div>
 
       {/* Profile → links to settings */}
-      <div className="border-t border-border p-3 flex-shrink-0">
+      <div className="border-t border-border p-3 flex-shrink-0 mb-20">
         <div className={cn(
           "flex items-center gap-2.5 px-2 py-1.5",
           collapsed && !mobileOpen && "justify-center px-0",
