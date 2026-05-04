@@ -53,6 +53,22 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
     };
   }
 
+  // 1b. Check if template is active in CRM
+  const { data: tpl } = await (cr.from("email_templates") as any)
+    .select("active")
+    .eq("id", input.emailType)
+    .maybeSingle();
+
+  if (tpl && !tpl.active) {
+    console.log(`[lifecycle] ${input.emailType} disabled in CRM, skipping`);
+    return {
+      ok: false,
+      skipped: "already_sent" as const,
+      finalRecipient: input.recipientEmail,
+      isTest: false,
+    };
+  }
+
   // 2. Recipient override (testing). Trimmed because Vercel env vars copy-pasted
   // from a terminal often carry a trailing newline, and Resend rejects an
   // address that ends with whitespace — silently dropping every cron run.
