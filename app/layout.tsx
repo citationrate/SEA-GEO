@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Syne, DM_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import dynamic from "next/dynamic";
-import Script from "next/script";
 
-const GA_IDS = ["G-9GGN16KTRJ", "G-2FT65PHRXJ"];
 import { LanguageProvider } from "@/lib/i18n/context";
 import { ConsultationProvider } from "@/lib/consultation-context";
 import { ConsultationModal } from "@/components/consultation-modal";
@@ -12,11 +10,6 @@ import "./globals.css";
 
 const CursorFollower = dynamic(
   () => import("@/components/cursor-follower").then((m) => m.CursorFollower),
-  { ssr: false },
-);
-
-const CookieBanner = dynamic(
-  () => import("@/components/cookie-banner"),
   { ssr: false },
 );
 
@@ -66,6 +59,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/logo.jpg" />
         <link rel="preconnect" href="https://suite.citationrate.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://suite.citationrate.com" />
+        {/* Google Consent Mode v2 defaults — must run BEFORE GTM loads.
+            Reads the cross-domain cookie_consent set by CookieAegis on the
+            shared .citationrate.com so a user who already consented on suite
+            doesn't see the banner again on AVI. */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          window.gtag = gtag;
+          var __consent = {analytics:false, marketing:false};
+          try {
+            var m = document.cookie.match(/(?:^|; )cookie_consent=([^;]*)/);
+            if (m) __consent = JSON.parse(decodeURIComponent(m[1]));
+          } catch(e){}
+          gtag('consent', 'default', {
+            ad_storage: __consent.marketing ? 'granted' : 'denied',
+            ad_user_data: __consent.marketing ? 'granted' : 'denied',
+            ad_personalization: __consent.marketing ? 'granted' : 'denied',
+            analytics_storage: __consent.analytics ? 'granted' : 'denied',
+            wait_for_update: 500
+          });
+        `}} />
+        {/* Google Tag Manager — loaded on every page, tags gated via Consent Mode v2 */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+          new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+          j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+          'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+          })(window,document,'script','dataLayer','GTM-N5L5WHTZ');
+        `}} />
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             var t = localStorage.getItem('seageo-theme');
@@ -74,16 +96,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}} />
       </head>
       <body className={`${cormorant.variable} ${syne.variable} ${dmMono.variable} font-sans antialiased`}>
-        <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_IDS[0]}`} strategy="afterInteractive" />
-        <Script id="ga4-init" strategy="afterInteractive">
-          {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());${GA_IDS.map(id => `gtag('config','${id}',{anonymize_ip:true});`).join("")}`}
-        </Script>
+        {/* Google Tag Manager (noscript) */}
+        <noscript>
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-N5L5WHTZ"
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
         <LanguageProvider>
         <ConsultationProvider>
         {children}
         <ConsultationModal />
         <CursorFollower />
-        <CookieBanner />
         <AttributionCapture />
         </ConsultationProvider>
         <Toaster
