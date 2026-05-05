@@ -50,7 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </main>
         </div>
         <OnboardingTour onboardingCompleted={!!(profile as any)?.onboarding_completed} />
-        <TrackingInit userId={user.id} />
+        <TrackingInit userId={user.id} email={user.email} />
       </div>
     </MobileNavProvider>
   );
