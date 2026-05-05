@@ -12,6 +12,7 @@ import {
   Database, ChevronRight, Plus,
   PanelLeftClose, PanelLeftOpen,
   ExternalLink, X, Newspaper, CreditCard, Sparkles, LogOut, BookOpen,
+  Radar,
 } from "lucide-react";
 import { useMobileNav } from "./mobile-nav-context";
 import { useHasUnreadNews } from "@/components/ai-news-panel";
@@ -62,8 +63,9 @@ export function Sidebar({ profile }: SidebarProps) {
     {
       group: t("sidebar.overview"),
       items: [
-        { href: "/dashboard",   icon: LayoutDashboard, label: t("sidebar.dashboard")    },
-        { href: "/projects",    icon: FolderOpen,      label: t("sidebar.projects")     },
+        { href: "/dashboard",     icon: LayoutDashboard, label: t("sidebar.dashboard")    },
+        { href: "/projects",      icon: FolderOpen,      label: t("sidebar.projects")     },
+        { href: "/brand-profile", icon: Radar,           label: t("sidebar.brandProfile") },
       ],
     },
     {
