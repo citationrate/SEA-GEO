@@ -2,6 +2,7 @@
 
 import { Radar, Plus, Globe, Clock } from "lucide-react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface RunItem {
   id: string;
@@ -14,24 +15,25 @@ interface RunItem {
   total_prompts: number;
 }
 
-function statusBadge(status: string) {
-  const map: Record<string, { label: string; cls: string }> = {
-    completed: { label: "Completata", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" },
-    running: { label: "In corso", cls: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
-    pending: { label: "In coda", cls: "bg-sky-500/10 text-sky-400 border-sky-500/30" },
-    failed: { label: "Fallita", cls: "bg-red-500/10 text-red-400 border-red-500/30" },
+function StatusBadge({ status }: { status: string }) {
+  const { t } = useTranslation();
+  const map: Record<string, { keyLabel: string; cls: string }> = {
+    completed: { keyLabel: "brandProfile.statusCompleted", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" },
+    running: { keyLabel: "brandProfile.statusRunning", cls: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
+    pending: { keyLabel: "brandProfile.statusPending", cls: "bg-sky-500/10 text-sky-400 border-sky-500/30" },
+    failed: { keyLabel: "brandProfile.statusFailed", cls: "bg-red-500/10 text-red-400 border-red-500/30" },
   };
-  const cfg = map[status] ?? { label: status, cls: "bg-muted text-muted-foreground border-border" };
+  const cfg = map[status] ?? { keyLabel: "", cls: "bg-muted text-muted-foreground border-border" };
   return (
     <span className={`inline-flex px-2 py-0.5 rounded-[2px] text-[11px] border ${cfg.cls}`}>
-      {cfg.label}
+      {cfg.keyLabel ? t(cfg.keyLabel) : status}
     </span>
   );
 }
 
-function formatDate(iso: string) {
+function formatDate(iso: string, locale: string) {
   try {
-    return new Date(iso).toLocaleString("it-IT", {
+    return new Date(iso).toLocaleString(`${locale}-${locale.toUpperCase()}`, {
       day: "2-digit",
       month: "short",
       hour: "2-digit",
@@ -53,9 +55,11 @@ export function BrandProfileList({
   runsUsed: number;
   runLimit: number;
 }) {
+  const { t, locale } = useTranslation();
   const remaining = Math.max(0, runLimit - runsUsed);
   const canRun = remaining > 0;
   const isUnlimited = runLimit >= 999;
+  const isFreeOrDemo = plan === "demo" || plan === "free";
 
   return (
     <>
@@ -63,17 +67,17 @@ export function BrandProfileList({
         <div>
           <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
             <Radar className="w-6 h-6 text-primary" />
-            Brand Profile
+            {t("brandProfile.title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            La forma del tuo brand secondo le AI: 5 pilastri, un radar, una run alla volta.
+            {t("brandProfile.tagline")}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <div className="text-xs text-muted-foreground uppercase tracking-wide">Run residue</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">{t("brandProfile.runsRemaining")}</div>
             <div className="text-sm font-display font-semibold text-foreground">
-              {isUnlimited ? "Illimitate" : `${remaining} / ${runLimit}`}
+              {isUnlimited ? t("brandProfile.unlimited") : `${remaining} / ${runLimit}`}
             </div>
           </div>
           {canRun ? (
@@ -82,14 +86,14 @@ export function BrandProfileList({
               className="inline-flex items-center gap-2 px-4 py-2 rounded-[2px] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Nuova run
+              {t("brandProfile.newRun")}
             </Link>
           ) : (
             <Link
               href="/piano"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-[2px] border border-primary text-primary text-sm font-semibold hover:bg-primary/10 transition-colors"
             >
-              {plan === "demo" || plan === "free" ? "Sblocca con upgrade" : "Quota esaurita"}
+              {isFreeOrDemo ? t("brandProfile.upgradeUnlock") : t("brandProfile.quotaExhausted")}
             </Link>
           )}
         </div>
@@ -99,7 +103,7 @@ export function BrandProfileList({
         <div className="card flex flex-col items-center justify-center py-24 text-center">
           <Radar className="w-10 h-10 text-muted-foreground/40 mb-3" />
           <p className="text-sm text-muted-foreground max-w-md">
-            Non hai ancora lanciato nessuna run. Inizia con il tuo brand: 15 prompt × 5 pilastri = un radar dettagliato.
+            {t("brandProfile.emptyState")}
           </p>
           {canRun && (
             <Link
@@ -107,7 +111,7 @@ export function BrandProfileList({
               className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-[2px] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Lancia la prima run
+              {t("brandProfile.emptyCta")}
             </Link>
           )}
         </div>
@@ -121,7 +125,7 @@ export function BrandProfileList({
             >
               <div className="flex items-start justify-between gap-2 mb-3">
                 <h3 className="font-display font-semibold text-foreground line-clamp-1">{r.brand_name}</h3>
-                {statusBadge(r.status)}
+                <StatusBadge status={r.status} />
               </div>
               <p className="text-xs text-muted-foreground line-clamp-1">{r.sector}</p>
               <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
@@ -131,7 +135,7 @@ export function BrandProfileList({
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  {formatDate(r.started_at)}
+                  {formatDate(r.started_at, locale)}
                 </span>
               </div>
             </Link>

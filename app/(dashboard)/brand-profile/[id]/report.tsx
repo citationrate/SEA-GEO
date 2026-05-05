@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Radar, ArrowLeft, Loader2, AlertTriangle } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
+import { ScoreRadar } from "./score-radar";
 
 interface RunRow {
   id: string;
@@ -39,12 +41,12 @@ interface PromptRow {
   duration_ms: number | null;
 }
 
-const PILLARS: Array<{ key: keyof Omit<ScoreRow, "total" | "breakdown">; label: string }> = [
-  { key: "recognition", label: "Recognition" },
-  { key: "clarity", label: "Clarity" },
-  { key: "authority", label: "Authority" },
-  { key: "relevance", label: "Relevance" },
-  { key: "sentiment", label: "Sentiment" },
+const PILLAR_KEYS: Array<{ key: keyof Omit<ScoreRow, "total" | "breakdown">; tKey: string }> = [
+  { key: "recognition", tKey: "brandProfile.pillarRecognition" },
+  { key: "clarity", tKey: "brandProfile.pillarClarity" },
+  { key: "authority", tKey: "brandProfile.pillarAuthority" },
+  { key: "relevance", tKey: "brandProfile.pillarRelevance" },
+  { key: "sentiment", tKey: "brandProfile.pillarSentiment" },
 ];
 
 function scoreColor(v: number | null | undefined): string {
@@ -67,9 +69,10 @@ export function BrandProfileReport({
   initialScores: ScoreRow | null;
   initialPrompts: PromptRow[];
 }) {
+  const { t } = useTranslation();
   const [run, setRun] = useState<RunRow>(initialRun);
   const [scores, setScores] = useState<ScoreRow | null>(initialScores);
-  const [prompts, setPrompts] = useState<PromptRow[]>(initialPrompts);
+  const [prompts] = useState<PromptRow[]>(initialPrompts);
 
   const isPolling = run.status === "pending" || run.status === "running";
   const total = Number(scores?.total ?? 0);
@@ -92,7 +95,7 @@ export function BrandProfileReport({
     return () => { cancelled = true; clearInterval(id); };
   }, [isPolling, runId]);
 
-  const promptsByPillar = PILLARS.reduce<Record<string, PromptRow[]>>((acc, p) => {
+  const promptsByPillar = PILLAR_KEYS.reduce<Record<string, PromptRow[]>>((acc, p) => {
     acc[p.key as string] = prompts.filter((r) => r.pillar === (p.key as string));
     return acc;
   }, {});
@@ -106,14 +109,14 @@ export function BrandProfileReport({
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
           >
             <ArrowLeft className="w-3 h-3" />
-            Torna alle run
+            {t("brandProfile.backToRuns")}
           </Link>
           <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
             <Radar className="w-6 h-6 text-primary" />
             {run.brand_name}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {run.sector} · {run.country} · {run.models?.length ?? 0} modelli · {run.total_prompts} prompt
+            {run.sector} · {run.country} · {run.models?.length ?? 0} {t("brandProfile.modelsLabel")} · {run.total_prompts} {t("brandProfile.promptsLabel")}
           </p>
         </div>
       </div>
@@ -123,9 +126,9 @@ export function BrandProfileReport({
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
             <div>
-              <h3 className="font-display font-semibold text-red-400">Run fallita</h3>
+              <h3 className="font-display font-semibold text-red-400">{t("brandProfile.failedTitle")}</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                {run.error_message ?? "Errore sconosciuto durante l'esecuzione."}
+                {run.error_message ?? t("brandProfile.failedFallback")}
               </p>
             </div>
           </div>
@@ -137,7 +140,7 @@ export function BrandProfileReport({
           <div className="flex items-center gap-3">
             <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />
             <p className="text-sm text-foreground">
-              Run in {run.status === "pending" ? "coda" : "esecuzione"}… aggiornamento ogni 4 secondi.
+              {run.status === "pending" ? t("brandProfile.pollingPending") : t("brandProfile.pollingRunning")}
             </p>
           </div>
         </div>
@@ -145,44 +148,57 @@ export function BrandProfileReport({
 
       {scores && run.status === "completed" && (
         <>
-          <div className="card p-6">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wide">Score complessivo</div>
-                <div className={`font-display text-5xl font-bold ${scoreColor(total)}`}>
-                  {Math.round(total)}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">su 100</div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="card p-6 lg:col-span-2">
+              <ScoreRadar
+                scores={{
+                  recognition: Number(scores.recognition ?? 0),
+                  clarity: Number(scores.clarity ?? 0),
+                  authority: Number(scores.authority ?? 0),
+                  relevance: Number(scores.relevance ?? 0),
+                  sentiment: Number(scores.sentiment ?? 0),
+                }}
+                labels={{
+                  recognition: t("brandProfile.pillarRecognition"),
+                  clarity: t("brandProfile.pillarClarity"),
+                  authority: t("brandProfile.pillarAuthority"),
+                  relevance: t("brandProfile.pillarRelevance"),
+                  sentiment: t("brandProfile.pillarSentiment"),
+                }}
+              />
+            </div>
+            <div className="card p-6 flex flex-col justify-center">
+              <div className="text-xs text-muted-foreground uppercase tracking-wide">{t("brandProfile.scoreTotal")}</div>
+              <div className={`font-display text-6xl font-bold leading-none ${scoreColor(total)}`}>
+                {Math.round(total)}
               </div>
-              <div className="flex-1 min-w-[280px] grid grid-cols-5 gap-3">
-                {PILLARS.map((p) => {
+              <div className="text-xs text-muted-foreground mt-1">{t("brandProfile.scoreOutOf")}</div>
+              <div className="grid grid-cols-5 gap-2 mt-6">
+                {PILLAR_KEYS.map((p) => {
                   const v = Number(scores[p.key] ?? 0);
                   return (
                     <div key={p.key} className="text-center">
-                      <div className={`font-display text-2xl font-bold ${scoreColor(v)}`}>
+                      <div className={`font-display text-lg font-bold ${scoreColor(v)}`}>
                         {Math.round(v)}
                       </div>
-                      <div className="text-[11px] text-muted-foreground uppercase tracking-wide mt-0.5">
-                        {p.label}
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5 truncate">
+                        {t(p.tKey)}
                       </div>
                     </div>
                   );
                 })}
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-4">
-              Radar visivo in arrivo — per ora valori grezzi e breakdown qui sotto.
-            </p>
           </div>
 
           {scores.breakdown && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {PILLARS.map((p) => {
+              {PILLAR_KEYS.map((p) => {
                 const sub = (scores.breakdown as any)?.[p.key as string];
                 if (!sub) return null;
                 return (
                   <div key={p.key} className="card p-5">
-                    <h3 className="font-display font-semibold text-foreground mb-3">{p.label}</h3>
+                    <h3 className="font-display font-semibold text-foreground mb-3">{t(p.tKey)}</h3>
                     <ul className="space-y-2">
                       {Object.entries(sub).map(([k, v]) => (
                         <li key={k} className="flex items-center justify-between text-sm">
@@ -202,15 +218,15 @@ export function BrandProfileReport({
       {prompts.length > 0 && (
         <div className="card p-5">
           <h3 className="font-display font-semibold text-foreground mb-4">
-            Prompt eseguiti ({prompts.length})
+            {t("brandProfile.promptsExecuted")} ({prompts.length})
           </h3>
           <div className="space-y-1 text-xs font-mono">
-            {PILLARS.map((p) => {
+            {PILLAR_KEYS.map((p) => {
               const list = promptsByPillar[p.key as string] ?? [];
               if (list.length === 0) return null;
               return (
                 <div key={p.key} className="border-l-2 border-border pl-3 py-1.5">
-                  <div className="text-foreground font-display text-sm font-semibold not-italic mb-1">{p.label}</div>
+                  <div className="text-foreground font-display text-sm font-semibold not-italic mb-1">{t(p.tKey)}</div>
                   {list.map((r, i) => (
                     <div key={i} className="text-muted-foreground flex items-center gap-2">
                       <span className="text-foreground">[{r.prompt_index}]</span>
