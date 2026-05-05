@@ -130,6 +130,9 @@ async function updateLifecycleStatus(
       break;
     case "email.failed":
     case "email.delivery_delayed":
+    case "email.received":
+    case "email.scheduled":
+    case "email.suppressed":
       update.status = eventType.replace("email.", "");
       break;
   }
