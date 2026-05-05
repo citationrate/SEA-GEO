@@ -55,7 +55,23 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
     };
   }
 
-  // 1b. Check if template is active in CRM
+  // 1b. Check if user has unsubscribed (marketing_consent = false)
+  const { data: profile } = await (cr.from("profiles") as any)
+    .select("marketing_consent")
+    .eq("id", input.userId)
+    .maybeSingle();
+
+  if (profile && profile.marketing_consent === false) {
+    console.log(`[lifecycle] ${input.emailType} skipped for ${input.userId}: user unsubscribed`);
+    return {
+      ok: false,
+      skipped: "already_sent" as const,
+      finalRecipient: input.recipientEmail,
+      isTest: false,
+    };
+  }
+
+  // 1c. Check if template is active in CRM
   const { data: tpl } = await (cr.from("email_templates") as any)
     .select("active")
     .eq("id", input.emailType)
