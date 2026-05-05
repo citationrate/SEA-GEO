@@ -24,7 +24,7 @@ const BATCH_SIZE = 5;
 export const runBrandProfile = inngest.createFunction(
   {
     id: "brand-profile-run",
-    concurrency: { limit: 100 },
+    concurrency: { limit: 5 },
     retries: 2,
     onFailure: async ({ event: failEvent }) => {
       try {

@@ -721,7 +721,7 @@ async function updateRunProgress(supabase: SupabaseClient, runId: string, totalT
 export const runAnalysis = inngest.createFunction(
   {
     id: "run-analysis",
-    concurrency: { limit: 500 },
+    concurrency: { limit: 5 },
     retries: 3,
     onFailure: async ({ event: failEvent }) => {
       // Last-resort handler: if all retries exhausted, mark run as failed
