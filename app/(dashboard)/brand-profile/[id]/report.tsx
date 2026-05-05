@@ -30,17 +30,6 @@ interface ScoreRow {
   breakdown: any;
 }
 
-interface PromptRow {
-  pillar: string;
-  prompt_index: number;
-  model: string;
-  brand_mentioned: boolean | null;
-  brand_position: number | null;
-  sentiment_score: number | null;
-  error_message: string | null;
-  duration_ms: number | null;
-}
-
 const PILLAR_KEYS: Array<{ key: keyof Omit<ScoreRow, "total" | "breakdown">; tKey: string }> = [
   { key: "recognition", tKey: "brandProfile.pillarRecognition" },
   { key: "clarity", tKey: "brandProfile.pillarClarity" },
@@ -62,17 +51,14 @@ export function BrandProfileReport({
   runId,
   initialRun,
   initialScores,
-  initialPrompts,
 }: {
   runId: string;
   initialRun: RunRow;
   initialScores: ScoreRow | null;
-  initialPrompts: PromptRow[];
 }) {
   const { t } = useTranslation();
   const [run, setRun] = useState<RunRow>(initialRun);
   const [scores, setScores] = useState<ScoreRow | null>(initialScores);
-  const [prompts] = useState<PromptRow[]>(initialPrompts);
 
   const isPolling = run.status === "pending" || run.status === "running";
   const total = Number(scores?.total ?? 0);
@@ -94,11 +80,6 @@ export function BrandProfileReport({
     tick();
     return () => { cancelled = true; clearInterval(id); };
   }, [isPolling, runId]);
-
-  const promptsByPillar = PILLAR_KEYS.reduce<Record<string, PromptRow[]>>((acc, p) => {
-    acc[p.key as string] = prompts.filter((r) => r.pillar === (p.key as string));
-    return acc;
-  }, {});
 
   return (
     <>
@@ -215,40 +196,6 @@ export function BrandProfileReport({
         </>
       )}
 
-      {prompts.length > 0 && (
-        <div className="card p-5">
-          <h3 className="font-display font-semibold text-foreground mb-4">
-            {t("brandProfile.promptsExecuted")} ({prompts.length})
-          </h3>
-          <div className="space-y-1 text-xs font-mono">
-            {PILLAR_KEYS.map((p) => {
-              const list = promptsByPillar[p.key as string] ?? [];
-              if (list.length === 0) return null;
-              return (
-                <div key={p.key} className="border-l-2 border-border pl-3 py-1.5">
-                  <div className="text-foreground font-display text-sm font-semibold not-italic mb-1">{t(p.tKey)}</div>
-                  {list.map((r, i) => (
-                    <div key={i} className="text-muted-foreground flex items-center gap-2">
-                      <span className="text-foreground">[{r.prompt_index}]</span>
-                      <span>{r.model}</span>
-                      {r.error_message ? (
-                        <span className="text-red-400">err: {String(r.error_message).slice(0, 60)}</span>
-                      ) : (
-                        <>
-                          <span>mentioned={String(r.brand_mentioned)}</span>
-                          {r.brand_position != null && <span>pos={r.brand_position}</span>}
-                          {r.sentiment_score != null && <span>sent={Number(r.sentiment_score).toFixed(2)}</span>}
-                          {r.duration_ms != null && <span>{r.duration_ms}ms</span>}
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </>
   );
 }
