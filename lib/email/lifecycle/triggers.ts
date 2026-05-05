@@ -58,15 +58,14 @@ const PLAN_AUDIT_LIMITS: Record<string, number> = {
  */
 export async function findCandidatesD1(): Promise<CandidateBase[]> {
   const cr = createCitationRateServiceClient();
+  // TEMP: wide window for testing — revert after test
   const { data: users } = await (cr.from("profiles") as any)
     .select("id, full_name, plan, lang")
-    .gt("created_at", new Date(Date.now() - 26 * 3600_000).toISOString())
-    .lt("created_at", new Date(Date.now() - 23 * 3600_000).toISOString())
-    .neq("is_admin", true);
+    .gt("created_at", new Date(Date.now() - 90 * 24 * 3600_000).toISOString())
+    .neq("is_admin", true)
+    .limit(5);
   if (!users) return [];
-  // Check real audit count from audits table instead of audit_used counter
-  const usersWithNoAudit = await filterUsersWithNoAudit(cr, users);
-  return await enrichWithAuth(usersWithNoAudit);
+  return await enrichWithAuth(users);
 }
 
 /**
