@@ -8,7 +8,9 @@
  */
 
 import { Resend } from "resend";
+import { randomUUID } from "crypto";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
+import { injectTracking } from "./inject-tracking";
 import type { EmailType } from "./templates";
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "noreply@aicitationrate.com";
@@ -90,6 +92,7 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
       user_id: input.userId,
       email_type: input.emailType,
       resend_message_id: fakeId,
+      tracking_id: randomUUID(),
       recipient_email: input.recipientEmail,
       lang: input.lang,
       payload: input.payload || {},
@@ -110,12 +113,16 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
   }
   const resend = new Resend(process.env.RESEND_API_KEY);
 
+  // Inject open pixel + click tracking before sending
+  const trackingId = randomUUID();
+  const trackedHtml = injectTracking(input.html, trackingId);
+
   const sendResult = await resend.emails.send({
     from: `${FROM_NAME} <${FROM_EMAIL}>`,
     to: finalRecipient,
     replyTo: REPLY_TO,
     subject: finalSubject,
-    html: input.html,
+    html: trackedHtml,
     headers: {
       "X-Lifecycle-Type": input.emailType,
       "X-User-Id": input.userId,
@@ -148,6 +155,7 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
     user_id: input.userId,
     email_type: input.emailType,
     resend_message_id: messageId,
+    tracking_id: trackingId,
     recipient_email: input.recipientEmail,
     lang: input.lang,
     payload: input.payload || {},
