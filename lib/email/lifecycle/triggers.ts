@@ -59,12 +59,14 @@ const PLAN_AUDIT_LIMITS: Record<string, number> = {
 export async function findCandidatesD1(): Promise<CandidateBase[]> {
   const cr = createCitationRateServiceClient();
   const { data: users } = await (cr.from("profiles") as any)
-    .select("id, full_name, plan, lang, audit_used")
+    .select("id, full_name, plan, lang")
     .gt("created_at", new Date(Date.now() - 26 * 3600_000).toISOString())
     .lt("created_at", new Date(Date.now() - 23 * 3600_000).toISOString())
     .neq("is_admin", true);
   if (!users) return [];
-  return await enrichWithAuth(users.filter((u: any) => (u.audit_used || 0) === 0));
+  // Check real audit count from audits table instead of audit_used counter
+  const usersWithNoAudit = await filterUsersWithNoAudit(cr, users);
+  return await enrichWithAuth(usersWithNoAudit);
 }
 
 /**
@@ -73,12 +75,13 @@ export async function findCandidatesD1(): Promise<CandidateBase[]> {
 export async function findCandidatesD2(): Promise<CandidateBase[]> {
   const cr = createCitationRateServiceClient();
   const { data: users } = await (cr.from("profiles") as any)
-    .select("id, full_name, plan, lang, audit_used")
+    .select("id, full_name, plan, lang")
     .gt("created_at", new Date(Date.now() - 73 * 3600_000).toISOString())
     .lt("created_at", new Date(Date.now() - 71 * 3600_000).toISOString())
     .neq("is_admin", true);
   if (!users) return [];
-  return await enrichWithAuth(users.filter((u: any) => (u.audit_used || 0) === 0));
+  const usersWithNoAudit = await filterUsersWithNoAudit(cr, users);
+  return await enrichWithAuth(usersWithNoAudit);
 }
 
 /**
@@ -87,12 +90,13 @@ export async function findCandidatesD2(): Promise<CandidateBase[]> {
 export async function findCandidatesD3(): Promise<CandidateBase[]> {
   const cr = createCitationRateServiceClient();
   const { data: users } = await (cr.from("profiles") as any)
-    .select("id, full_name, plan, lang, audit_used")
+    .select("id, full_name, plan, lang")
     .gt("created_at", new Date(Date.now() - (7 * 24 + 1) * 3600_000).toISOString())
     .lt("created_at", new Date(Date.now() - (7 * 24 - 1) * 3600_000).toISOString())
     .neq("is_admin", true);
   if (!users) return [];
-  return await enrichWithAuth(users.filter((u: any) => (u.audit_used || 0) === 0));
+  const usersWithNoAudit = await filterUsersWithNoAudit(cr, users);
+  return await enrichWithAuth(usersWithNoAudit);
 }
 
 /**
@@ -309,19 +313,22 @@ export async function findCandidatesD5_AVI(): Promise<CandidateForAVI[]> {
 export async function findCandidatesD6(): Promise<CandidateForUpgrade[]> {
   const cr = createCitationRateServiceClient();
   const { data: profiles } = await (cr.from("profiles") as any)
-    .select("id, full_name, plan, lang, audit_used, billing_period_start")
+    .select("id, full_name, plan, lang, billing_period_start")
     .in("plan", ["base", "pro", "enterprise"])
-    .eq("audit_used", 0)
     .gt("billing_period_start", new Date(Date.now() - 14 * 86400_000).toISOString())
     .lt("billing_period_start", new Date(Date.now() - 5 * 86400_000).toISOString())
     .neq("is_admin", true);
   if (!profiles || profiles.length === 0) return [];
 
-  const userIds = profiles.map((p: any) => p.id);
+  // Filter by real audit count = 0
+  const filteredProfiles = await filterUsersWithNoAudit(cr, profiles);
+  if (filteredProfiles.length === 0) return [];
+
+  const userIds = filteredProfiles.map((p: any) => p.id);
   const auths = await fetchAuthUsers(userIds);
 
   const out: CandidateForUpgrade[] = [];
-  for (const p of profiles) {
+  for (const p of filteredProfiles) {
     const u = auths.get(p.id);
     if (!u) continue;
     const upgradeAt = p.billing_period_start;
@@ -343,6 +350,20 @@ export async function findCandidatesD6(): Promise<CandidateForUpgrade[]> {
 }
 
 // ===== helpers =====
+
+/**
+ * Filter users who have zero audits in the audits table.
+ * Uses real count instead of the unreliable audit_used counter.
+ */
+async function filterUsersWithNoAudit(cr: any, users: any[]): Promise<any[]> {
+  if (users.length === 0) return [];
+  const userIds = users.map((u: any) => u.id);
+  const { data: audits } = await (cr.from("audits") as any)
+    .select("user_id")
+    .in("user_id", userIds);
+  const usersWithAudit = new Set((audits || []).map((a: any) => a.user_id));
+  return users.filter((u: any) => !usersWithAudit.has(u.id));
+}
 
 async function fetchProfiles(userIds: string[]): Promise<Map<string, any>> {
   if (userIds.length === 0) return new Map();
