@@ -17,7 +17,6 @@ export const AI_MODELS: AIModel[] = [
   { id: "gpt-4o",       label: "GPT-4o",             desc: "Preciso, risposte elaborate",                 provider: "openai" },
   { id: "gpt-5.4",      label: "GPT-5.4",            desc: "Generazione precedente, alta qualità",        provider: "openai" },
   { id: "gpt-5.5",      label: "GPT-5.5",            desc: "Ultimo modello OpenAI, contesto 1M token",    provider: "openai" },
-  { id: "gpt-5.5-pro",  label: "GPT-5.5 Pro",        desc: "Massima accuratezza, ragionamento esteso",    provider: "openai", expensive: true, reasoningEffort: "medium" },
   // Anthropic (short IDs — canonical)
   { id: "claude-haiku",   label: "Claude Haiku 4.5",   desc: "Veloce e diretto",                          provider: "anthropic" },
   { id: "claude-sonnet",  label: "Claude Sonnet 4.6",  desc: "Bilanciato e preciso",                      provider: "anthropic" },
@@ -117,7 +116,6 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
     models: [
       { id: "gpt-5.4-mini", label: "GPT-5.4 Mini", descriptionKey: "modelDescriptions.gpt-54-mini" },
       { id: "gpt-5.5", label: "GPT-5.5", descriptionKey: "modelDescriptions.gpt-55" },
-      { id: "gpt-5.5-pro", label: "GPT-5.5 Pro", descriptionKey: "modelDescriptions.gpt-55-pro", expensive: true, enterpriseOnly: true },
     ],
   },
   {

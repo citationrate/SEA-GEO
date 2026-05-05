@@ -884,14 +884,14 @@ export const runAnalysis = inngest.createFunction(
     // Cheap models (gpt-5.4-mini, gemini-2.5-flash, sonar, etc.) batch fine in
     // a single step — the calls are short and the Haiku follow-up is cheap.
     //
-    // Expensive reasoning models (`expensive: true` in models.ts — today
-    // gpt-5.5-pro, claude-opus) routinely sit on a slow call for 1-2 min, then
-    // need another ~10-30s for the Haiku extractor. Putting both in the same
-    // step is risky: a slow AI call can use up most of the 600s budget and
-    // leave the extractor to die mid-flight, losing the response we already
-    // paid for. So expensive tasks split into TWO sequential steps per task:
-    //   1. exp-call  — INSERT row + AI call + UPDATE response (own 600s)
-    //   2. exp-extract — Haiku extractor + persist analysis (own 600s)
+    // Expensive models (`expensive: true` in models.ts — today claude-opus)
+    // routinely sit on a slow call for 1-2 min, then need another ~10-30s for
+    // the Haiku extractor. Putting both in the same step is risky: a slow AI
+    // call can use up most of the 300s budget and leave the extractor to die
+    // mid-flight, losing the response we already paid for. So expensive tasks
+    // split into TWO sequential steps per task:
+    //   1. exp-call  — INSERT row + AI call + UPDATE response (own 300s)
+    //   2. exp-extract — Haiku extractor + persist analysis (own 300s)
     // The first step's return travels via Inngest memoization to the second
     // step, so an extractor crash never re-triggers the (paid) AI call.
     const isExpensive = (modelId: string) => MODEL_MAP.get(modelId)?.expensive === true;

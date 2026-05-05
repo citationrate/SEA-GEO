@@ -106,10 +106,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // Enterprise-only models (today: gpt-5.5-pro) on non-Enterprise plans —
-    // soft skip with the same rationale as Pro-gated above. Pro users get the
-    // rest of the project's models; if every selected model is enterprise-only,
-    // hard-fail with a clear message instead of running an empty analysis.
+    // Enterprise-only models on non-Enterprise plans — soft skip with the same
+    // rationale as Pro-gated above. Pro users get the rest of the project's
+    // models; if every selected model is enterprise-only, hard-fail with a
+    // clear message instead of running an empty analysis. No active
+    // enterprise-only models today; gating kept as a no-op for future use.
     if (userPlanId !== "enterprise") {
       const entInProject = validModels.filter((id: string) => ENTERPRISE_ONLY_MODEL_IDS.has(id));
       if (entInProject.length > 0) {

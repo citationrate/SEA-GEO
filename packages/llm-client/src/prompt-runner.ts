@@ -29,14 +29,13 @@ export const API_MODEL_ID: Record<string, string> = {
   "gpt-5.4-mini": "gpt-5.4-mini-2026-03-17",
   "gpt-5.4": "gpt-5.4-2026-03-05",
   "gpt-5.5": "gpt-5.5",
-  "gpt-5.5-pro": "gpt-5.5-pro",
   "perplexity-sonar": "sonar",
   "perplexity-sonar-pro": "sonar-pro",
   "copilot-gpt4": "gpt-4o",
 };
 
 /** Models that require the Responses API instead of Chat Completions */
-const RESPONSES_API_MODELS = new Set(["gpt-5.4", "gpt-5.4-mini", "gpt-5.5", "gpt-5.5-pro"]);
+const RESPONSES_API_MODELS = new Set(["gpt-5.4", "gpt-5.4-mini", "gpt-5.5"]);
 
 /**
  * Call an AI model with retry logic and source extraction.
@@ -318,11 +317,12 @@ export async function callAIModel(
     if (!process.env.OPENAI_API_KEY) {
       return { text: "", sources: [], error: `[${model}] SKIPPED: OPENAI_API_KEY non configurata` };
     }
-    // Reasoning models (today: gpt-5.5-pro) carry a `reasoningEffort` budget set
-    // in models.ts. With effort=medium a call returns in ~2 min; web_search adds
-    // unpredictable latency on top so we disable it for reasoning models — their
-    // value comes from depth of analysis, not freshness. The 240s SDK timeout +
-    // 0 retries fits comfortably inside the lambda budget for any effort level.
+    // Reasoning effort budget hook: if a model declares `reasoningEffort` in
+    // models.ts we forward it to the Responses API and disable web_search
+    // (depth, not freshness, is the value). No active OpenAI model uses this
+    // today — gpt-5.5-pro was removed because the SDK timeout couldn't cover
+    // worst-case reasoning latency reliably, leaking paid-but-unrecoverable
+    // responses. Field is kept so we can flip it back on for a future model.
     const reasoningEffort = MODEL_MAP.get(model)?.reasoningEffort;
     const isReasoning = !!reasoningEffort;
     const openai = new OpenAI({
