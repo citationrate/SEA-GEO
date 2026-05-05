@@ -32,8 +32,19 @@ export function injectTracking(html: string, trackingId: string): string {
 
   // 2. Append tracking pixel + unsubscribe link before </body>
   const pixel = `<img src="${BASE_URL}/api/email/track/open?id=${encodeURIComponent(trackingId)}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;" />`;
-  const unsubLink = `<div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid #e8e8e8;font-size:11px;color:#8a8f96;">
-  <a href="${BASE_URL}/api/email/unsubscribe?id=${encodeURIComponent(trackingId)}" style="color:#8a8f96;text-decoration:underline;">Non vuoi più ricevere queste email? Disiscriviti</a>
+  const unsubUrl = `${BASE_URL}/api/email/unsubscribe?id=${encodeURIComponent(trackingId)}`;
+  const unsubLink = `<div style="text-align:center;margin-top:32px;padding-top:20px;border-top:1px solid #e8e8e8;font-size:11px;color:#8a8f96;line-height:1.6;">
+  <p style="margin:0 0 8px 0;">Ricevi questa email perch\u00e9 sei iscritto a CitationRate.<br/>
+  Questa comunicazione ha finalit\u00e0 informative e di marketing relative ai servizi di AI Visibility.</p>
+  <p style="margin:0 0 8px 0;">
+    <a href="${unsubUrl}" style="color:#8a8f96;text-decoration:underline;">Non vuoi pi\u00f9 ricevere queste email? Disiscriviti</a>
+  </p>
+  <p style="margin:0;font-size:10px;color:#b0b5bc;">
+    CitationRate &middot; AI Visibility Platform<br/>
+    I tuoi dati sono trattati ai sensi del GDPR (Reg. UE 2016/679).<br/>
+    <a href="https://www.citationrate.com/privacy" style="color:#b0b5bc;">Privacy Policy</a> &middot;
+    <a href="https://www.citationrate.com/terms" style="color:#b0b5bc;">Termini di Servizio</a>
+  </p>
 </div>`;
 
   if (result.includes("</body>")) {
