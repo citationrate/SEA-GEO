@@ -13,7 +13,7 @@ import type { EmailType } from "./templates";
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "noreply@aicitationrate.com";
 const FROM_NAME = "Team CitationRate";
-const REPLY_TO = "hello@aicitationrate.com";
+const REPLY_TO = "citationrate@gmail.com";
 
 interface SendInput {
   userId: string;
