@@ -12,7 +12,6 @@ import {
   GitCompare,
   TrendingUp,
   FileDown,
-  ArrowLeftRight,
   PanelLeftClose,
   PanelLeftOpen,
   X,
@@ -21,6 +20,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useMobileNav } from "./mobile-nav-context";
+import { ToolSwitcher } from "./tool-switcher";
 
 interface SidebarProps {
   profile: { full_name?: string | null; email?: string; plan?: string; avatar_url?: string | null } | null;
@@ -182,29 +182,14 @@ export function BrandProfileSidebar({ profile }: SidebarProps) {
           </div>
         ))}
 
-        {/* Switch back to AVI */}
+        {/* Tool switcher — Citability Score / AVI / Brand Profile */}
         <div>
           {(!collapsed || mobileOpen) && (
             <p className="font-mono text-[0.75rem] font-semibold uppercase tracking-widest text-muted-foreground px-2 mb-1.5 select-none">
               {t("brandProfileSidebar.tools") || "Strumenti"}
             </p>
           )}
-          <ul className="space-y-0.5">
-            <li>
-              <Link
-                href="/dashboard"
-                onClick={closeMobile}
-                className={cn(
-                  "flex items-center gap-2.5 px-2 py-2.5 md:py-1.5 rounded-[2px] text-sm font-sans text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-all duration-100",
-                  collapsed && !mobileOpen && "justify-center px-0",
-                )}
-                title={collapsed && !mobileOpen ? t("brandProfileSidebar.backToAvi") || "Torna ad AVI" : undefined}
-              >
-                <ArrowLeftRight className="w-[15px] h-[15px] flex-shrink-0 text-muted-foreground" />
-                {(!collapsed || mobileOpen) && <span className="truncate">{t("brandProfileSidebar.backToAvi") || "Torna ad AVI"}</span>}
-              </Link>
-            </li>
-          </ul>
+          <ToolSwitcher current="bp" collapsed={collapsed && !mobileOpen} />
         </div>
       </nav>
 
