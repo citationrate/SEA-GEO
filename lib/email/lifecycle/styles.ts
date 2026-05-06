@@ -1,23 +1,24 @@
 /**
  * Design tokens + HTML layout helpers per lifecycle emails.
- * Style estratti da aivx-frontend (Tailwind config + globals.css):
+ * Dark theme — matches CitationRate brand.
+ *   - Background: #0d1014 (near-black)
  *   - Primary sage: #7eb098
- *   - Font UI: Syne (con fallback per Outlook desktop)
- *   - Border radius: 2px
+ *   - Font UI: Syne
  */
 
 export const colors = {
-  bg: "#fafaf9",
-  card: "#ffffff",
-  text: "#0d1014",
-  textMuted: "#525860",
-  textLight: "#8a8f96",
-  border: "#e5e7eb",
+  bg: "#0d1014",
+  card: "#0d1014",
+  text: "#e0e2e6",
+  textMuted: "#9ca0a8",
+  textLight: "#6b7078",
+  border: "#1e2228",
   primary: "#7eb098",
-  primaryDark: "#3d7a5a",
+  primaryDark: "#5a9478",
   primaryFg: "#0d1014",
-  link: "#5ba4cf",
-  divider: "#e8e8e8",
+  link: "#7eb098",
+  divider: "#2a2e35",
+  featureBorder: "#3d7a5a",
 };
 
 export const fonts = {
@@ -35,18 +36,20 @@ export function emailButton(href: string, label: string): string {
             background-color:${colors.primary};
             color:${colors.primaryFg};
             font-family:${fonts.ui};
-            font-weight:600;
-            font-size:15px;
+            font-weight:700;
+            font-size:13px;
             line-height:1;
-            padding:14px 28px;
+            padding:14px 32px;
             border-radius:2px;
             text-decoration:none;
+            letter-spacing:1.5px;
+            text-transform:uppercase;
             mso-padding-alt:0;
           ">
             <!--[if mso]>
             <i style="letter-spacing:28px;mso-font-width:-100%;mso-text-raise:30pt;">&nbsp;</i>
             <![endif]-->
-            <span style="mso-text-raise:15pt;">${escapeHtml(label)}</span>
+            <span style="mso-text-raise:15pt;">${escapeHtml(label)} &rarr;</span>
             <!--[if mso]>
             <i style="letter-spacing:28px;mso-font-width:-100%;">&nbsp;</i>
             <![endif]-->
@@ -57,18 +60,70 @@ export function emailButton(href: string, label: string): string {
   `;
 }
 
+/** Secondary link (underlined, no button background) */
+export function emailLink(href: string, label: string): string {
+  return `<a href="${escapeAttr(href)}" target="_blank" rel="noopener" style="
+    color:${colors.primary};
+    font-family:${fonts.ui};
+    font-weight:700;
+    font-size:13px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    text-decoration:underline;
+    text-underline-offset:3px;
+  ">${escapeHtml(label)} &rarr;</a>`;
+}
+
+/** Feature card with green border (like the CS/AVI boxes in the design) */
+export function featureCard(opts: { label: string; title: string; description: string; ctaHtml: string }): string {
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;border:1px solid ${colors.featureBorder};border-radius:2px;">
+      <tr>
+        <td style="padding:24px 28px;">
+          <div style="font-family:${fonts.ui};font-size:11px;font-weight:600;letter-spacing:2px;color:${colors.primary};text-transform:uppercase;margin-bottom:8px;">
+            ${opts.label}
+          </div>
+          <div style="font-family:${fonts.ui};font-size:17px;font-weight:700;color:#ffffff;margin-bottom:10px;line-height:1.3;">
+            ${opts.title}
+          </div>
+          <div style="font-family:${fonts.ui};font-size:14px;color:${colors.textMuted};line-height:1.6;margin-bottom:16px;">
+            ${opts.description}
+          </div>
+          ${opts.ctaHtml}
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
+/** Section label (small uppercase green text, like "BENVENUTO") */
+export function sectionLabel(text: string): string {
+  return `<div style="font-family:${fonts.ui};font-size:11px;font-weight:600;letter-spacing:2.5px;color:${colors.primary};text-transform:uppercase;margin-bottom:8px;">${escapeHtml(text)}</div>`;
+}
+
+/** Large heading (white bold, optional green italic accent line) */
+export function heading(line1: string, accentLine?: string): string {
+  let html = `<div style="font-family:${fonts.ui};font-size:28px;font-weight:700;color:#ffffff;line-height:1.2;margin-bottom:4px;">${line1}</div>`;
+  if (accentLine) {
+    html += `<div style="font-family:${fonts.ui};font-size:28px;font-weight:700;color:${colors.primary};font-style:italic;line-height:1.2;margin-bottom:20px;">${accentLine}</div>`;
+  } else {
+    html += `<div style="margin-bottom:20px;"></div>`;
+  }
+  return html;
+}
+
 export function emailLayout(opts: { preview: string; bodyInner: string; lang?: string }): string {
   const lang = opts.lang || "it";
   const footerByLang: Record<string, { team: string; reply: string; address: string }> = {
     it: {
       team: "Team CitationRate",
-      reply: "Per qualsiasi dubbio rispondi a questa mail, siamo a disposizione.",
-      address: "CitationRate · suite.citationrate.com · avi.citationrate.com",
+      reply: "Se hai domande, rispondi a questa mail. Ci siamo.",
+      address: "CitationRate &middot; suite.citationrate.com &middot; avi.citationrate.com",
     },
     en: {
       team: "The CitationRate Team",
-      reply: "For any questions just reply to this email, we are happy to help.",
-      address: "CitationRate · suite.citationrate.com · avi.citationrate.com",
+      reply: "If you have questions, just reply to this email. We're here.",
+      address: "CitationRate &middot; suite.citationrate.com &middot; avi.citationrate.com",
     },
   };
   const f = footerByLang[lang] || footerByLang.it;
@@ -99,24 +154,27 @@ export function emailLayout(opts: { preview: string; bodyInner: string; lang?: s
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${colors.bg};">
     <tr>
       <td align="center" style="padding:32px 16px;">
-        <table role="presentation" class="container" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:100%;background:${colors.card};border-radius:2px;border:1px solid ${colors.border};">
+        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;background:${colors.card};border-radius:2px;">
           <tr>
-            <td style="padding:32px 36px;">
-              <div style="font-family:${fonts.ui};font-size:14px;font-weight:600;letter-spacing:0.5px;color:${colors.primaryDark};text-transform:uppercase;margin-bottom:24px;">
-                CitationRate
+            <td style="padding:40px 44px;">
+              <!-- Logo -->
+              <div style="font-family:${fonts.ui};font-size:15px;font-weight:600;letter-spacing:3px;color:${colors.primary};text-transform:lowercase;margin-bottom:32px;">
+                citationrate
               </div>
-              <div style="font-family:${fonts.ui};font-size:15px;line-height:1.6;color:${colors.text};">
+              <!-- Body -->
+              <div style="font-family:${fonts.ui};font-size:15px;line-height:1.7;color:${colors.text};">
                 ${opts.bodyInner}
               </div>
-              <div style="margin-top:32px;padding-top:20px;border-top:1px solid ${colors.divider};font-family:${fonts.ui};font-size:14px;color:${colors.textMuted};line-height:1.5;">
-                ${escapeHtml(f.reply)}<br><br>
-                <strong style="color:${colors.text};">${escapeHtml(f.team)}</strong>
+              <!-- Footer -->
+              <div style="margin-top:36px;padding-top:24px;border-top:1px solid ${colors.divider};font-family:${fonts.ui};font-size:14px;color:${colors.textMuted};line-height:1.6;">
+                ${f.reply}<br><br>
+                <strong style="color:${colors.primary};">&mdash; ${escapeHtml(f.team)}</strong>
               </div>
             </td>
           </tr>
         </table>
         <div style="font-family:${fonts.ui};font-size:11px;color:${colors.textLight};margin-top:16px;text-align:center;">
-          ${escapeHtml(f.address)}
+          ${f.address}
         </div>
       </td>
     </tr>
@@ -149,7 +207,7 @@ export function scoreZone(score: number, lang: string = "it"): string {
 }
 
 export function paragraph(html: string): string {
-  return `<p style="margin:0 0 16px 0;">${html}</p>`;
+  return `<p style="margin:0 0 16px 0;color:${colors.text};line-height:1.7;">${html}</p>`;
 }
 
 export function statTable(rows: Array<[string, string]>): string {
@@ -157,10 +215,10 @@ export function statTable(rows: Array<[string, string]>): string {
     .map(
       ([label, value]) => `
     <tr>
-      <td style="padding:6px 0;color:${colors.textMuted};font-size:14px;width:160px;">${escapeHtml(label)}</td>
-      <td style="padding:6px 0;color:${colors.text};font-size:14px;font-weight:600;font-family:${fonts.mono};">${value}</td>
+      <td style="padding:8px 0;color:${colors.textMuted};font-size:14px;width:180px;border-bottom:1px solid ${colors.divider};">${escapeHtml(label)}</td>
+      <td style="padding:8px 0;color:#ffffff;font-size:14px;font-weight:600;font-family:${fonts.mono};border-bottom:1px solid ${colors.divider};">${value}</td>
     </tr>`,
     )
     .join("");
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0;border-collapse:collapse;">${tds}</table>`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0;width:100%;border-collapse:collapse;">${tds}</table>`;
 }
