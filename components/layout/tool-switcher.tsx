@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Activity, Radar, BarChart3, ArrowLeftRight, ChevronUp } from "lucide-react";
+import { Activity, BarChart3, ArrowLeftRight, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -16,6 +16,10 @@ interface ToolDef {
   Icon: typeof Activity;
 }
 
+// NOTE: Brand Profile entry intentionally omitted during soft launch — the
+// product is shipped behind a whitelist gate in `(brand-profile)/layout.tsx`
+// until the public launch flag flips. To re-enable: add the bp entry back
+// here (and lift the gate in the layout).
 const TOOLS: ToolDef[] = [
   {
     id: "cs",
@@ -30,13 +34,6 @@ const TOOLS: ToolDef[] = [
     nameKey: "toolSwitcher.avi",
     fallback: "AI Visibility Index",
     Icon: BarChart3,
-  },
-  {
-    id: "bp",
-    url: "https://avi.citationrate.com/brand-profile",
-    nameKey: "toolSwitcher.bp",
-    fallback: "Brand Profile",
-    Icon: Radar,
   },
 ];
 
