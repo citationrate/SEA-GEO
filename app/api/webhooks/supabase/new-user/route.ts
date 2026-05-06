@@ -3,7 +3,7 @@ import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-ser
 import { verifyWebhookSecret, sendAlertEmail, deriveSource, deriveCountry, nowItalian, escapeHtml } from "@/lib/webhooks/alert-email";
 import { sendLifecycleEmail } from "@/lib/email/lifecycle/send";
 import { detectLang } from "@/lib/email/lifecycle/lang-detect";
-import { emailLayout, escapeHtml } from "@/lib/email/lifecycle/styles";
+import { emailLayout } from "@/lib/email/lifecycle/styles";
 
 /**
  * Supabase Database Webhook — INSERT on auth.users (CitationRate project)
