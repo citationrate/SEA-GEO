@@ -8,6 +8,7 @@ import type { SupportedLang } from "./lang-detect";
 import { emailButton, emailLayout, escapeHtml, paragraph, scoreZone, statTable } from "./styles";
 
 export type EmailType =
+  | "W0"
   | "1A"
   | "1B"
   | "1C"
@@ -41,6 +42,64 @@ const URL_UPGRADE_BASE_AVI = "https://avi.citationrate.com/piano#piani";
 function nameOrDefault(name: string | null | undefined, lang: SupportedLang): string {
   if (name && name.trim()) return name.trim();
   return lang === "en" ? "there" : "ciao";
+}
+
+// ============================================================
+// W0 — Welcome (immediata al signup)
+// ============================================================
+export function tplW0(input: BaseInput) {
+  const lang = input.lang || "it";
+  const n = nameOrDefault(input.name, lang);
+
+  if (lang === "en") {
+    return {
+      subject: `Welcome to CitationRate, ${n}`,
+      html: emailLayout({
+        lang,
+        preview: `Everything's ready: 1 free audit + 40 AVI prompts in 30 seconds.`,
+        bodyInner: [
+          paragraph(`Hi ${escapeHtml(n)},`),
+          paragraph(`thanks for signing up to CitationRate. You're in.`),
+          paragraph(
+            `You have access to 2 tools that measure how much your business is cited by AI engines (ChatGPT, Claude, Gemini, Perplexity, Copilot, AIMode, Grok):`,
+          ),
+          paragraph(
+            `&bull; <strong>Citability Score</strong> — audit your site across 7 AI engines<br>` +
+            `&bull; <strong>AVI</strong> — multi-LLM analysis on 40 branded prompts`,
+          ),
+          emailButton(withUtm(URL_AUDIT, "W0"), "Start your free audit"),
+          paragraph(
+            `Or start with AVI (40 free prompts): <a href="${escapeHtml(withUtm(URL_AVI, "W0"))}">avi.citationrate.com</a>.`,
+          ),
+          paragraph(`If you need anything, just reply to this email.`),
+        ].join(""),
+      }),
+    };
+  }
+
+  return {
+    subject: `Benvenuto in CitationRate, ${n}`,
+    html: emailLayout({
+      lang,
+      preview: `Tutto pronto: 1 audit + 40 prompt AVI in 30 secondi.`,
+      bodyInner: [
+        paragraph(`Ciao ${escapeHtml(n)},`),
+        paragraph(`grazie per esserti registrato a CitationRate. Sei dentro.`),
+        paragraph(
+          `Hai accesso a 2 strumenti per misurare quanto la tua azienda viene citata dai motori AI (ChatGPT, Claude, Gemini, Perplexity, Copilot, AIMode, Grok):`,
+        ),
+        paragraph(
+          `&bull; <strong>Citability Score</strong> — audit del tuo sito su 7 motori AI<br>` +
+          `&bull; <strong>AVI</strong> — analisi multi-LLM su 40 prompt branded`,
+        ),
+        emailButton(withUtm(URL_AUDIT, "W0"), "Avvia il tuo primo audit"),
+        paragraph(
+          `In alternativa puoi partire da AVI (40 prompt gratuiti): <a href="${escapeHtml(withUtm(URL_AVI, "W0"))}">avi.citationrate.com</a>.`,
+        ),
+        paragraph(`Se ti serve qualsiasi cosa, rispondi a questa mail.`),
+      ].join(""),
+    }),
+  };
 }
 
 // ============================================================

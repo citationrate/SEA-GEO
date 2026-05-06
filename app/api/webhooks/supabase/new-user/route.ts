@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
 import { verifyWebhookSecret, sendAlertEmail, deriveSource, deriveCountry, nowItalian, escapeHtml } from "@/lib/webhooks/alert-email";
+import { sendLifecycleEmail } from "@/lib/email/lifecycle/send";
+import { tplW0 } from "@/lib/email/lifecycle/templates";
+import { detectLang } from "@/lib/email/lifecycle/lang-detect";
 
 /**
  * Supabase Database Webhook — INSERT on auth.users (CitationRate project)
@@ -64,7 +67,31 @@ export async function POST(request: Request) {
     if (!result.ok) {
       console.error("[new-user] email failed:", result.error);
     }
-    return NextResponse.json({ received: true, emailed: result.ok });
+
+    // W0 — Welcome email to the new user
+    let w0Sent = false;
+    try {
+      const fullName: string = rawUserMeta.full_name || rawUserMeta.name || "";
+      const lang = detectLang({ email, profileLang: rawUserMeta.lang });
+      const { subject: w0Subject, html: w0Html } = tplW0({ name: fullName, lang });
+      const w0Result = await sendLifecycleEmail({
+        userId,
+        emailType: "W0",
+        recipientEmail: email,
+        lang,
+        subject: w0Subject,
+        html: w0Html,
+        payload: { source, country },
+      });
+      w0Sent = w0Result.ok;
+      if (!w0Result.ok && !w0Result.skipped) {
+        console.error("[new-user] W0 failed:", w0Result.error);
+      }
+    } catch (e) {
+      console.error("[new-user] W0 exception:", e instanceof Error ? e.message : e);
+    }
+
+    return NextResponse.json({ received: true, emailed: result.ok, w0: w0Sent });
   } catch (err) {
     console.error("[new-user] unhandled error:", err instanceof Error ? err.message : err);
     return NextResponse.json({ received: true, error: "logged" });
