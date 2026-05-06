@@ -19,17 +19,9 @@ import { NextResponse } from "next/server";
 import { TRIGGERS } from "@/lib/email/lifecycle/triggers";
 import { sendLifecycleEmail } from "@/lib/email/lifecycle/send";
 import { detectLang } from "@/lib/email/lifecycle/lang-detect";
-import {
-  tplD1,
-  tplD2,
-  tplD3,
-  tplD4_CS,
-  tplD4_AVI,
-  tplD5_CS,
-  tplD5_AVI,
-  tplD6,
-  type EmailType,
-} from "@/lib/email/lifecycle/templates";
+import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
+import { emailLayout, emailButton, paragraph, escapeHtml, statTable, scoreZone } from "@/lib/email/lifecycle/styles";
+import type { EmailType } from "@/lib/email/lifecycle/templates";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -90,7 +82,7 @@ export async function GET(request: Request) {
             email: c.email,
             profileLang: c.lang_hint,
           });
-          const { subject, html } = renderTemplate(type, c, lang);
+          const { subject, html } = await renderTemplate(type, c, lang);
           const r = await sendLifecycleEmail({
             userId: c.user_id,
             emailType: type,
@@ -136,64 +128,86 @@ export async function GET(request: Request) {
 // Permetti anche POST (alcuni schedulatori usano POST)
 export const POST = GET;
 
-function renderTemplate(type: EmailType, c: any, lang: "it" | "en"): { subject: string; html: string } {
-  const name = c.full_name || "";
-  switch (type) {
-    case "D1":
-      return tplD1({ name, lang });
-    case "D2":
-      return tplD2({ name, lang });
-    case "D3":
-      return tplD3({ name, lang });
-    case "D4_CS": {
-      const scores = parseScores(c.scores);
-      return tplD4_CS({ name, lang, brand: c.brand, auditId: c.audit_id, scores });
-    }
-    case "D4_AVI": {
-      return tplD4_AVI({
-        name,
-        lang,
-        brand: c.brand,
-        projectId: c.project_id,
-        runId: c.run_id,
-        result: {
-          aviScore: c.avi_score,
-          presence: c.presence_score,
-          sentiment: c.sentiment_score,
-          avgRank: c.avg_brand_rank,
-        },
-      });
-    }
-    case "D5_CS": {
-      const scores = parseScores(c.scores);
-      return tplD5_CS({ name, lang, brand: c.brand, globalScore: scores.global });
-    }
-    case "D5_AVI": {
-      return tplD5_AVI({ name, lang, brand: c.brand, aviScore: c.avi_score });
-    }
-    case "D6": {
-      return tplD6({
-        name,
-        lang,
-        plan: c.plan,
-        daysSinceUpgrade: c.days_since_upgrade,
-        auditLimit: c.audit_limit,
-      });
-    }
-    default:
-      throw new Error(`Unknown type: ${type}`);
-  }
+// Cache templates from DB for the duration of this cron run
+let _tplCache: Map<string, any> | null = null;
+async function fetchTemplates(): Promise<Map<string, any>> {
+  if (_tplCache) return _tplCache;
+  const cr = createCitationRateServiceClient();
+  const { data } = await (cr.from("email_templates") as any)
+    .select("id, subject_it, subject_en, preview_it, preview_en, body_it, body_en, active");
+  const m = new Map<string, any>();
+  for (const t of data || []) m.set(t.id, t);
+  _tplCache = m;
+  return m;
 }
 
-function parseScores(scores: any): { global: number; perEngine?: any } {
-  const global = Number(scores?.global ?? scores?.score ?? 0);
-  const perEngine: any = {};
-  const engines = scores?.per_engine || scores?.engines || {};
-  for (const k of ["ChatGPT", "Claude", "Gemini", "Perplexity", "Copilot", "AIMode", "Grok"]) {
-    const v = engines[k] ?? engines[k.toLowerCase()] ?? engines[k.toLowerCase().replace(/[^a-z]/g, "")];
-    if (v !== undefined && v !== null) perEngine[k] = Number(v);
+const BILINGUAL_DIVIDER = `
+  <div style="margin:32px 0;padding:24px 0;border-top:2px solid #e5e7eb;border-bottom:2px solid #e5e7eb;text-align:center;">
+    <span style="font-size:13px;color:#8a8f96;letter-spacing:1px;text-transform:uppercase;">🇬🇧 English version below</span>
+  </div>
+`;
+
+/** Replace {nome}, {brand}, {days}, etc. in template body */
+function interpolate(body: string, vars: Record<string, string | number | null | undefined>): string {
+  let result = body;
+  for (const [key, val] of Object.entries(vars)) {
+    if (val !== null && val !== undefined) {
+      result = result.replaceAll(`{${key}}`, escapeHtml(String(val)));
+    }
   }
-  return { global, perEngine };
+  return result;
+}
+
+/** Build template variables from candidate data */
+function candidateVars(type: EmailType, c: any): Record<string, string | number | null> {
+  const scores = c.scores || {};
+  const engines = scores?.per_engine || scores?.engines || {};
+  const global = Number(scores?.global ?? scores?.score ?? 0);
+  const aviScore = c.avi_score ? Math.round(Number(c.avi_score)) : null;
+  const presence = c.presence_score ? Math.round(Number(c.presence_score)) : null;
+  const sentiment = c.sentiment_score ? Math.round(Number(c.sentiment_score)) : null;
+  const avgRank = c.avg_brand_rank ? Number(c.avg_brand_rank).toFixed(1) : null;
+
+  return {
+    nome: c.full_name || "",
+    brand: c.brand || "",
+    days: c.days_since_signup ?? "",
+    globalScore: global ? String(Math.round(global)) : "",
+    aviScore: aviScore ? String(aviScore) : "",
+    presence: presence ? String(presence) : "",
+    sentiment: sentiment ? String(sentiment) : "",
+    avgRank: avgRank || "",
+    plan: c.plan || "",
+    daysSinceUpgrade: c.days_since_upgrade ?? "",
+    auditLimit: c.audit_limit ?? "",
+    auditId: c.audit_id || "",
+    projectId: c.project_id || "",
+    runId: c.run_id || "",
+  };
+}
+
+async function renderTemplate(type: EmailType, c: any, lang: "it" | "en"): Promise<{ subject: string; html: string }> {
+  const templates = await fetchTemplates();
+  const tpl = templates.get(type);
+
+  if (!tpl || !tpl.body_it) {
+    throw new Error(`Template ${type} not found in DB or body_it is empty`);
+  }
+
+  const vars = candidateVars(type, c);
+  const bodyIt = interpolate(tpl.body_it, vars);
+  const subject = interpolate(tpl.subject_it, vars);
+  const preview = interpolate(tpl.preview_it || "", vars);
+
+  // Compose bilingual body: IT + divider + EN (if EN exists)
+  let bodyInner = bodyIt;
+  if (tpl.body_en) {
+    const bodyEn = interpolate(tpl.body_en, vars);
+    bodyInner = bodyIt + BILINGUAL_DIVIDER + bodyEn;
+  }
+
+  const html = emailLayout({ lang: "it", preview, bodyInner });
+  return { subject, html };
 }
 
 function extractPayload(type: EmailType, c: any): Record<string, any> {

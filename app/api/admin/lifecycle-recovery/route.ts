@@ -22,7 +22,38 @@ import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-ser
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendLifecycleEmail } from "@/lib/email/lifecycle/send";
 import { detectLang, type SupportedLang } from "@/lib/email/lifecycle/lang-detect";
-import { tpl1A, tpl1B, tpl1C, type EmailType } from "@/lib/email/lifecycle/templates";
+import { emailLayout, escapeHtml } from "@/lib/email/lifecycle/styles";
+import type { EmailType } from "@/lib/email/lifecycle/templates";
+
+const BILINGUAL_DIVIDER = `<div style="margin:32px 0;padding:24px 0;border-top:2px solid #e5e7eb;border-bottom:2px solid #e5e7eb;text-align:center;"><span style="font-size:13px;color:#8a8f96;letter-spacing:1px;text-transform:uppercase;">🇬🇧 English version below</span></div>`;
+
+function interpolate(body: string, vars: Record<string, string | number | null | undefined>): string {
+  let result = body;
+  for (const [key, val] of Object.entries(vars)) {
+    if (val !== null && val !== undefined) {
+      result = result.replaceAll(`{${key}}`, escapeHtml(String(val)));
+    }
+  }
+  return result;
+}
+
+async function renderFromDb(
+  cr: any,
+  templateId: string,
+  vars: Record<string, string | number | null | undefined>,
+): Promise<{ subject: string; html: string } | null> {
+  const { data: tpl } = await (cr.from("email_templates") as any)
+    .select("subject_it, preview_it, body_it, body_en")
+    .eq("id", templateId)
+    .maybeSingle();
+  if (!tpl?.body_it) return null;
+  const bodyIt = interpolate(tpl.body_it, vars);
+  const subject = interpolate(tpl.subject_it, vars);
+  const preview = interpolate(tpl.preview_it || "", vars);
+  let bodyInner = bodyIt;
+  if (tpl.body_en) bodyInner = bodyIt + BILINGUAL_DIVIDER + interpolate(tpl.body_en, vars);
+  return { subject, html: emailLayout({ lang: "it", preview, bodyInner }) };
+}
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -320,71 +351,49 @@ export async function GET(request: Request) {
   let skipped = 0;
   let failed = 0;
 
+  const cr = createCitationRateServiceClient();
+
   for (const c of c1aFiltered) {
     const lang = detectLang({ email: c.email });
-    const { subject, html } = tpl1A({ name: c.full_name || "", lang, daysSinceSignup: c.days_since_signup });
+    const vars = { nome: c.full_name || "", days: c.days_since_signup };
+    const rendered = await renderFromDb(cr, "1A", vars);
+    if (!rendered) { failed++; results.push({ type: "1A", email: c.email, ok: false, error: "template_missing" }); continue; }
     const r = await sendLifecycleEmail({
-      userId: c.user_id,
-      emailType: "1A",
-      recipientEmail: c.email,
-      lang,
-      subject,
-      html,
+      userId: c.user_id, emailType: "1A", recipientEmail: c.email, lang,
+      subject: rendered.subject, html: rendered.html,
       payload: { days_since_signup: c.days_since_signup },
     });
-    if (r.skipped === "already_sent") skipped++;
-    else if (r.ok) sent++;
-    else failed++;
+    if (r.skipped === "already_sent") skipped++; else if (r.ok) sent++; else failed++;
     results.push({ type: "1A", email: c.email, ok: r.ok, skipped: r.skipped, error: r.error });
     await sleep(250);
   }
 
   for (const c of c1bFiltered) {
     const lang = detectLang({ email: c.email });
-    const { subject, html } = tpl1B({
-      name: c.full_name || "",
-      lang,
-      brand: c.brand,
-      scores: { global: c.global, perEngine: c.scores_per_engine as any },
-      sector: c.sector,
-    });
+    const vars = { nome: c.full_name || "", brand: c.brand, globalScore: c.global };
+    const rendered = await renderFromDb(cr, "1B", vars);
+    if (!rendered) { failed++; results.push({ type: "1B", email: c.email, ok: false, error: "template_missing" }); continue; }
     const r = await sendLifecycleEmail({
-      userId: c.user_id,
-      emailType: "1B",
-      recipientEmail: c.email,
-      lang,
-      subject,
-      html,
+      userId: c.user_id, emailType: "1B", recipientEmail: c.email, lang,
+      subject: rendered.subject, html: rendered.html,
       payload: { brand: c.brand, audit_id: c.audit_id, global_score: c.global },
     });
-    if (r.skipped === "already_sent") skipped++;
-    else if (r.ok) sent++;
-    else failed++;
+    if (r.skipped === "already_sent") skipped++; else if (r.ok) sent++; else failed++;
     results.push({ type: "1B", email: c.email, ok: r.ok, skipped: r.skipped, error: r.error });
     await sleep(250);
   }
 
   for (const c of c1c) {
     const lang: SupportedLang = detectLang({ email: c.email, aviProjectCountry: c.country });
-    const { subject, html } = tpl1C({
-      name: c.full_name || "",
-      lang,
-      brand: c.brand,
-      country: c.country,
-      result: { aviScore: c.avi_score, presence: c.presence, sentiment: c.sentiment, avgRank: c.avg_rank },
-    });
+    const vars = { nome: c.full_name || "", brand: c.brand, aviScore: Math.round(c.avi_score), presence: Math.round(c.presence), sentiment: Math.round(c.sentiment), avgRank: c.avg_rank?.toFixed(1) };
+    const rendered = await renderFromDb(cr, "1C", vars);
+    if (!rendered) { failed++; results.push({ type: "1C", email: c.email, ok: false, error: "template_missing" }); continue; }
     const r = await sendLifecycleEmail({
-      userId: c.user_id,
-      emailType: "1C",
-      recipientEmail: c.email,
-      lang,
-      subject,
-      html,
+      userId: c.user_id, emailType: "1C", recipientEmail: c.email, lang,
+      subject: rendered.subject, html: rendered.html,
       payload: { brand: c.brand, avi_score: c.avi_score },
     });
-    if (r.skipped === "already_sent") skipped++;
-    else if (r.ok) sent++;
-    else failed++;
+    if (r.skipped === "already_sent") skipped++; else if (r.ok) sent++; else failed++;
     results.push({ type: "1C", email: c.email, ok: r.ok, skipped: r.skipped, error: r.error });
     await sleep(250);
   }

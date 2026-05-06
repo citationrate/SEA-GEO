@@ -409,6 +409,7 @@ async function enrichWithAuth(profiles: any[]): Promise<CandidateBase[]> {
 }
 
 export const TRIGGERS: Record<EmailType, () => Promise<any[]>> = {
+  W0: async () => [],   // triggered via webhook, not cron
   "1A": async () => [], // recovery one-shot manuale
   "1B": async () => [],
   "1C": async () => [],

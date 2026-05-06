@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
 import { verifyWebhookSecret, sendAlertEmail, deriveSource, deriveCountry, nowItalian, escapeHtml } from "@/lib/webhooks/alert-email";
 import { sendLifecycleEmail } from "@/lib/email/lifecycle/send";
-import { tplW0 } from "@/lib/email/lifecycle/templates";
 import { detectLang } from "@/lib/email/lifecycle/lang-detect";
+import { emailLayout, escapeHtml } from "@/lib/email/lifecycle/styles";
 
 /**
  * Supabase Database Webhook — INSERT on auth.users (CitationRate project)
@@ -68,24 +68,46 @@ export async function POST(request: Request) {
       console.error("[new-user] email failed:", result.error);
     }
 
-    // W0 — Welcome email to the new user
+    // W0 — Welcome email to the new user (template from DB)
     let w0Sent = false;
     try {
       const fullName: string = rawUserMeta.full_name || rawUserMeta.name || "";
       const lang = detectLang({ email, profileLang: rawUserMeta.lang });
-      const { subject: w0Subject, html: w0Html } = tplW0({ name: fullName, lang });
-      const w0Result = await sendLifecycleEmail({
-        userId,
-        emailType: "W0",
-        recipientEmail: email,
-        lang,
-        subject: w0Subject,
-        html: w0Html,
-        payload: { source, country },
-      });
-      w0Sent = w0Result.ok;
-      if (!w0Result.ok && !w0Result.skipped) {
-        console.error("[new-user] W0 failed:", w0Result.error);
+
+      const supabaseCr = createCitationRateServiceClient();
+      const { data: tpl } = await (supabaseCr.from("email_templates") as any)
+        .select("subject_it, preview_it, body_it, body_en")
+        .eq("id", "W0")
+        .maybeSingle();
+
+      if (tpl?.body_it) {
+        const vars: Record<string, string> = { nome: fullName || (lang === "en" ? "there" : "ciao") };
+        const interpolate = (s: string) => s.replace(/\{(\w+)\}/g, (_, k) => escapeHtml(vars[k] || `{${k}}`));
+        const bodyIt = interpolate(tpl.body_it);
+        const w0Subject = interpolate(tpl.subject_it);
+        const preview = interpolate(tpl.preview_it || "");
+        let bodyInner = bodyIt;
+        if (tpl.body_en) {
+          const divider = `<div style="margin:32px 0;padding:24px 0;border-top:2px solid #e5e7eb;border-bottom:2px solid #e5e7eb;text-align:center;"><span style="font-size:13px;color:#8a8f96;letter-spacing:1px;text-transform:uppercase;">🇬🇧 English version below</span></div>`;
+          bodyInner = bodyIt + divider + interpolate(tpl.body_en);
+        }
+        const w0Html = emailLayout({ lang: "it", preview, bodyInner });
+
+        const w0Result = await sendLifecycleEmail({
+          userId,
+          emailType: "W0",
+          recipientEmail: email,
+          lang,
+          subject: w0Subject,
+          html: w0Html,
+          payload: { source, country },
+        });
+        w0Sent = w0Result.ok;
+        if (!w0Result.ok && !w0Result.skipped) {
+          console.error("[new-user] W0 failed:", w0Result.error);
+        }
+      } else {
+        console.warn("[new-user] W0 template not found in DB, skipping");
       }
     } catch (e) {
       console.error("[new-user] W0 exception:", e instanceof Error ? e.message : e);
