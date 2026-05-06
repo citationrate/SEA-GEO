@@ -1,7 +1,7 @@
 import { callAIModel, filterAvailableModels } from "@citationrate/llm-client";
 import { inngest } from "@/lib/inngest";
 import { createServiceClient } from "@/lib/supabase/service";
-import { fetchCSDiagnostics } from "./cs-bridge";
+import { fetchCSDiagnostics, type DiagnosticEntry } from "./cs-bridge";
 import { extractByPillar, type PillarExtraction } from "./extractor";
 import { generateInsights, type Pillar as InsightPillar } from "./insights";
 import { buildPrompts, type Pillar } from "./prompts";
@@ -165,6 +165,24 @@ export const runBrandProfile = inngest.createFunction(
       return { scores, breakdown };
     });
 
+    const diagnostics = await step.run("cs-bridge", async () => {
+      try {
+        const found = await fetchCSDiagnostics({
+          userId: data.userId,
+          brandUrl: data.brandUrl,
+        });
+        if (found.length > 0) {
+          await (bp.from("diagnostics") as any).insert(
+            found.map((d) => ({ run_id: data.runId, ...d })),
+          );
+        }
+        return found as DiagnosticEntry[];
+      } catch (e) {
+        console.error("[brand-profile/cs-bridge] non-fatal:", e);
+        return [] as DiagnosticEntry[];
+      }
+    });
+
     await step.run("generate-insights", async () => {
       try {
         const { data: rows } = await (bp.from("prompt_results") as any)
@@ -198,6 +216,7 @@ export const runBrandProfile = inngest.createFunction(
           },
           breakdown: computed.breakdown,
           responsesByPillar,
+          diagnostics,
         });
         const rowsToInsert: any[] = [];
         (Object.keys(insights) as InsightPillar[]).forEach((p) => {
@@ -215,22 +234,6 @@ export const runBrandProfile = inngest.createFunction(
         }
       } catch (e) {
         console.error("[brand-profile/generate-insights] non-fatal:", e);
-      }
-    });
-
-    await step.run("cs-bridge", async () => {
-      try {
-        const diagnostics = await fetchCSDiagnostics({
-          userId: data.userId,
-          brandUrl: data.brandUrl,
-        });
-        if (diagnostics.length > 0) {
-          await (bp.from("diagnostics") as any).insert(
-            diagnostics.map((d) => ({ run_id: data.runId, ...d })),
-          );
-        }
-      } catch (e) {
-        console.error("[brand-profile/cs-bridge] non-fatal:", e);
       }
     });
 

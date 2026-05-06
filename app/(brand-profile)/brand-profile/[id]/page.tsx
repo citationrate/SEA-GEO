@@ -22,7 +22,7 @@ export default async function BrandProfileRunPage({ params }: { params: { id: st
 
   if (!run) notFound();
 
-  const [{ data: scores }, { data: insights }, { data: prompts }] = await Promise.all([
+  const [{ data: scores }, { data: insights }, { data: prompts }, { data: diagnostics }] = await Promise.all([
     (bp.from("scores") as any).select("*").eq("run_id", params.id).maybeSingle(),
     (bp.from("insights") as any)
       .select("pillar, insight_text")
@@ -32,6 +32,9 @@ export default async function BrandProfileRunPage({ params }: { params: { id: st
       .eq("run_id", params.id)
       .order("pillar")
       .order("prompt_index"),
+    (bp.from("diagnostics") as any)
+      .select("pillar, cs_parameter_id, cs_status, cs_audit_id, cs_audit_date, note")
+      .eq("run_id", params.id),
   ]);
 
   return (
@@ -42,6 +45,7 @@ export default async function BrandProfileRunPage({ params }: { params: { id: st
         initialScores={scores as any}
         initialInsights={(insights as any) ?? []}
         initialPrompts={(prompts as any) ?? []}
+        initialDiagnostics={(diagnostics as any) ?? []}
       />
     </div>
   );
