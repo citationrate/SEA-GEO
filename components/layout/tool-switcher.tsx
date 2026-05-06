@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Activity, Radar, BarChart3, Check, ChevronUp } from "lucide-react";
+import { Activity, Radar, BarChart3, ArrowLeftRight, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -67,9 +67,8 @@ export function ToolSwitcher({
     };
   }, [open]);
 
-  const currentDef = TOOLS.find((tt) => tt.id === current) ?? TOOLS[0];
-  const CurrentIcon = currentDef.Icon;
-  const currentLabel = t(currentDef.nameKey) || currentDef.fallback;
+  const triggerLabel = t("toolSwitcher.label") || "Cambia strumento";
+  const otherTools = TOOLS.filter((tt) => tt.id !== current);
 
   return (
     <div ref={ref} className="relative">
@@ -78,7 +77,7 @@ export function ToolSwitcher({
         onClick={() => setOpen((s) => !s)}
         aria-expanded={open}
         aria-haspopup="menu"
-        title={collapsed ? currentLabel : undefined}
+        title={collapsed ? triggerLabel : undefined}
         className={cn(
           "w-full flex items-center gap-2 rounded-[2px] transition-colors text-sm",
           collapsed ? "justify-center py-2" : "py-2 px-3 justify-between",
@@ -94,8 +93,8 @@ export function ToolSwitcher({
         }}
       >
         <span className="flex items-center gap-2 truncate">
-          <CurrentIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
-          {!collapsed && <span className="truncate">{currentLabel}</span>}
+          <ArrowLeftRight className="w-4 h-4 shrink-0" aria-hidden="true" />
+          {!collapsed && <span className="truncate">{triggerLabel}</span>}
         </span>
         {!collapsed && (
           <ChevronUp className={cn("w-3.5 h-3.5 transition-transform", open ? "rotate-0" : "rotate-180")} />
@@ -107,27 +106,19 @@ export function ToolSwitcher({
           role="menu"
           className="absolute bottom-full mb-1 left-0 right-0 min-w-[180px] z-50 rounded-[2px] border border-border bg-ink shadow-lg overflow-hidden"
         >
-          {TOOLS.map((tt) => {
+          {otherTools.map((tt) => {
             const Icon = tt.Icon;
-            const isCurrent = tt.id === current;
             const label = t(tt.nameKey) || tt.fallback;
             return (
               <a
                 key={tt.id}
-                href={isCurrent ? undefined : tt.url}
+                href={tt.url}
                 onClick={() => setOpen(false)}
                 role="menuitem"
-                aria-current={isCurrent || undefined}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 text-sm transition-colors",
-                  isCurrent
-                    ? "text-primary cursor-default bg-primary/5"
-                    : "text-foreground hover:bg-surface-2",
-                )}
+                className="flex items-center gap-2 px-3 py-2 text-sm transition-colors text-foreground hover:bg-surface-2"
               >
                 <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
                 <span className="flex-1 truncate">{label}</span>
-                {isCurrent && <Check className="w-3.5 h-3.5 text-primary" aria-hidden="true" />}
               </a>
             );
           })}
