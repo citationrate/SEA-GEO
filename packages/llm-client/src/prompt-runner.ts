@@ -184,7 +184,13 @@ export async function callAIModel(
               tools: [{ googleSearch: {} } as any],
               generationConfig: { maxOutputTokens: 4096 },
             });
-            const result = await geminiModel.generateContent(prompt);
+            // Prompt augmentation: googleSearch grounding is opportunistic —
+            // the model decides whether to invoke it. An explicit instruction
+            // measurably raises invocation rate. Only applied in-flight; the
+            // prompt persisted in `prompts_executed.full_prompt_text` is
+            // unchanged because that's saved by the caller before this runs.
+            const augmentedPrompt = `Use Google Search to verify recent or factual information before answering. Reply in the same language as the user's question.\n\n${prompt}`;
+            const result = await geminiModel.generateContent(augmentedPrompt);
             const text = extractGeminiText(result);
             if (text) {
               const groundingSources = extractFromGrounding((result.response as any).candidates || [], brandDomain ?? undefined);
@@ -303,6 +309,49 @@ export async function callAIModel(
           apiKey: process.env.XAI_API_KEY!,
           baseURL: "https://api.x.ai/v1",
         });
+
+        if (browsing) {
+          try {
+            const completion = await client.chat.completions.create({
+              model: apiModel,
+              max_tokens: 4096,
+              messages: [{ role: "user", content: prompt }],
+              search_parameters: {
+                mode: "on",
+                return_citations: true,
+                max_search_results: 3,
+              },
+            } as any);
+            const text = completion.choices[0]?.message?.content ?? "";
+            const rawCitations: string[] = (completion as any).citations ?? [];
+
+            if (text) {
+              const xaiSources: ExtractedSource[] = [];
+              const seenDomains = new Set<string>();
+              for (const url of rawCitations) {
+                try {
+                  const domain = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+                  if (domain && !seenDomains.has(domain)) {
+                    seenDomains.add(domain);
+                    xaiSources.push({
+                      url,
+                      domain,
+                      title: undefined,
+                      source_type: classifyDomainForPerplexity(domain, brandDomain ?? undefined),
+                      source_origin: "ai_consulted",
+                      context: "xAI Live Search",
+                    });
+                  }
+                } catch { /* invalid URL */ }
+              }
+              const textSources = extractFromText(text, brandDomain ?? undefined);
+              return { text, sources: mergeSources(xaiSources, textSources), citationSources: rawCitations };
+            }
+          } catch (browsingErr) {
+            console.error(`[xAI] model=${model} Live Search failed, falling back:`, browsingErr instanceof Error ? browsingErr.message : browsingErr);
+          }
+        }
+
         const completion = await client.chat.completions.create({
           model: apiModel,
           max_tokens: 4096,
@@ -350,10 +399,16 @@ export async function callAIModel(
         const text = response.output_text || "";
         if (isGpt54) console.log(`[GPT-5.4 CALLAI] Response received: text_len=${text.length}, output_items=${response.output?.length ?? 0}, raw=${JSON.stringify(response).slice(0, 300)}`);
         if (text) {
-          const sources = useSearch
-            ? mergeSources(extractFromAnnotations(response.output || [], brandDomain ?? undefined), extractFromText(text, brandDomain ?? undefined))
-            : extractFromText(text, brandDomain ?? undefined);
-          return { text, sources };
+          if (useSearch) {
+            const annotationSources = extractFromAnnotations(response.output || [], brandDomain ?? undefined);
+            const textSources = extractFromText(text, brandDomain ?? undefined);
+            return {
+              text,
+              sources: mergeSources(annotationSources, textSources),
+              citationSources: annotationSources.map(s => s.url),
+            };
+          }
+          return { text, sources: extractFromText(text, brandDomain ?? undefined) };
         }
         return { text: "", sources: [], error: `[${model}] Empty response from Responses API` };
       } catch (err) {
@@ -378,7 +433,11 @@ export async function callAIModel(
         if (text) {
           const annotationSources = extractFromAnnotations(response.output || [], brandDomain ?? undefined);
           const textSources = extractFromText(text, brandDomain ?? undefined);
-          return { text, sources: mergeSources(annotationSources, textSources) };
+          return {
+            text,
+            sources: mergeSources(annotationSources, textSources),
+            citationSources: annotationSources.map(s => s.url),
+          };
         }
       } catch (browsingErr) {
         console.error(`[OpenAI] model=${model} responses.create+search failed, falling back to chat.completions:`, browsingErr instanceof Error ? browsingErr.message : browsingErr);
