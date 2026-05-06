@@ -8,6 +8,7 @@ import { getEffectivePlanId } from "@/lib/utils/is-pro";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
 import { trackAviStartTrialOnce } from "@/lib/meta-track";
+import { ContextualCoachmark } from "@/components/contextual-coachmark";
 
 interface ModelOption {
   id: string;
@@ -366,6 +367,17 @@ export default function NewProjectPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+      {/* Idle coachmark: surfaces if the user lingers 45s on the form
+          without typing the project name — points at the first input. */}
+      <ContextualCoachmark
+        id="avi-project-name-input"
+        anchorSelector='[data-coachmark="avi-project-name-input"]'
+        idleSeconds={45}
+        title={t("coach.aviProjectNewTitle")}
+        description={t("coach.aviProjectNewDesc")}
+        ctaLabel={t("coach.aviProjectNewCta")}
+        position="bottom"
+      />
       <div>
         <a href="/projects" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
           <ArrowLeft className="w-4 h-4" />
@@ -380,7 +392,8 @@ export default function NewProjectPage() {
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">{t("projects.projectName")}</label>
           <input type="text" required value={name} onChange={(e) => setName(e.target.value)}
-            placeholder={t("projects.projectNamePlaceholder")} className="input-base" />
+            placeholder={t("projects.projectNamePlaceholder")} className="input-base"
+            data-coachmark="avi-project-name-input" />
         </div>
 
         {/* Brand rilevato */}
