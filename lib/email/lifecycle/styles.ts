@@ -134,19 +134,11 @@ export function heading(line1: string, accentLine?: string): string {
 
 export function emailLayout(opts: { preview: string; bodyInner: string; lang?: string }): string {
   const lang = opts.lang || "it";
-  const footerByLang: Record<string, { team: string; reply: string; address: string }> = {
-    it: {
-      team: "Team CitationRate",
-      reply: "Se hai domande, rispondi a questa mail. Ci siamo.",
-      address: "CitationRate &middot; suite.citationrate.com &middot; avi.citationrate.com",
-    },
-    en: {
-      team: "The CitationRate Team",
-      reply: "If you have questions, just reply to this email. We're here.",
-      address: "CitationRate &middot; suite.citationrate.com &middot; avi.citationrate.com",
-    },
+  const f = {
+    team: "Team CitationRate",
+    reply: "Se hai domande, rispondi a questa mail. Ci siamo.<br><em style=\"color:" + colors.textMuted + ";font-size:14px;\">If you have questions, just reply to this email. We're here.</em>",
+    address: "CitationRate &middot; suite.citationrate.com &middot; avi.citationrate.com",
   };
-  const f = footerByLang[lang] || footerByLang.it;
 
   return `<!DOCTYPE html>
 <html lang="${escapeAttr(lang)}">
