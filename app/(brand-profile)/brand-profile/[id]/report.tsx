@@ -56,12 +56,12 @@ interface DiagnosticRow {
   note: string | null;
 }
 
-const PILLAR_KEYS: Array<{ key: keyof Omit<ScoreRow, "total" | "breakdown">; tKey: string }> = [
-  { key: "recognition", tKey: "brandProfile.pillarRecognition" },
-  { key: "clarity", tKey: "brandProfile.pillarClarity" },
-  { key: "authority", tKey: "brandProfile.pillarAuthority" },
-  { key: "relevance", tKey: "brandProfile.pillarRelevance" },
-  { key: "sentiment", tKey: "brandProfile.pillarSentiment" },
+const PILLAR_KEYS: Array<{ key: keyof Omit<ScoreRow, "total" | "breakdown">; tKey: string; descKey: string }> = [
+  { key: "recognition", tKey: "brandProfile.pillarRecognition", descKey: "brandProfile.pillarDescRecognition" },
+  { key: "clarity",     tKey: "brandProfile.pillarClarity",     descKey: "brandProfile.pillarDescClarity"     },
+  { key: "authority",   tKey: "brandProfile.pillarAuthority",   descKey: "brandProfile.pillarDescAuthority"   },
+  { key: "relevance",   tKey: "brandProfile.pillarRelevance",   descKey: "brandProfile.pillarDescRelevance"   },
+  { key: "sentiment",   tKey: "brandProfile.pillarSentiment",   descKey: "brandProfile.pillarDescSentiment"   },
 ];
 
 function scoreColor(v: number | null | undefined): string {
@@ -96,6 +96,7 @@ export function BrandProfileReport({
   const [insights, setInsights] = useState<InsightRow[]>(initialInsights);
   const [prompts] = useState<PromptRow[]>(initialPrompts);
   const [diagnostics, setDiagnostics] = useState<DiagnosticRow[]>(initialDiagnostics);
+  const [openPillar, setOpenPillar] = useState<string | null>(null);
 
   const isPolling = run.status === "pending" || run.status === "running";
   const total = Number(scores?.total ?? 0);
@@ -237,26 +238,61 @@ export function BrandProfileReport({
                 }}
               />
             </div>
-            <div className="card p-6 flex flex-col justify-center">
-              <div className="text-xs text-muted-foreground uppercase tracking-wide">{t("brandProfile.scoreTotal")}</div>
-              <div className={`font-display text-6xl font-bold leading-none ${scoreColor(total)}`}>
-                {Math.round(total)}
+            <div className="card p-6 flex flex-col">
+              <div className="flex flex-col items-center text-center pb-5">
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">{t("brandProfile.scoreTotal")}</div>
+                <div className={`font-display text-7xl font-bold leading-none mt-2 ${scoreColor(total)}`}>
+                  {Math.round(total)}
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">{t("brandProfile.scoreOutOf")}</div>
               </div>
-              <div className="text-xs text-muted-foreground mt-1">{t("brandProfile.scoreOutOf")}</div>
-              <div className="grid grid-cols-5 gap-2 mt-6">
-                {PILLAR_KEYS.map((p) => {
-                  const v = Number(scores[p.key] ?? 0);
-                  return (
-                    <div key={p.key} className="text-center">
-                      <div className={`font-display text-lg font-bold ${scoreColor(v)}`}>
-                        {Math.round(v)}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5 truncate">
-                        {t(p.tKey)}
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="border-t border-border pt-3">
+                <ul className="space-y-1">
+                  {PILLAR_KEYS.map((p) => {
+                    const v = Number(scores[p.key] ?? 0);
+                    const isOpen = openPillar === p.key;
+                    const subBreakdown = (scores.breakdown as any)?.[p.key as string];
+                    return (
+                      <li key={p.key}>
+                        <button
+                          type="button"
+                          onClick={() => setOpenPillar(isOpen ? null : (p.key as string))}
+                          aria-expanded={isOpen}
+                          className="w-full flex items-center justify-between gap-3 px-2 py-2 rounded-[2px] hover:bg-surface-2 transition-colors"
+                        >
+                          <span className="flex items-center gap-2 min-w-0">
+                            <ChevronDown
+                              className={`w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform ${isOpen ? "" : "-rotate-90"}`}
+                            />
+                            <span className="text-sm text-foreground truncate">{t(p.tKey)}</span>
+                          </span>
+                          <span className={`font-mono font-semibold text-sm tabular-nums ${scoreColor(v)}`}>
+                            {Math.round(v)}
+                          </span>
+                        </button>
+                        {isOpen && (
+                          <div className="px-2 pt-1 pb-3 space-y-2">
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              {t(p.descKey)}
+                            </p>
+                            {subBreakdown && (
+                              <ul className="space-y-1 pt-1">
+                                {Object.entries(subBreakdown).map(([k, vv]) => (
+                                  <li key={k} className="flex items-center justify-between text-xs gap-3">
+                                    <span className="text-muted-foreground capitalize">{k.replace(/_/g, " ")}</span>
+                                    <span className={`font-mono tabular-nums ${scoreColor(Number(vv))}`}>
+                                      {Math.round(Number(vv))}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             </div>
           </div>
