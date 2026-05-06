@@ -2,6 +2,10 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { translations, type Locale } from "./translations";
+import {
+  writeLocaleCookie as writeSharedLocaleCookie,
+  readLocaleCookie as readSharedLocaleCookie,
+} from "@/lib/preferences-cookie";
 
 interface I18nContextValue {
   locale: Locale;
@@ -12,22 +16,19 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 const LS_KEY = "seageo-lang";
-const COOKIE_KEY = "avi-locale";
-// One year, in seconds. Server components read this cookie to know the user's
-// locale (the localStorage value is invisible to SSR).
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+const LEGACY_COOKIE_KEY = "avi-locale";
 
-function writeLocaleCookie(l: Locale) {
-  if (typeof document === "undefined") return;
-  document.cookie = `${COOKIE_KEY}=${l}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
-}
-
-function readLocaleCookie(): Locale | null {
+function readLegacyAviLocaleCookie(): Locale | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(
-    new RegExp(`(?:^|; )${COOKIE_KEY}=([^;]*)`),
+    new RegExp(`(?:^|; )${LEGACY_COOKIE_KEY}=([^;]*)`),
   );
   const v = match?.[1];
+  return v && v in translations ? (v as Locale) : null;
+}
+
+function readSharedLocale(): Locale | null {
+  const v = readSharedLocaleCookie();
   return v && v in translations ? (v as Locale) : null;
 }
 
@@ -36,14 +37,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Preference order: shared cross-subdomain cookie → legacy avi-locale → localStorage
     const stored =
-      (localStorage.getItem(LS_KEY) as Locale | null) || readLocaleCookie();
+      readSharedLocale() ??
+      readLegacyAviLocaleCookie() ??
+      ((localStorage.getItem(LS_KEY) as Locale | null) || null);
     if (stored && stored in translations) {
       setLocaleState(stored);
       document.documentElement.lang = stored;
-      // Backfill cookie if the user only had localStorage (returning user
-      // before this change shipped).
-      writeLocaleCookie(stored);
+      // Backfill the shared cookie if we only had legacy state.
+      writeSharedLocaleCookie(stored);
     }
     setMounted(true);
   }, []);
@@ -51,7 +54,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
     localStorage.setItem(LS_KEY, l);
-    writeLocaleCookie(l);
+    writeSharedLocaleCookie(l);
     document.documentElement.lang = l;
   }, []);
 
