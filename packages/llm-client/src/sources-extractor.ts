@@ -10,7 +10,10 @@ export interface ExtractedSource {
   associated_brand?: string;
 }
 
-/** Estrae fonti da URL citation annotations (OpenAI Responses API) */
+/** Estrae fonti da URL citation annotations (OpenAI Responses API web_search_preview).
+ *  url_citation annotations are emitted only when the model actually invoked
+ *  the web_search tool, so origin is "ai_consulted" (parallel to Anthropic
+ *  web_search_tool_result and Gemini groundingMetadata). */
 export function extractFromAnnotations(output: any[], brandDomain?: string): ExtractedSource[] {
   const results: ExtractedSource[] = [];
   const seen = new Set<string>();
@@ -28,7 +31,7 @@ export function extractFromAnnotations(output: any[], brandDomain?: string): Ext
                   domain,
                   title: annotation.title,
                   source_type: classifyDomain(domain, brandDomain),
-                  source_origin: "text_mention",
+                  source_origin: "ai_consulted",
                 });
               }
             }

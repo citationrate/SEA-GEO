@@ -652,7 +652,17 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                                 {errorLabel ? t(errorLabel) : t("common.error")}
                               </span>
                             : p.raw_response
-                              ? <span className="badge badge-success text-[12px]">OK</span>
+                              ? <span className="inline-flex items-center gap-1.5">
+                                  <span className="badge badge-success text-[12px]">OK</span>
+                                  {p.citation_urls && p.citation_urls.length > 0 && (
+                                    <span
+                                      className="text-success"
+                                      title={t("runMetrics.browsingUsedTooltip").replace("{n}", String(p.citation_urls.length))}
+                                    >
+                                      <Globe className="w-3.5 h-3.5" />
+                                    </span>
+                                  )}
+                                </span>
                               : <span className="badge badge-muted text-[12px]">Pending</span>}
                         </td>
                         <td className="py-2">
@@ -728,6 +738,15 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
               {modalPrompt.analysis?.sentiment_score != null && (
                 <span className={`badge badge-muted ${sentimentColor(modalPrompt.analysis.sentiment_score)}`}>
                   Sentiment: {sentimentSign(modalPrompt.analysis.sentiment_score)}{modalPrompt.analysis.sentiment_score.toFixed(2)}
+                </span>
+              )}
+              {modalPrompt.prompt.citation_urls && modalPrompt.prompt.citation_urls.length > 0 && (
+                <span
+                  className="badge badge-success flex items-center gap-1"
+                  title={t("runMetrics.browsingUsedTooltip").replace("{n}", String(modalPrompt.prompt.citation_urls.length))}
+                >
+                  <Globe className="w-3 h-3" />
+                  {t("runMetrics.browsingUsed")} ({modalPrompt.prompt.citation_urls.length})
                 </span>
               )}
             </div>
