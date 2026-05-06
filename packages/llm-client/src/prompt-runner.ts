@@ -29,6 +29,8 @@ export const API_MODEL_ID: Record<string, string> = {
   "gpt-5.4-mini": "gpt-5.4-mini-2026-03-17",
   "gpt-5.4": "gpt-5.4-2026-03-05",
   "gpt-5.5": "gpt-5.5",
+  "grok-4.3": "grok-4.3",
+  "grok-4-1-fast": "grok-4-1-fast",
   "perplexity-sonar": "sonar",
   "perplexity-sonar-pro": "sonar-pro",
   "copilot-gpt4": "gpt-4o",
@@ -308,47 +310,33 @@ export async function callAIModel(
         const client = new OpenAI({
           apiKey: process.env.XAI_API_KEY!,
           baseURL: "https://api.x.ai/v1",
+          timeout: 240_000,
+          maxRetries: 0,
         });
 
+        // xAI Web Search lives on the Responses API (the legacy Live Search
+        // parameters on chat/completions were retired in Jan 2026). Only
+        // Grok 4.x supports `web_search`; older Grok 3 IDs are kept in
+        // LEGACY_MODEL_IDS and never reach this branch from the UI.
         if (browsing) {
           try {
-            const completion = await client.chat.completions.create({
+            const response = await client.responses.create({
               model: apiModel,
-              max_tokens: 4096,
-              messages: [{ role: "user", content: prompt }],
-              search_parameters: {
-                mode: "on",
-                return_citations: true,
-                max_search_results: 3,
-              },
+              input: prompt,
+              tools: [{ type: "web_search" }],
             } as any);
-            const text = completion.choices[0]?.message?.content ?? "";
-            const rawCitations: string[] = (completion as any).citations ?? [];
-
+            const text = (response as any).output_text || "";
             if (text) {
-              const xaiSources: ExtractedSource[] = [];
-              const seenDomains = new Set<string>();
-              for (const url of rawCitations) {
-                try {
-                  const domain = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
-                  if (domain && !seenDomains.has(domain)) {
-                    seenDomains.add(domain);
-                    xaiSources.push({
-                      url,
-                      domain,
-                      title: undefined,
-                      source_type: classifyDomainForPerplexity(domain, brandDomain ?? undefined),
-                      source_origin: "ai_consulted",
-                      context: "xAI Live Search",
-                    });
-                  }
-                } catch { /* invalid URL */ }
-              }
+              const annotationSources = extractFromAnnotations((response as any).output || [], brandDomain ?? undefined);
               const textSources = extractFromText(text, brandDomain ?? undefined);
-              return { text, sources: mergeSources(xaiSources, textSources), citationSources: rawCitations };
+              return {
+                text,
+                sources: mergeSources(annotationSources, textSources),
+                citationSources: annotationSources.map(s => s.url),
+              };
             }
           } catch (browsingErr) {
-            console.error(`[xAI] model=${model} Live Search failed, falling back:`, browsingErr instanceof Error ? browsingErr.message : browsingErr);
+            console.error(`[xAI] model=${model} Responses+web_search failed, falling back:`, browsingErr instanceof Error ? browsingErr.message : browsingErr);
           }
         }
 
@@ -388,7 +376,7 @@ export async function callAIModel(
       if (isGpt54) console.log(`[GPT-5.4 CALLAI] Entered Responses API path. browsing=${browsing}, apiModel=${apiModel}`);
       try {
         const useSearch = browsing && !isReasoning;
-        const tools = useSearch ? [{ type: "web_search_preview" as const }] : undefined;
+        const tools = useSearch ? [{ type: "web_search" as const }] : undefined;
         if (isGpt54) console.log(`[GPT-5.4 CALLAI] Calling openai.responses.create with${useSearch ? "" : "out"} tools`);
         const response = await openai.responses.create({
           model: apiModel,
@@ -423,10 +411,10 @@ export async function callAIModel(
     // Standard OpenAI models: try Responses API with web_search when browsing
     if (browsing) {
       try {
-        console.log(`[OpenAI] model=${model} apiModel=${apiModel} responses.create with web_search_preview (standard)`);
+        console.log(`[OpenAI] model=${model} apiModel=${apiModel} responses.create with web_search (standard)`);
         const response = await openai.responses.create({
           model: apiModel,
-          tools: [{ type: "web_search_preview" }],
+          tools: [{ type: "web_search" }],
           input: prompt,
         });
         const text = response.output_text || "";
