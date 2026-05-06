@@ -54,6 +54,7 @@ export function BrandProfileSidebar({ profile }: SidebarProps) {
   const isEnterprise = profile?.plan === "enterprise";
   const isAgency = profile?.plan === "agency";
   const compareUnlocked = isPro || isEnterprise || isAgency;
+  const historyUnlocked = isBase || isPro || isEnterprise || isAgency;
   const planLabel = isDemo ? "Demo" : isBase ? "Base" : isPro ? "Pro" : isEnterprise ? "Enterprise" : profile?.plan ?? "Demo";
   const planColor = isBase ? "#60a5fa" : isPro || isEnterprise ? "#c4a882" : undefined;
 
@@ -71,7 +72,9 @@ export function BrandProfileSidebar({ profile }: SidebarProps) {
         compareUnlocked
           ? { href: "/brand-profile/compare", icon: GitCompare, label: t("brandProfileSidebar.compare") || "Confronto" }
           : { href: "#",  icon: GitCompare,  label: t("brandProfileSidebar.compare") || "Confronto", soon: true },
-        { href: "#",  icon: TrendingUp,  label: t("brandProfileSidebar.history") || "Storico",   soon: true },
+        historyUnlocked
+          ? { href: "/brand-profile/history", icon: TrendingUp, label: t("brandProfileSidebar.history") || "Storico" }
+          : { href: "#",  icon: TrendingUp,  label: t("brandProfileSidebar.history") || "Storico", soon: true },
         { href: "#",  icon: FileDown,    label: t("brandProfileSidebar.export") || "Export PDF", soon: true },
       ],
     },
