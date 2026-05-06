@@ -1,5 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
+import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
+import { bpComparePlanAllowed } from "@/lib/brand-profile/plans";
 import { BrandProfileReport } from "./report";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +12,13 @@ export default async function BrandProfileRunPage({ params }: { params: { id: st
   const { data: { session } } = await auth.auth.getSession();
   const user = session?.user ?? null;
   if (!user) redirect("/login");
+
+  const cr = createCitationRateServiceClient();
+  const { data: crProfile } = await (cr.from("profiles") as any)
+    .select("plan")
+    .eq("id", user.id)
+    .single();
+  const canExport = bpComparePlanAllowed((crProfile?.plan as string | undefined) ?? "demo");
 
   const data = createDataClient();
   const bp = data.schema("brand_profile" as any);
@@ -46,6 +55,7 @@ export default async function BrandProfileRunPage({ params }: { params: { id: st
         initialInsights={(insights as any) ?? []}
         initialPrompts={(prompts as any) ?? []}
         initialDiagnostics={(diagnostics as any) ?? []}
+        canExport={canExport}
       />
     </div>
   );
