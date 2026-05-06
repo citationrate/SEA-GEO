@@ -80,6 +80,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             wait_for_update: 500
           });
         `}} />
+        {/* GA4 — Citation Rate */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-2FT65PHRXJ" />
+        <script dangerouslySetInnerHTML={{ __html: `
+          gtag('config', 'G-2FT65PHRXJ');
+        `}} />
         {/* Google Tag Manager — loaded on every page, tags gated via Consent Mode v2 */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
