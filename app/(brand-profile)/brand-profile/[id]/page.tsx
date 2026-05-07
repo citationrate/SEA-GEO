@@ -15,11 +15,12 @@ export default async function BrandProfileRunPage({ params }: { params: { id: st
 
   const cr = createCitationRateServiceClient();
   const { data: crProfile } = await (cr.from("profiles") as any)
-    .select("plan")
+    .select("plan, is_admin")
     .eq("id", user.id)
     .single();
   const userPlan = ((crProfile?.plan as string | undefined) ?? "demo").toLowerCase();
   const canExport = bpComparePlanAllowed(userPlan);
+  const isAdmin = !!(crProfile as any)?.is_admin;
 
   const data = createDataClient();
   const bp = data.schema("brand_profile" as any);
@@ -58,6 +59,7 @@ export default async function BrandProfileRunPage({ params }: { params: { id: st
         initialDiagnostics={(diagnostics as any) ?? []}
         canExport={canExport}
         userPlan={userPlan}
+        isAdmin={isAdmin}
       />
     </div>
   );

@@ -189,14 +189,11 @@ export function RunInProgressAnimation({
           </p>
         </div>
 
-        {/* Progress bar */}
+        {/* Progress bar — only the % stays visible per user feedback;
+            the "X / Y prompts" exposé was technical noise. */}
         <div className="w-full max-w-md">
-          <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
-            <span>{t("brandProfile.runProgressPromptsLabel")}</span>
-            <span className="tabular-nums">
-              {completed} / {total > 0 ? total : "…"}
-              {total > 0 && <span className="ml-2 text-foreground">{progressPct}%</span>}
-            </span>
+          <div className="flex items-center justify-end text-[11px] font-mono uppercase tracking-wider text-foreground mb-1.5 tabular-nums">
+            {total > 0 ? `${progressPct}%` : "…"}
           </div>
           <div className="h-1 bg-surface-2 rounded-full overflow-hidden">
             <div
