@@ -83,7 +83,7 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
 
   // 1c. Check if template is active in CRM
   const { data: tpl } = await (cr.from("email_templates") as any)
-    .select("active")
+    .select("active, unsubscribe_text, unsubscribe_url")
     .eq("id", input.emailType)
     .maybeSingle();
 
@@ -141,7 +141,10 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
 
   // Inject open pixel + click tracking before sending
   const trackingId = randomUUID();
-  const trackedHtml = injectTracking(input.html, trackingId);
+  const trackedHtml = injectTracking(input.html, trackingId, {
+    unsubscribeText: tpl?.unsubscribe_text || undefined,
+    unsubscribeUrl: tpl?.unsubscribe_url || undefined,
+  });
 
   const sendResult = await resend.emails.send({
     from: `${FROM_NAME} <${FROM_EMAIL}>`,

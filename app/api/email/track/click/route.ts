@@ -12,6 +12,7 @@ import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-ser
 export async function GET(req: NextRequest) {
   const trackingId = req.nextUrl.searchParams.get("id");
   const destinationUrl = req.nextUrl.searchParams.get("url");
+  const isUnsub = req.nextUrl.searchParams.get("unsub") === "1";
 
   // Always redirect even if tracking fails
   if (!destinationUrl) {
@@ -19,8 +20,8 @@ export async function GET(req: NextRequest) {
   }
 
   if (trackingId) {
-    // Fire-and-forget
-    void handleClick(trackingId, destinationUrl, req).catch((e) =>
+    // Fire-and-forget: track click + handle unsubscribe if needed
+    void handleClick(trackingId, destinationUrl, req, isUnsub).catch((e) =>
       console.error("[track/click]", e),
     );
   }
@@ -32,12 +33,13 @@ async function handleClick(
   trackingId: string,
   url: string,
   req: NextRequest,
+  isUnsub: boolean,
 ) {
   const cr = createCitationRateServiceClient();
   const now = new Date().toISOString();
 
   const { data: existing } = await (cr.from("lifecycle_emails") as any)
-    .select("id, click_count, first_clicked_at")
+    .select("id, user_id, click_count, first_clicked_at")
     .eq("tracking_id", trackingId)
     .maybeSingle();
 
@@ -54,11 +56,22 @@ async function handleClick(
   // Audit log
   await (cr.from("email_events") as any).insert({
     message_id: trackingId,
-    event_type: "email.clicked",
+    event_type: isUnsub ? "email.unsubscribed" : "email.clicked",
     occurred_at: now,
     payload: {},
     link_url: url,
     ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
     user_agent: req.headers.get("user-agent") || null,
   });
+
+  // If custom unsub link: also set marketing_consent = false
+  if (isUnsub && existing.user_id) {
+    await (cr.from("profiles") as any)
+      .update({ marketing_consent: false })
+      .eq("id", existing.user_id);
+
+    await (cr.from("lifecycle_emails") as any)
+      .update({ unsubscribed_at: now })
+      .eq("id", existing.id);
+  }
 }
