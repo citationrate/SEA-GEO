@@ -461,7 +461,14 @@ async function extractCompetitorsTopicsSources(
 
   const sectorCompetitorGuidance = getSectorCompetitorGuidance(sector);
 
-  const prompt = `You are an AI analyst. The brand "${targetBrand}" is NOT present in this response.
+  // Split prompt into a STATIC prefix (cacheable for the duration of a run —
+  // brand/sector/language/brandType are stable) and a DYNAMIC suffix
+  // (the response under analysis, different per call). Anthropic prompt
+  // caching: marking the static block with cache_control=ephemeral makes
+  // every subsequent call within ~5 min pay only 10% of the input rate on
+  // the cached portion. For Haiku this collapses ~$0.0009 → ~$0.0001 per
+  // cached call after the first one.
+  const staticPrompt = `You are an AI analyst. The brand "${targetBrand}" is NOT present in this response.
 Sector: ${sector ?? "generic"}
 Brand type: ${brandType ?? "manufacturer"}
 
@@ -518,7 +525,9 @@ If a name sounds like an institution, exclude it. If a name sounds like a commer
 Return ONLY company/brand names, never product names or model numbers.
 
 SOURCES — extract ONLY URLs/domains LITERALLY written in the response. Do NOT infer domains from brand names. If no explicit URLs appear, return "sources": [].
-source_type: media|review|ecommerce|social|competitor|wikipedia|other
+source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
+
+  const dynamicSuffix = `
 
 Analyze this response:
 
@@ -529,7 +538,15 @@ ${cleanResponse}`;
     const haikuCall = () => anthropic.messages.create({
       model: HAIKU_API_MODEL,
       max_tokens: 2000,
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: staticPrompt, cache_control: { type: "ephemeral" } },
+            { type: "text", text: dynamicSuffix },
+          ] as any,
+        },
+      ],
     });
     const message = trackingContext
       ? await trackedAICall(
@@ -769,6 +786,14 @@ ${competitorExclusionRules}
 SOURCES — extract ONLY URLs/domains LITERALLY written in the response text. Do NOT infer domains from brand names. If no explicit URLs appear, return "sources": [].
 source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
 
+  // Same caching strategy as extractCompetitorsTopicsSources above.
+  // systemPrompt is stable for the duration of a run (depends on
+  // language/sector/brandType which don't change between prompts of the
+  // same project), so marking it cache_control=ephemeral lets every call
+  // after the first within ~5 min pay only 10% of the cached input rate.
+  const cleanedResponse = response.replace(/\[(\d{1,2})\]/g, "").replace(/\s{2,}/g, " ").slice(0, 3000);
+  const dynamicSuffix = `\n\nAnalizza questa risposta:\n\n${cleanedResponse}`;
+
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const haikuCall = () => anthropic.messages.create({
     model: HAIKU_API_MODEL,
@@ -776,7 +801,10 @@ source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
     messages: [
       {
         role: "user",
-        content: `${systemPrompt}\n\nAnalizza questa risposta:\n\n${response.replace(/\[(\d{1,2})\]/g, "").replace(/\s{2,}/g, " ").slice(0, 3000)}`,
+        content: [
+          { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
+          { type: "text", text: dynamicSuffix },
+        ] as any,
       },
     ],
   });
