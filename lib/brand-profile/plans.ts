@@ -32,3 +32,13 @@ export function bpComparePlanAllowed(plan: string | null | undefined): boolean {
 
 export const BP_COMPARE_MIN_RUNS = 2;
 export const BP_COMPARE_MAX_RUNS = 4;
+
+const BP_HISTORY_PLANS = new Set(["base", "pro", "agency", "enterprise"]);
+
+export function bpHistoryPlanAllowed(plan: string | null | undefined): boolean {
+  return BP_HISTORY_PLANS.has((plan ?? "demo").toLowerCase());
+}
+
+export function bpTimeSeriesAllowed(plan: string | null | undefined): boolean {
+  return (plan ?? "demo").toLowerCase() === "enterprise";
+}
