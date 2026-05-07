@@ -208,7 +208,7 @@ export function PianoClient({ plan, planExpires }: { plan: string; planExpires: 
 
       {/* Tool tabs */}
       <div className="card p-0 overflow-hidden">
-        <div className="flex border-b border-border">
+        <div className="flex border-b border-border overflow-x-auto">
           {TOOLS.map((tool) => {
             const Icon = tool.Icon;
             const isActive = tool.key === activeTool;
@@ -217,15 +217,15 @@ export function PianoClient({ plan, planExpires }: { plan: string; planExpires: 
                 key={tool.key}
                 type="button"
                 onClick={() => setActiveTool(tool.key)}
-                className={`flex-1 px-4 py-3 text-sm font-medium border-r border-border last:border-r-0 transition-colors ${
+                className={`flex-1 min-w-[110px] px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium border-r border-border last:border-r-0 transition-colors whitespace-nowrap ${
                   isActive
                     ? "bg-primary/[0.06] text-primary border-b-2 border-b-primary -mb-px"
                     : "text-muted-foreground hover:text-foreground hover:bg-surface-2"
                 }`}
               >
-                <span className="inline-flex items-center gap-2">
-                  <Icon className="w-4 h-4" />
-                  {tool.label}
+                <span className="inline-flex items-center gap-1.5 sm:gap-2">
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{tool.label}</span>
                 </span>
               </button>
             );

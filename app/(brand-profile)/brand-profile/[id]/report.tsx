@@ -818,7 +818,7 @@ function RawResponsesModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors shrink-0"
+            className="w-11 h-11 md:w-8 md:h-8 flex items-center justify-center rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors shrink-0"
             aria-label="Close"
           >
             <ChevronUp className="w-4 h-4 rotate-45" />
