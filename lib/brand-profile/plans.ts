@@ -31,27 +31,29 @@ export function bpAccessAllowed(opts: { email?: string | null; isAdmin?: boolean
 }
 
 /**
- * Curated model pool per plan (server-side selection — the user no longer
- * picks models from the wizard). Pools are append-only as the plan tier
- * grows so a Pro run includes everything Base sees, plus extras.
+ * Curated model pool — the same 2 models for every plan. We picked
+ * claude-haiku (Anthropic, ~$0.0005/main + $0.0016 extractor) and
+ * perplexity-sonar (web-search grounded, ~$0.002/main + $0.0016 extractor):
  *
- * Cost ladder (cheapest first): claude-haiku < gpt-5.4-mini < gemini-2.5-flash
- * < perplexity-sonar < claude-sonnet < gpt-5.5.
+ * - Haiku gives a fast, cheap, training-data view of the brand.
+ * - Sonar adds a live-web view, which is what AI users with browsing
+ *   actually experience — exactly the signal Brand Profile measures.
+ *
+ * Per-run cost ≈ 30 prompts × ~$0.003 + 1 Sonnet insights call ≈ $0.14.
+ *
+ * Plans differentiate on RUN QUOTA + FEATURE GATING (compare, history,
+ * time-series, PDF), not on model pool. To change the pool, edit this
+ * single array — every plan inherits the change.
  */
+const BP_MODEL_POOL: readonly string[] = ["claude-haiku", "perplexity-sonar"];
+
 export const BP_MODELS_BY_PLAN: Record<string, readonly string[]> = {
-  demo: ["claude-haiku"],
-  free: ["claude-haiku"],
-  base: ["claude-haiku", "gpt-5.4-mini"],
-  pro: ["claude-haiku", "gpt-5.4-mini", "gemini-2.5-flash", "perplexity-sonar"],
-  agency: ["claude-haiku", "gpt-5.4-mini", "gemini-2.5-flash", "perplexity-sonar"],
-  enterprise: [
-    "claude-haiku",
-    "gpt-5.4-mini",
-    "gemini-2.5-flash",
-    "perplexity-sonar",
-    "claude-sonnet",
-    "gpt-5.5",
-  ],
+  demo: BP_MODEL_POOL,
+  free: BP_MODEL_POOL,
+  base: BP_MODEL_POOL,
+  pro: BP_MODEL_POOL,
+  agency: BP_MODEL_POOL,
+  enterprise: BP_MODEL_POOL,
 };
 
 export function bpRunLimit(plan: string | null | undefined): number {
