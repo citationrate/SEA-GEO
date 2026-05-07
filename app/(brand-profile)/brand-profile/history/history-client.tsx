@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -75,12 +76,24 @@ export function HistoryClient({
   showTimeSeries: boolean;
 }) {
   const { t } = useTranslation();
+  const router = useRouter();
   const [completedOnly, setCompletedOnly] = useState(true);
   const [country, setCountry] = useState<string>("");
   const [sector, setSector] = useState<string>("");
   const [brand, setBrand] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  // The page is force-dynamic but Next's bfcache can still serve a stale
+  // snapshot after navigating back from a run detail or completing a new
+  // run. router.refresh() invalidates the RSC cache and re-runs the SSR
+  // fetch so a freshly-completed run shows up without a manual reload.
+  useEffect(() => {
+    router.refresh();
+    const onFocus = () => router.refresh();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [router]);
 
   const countries = useMemo(
     () => Array.from(new Set(items.map((i) => i.country))).sort(),
