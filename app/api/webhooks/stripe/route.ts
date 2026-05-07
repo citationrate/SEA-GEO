@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getStripe, isPackagePrice, packageDetailsFromPriceId } from "@/lib/stripe/client";
 import { createServiceClient } from "@/lib/supabase/service";
+import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
 import { addToWallet } from "@/lib/usage";
+import { bpPackFromPriceId } from "@/lib/brand-profile/extra-packs";
 import type Stripe from "stripe";
 
 /**
@@ -75,7 +77,21 @@ async function handleCheckoutCompleted(eventId: string, session: Stripe.Checkout
 
   const lineItems = await getStripe().checkout.sessions.listLineItems(session.id);
   const priceId = lineItems.data[0]?.price?.id;
-  if (!priceId || !isPackagePrice(priceId)) {
+  if (!priceId) {
+    console.log("[stripe-webhook] No price id on line items, ignoring");
+    return;
+  }
+
+  // BP extra-runs purchases dispatch BEFORE the AVI package check because
+  // they share mode=payment but credit a different pool (CitationRate
+  // user_usage.brand_profile_extra_runs_balance, not seageo1.query_wallet).
+  const bpPack = bpPackFromPriceId(priceId);
+  if (bpPack || session.metadata?.type === "bp_extra") {
+    await handleBpExtraPurchase(eventId, session, priceId);
+    return;
+  }
+
+  if (!isPackagePrice(priceId)) {
     console.log("[stripe-webhook] Not an AVI package price, ignoring:", priceId);
     return;
   }
@@ -144,5 +160,68 @@ async function handleCheckoutCompleted(eventId: string, session: Stripe.Checkout
       error: walletErr instanceof Error ? walletErr.message : walletErr,
     });
     // Do NOT rethrow — return 200 so Stripe doesn't retry (would create duplicate purchase).
+  }
+}
+
+/**
+ * BP extra-runs fulfillment.
+ *
+ * Idempotency comes from the UNIQUE constraint on
+ * bp_extra_purchases.stripe_session_id inside the credit_bp_extra_runs RPC,
+ * so a duplicate webhook delivery does not double-credit the balance.
+ *
+ * The pack size and price are resolved server-side from the price ID, not
+ * trusted from session metadata, in case the same checkout was created with
+ * a price the catalog doesn't know about.
+ */
+async function handleBpExtraPurchase(
+  eventId: string,
+  session: Stripe.Checkout.Session,
+  priceId: string,
+) {
+  const userId = session.metadata?.user_id;
+  if (!userId) {
+    console.error("[stripe-webhook][bp-extra] No user_id in metadata", { eventId });
+    return;
+  }
+
+  const pack = bpPackFromPriceId(priceId);
+  if (!pack) {
+    console.error("[stripe-webhook][bp-extra] Unknown price id", { eventId, priceId });
+    return;
+  }
+
+  const planAtPurchase = (session.metadata?.plan_at_purchase || pack.plan).toLowerCase();
+  const currency = (session.currency || "eur").toUpperCase();
+  const priceCents = session.amount_total ?? pack.priceCents;
+  const paymentIntentId = (session.payment_intent as string) ?? null;
+
+  const cr = createCitationRateServiceClient();
+  const { data, error } = await (cr as any).rpc("credit_bp_extra_runs", {
+    p_user_id: userId,
+    p_pack_size: pack.runs,
+    p_plan_at_purchase: planAtPurchase,
+    p_price_cents: priceCents,
+    p_currency: currency,
+    p_stripe_session_id: session.id,
+    p_stripe_payment_intent_id: paymentIntentId,
+  });
+
+  if (error) {
+    console.error("[stripe-webhook][bp-extra] CRITICAL: RPC credit failed", {
+      eventId,
+      userId,
+      packId: pack.id,
+      runs: pack.runs,
+      sessionId: session.id,
+      error: error.message,
+    });
+    return;
+  }
+
+  if (data?.credited) {
+    console.log(`[stripe-webhook][bp-extra] Credited +${pack.runs} runs to ${userId} (pack=${pack.id}, balance=${data.balance})`);
+  } else {
+    console.log(`[stripe-webhook][bp-extra] Duplicate session, no credit applied (sessionId=${session.id})`);
   }
 }
