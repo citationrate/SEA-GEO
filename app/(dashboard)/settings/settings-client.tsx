@@ -2,9 +2,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Ticket, PlayCircle, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Send, Smartphone, Shield, Download, Camera, X } from "lucide-react";
+import { User, Ticket, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Send, Smartphone, Shield, Download, Camera, X } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
-import { RestartTourButton } from "./restart-tour-button";
 import { TwoFactorModal } from "@/components/two-factor-modal";
 import { createClient as createAuthClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -602,17 +601,6 @@ export function SettingsClient({
             </div>
           </div>
 
-          {/* Tour guidato */}
-          <div data-tour="settings-tour" className="card p-6 space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-              <PlayCircle className="w-5 h-5 text-primary" />
-              <h2 className="font-display font-semibold text-foreground">{t("settings.guidedTour")}</h2>
-            </div>
-            <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
-              <p className="text-sm text-muted-foreground">{t("settings.reviewTour")}</p>
-              <RestartTourButton />
-            </div>
-          </div>
         </div>
       )}
 

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { useTranslation } from "@/lib/i18n/context";
 import {
@@ -11,6 +12,7 @@ import {
   Plus,
   GitCompare,
   TrendingUp,
+  Newspaper,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
@@ -24,11 +26,18 @@ import { ToolSwitcher } from "./tool-switcher";
 
 interface SidebarProps {
   profile: { full_name?: string | null; email?: string; plan?: string; avatar_url?: string | null } | null;
+  bpRunsUsed?: number;
+  bpRunsTotal?: number;
 }
 
-export function BrandProfileSidebar({ profile }: SidebarProps) {
+// Shared "active feedback" classes for buttons / Links in the sidebar so
+// every tap shows an immediate visual confirmation. The `active:` prefix
+// triggers on tap-down (mobile) and click-down (desktop), so the user
+// gets feedback before the navigation completes.
+const PRESS_FEEDBACK = "active:bg-primary/15 active:scale-[0.98] transition-transform duration-75";
+
+export function BrandProfileSidebar({ profile, bpRunsUsed = 0, bpRunsTotal = 0 }: SidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const { t } = useTranslation();
   const { isOpen: mobileOpen, close: closeMobile } = useMobileNav();
   const [collapsed, setCollapsed] = useState(false);
@@ -58,6 +67,15 @@ export function BrandProfileSidebar({ profile }: SidebarProps) {
   const planLabel = isDemo ? "Demo" : isBase ? "Base" : isPro ? "Pro" : isEnterprise ? "Enterprise" : profile?.plan ?? "Demo";
   const planColor = isBase ? "#60a5fa" : isPro || isEnterprise ? "#c4a882" : undefined;
 
+  const fullName = (profile?.full_name ?? "").trim();
+  const email = profile?.email ?? "";
+  const avatarInitial = (fullName || email || "U").charAt(0).toUpperCase();
+  const isUnlimited = bpRunsTotal >= 999;
+  const bpRemaining = Math.max(0, bpRunsTotal - bpRunsUsed);
+
+  // Sidebar nav: Run + Intelligence + AI News (single item, no group label)
+  // The "Sistema" group with Impostazioni was moved to the bottom area, under
+  // the Piano link, per user feedback.
   const NAV = [
     {
       group: t("brandProfileSidebar.run") || "Run",
@@ -75,12 +93,7 @@ export function BrandProfileSidebar({ profile }: SidebarProps) {
         historyUnlocked
           ? { href: "/brand-profile/history", icon: TrendingUp, label: t("brandProfileSidebar.history") || "Storico" }
           : { href: "#",  icon: TrendingUp,  label: t("brandProfileSidebar.history") || "Storico", soon: true },
-      ],
-    },
-    {
-      group: t("brandProfileSidebar.system") || "Sistema",
-      items: [
-        { href: "/settings", icon: Settings, label: t("brandProfileSidebar.settings") || "Impostazioni" },
+        { href: "/notizie", icon: Newspaper, label: t("brandProfileSidebar.aiNews") || "AI News", external: true as const },
       ],
     },
   ];
@@ -135,6 +148,7 @@ export function BrandProfileSidebar({ profile }: SidebarProps) {
             <ul className="space-y-0.5">
               {items.map((item: any) => {
                 const soon = !!item.soon;
+                const external = !!item.external;
                 const active = isActive(item.href);
                 return (
                   <li key={`${group}-${item.label}`}>
@@ -160,10 +174,12 @@ export function BrandProfileSidebar({ profile }: SidebarProps) {
                     ) : (
                       <Link
                         href={item.href}
+                        prefetch={!external}
                         onClick={closeMobile}
                         className={cn(
                           "flex items-center gap-2.5 px-2 py-2.5 md:py-1.5 rounded-[2px] text-sm font-sans transition-all duration-100",
                           collapsed && !mobileOpen && "justify-center px-0",
+                          PRESS_FEEDBACK,
                           active
                             ? "text-primary font-medium"
                             : "text-muted-foreground hover:text-foreground hover:bg-surface-2",
@@ -187,25 +203,24 @@ export function BrandProfileSidebar({ profile }: SidebarProps) {
           </div>
         ))}
 
-        {/* Tool switcher — Citability Score / AVI / Brand Profile */}
+        {/* Tool switcher — Citability Score / AVI / Brand Profile.
+            "Strumenti" group label removed per user feedback; the switcher
+            now sits as a single dropdown without a header. */}
         <div>
-          {(!collapsed || mobileOpen) && (
-            <p className="font-mono text-[0.75rem] font-semibold uppercase tracking-widest text-muted-foreground px-2 mb-1.5 select-none">
-              {t("brandProfileSidebar.tools") || "Strumenti"}
-            </p>
-          )}
           <ToolSwitcher current="bp" collapsed={collapsed && !mobileOpen} />
         </div>
       </nav>
 
-      {/* Bottom: plan + logout */}
+      {/* Bottom: plan + impostazioni + logout + account card */}
       <div className="border-t border-border p-2 space-y-1">
         <Link
           href="/brand-profile/piano"
+          prefetch
           onClick={closeMobile}
           className={cn(
             "flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] text-sm font-sans transition-colors hover:bg-surface-2",
             collapsed && !mobileOpen && "justify-center px-0",
+            PRESS_FEEDBACK,
           )}
           style={planColor ? { color: planColor } : { color: "var(--muted-foreground)" }}
           title={collapsed && !mobileOpen ? `${t("sidebar.piano")} · ${planLabel}` : undefined}
@@ -217,18 +232,78 @@ export function BrandProfileSidebar({ profile }: SidebarProps) {
             </span>
           )}
         </Link>
+        <Link
+          href="/brand-profile/settings"
+          prefetch
+          onClick={closeMobile}
+          className={cn(
+            "flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] text-sm font-sans text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors",
+            collapsed && !mobileOpen && "justify-center px-0",
+            PRESS_FEEDBACK,
+          )}
+          title={collapsed && !mobileOpen ? t("brandProfileSidebar.settings") || "Impostazioni" : undefined}
+        >
+          <Settings className="w-[15px] h-[15px] flex-shrink-0" />
+          {(!collapsed || mobileOpen) && (
+            <span className="truncate text-xs">{t("brandProfileSidebar.settings") || "Impostazioni"}</span>
+          )}
+        </Link>
         <button
           onClick={handleLogout}
           disabled={loggingOut}
           className={cn(
             "w-full flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] text-sm font-sans text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors disabled:opacity-50",
             collapsed && !mobileOpen && "justify-center px-0",
+            PRESS_FEEDBACK,
           )}
           title={collapsed && !mobileOpen ? t("sidebar.logout") : undefined}
         >
           <LogOut className="w-[15px] h-[15px] flex-shrink-0" />
           {(!collapsed || mobileOpen) && <span className="truncate text-xs">{loggingOut ? t("sidebar.loggingOut") : t("sidebar.logout")}</span>}
         </button>
+
+        {/* Account card — visible only when sidebar is expanded. Mirrors the
+            CS pattern with avatar + name + plan badge + BP usage counter
+            for the current month. */}
+        {(!collapsed || mobileOpen) && (
+          <Link
+            href="/brand-profile/settings"
+            prefetch
+            onClick={closeMobile}
+            className={cn(
+              "mt-1 flex items-center gap-2.5 p-2 rounded-[2px] border border-border hover:border-primary/40 hover:bg-surface-2 transition-colors",
+              PRESS_FEEDBACK,
+            )}
+          >
+            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+              {profile?.avatar_url ? (
+                <Image
+                  src={profile.avatar_url}
+                  alt=""
+                  width={36}
+                  height={36}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="font-display text-sm text-primary font-semibold">{avatarInitial}</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-foreground truncate font-medium">
+                {fullName || email || "—"}
+              </div>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mt-0.5">
+                BP {isUnlimited
+                  ? <span className="text-foreground">∞</span>
+                  : <span className="text-foreground">{bpRemaining}/{bpRunsTotal}</span>
+                }
+                <span className="ml-1 normal-case tracking-normal text-muted-foreground/70">
+                  {t("brandProfileSidebar.runsThisMonth") || "run/mese"}
+                </span>
+              </div>
+            </div>
+          </Link>
+        )}
       </div>
     </>
   );

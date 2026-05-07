@@ -4,7 +4,7 @@ import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-ser
 import { BrandProfileSidebar } from "@/components/layout/brand-profile-sidebar";
 import { TopBar } from "@/components/layout/topbar";
 import { MobileNavProvider } from "@/components/layout/mobile-nav-context";
-import { bpAccessAllowed } from "@/lib/brand-profile/plans";
+import { bpAccessAllowed, bpRunLimit } from "@/lib/brand-profile/plans";
 
 export default async function BrandProfileLayout({ children }: { children: React.ReactNode }) {
   const auth = createServerClient();
@@ -22,14 +22,23 @@ export default async function BrandProfileLayout({ children }: { children: React
 
   // Soft-launch gate: only admins (CR profiles.is_admin) or whitelisted emails
   // can reach Brand Profile. Everyone else is bounced back to AVI.
+  // Also fetch the BP run counter (CR user_usage) so the sidebar can show
+  // a "X / N" badge under the account card without an extra round-trip
+  // from the client.
   const cr = createCitationRateServiceClient();
-  const { data: crProfile } = await (cr.from("profiles") as any)
-    .select("is_admin")
-    .eq("id", user.id)
-    .maybeSingle();
+  const [{ data: crProfile }, { data: usage }] = await Promise.all([
+    (cr.from("profiles") as any).select("is_admin, plan").eq("id", user.id).maybeSingle(),
+    (cr.from("user_usage") as any)
+      .select("brand_profile_runs_used")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
   if (!bpAccessAllowed({ email: user.email, isAdmin: (crProfile as any)?.is_admin })) {
     redirect("/dashboard");
   }
+  const bpPlan = ((crProfile as any)?.plan as string | undefined)?.toLowerCase() ?? "demo";
+  const bpRunsUsed = Number((usage as any)?.brand_profile_runs_used ?? 0);
+  const bpRunsTotal = bpRunLimit(bpPlan);
 
   const supabase = createDataClient();
   let { data: profile } = await (supabase.from("profiles") as any)
@@ -50,7 +59,11 @@ export default async function BrandProfileLayout({ children }: { children: React
     <MobileNavProvider>
       <div className="flex h-screen bg-ink overflow-hidden print:block print:h-auto print:overflow-visible">
         <div data-bp-no-print>
-          <BrandProfileSidebar profile={profile as any} />
+          <BrandProfileSidebar
+            profile={profile as any}
+            bpRunsUsed={bpRunsUsed}
+            bpRunsTotal={bpRunsTotal}
+          />
         </div>
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden print:overflow-visible">
           <div data-bp-no-print>
