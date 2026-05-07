@@ -97,6 +97,7 @@ export function BrandProfileReport({
   const [prompts] = useState<PromptRow[]>(initialPrompts);
   const [diagnostics, setDiagnostics] = useState<DiagnosticRow[]>(initialDiagnostics);
   const [openPillar, setOpenPillar] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const isPolling = run.status === "pending" || run.status === "running";
   const total = Number(scores?.total ?? 0);
@@ -183,11 +184,25 @@ export function BrandProfileReport({
           <button
             type="button"
             data-bp-no-print
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] text-sm border border-border text-foreground hover:bg-surface-2 transition-colors"
+            disabled={exporting}
+            onClick={async () => {
+              setExporting(true);
+              try {
+                const { exportBrandProfilePdf } = await import("@/lib/brand-profile/export-pdf");
+                await exportBrandProfilePdf({
+                  brandName: run.brand_name,
+                  date: run.completed_at ?? run.started_at,
+                });
+              } catch (e) {
+                console.error("[bp/export-pdf]", e);
+              } finally {
+                setExporting(false);
+              }
+            }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] text-sm border border-border text-foreground hover:bg-surface-2 transition-colors disabled:opacity-60 disabled:cursor-wait"
           >
-            <Printer className="w-3.5 h-3.5" />
-            {t("brandProfile.exportPdf")}
+            {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />}
+            {exporting ? t("brandProfile.exportPdfBuilding") : t("brandProfile.exportPdf")}
           </button>
         )}
       </div>
