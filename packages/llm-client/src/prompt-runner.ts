@@ -11,6 +11,7 @@ import {
   mergeSources,
   classifyDomainForPerplexity,
 } from "./sources-extractor";
+import { trackedAICall, type TrackedCallArgs } from "./cost-tracker";
 
 export interface AIModelResult {
   text: string;
@@ -18,6 +19,30 @@ export interface AIModelResult {
   /** Raw URLs the AI actually consulted (Perplexity citations, Claude web search, Gemini grounding) */
   citationSources?: string[];
   error?: string;
+}
+
+/**
+ * Optional tracking context. When provided, every SDK call inside callAIModel
+ * is wrapped with `trackedAICall` and a row is written to api_call_logs.
+ * Backward-compatible: callers that don't pass it get the original behaviour.
+ */
+export type CallTrackingContext = Pick<
+  TrackedCallArgs,
+  "product" | "operation" | "userId" | "userEmail" | "projectId" | "projectName" | "runId" | "promptId" | "meta"
+>;
+
+/**
+ * Internal helper: run `fn` directly when no tracking context, otherwise wrap
+ * with trackedAICall using the provided per-call args (provider + apiModel).
+ * Keeps each SDK call site to a single line of diff.
+ */
+async function maybeTrack<T>(
+  ctx: CallTrackingContext | undefined,
+  args: { provider: TrackedCallArgs["provider"]; apiModel: string },
+  fn: () => Promise<T>,
+): Promise<T> {
+  if (!ctx) return fn();
+  return trackedAICall<T>({ ...ctx, ...args }, fn);
 }
 
 /** Map short model IDs to actual API model identifiers */
@@ -48,6 +73,7 @@ export async function callAIModel(
   model: string,
   browsing = false,
   brandDomain?: string | null,
+  trackingContext?: CallTrackingContext,
 ): Promise<AIModelResult> {
   const empty: AIModelResult = { text: "", sources: [] };
 
@@ -78,27 +104,29 @@ export async function callAIModel(
 
         if (browsing) {
           try {
-            const msg = await anthropic.messages.create({
-              model: apiModel,
-              max_tokens: maxTokens,
-              messages: [{ role: "user", content: prompt }],
-              tools: [{
-                type: "web_search_20250305",
-                name: "web_search",
-                max_uses: searchMaxUses,
-                user_location: {
-                  type: "approximate",
-                  country: "IT",
-                  timezone: "Europe/Rome",
-                },
-                blocked_domains: [
-                  "facebook.com",
-                  "instagram.com",
-                  "twitter.com",
-                  "tiktok.com",
-                ],
-              }],
-            } as any);
+            const msg = await maybeTrack(trackingContext, { provider: "anthropic", apiModel }, () =>
+              anthropic.messages.create({
+                model: apiModel,
+                max_tokens: maxTokens,
+                messages: [{ role: "user", content: prompt }],
+                tools: [{
+                  type: "web_search_20250305",
+                  name: "web_search",
+                  max_uses: searchMaxUses,
+                  user_location: {
+                    type: "approximate",
+                    country: "IT",
+                    timezone: "Europe/Rome",
+                  },
+                  blocked_domains: [
+                    "facebook.com",
+                    "instagram.com",
+                    "twitter.com",
+                    "tiktok.com",
+                  ],
+                }],
+              } as any)
+            );
 
             // Concatenate ALL text blocks — web search splits response across multiple blocks
             const text = msg.content
@@ -121,11 +149,13 @@ export async function callAIModel(
           }
         }
 
-        const msg = await anthropic.messages.create({
-          model: apiModel,
-          max_tokens: maxTokens,
-          messages: [{ role: "user", content: prompt }],
-        });
+        const msg = await maybeTrack(trackingContext, { provider: "anthropic", apiModel }, () =>
+          anthropic.messages.create({
+            model: apiModel,
+            max_tokens: maxTokens,
+            messages: [{ role: "user", content: prompt }],
+          })
+        );
 
         // Concatenate ALL text blocks (standard calls usually have one, but be safe)
         const text = msg.content
@@ -192,7 +222,9 @@ export async function callAIModel(
             // prompt persisted in `prompts_executed.full_prompt_text` is
             // unchanged because that's saved by the caller before this runs.
             const augmentedPrompt = `Use Google Search to verify recent or factual information before answering. Reply in the same language as the user's question.\n\n${prompt}`;
-            const result = await geminiModel.generateContent(augmentedPrompt);
+            const result = await maybeTrack(trackingContext, { provider: "google", apiModel }, () =>
+              geminiModel.generateContent(augmentedPrompt)
+            );
             const text = extractGeminiText(result);
             if (text) {
               const groundingSources = extractFromGrounding((result.response as any).candidates || [], brandDomain ?? undefined);
@@ -208,7 +240,9 @@ export async function callAIModel(
           model: apiModel,
           generationConfig: { maxOutputTokens: 4096 },
         });
-        const result = await geminiModel.generateContent(prompt);
+        const result = await maybeTrack(trackingContext, { provider: "google", apiModel }, () =>
+          geminiModel.generateContent(prompt)
+        );
         const text = extractGeminiText(result);
         if (text) return { text, sources: extractFromText(text, brandDomain ?? undefined) };
         throw new Error("Gemini returned empty response");
@@ -220,24 +254,26 @@ export async function callAIModel(
         return { text: "", sources: [], error: `[${model}] SKIPPED: PERPLEXITY_API_KEY non configurata` };
       }
       return await retryCall(2, async () => {
-        const res = await fetch("https://api.perplexity.ai/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${process.env.PERPLEXITY_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: apiModel,
-            messages: [{ role: "user", content: prompt }],
-            max_tokens: 4096,
-            temperature: 0.7,
-          }),
+        const data = await maybeTrack(trackingContext, { provider: "perplexity", apiModel }, async () => {
+          const res = await fetch("https://api.perplexity.ai/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: apiModel,
+              messages: [{ role: "user", content: prompt }],
+              max_tokens: 4096,
+              temperature: 0.7,
+            }),
+          });
+          if (!res.ok) {
+            const body = await res.text().catch(() => "");
+            throw new RetryableError(`Perplexity ${res.status}: ${body}`, res.status);
+          }
+          return await res.json();
         });
-        if (!res.ok) {
-          const body = await res.text().catch(() => "");
-          throw new RetryableError(`Perplexity ${res.status}: ${body}`, res.status);
-        }
-        const data = await res.json();
         const text = data.choices?.[0]?.message?.content ?? "";
         if (!text) {
           console.warn(`[Perplexity] empty text from response. Keys: ${Object.keys(data).join(",")}, choices: ${JSON.stringify(data.choices?.[0]).slice(0, 200)}`);
@@ -320,11 +356,13 @@ export async function callAIModel(
         // LEGACY_MODEL_IDS and never reach this branch from the UI.
         if (browsing) {
           try {
-            const response = await client.responses.create({
-              model: apiModel,
-              input: prompt,
-              tools: [{ type: "web_search" }],
-            } as any);
+            const response = await maybeTrack(trackingContext, { provider: "xai", apiModel }, () =>
+              client.responses.create({
+                model: apiModel,
+                input: prompt,
+                tools: [{ type: "web_search" }],
+              } as any)
+            );
             const text = (response as any).output_text || "";
             if (text) {
               const annotationSources = extractFromAnnotations((response as any).output || [], brandDomain ?? undefined);
@@ -340,11 +378,13 @@ export async function callAIModel(
           }
         }
 
-        const completion = await client.chat.completions.create({
-          model: apiModel,
-          max_tokens: 4096,
-          messages: [{ role: "user", content: prompt }],
-        });
+        const completion = await maybeTrack(trackingContext, { provider: "xai", apiModel }, () =>
+          client.chat.completions.create({
+            model: apiModel,
+            max_tokens: 4096,
+            messages: [{ role: "user", content: prompt }],
+          })
+        );
         const text = completion.choices[0]?.message?.content ?? "";
         return { text, sources: extractFromText(text, brandDomain ?? undefined) };
       }, "xAI");
@@ -378,12 +418,14 @@ export async function callAIModel(
         const useSearch = browsing && !isReasoning;
         const tools = useSearch ? [{ type: "web_search" as const }] : undefined;
         if (isGpt54) console.log(`[GPT-5.4 CALLAI] Calling openai.responses.create with${useSearch ? "" : "out"} tools`);
-        const response = await openai.responses.create({
-          model: apiModel,
-          input: prompt,
-          ...(tools ? { tools } : {}),
-          ...(reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
-        });
+        const response = await maybeTrack(trackingContext, { provider: "openai", apiModel }, () =>
+          openai.responses.create({
+            model: apiModel,
+            input: prompt,
+            ...(tools ? { tools } : {}),
+            ...(reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
+          })
+        );
         const text = response.output_text || "";
         if (isGpt54) console.log(`[GPT-5.4 CALLAI] Response received: text_len=${text.length}, output_items=${response.output?.length ?? 0}, raw=${JSON.stringify(response).slice(0, 300)}`);
         if (text) {
@@ -412,11 +454,13 @@ export async function callAIModel(
     if (browsing) {
       try {
         console.log(`[OpenAI] model=${model} apiModel=${apiModel} responses.create with web_search (standard)`);
-        const response = await openai.responses.create({
-          model: apiModel,
-          tools: [{ type: "web_search" }],
-          input: prompt,
-        });
+        const response = await maybeTrack(trackingContext, { provider: "openai", apiModel }, () =>
+          openai.responses.create({
+            model: apiModel,
+            tools: [{ type: "web_search" }],
+            input: prompt,
+          })
+        );
         const text = response.output_text || "";
         if (text) {
           const annotationSources = extractFromAnnotations(response.output || [], brandDomain ?? undefined);
@@ -445,12 +489,14 @@ export async function callAIModel(
       }
 
       console.log(`[OpenAI] model=${model} apiModel=${apiModel} chat.completions.create`);
-      const completion = await openai.chat.completions.create({
-        model: apiModel,
-        temperature: 0.7,
-        max_tokens: 4096,
-        messages: [{ role: "user", content: prompt }],
-      });
+      const completion = await maybeTrack(trackingContext, { provider: "openai", apiModel }, () =>
+        openai.chat.completions.create({
+          model: apiModel,
+          temperature: 0.7,
+          max_tokens: 4096,
+          messages: [{ role: "user", content: prompt }],
+        })
+      );
       const text = completion.choices[0]?.message?.content ?? "";
       return { text, sources: extractFromText(text, brandDomain ?? undefined) };
     } catch (openaiErr) {

@@ -348,25 +348,25 @@ export function SettingsClient({
               </button>
             )}
           </div>
-          <div className="min-w-0">
-            <p className="text-foreground font-medium">{fullName || email}</p>
-            <p className="text-xs text-muted-foreground">{email}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-foreground font-medium break-all">{fullName || email}</p>
+            <p className="text-xs text-muted-foreground break-all">{email}</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground uppercase tracking-wide">{t("settings.name")}</label>
             <div className="flex gap-2">
-              <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="input-base flex-1" placeholder={t("settings.namePlaceholder")} />
-              <button onClick={saveName} disabled={savingName || fullName === initialName} className="px-3 py-2 bg-primary text-primary-foreground rounded-[2px] text-sm font-medium hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center gap-1.5">
+              <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="input-base flex-1 min-w-0" placeholder={t("settings.namePlaceholder")} />
+              <button onClick={saveName} disabled={savingName || fullName === initialName} className="px-3 py-2 bg-primary text-primary-foreground rounded-[2px] text-sm font-medium hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center gap-1.5 shrink-0">
                 {savingName ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : nameSaved ? <Check className="w-3.5 h-3.5" /> : null}
                 {nameSaved ? t("common.saved") : t("common.save")}
               </button>
             </div>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 min-w-0">
             <label className="text-xs text-muted-foreground uppercase tracking-wide">{t("auth.email")}</label>
-            <p className="text-sm text-foreground bg-muted/30 rounded-[2px] px-3 py-2">{email}</p>
+            <p className="text-sm text-foreground bg-muted/30 rounded-[2px] px-3 py-2 break-all">{email}</p>
           </div>
         </div>
       </div>
@@ -587,12 +587,12 @@ export function SettingsClient({
                   className="input-base w-full resize-none"
                 />
               </div>
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">{t("settings.supportFrom") || "Da:"} {email}</p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <p className="text-xs text-muted-foreground break-all min-w-0">{t("settings.supportFrom") || "Da:"} {email}</p>
                 <button
                   onClick={sendSupportMessage}
                   disabled={sendingSupport || !supportSubject.trim() || supportMessage.trim().length < 3}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0 self-stretch sm:self-auto whitespace-nowrap"
                 >
                   {sendingSupport ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                   {sendingSupport ? (t("common.sending") || "Invio...") : (t("settings.sendMessage") || "Invia messaggio")}

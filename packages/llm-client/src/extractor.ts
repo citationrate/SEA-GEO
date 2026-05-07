@@ -1,5 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { canonicalizeCompetitorName, extractBrandOnly } from "./competitor-names";
+import { trackedAICall } from "./cost-tracker";
+
+const HAIKU_API_MODEL = "claude-haiku-4-5-20251001";
 
 export interface ExtractionResult {
   brand_mentioned: boolean;
@@ -438,6 +441,7 @@ async function extractCompetitorsTopicsSources(
   brandType?: string,
   language?: string,
   brandDomain?: string | null,
+  trackingContext?: ExtractTrackingContext,
 ): Promise<Pick<ExtractionResult, "topics" | "competitors_found" | "sources">> {
   // Clean control characters and Perplexity-style citation markers [1], [2], etc.
   // that can confuse Haiku into including them in competitor names
@@ -522,11 +526,17 @@ ${cleanResponse}`;
 
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const message = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
+    const haikuCall = () => anthropic.messages.create({
+      model: HAIKU_API_MODEL,
       max_tokens: 2000,
       messages: [{ role: "user", content: prompt }],
     });
+    const message = trackingContext
+      ? await trackedAICall(
+          { ...trackingContext, provider: "anthropic", apiModel: HAIKU_API_MODEL, operation: "avi_extractor" },
+          haikuCall,
+        )
+      : await haikuCall();
 
     const raw = message.content[0]?.type === "text" ? message.content[0].text : "{}";
     const stripped = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
@@ -599,6 +609,22 @@ ${cleanResponse}`;
   }
 }
 
+/**
+ * Optional tracking context for the Haiku extractor calls inside this module.
+ * When provided, each anthropic.messages.create() call writes a row to
+ * api_call_logs with operation = "avi_extractor".
+ */
+export interface ExtractTrackingContext {
+  product: "avi" | "brand_profile" | "cs";
+  userId?: string | null;
+  userEmail?: string | null;
+  projectId?: string | null;
+  projectName?: string | null;
+  runId?: string | null;
+  promptId?: string | null;
+  meta?: Record<string, unknown>;
+}
+
 export async function extractFromResponse(
   response: string,
   targetBrand: string,
@@ -606,6 +632,7 @@ export async function extractFromResponse(
   brandType?: string,
   language?: string,
   brandDomain?: string | null,
+  trackingContext?: ExtractTrackingContext,
 ): Promise<ExtractionResult> {
   // Robust brand detection with variants and partial matching
   const detection = detectBrandMention(response, targetBrand);
@@ -615,7 +642,7 @@ export async function extractFromResponse(
   // If brand not present, use a lighter prompt for competitors/topics/sources only
   if (!detection.mentioned) {
     const partialResult = await extractCompetitorsTopicsSources(
-      response, targetBrand, sector, brandType, language, brandDomain
+      response, targetBrand, sector, brandType, language, brandDomain, trackingContext
     );
     return {
       brand_mentioned: false,
@@ -743,8 +770,8 @@ SOURCES — extract ONLY URLs/domains LITERALLY written in the response text. Do
 source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const message = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
+  const haikuCall = () => anthropic.messages.create({
+    model: HAIKU_API_MODEL,
     max_tokens: 2000,
     messages: [
       {
@@ -753,6 +780,12 @@ source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
       },
     ],
   });
+  const message = trackingContext
+    ? await trackedAICall(
+        { ...trackingContext, provider: "anthropic", apiModel: HAIKU_API_MODEL, operation: "avi_extractor" },
+        haikuCall,
+      )
+    : await haikuCall();
 
   const raw = message.content[0]?.type === "text"
     ? message.content[0].text
