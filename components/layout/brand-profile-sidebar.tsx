@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useMobileNav } from "./mobile-nav-context";
 import { ToolSwitcher } from "./tool-switcher";
+import { useHasUnreadNews } from "@/components/ai-news-panel";
 
 interface SidebarProps {
   profile: { full_name?: string | null; email?: string; plan?: string; avatar_url?: string | null } | null;
@@ -42,6 +43,7 @@ export function BrandProfileSidebar({ profile, bpRunsUsed = 0, bpRunsTotal = 0 }
   const { isOpen: mobileOpen, close: closeMobile } = useMobileNav();
   const [collapsed, setCollapsed] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const hasUnreadNews = useHasUnreadNews();
 
   useEffect(() => { closeMobile(); }, [pathname, closeMobile]);
 
@@ -93,7 +95,7 @@ export function BrandProfileSidebar({ profile, bpRunsUsed = 0, bpRunsTotal = 0 }
         historyUnlocked
           ? { href: "/brand-profile/history", icon: TrendingUp, label: t("brandProfileSidebar.history") || "Storico" }
           : { href: "#",  icon: TrendingUp,  label: t("brandProfileSidebar.history") || "Storico", soon: true },
-        { href: "/notizie", icon: Newspaper, label: t("brandProfileSidebar.aiNews") || "AI News", external: true as const },
+        { href: "/brand-profile/notizie", icon: Newspaper, label: t("brandProfileSidebar.aiNews") || "AI News", showUnreadDot: true as const },
       ],
     },
   ];
@@ -148,7 +150,6 @@ export function BrandProfileSidebar({ profile, bpRunsUsed = 0, bpRunsTotal = 0 }
             <ul className="space-y-0.5">
               {items.map((item: any) => {
                 const soon = !!item.soon;
-                const external = !!item.external;
                 const active = isActive(item.href);
                 return (
                   <li key={`${group}-${item.label}`}>
@@ -174,10 +175,10 @@ export function BrandProfileSidebar({ profile, bpRunsUsed = 0, bpRunsTotal = 0 }
                     ) : (
                       <Link
                         href={item.href}
-                        prefetch={!external}
+                        prefetch
                         onClick={closeMobile}
                         className={cn(
-                          "flex items-center gap-2.5 px-2 py-2.5 md:py-1.5 rounded-[2px] text-sm font-sans transition-all duration-100",
+                          "flex items-center gap-2.5 px-2 py-2.5 md:py-1.5 rounded-[2px] text-sm font-sans transition-all duration-100 relative",
                           collapsed && !mobileOpen && "justify-center px-0",
                           PRESS_FEEDBACK,
                           active
@@ -193,7 +194,18 @@ export function BrandProfileSidebar({ profile, bpRunsUsed = 0, bpRunsTotal = 0 }
                             active ? "text-primary" : "text-muted-foreground",
                           )}
                         />
-                        {(!collapsed || mobileOpen) && <span className="truncate">{item.label}</span>}
+                        {(!collapsed || mobileOpen) && <span className="truncate flex-1">{item.label}</span>}
+                        {item.showUnreadDot && hasUnreadNews && (
+                          <span
+                            className={cn(
+                              "rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.7)]",
+                              collapsed && !mobileOpen
+                                ? "absolute top-1 right-1 w-1.5 h-1.5"
+                                : "w-2 h-2 mr-1",
+                            )}
+                            aria-label="Nuove notizie"
+                          />
+                        )}
                       </Link>
                     )}
                   </li>
@@ -262,20 +274,20 @@ export function BrandProfileSidebar({ profile, bpRunsUsed = 0, bpRunsTotal = 0 }
           {(!collapsed || mobileOpen) && <span className="truncate text-xs">{loggingOut ? t("sidebar.loggingOut") : t("sidebar.logout")}</span>}
         </button>
 
-        {/* Account card — visible only when sidebar is expanded. Mirrors the
-            CS pattern with avatar + name + plan badge + BP usage counter
-            for the current month. */}
+        {/* Account card — CS-style: avatar + name + plan badge + audit
+            progress bar with X / N counter. Visible only when sidebar
+            is expanded. Tap goes to settings. */}
         {(!collapsed || mobileOpen) && (
           <Link
             href="/brand-profile/settings"
             prefetch
             onClick={closeMobile}
             className={cn(
-              "mt-1 flex items-center gap-2.5 p-2 rounded-[2px] border border-border hover:border-primary/40 hover:bg-surface-2 transition-colors",
+              "mt-1 flex items-start gap-2.5 p-2.5 rounded-[2px] border border-border hover:border-primary/40 hover:bg-surface-2 transition-colors",
               PRESS_FEEDBACK,
             )}
           >
-            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+            <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0 overflow-hidden mt-0.5">
               {profile?.avatar_url ? (
                 <Image
                   src={profile.avatar_url}
@@ -288,16 +300,37 @@ export function BrandProfileSidebar({ profile, bpRunsUsed = 0, bpRunsTotal = 0 }
                 <span className="font-display text-sm text-primary font-semibold">{avatarInitial}</span>
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs text-foreground truncate font-medium">
-                {fullName || email || "—"}
+            <div className="flex-1 min-w-0 space-y-1.5">
+              <div className="text-sm text-foreground truncate font-display leading-none">
+                {fullName || (email ? email.split("@")[0] : "—")}
               </div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mt-0.5">
-                BP {isUnlimited
-                  ? <span className="text-foreground">∞</span>
-                  : <span className="text-foreground">{bpRemaining}/{bpRunsTotal}</span>
-                }
-                <span className="ml-1 normal-case tracking-normal text-muted-foreground/70">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">PIANO</span>
+                <span
+                  className="text-[9px] font-mono uppercase tracking-wider px-1 py-0.5 rounded-[2px] border"
+                  style={{
+                    color: planColor ?? "var(--muted-foreground)",
+                    borderColor: planColor ? `${planColor}55` : "var(--border)",
+                  }}
+                >
+                  {planLabel}
+                </span>
+              </div>
+              {/* Progress bar — runs used vs runs total this month */}
+              <div className="h-1 bg-surface-2 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all duration-500"
+                  style={{
+                    width: isUnlimited
+                      ? "100%"
+                      : `${Math.min(100, (bpRunsUsed / Math.max(1, bpRunsTotal)) * 100)}%`,
+                    opacity: isUnlimited ? 0.4 : 1,
+                  }}
+                />
+              </div>
+              <div className="text-[10px] font-mono text-muted-foreground tabular-nums">
+                {isUnlimited ? "∞" : `${bpRunsUsed} / ${bpRunsTotal}`}{" "}
+                <span className="text-muted-foreground/70">
                   {t("brandProfileSidebar.runsThisMonth") || "run/mese"}
                 </span>
               </div>

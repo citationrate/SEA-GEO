@@ -87,17 +87,20 @@ export function ToolSwitcher({
         aria-haspopup="menu"
         title={collapsed ? triggerLabel : undefined}
         className={cn(
-          "w-full flex items-center gap-2 rounded-[2px] transition-colors text-sm",
+          "w-full flex items-center gap-2 rounded-[2px] transition-colors text-sm font-medium border",
           collapsed ? "justify-center py-2" : "py-2 px-3 justify-between",
+          "active:scale-[0.98] active:transition-transform active:duration-75",
         )}
-        style={{ color: "var(--muted-foreground)" }}
+        style={{
+          color: "var(--primary)",
+          borderColor: "rgba(126,184,154,0.4)",
+          background: "rgba(126,184,154,0.06)",
+        }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = "var(--primary-glow, rgba(126,184,154,0.06))";
-          e.currentTarget.style.color = "var(--foreground)";
+          e.currentTarget.style.background = "rgba(126,184,154,0.14)";
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = "transparent";
-          e.currentTarget.style.color = "var(--muted-foreground)";
+          e.currentTarget.style.background = "rgba(126,184,154,0.06)";
         }}
       >
         <span className="flex items-center gap-2 truncate">
