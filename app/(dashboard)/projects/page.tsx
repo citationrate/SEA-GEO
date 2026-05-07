@@ -32,7 +32,7 @@ export default async function ProjectsPage() {
   return (
     <div className="space-y-6 max-w-[1400px]">
       <MetaPageTrack variant="projects" />
-      <ProjectsHeader />
+      <ProjectsHeader hasProjects={items.length > 0} />
       <ProjectsList projects={items} />
     </div>
   );
