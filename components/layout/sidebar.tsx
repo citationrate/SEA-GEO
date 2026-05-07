@@ -11,10 +11,11 @@ import {
   Users, Link2, Tag, GitCompare, Settings,
   Database, ChevronRight, Plus,
   PanelLeftClose, PanelLeftOpen,
-  ExternalLink, X, Newspaper, CreditCard, Sparkles, LogOut, BookOpen,
+  X, Newspaper, CreditCard, Sparkles, LogOut, BookOpen,
 } from "lucide-react";
 import { useMobileNav } from "./mobile-nav-context";
 import { useHasUnreadNews } from "@/components/ai-news-panel";
+import { ToolSwitcher } from "./tool-switcher";
 
 const PRO_ROUTES = new Set(["/compare", "/datasets"]);
 
@@ -263,23 +264,9 @@ export function Sidebar({ profile }: SidebarProps) {
         </button>
       </div>
 
-      {/* Switch to Citability Score (CS) — bottom of sidebar */}
+      {/* Tool switcher — Citability Score / AVI / Brand Profile */}
       <div className="px-2 pb-2 flex-shrink-0">
-        <a
-          href="https://suite.citationrate.com/dashboard"
-          onClick={closeMobile}
-          className={cn(
-            "w-full flex items-center gap-2 rounded-[2px] transition-colors",
-            collapsed && !mobileOpen ? "justify-center py-2" : "py-2 px-3",
-          )}
-          style={{ color: "var(--primary)" }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--primary-glow)"; e.currentTarget.style.color = "var(--cream)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--primary)"; }}
-          title={collapsed && !mobileOpen ? t("sidebar.switchTool") : undefined}
-        >
-          <ExternalLink className="w-4 h-4 shrink-0" aria-hidden="true" />
-          {(!collapsed || mobileOpen) && <span className="text-sm">{t("sidebar.switchTool")}</span>}
-        </a>
+        <ToolSwitcher current="avi" collapsed={collapsed && !mobileOpen} />
       </div>
 
       {/* Profile → links to settings */}
