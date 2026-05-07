@@ -235,7 +235,7 @@ export function AnalysisLauncher({
                 {t("analysisLauncher.runCount")}
                 <InfoTooltip text={t("analysisLauncher.preciseWithConsistency")} />
               </p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {RUN_OPTIONS.map((opt) => {
                   const optPrompts = modelsConfig.length * queryCount * Math.max(segmentCount, 1) * opt.value;
                   const isSelected = runCount === opt.value;
@@ -314,7 +314,7 @@ export function AnalysisLauncher({
                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                   <Wallet className="w-3.5 h-3.5" /> {t("piano.querySource")}
                 </p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     onClick={() => setQuerySource("plan")}
                     disabled={loading}

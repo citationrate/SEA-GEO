@@ -371,7 +371,10 @@ export function PianoClient({
             <div className="p-5 overflow-x-auto">
               {(() => {
                 const PLAN_COLORS = { demo: "var(--muted-foreground)", base: "#3b82f6", pro: "#c4a882", enterprise: "#a78bfa" } as const;
-                const ROW_GRID = "minmax(200px,1.6fr) repeat(4, minmax(120px, 1fr))";
+                // Tighter grid template (label 140 + 4×96 = 524px min) so
+                // iPhone portrait scrolls only ~150px instead of ~500px
+                // inside the overflow-x-auto wrapper.
+                const ROW_GRID = "minmax(140px,1.4fr) repeat(4, minmax(96px, 1fr))";
 
                 const renderVal = (v: FeatureValue, accent: string) =>
                   v === false
@@ -413,7 +416,7 @@ export function PianoClient({
                 );
 
                 return (
-                  <div className="min-w-[880px]" style={{ paddingTop: 14 }}>
+                  <div className="min-w-[560px]" style={{ paddingTop: 14 }}>
                     {/* Header row */}
                     <div className="grid" style={{ gridTemplateColumns: ROW_GRID }}>
                       <div className="p-4" />
