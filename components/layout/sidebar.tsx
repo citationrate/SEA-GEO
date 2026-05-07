@@ -16,6 +16,7 @@ import {
 import { useMobileNav } from "./mobile-nav-context";
 import { useHasUnreadNews } from "@/components/ai-news-panel";
 import { ToolSwitcher } from "./tool-switcher";
+import { bpAccessAllowed } from "@/lib/brand-profile/plans";
 
 const PRO_ROUTES = new Set(["/compare", "/datasets"]);
 
@@ -266,7 +267,11 @@ export function Sidebar({ profile }: SidebarProps) {
 
       {/* Tool switcher — Citability Score / AVI / Brand Profile */}
       <div className="px-2 pb-2 flex-shrink-0">
-        <ToolSwitcher current="avi" collapsed={collapsed && !mobileOpen} />
+        <ToolSwitcher
+          current="avi"
+          collapsed={collapsed && !mobileOpen}
+          bpUnlocked={bpAccessAllowed({ email: profile?.email })}
+        />
       </div>
 
       {/* Profile → links to settings */}
