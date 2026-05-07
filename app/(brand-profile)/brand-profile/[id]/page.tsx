@@ -18,7 +18,8 @@ export default async function BrandProfileRunPage({ params }: { params: { id: st
     .select("plan")
     .eq("id", user.id)
     .single();
-  const canExport = bpComparePlanAllowed((crProfile?.plan as string | undefined) ?? "demo");
+  const userPlan = ((crProfile?.plan as string | undefined) ?? "demo").toLowerCase();
+  const canExport = bpComparePlanAllowed(userPlan);
 
   const data = createDataClient();
   const bp = data.schema("brand_profile" as any);
@@ -56,6 +57,7 @@ export default async function BrandProfileRunPage({ params }: { params: { id: st
         initialPrompts={(prompts as any) ?? []}
         initialDiagnostics={(diagnostics as any) ?? []}
         canExport={canExport}
+        userPlan={userPlan}
       />
     </div>
   );
