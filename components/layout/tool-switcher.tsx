@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Activity, BarChart3, ArrowLeftRight, ChevronUp } from "lucide-react";
+import { Activity, BarChart3, Radar, ArrowLeftRight, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -16,11 +16,11 @@ interface ToolDef {
   Icon: typeof Activity;
 }
 
-// NOTE: Brand Profile entry intentionally omitted during soft launch — the
-// product is shipped behind a whitelist gate in `(brand-profile)/layout.tsx`
-// until the public launch flag flips. To re-enable: add the bp entry back
-// here (and lift the gate in the layout).
-const TOOLS: ToolDef[] = [
+// During soft launch the BP entry is filtered out for non-whitelisted users.
+// The Sidebar passes `bpUnlocked` (computed from profile.email vs the
+// whitelist in lib/brand-profile/plans.ts) so whitelisted accounts see the
+// BP entry too. To launch publicly, just always include bp.
+const TOOLS_BASE: ToolDef[] = [
   {
     id: "cs",
     url: "https://suite.citationrate.com/dashboard",
@@ -37,16 +37,27 @@ const TOOLS: ToolDef[] = [
   },
 ];
 
+const BP_TOOL: ToolDef = {
+  id: "bp",
+  url: "https://avi.citationrate.com/brand-profile",
+  nameKey: "toolSwitcher.bp",
+  fallback: "Brand Profile",
+  Icon: Radar,
+};
+
 export function ToolSwitcher({
   current,
   collapsed,
+  bpUnlocked = false,
 }: {
   current: Tool;
   collapsed?: boolean;
+  bpUnlocked?: boolean;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const TOOLS: ToolDef[] = bpUnlocked ? [...TOOLS_BASE, BP_TOOL] : TOOLS_BASE;
 
   useEffect(() => {
     if (!open) return;
