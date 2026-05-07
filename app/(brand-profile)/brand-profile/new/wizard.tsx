@@ -159,7 +159,7 @@ export function BrandProfileWizard({
                 onChange={(e) => setBrand(e.target.value)}
                 placeholder={t("brandProfile.brandPlaceholder")}
                 maxLength={120}
-                className="w-full px-3 py-2 bg-surface-2 border border-border rounded-[2px] text-sm text-foreground focus:outline-none focus:border-primary"
+                className="w-full px-3 py-2.5 bg-surface-2 border border-border rounded-[2px] text-base md:text-sm text-foreground focus:outline-none focus:border-primary"
                 autoFocus
               />
               <p className="text-xs text-muted-foreground">{t("brandProfile.brandHelp")}</p>
@@ -171,7 +171,7 @@ export function BrandProfileWizard({
                 onChange={(e) => setSector(e.target.value)}
                 placeholder={t("brandProfile.sectorPlaceholder")}
                 maxLength={120}
-                className="w-full px-3 py-2 bg-surface-2 border border-border rounded-[2px] text-sm text-foreground focus:outline-none focus:border-primary"
+                className="w-full px-3 py-2.5 bg-surface-2 border border-border rounded-[2px] text-base md:text-sm text-foreground focus:outline-none focus:border-primary"
               />
               <p className="text-xs text-muted-foreground">{t("brandProfile.sectorHelp")}</p>
             </div>
@@ -187,7 +187,7 @@ export function BrandProfileWizard({
                 value={brandUrl}
                 onChange={(e) => setBrandUrl(e.target.value)}
                 placeholder={t("brandProfile.urlPlaceholder")}
-                className="w-full px-3 py-2 bg-surface-2 border border-border rounded-[2px] text-sm text-foreground focus:outline-none focus:border-primary"
+                className="w-full px-3 py-2.5 bg-surface-2 border border-border rounded-[2px] text-base md:text-sm text-foreground focus:outline-none focus:border-primary"
                 autoFocus
               />
               <p className="text-xs text-muted-foreground">{t("brandProfile.urlHelp")}</p>
@@ -197,7 +197,7 @@ export function BrandProfileWizard({
               <select
                 value={country}
                 onChange={(e) => setCountry(e.target.value as typeof country)}
-                className="w-full px-3 py-2 bg-surface-2 border border-border rounded-[2px] text-sm text-foreground focus:outline-none focus:border-primary"
+                className="w-full px-3 py-2.5 bg-surface-2 border border-border rounded-[2px] text-base md:text-sm text-foreground focus:outline-none focus:border-primary"
               >
                 {COUNTRIES.map((c) => (
                   <option key={c} value={c}>{c}</option>

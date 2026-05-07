@@ -230,7 +230,7 @@ export function HistoryClient({
           <select
             value={brand}
             onChange={(e) => setBrand(e.target.value)}
-            className="bg-surface-2 border border-border rounded-[2px] text-sm px-2 py-1 text-foreground"
+            className="bg-surface-2 border border-border rounded-[2px] text-base md:text-sm px-3 py-2 md:px-2 md:py-1 text-foreground min-h-[44px] md:min-h-0"
           >
             <option value="">{t("brandProfile.historyFilterAllBrands")}</option>
             {brands.map((b) => (
@@ -240,7 +240,7 @@ export function HistoryClient({
           <select
             value={country}
             onChange={(e) => setCountry(e.target.value)}
-            className="bg-surface-2 border border-border rounded-[2px] text-sm px-2 py-1 text-foreground"
+            className="bg-surface-2 border border-border rounded-[2px] text-base md:text-sm px-3 py-2 md:px-2 md:py-1 text-foreground min-h-[44px] md:min-h-0"
           >
             <option value="">{t("brandProfile.historyFilterAllCountries")}</option>
             {countries.map((c) => (
@@ -250,7 +250,7 @@ export function HistoryClient({
           <select
             value={sector}
             onChange={(e) => setSector(e.target.value)}
-            className="bg-surface-2 border border-border rounded-[2px] text-sm px-2 py-1 text-foreground"
+            className="bg-surface-2 border border-border rounded-[2px] text-base md:text-sm px-3 py-2 md:px-2 md:py-1 text-foreground min-h-[44px] md:min-h-0"
           >
             <option value="">{t("brandProfile.historyFilterAllSectors")}</option>
             {sectors.map((s) => (
