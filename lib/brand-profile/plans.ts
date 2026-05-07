@@ -20,6 +20,8 @@ export const BP_WHITELIST_EMAILS: ReadonlySet<string> = new Set([
   "tutorial@citationrate.com",
   "gianmariacipriano3@gmail.com",
   "monzabrianzadascoprire@gmail.com",
+  "tecla.casalone@gmail.com",
+  "tecla.casalone@studenti.iulm.it",
 ]);
 
 export function bpAccessAllowed(opts: { email?: string | null; isAdmin?: boolean | null }): boolean {
