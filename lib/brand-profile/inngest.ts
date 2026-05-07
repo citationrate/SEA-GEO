@@ -217,6 +217,7 @@ export const runBrandProfile = inngest.createFunction(
           breakdown: computed.breakdown,
           responsesByPillar,
           diagnostics,
+          modelCount: models.length,
         });
         const rowsToInsert: any[] = [];
         (Object.keys(insights) as InsightPillar[]).forEach((p) => {

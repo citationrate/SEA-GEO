@@ -78,17 +78,25 @@ function scoreClarity(rows: ClarityExtraction[]): { score: number; breakdown: Pi
 function scoreAuthority(rows: AuthorityExtraction[]): { score: number; breakdown: PillarBreakdown["authority"] } {
   if (rows.length === 0) return { score: 0, breakdown: { presence: 0, tone: 0 } };
 
-  const presencePoints = rows.map((r) => {
-    const hasSignal = (r.experts_listed?.length ?? 0) > 0 || (r.sources_listed?.length ?? 0) > 0;
-    return hasSignal ? 100 : 0;
-  });
+  // Authority "presence" = does the AI cite OUR brand as a source/expert,
+  // not whether the AI mentions any third-party experts. Previously this
+  // returned 100 whenever a response had any source list, which was almost
+  // always true — pushing the pillar score artificially high (e.g. 91 with
+  // 1/6 mentions). Now we tie it to brand_mentioned, in line with the other
+  // pillars.
+  const presencePoints = rows.map((r) => (r.brand_mentioned ? 100 : 0));
   const presence = avg(presencePoints);
 
-  const tonePoints = rows.map((r) => Math.max(0, Math.min(1, r.tone_authoritative ?? 0)) * 100);
-  const tone = avg(tonePoints);
+  // Tone is only meaningful for responses where the brand was actually
+  // mentioned — otherwise tone_authoritative describes the response in
+  // general, not the brand. Average over mentioned rows only.
+  const tonePoints = rows
+    .filter((r) => r.brand_mentioned)
+    .map((r) => Math.max(0, Math.min(1, r.tone_authoritative ?? 0)) * 100);
+  const tone = tonePoints.length === 0 ? 0 : avg(tonePoints);
 
   return {
-    score: clamp(0.7 * presence + 0.3 * tone),
+    score: clamp(0.6 * presence + 0.4 * tone),
     breakdown: { presence: clamp(presence), tone: clamp(tone) },
   };
 }

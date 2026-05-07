@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
-import { bpRunLimit, bpModelCap } from "@/lib/brand-profile/plans";
+import { bpRunLimit } from "@/lib/brand-profile/plans";
 import { BrandProfileWizard } from "./wizard";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,6 @@ export default async function NewBrandProfilePage() {
     .maybeSingle();
   const plan = ((profile as any)?.plan as string | undefined)?.toLowerCase() ?? "demo";
   const runLimit = bpRunLimit(plan);
-  const modelCap = bpModelCap(plan);
 
   const cr = createCitationRateServiceClient();
   const { data: usage } = await (cr.from("user_usage") as any)
@@ -40,7 +39,7 @@ export default async function NewBrandProfilePage() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <BrandProfileWizard plan={plan} modelCap={modelCap} remaining={remaining} runLimit={runLimit} />
+      <BrandProfileWizard plan={plan} remaining={remaining} runLimit={runLimit} />
     </div>
   );
 }

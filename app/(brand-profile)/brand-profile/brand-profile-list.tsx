@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Radar, Plus, Globe, Clock } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/context";
@@ -45,7 +46,7 @@ function formatDate(iso: string, locale: string) {
 }
 
 export function BrandProfileList({
-  runs,
+  runs: initialRuns,
   plan,
   runsUsed,
   runLimit,
@@ -56,6 +57,32 @@ export function BrandProfileList({
   runLimit: number;
 }) {
   const { t, locale } = useTranslation();
+  // Mirror the SSR list locally so we can refresh on mount + window focus —
+  // Next.js force-dynamic doesn't always defeat browser bfcache (back from a
+  // run detail to the list could show stale data without the just-completed
+  // run). The /api/brand-profile/runs endpoint returns the same shape and
+  // sends `Cache-Control: private, no-store` so this is always fresh.
+  const [runs, setRuns] = useState<RunItem[]>(initialRuns);
+  useEffect(() => {
+    let cancelled = false;
+    const refetch = async () => {
+      try {
+        const res = await fetch("/api/brand-profile/runs", { cache: "no-store" });
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (!cancelled && Array.isArray(json?.runs)) setRuns(json.runs as RunItem[]);
+      } catch {
+        /* swallow — keep SSR list */
+      }
+    };
+    refetch();
+    const onFocus = () => { void refetch(); };
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
   const remaining = Math.max(0, runLimit - runsUsed);
   const canRun = remaining > 0;
   const isUnlimited = runLimit >= 999;

@@ -26,6 +26,11 @@ export interface InsightInput {
   breakdown: any;
   responsesByPillar: Record<Pillar, string[]>;
   diagnostics?: DiagnosticEntry[];
+  // Number of distinct AI models that produced the responses (e.g. 2 if the
+  // user's plan included claude-haiku + gpt-5.4-mini). Sonnet was previously
+  // miscounting "AI" by reading 6 raw responses per pillar (3 prompts × 2
+  // models) as 6 AIs. This grounds it.
+  modelCount: number;
 }
 
 export interface InsightOutput {
@@ -110,9 +115,12 @@ function buildPrompt(input: InsightInput): string {
     ? `\n- Il sito è già stato auditato con Citability: usa i parametri MANCANTI/ROTTI come spiegazione causale specifica ("le AI confondono il settore perché manca P5 'Schema Product'") e suggerisci come ripararli prima di proporre azioni nuove.`
     : "";
 
+  const responsesPerPillar = input.responsesByPillar.recognition.length;
+  const modelCountLine = `\nContesto setup: ${input.modelCount} modello/i AI distinti, 3 prompt per pilastro = ${responsesPerPillar} risposte per pilastro. NON dire "${responsesPerPillar} AI" leggendo il numero di risposte: i modelli AI distinti sono ${input.modelCount}, mai più. Riferisciti alle risposte come "le risposte AI" o "i modelli", mai "${responsesPerPillar} AI".`;
+
   return `${lang}
 
-Sei un consulente di brand visibility AI. Analizza queste risposte di modelli AI sul brand "${input.brand}" (settore: ${input.sector}, paese: ${input.country}) e per OGNI pilastro produci 2-3 raccomandazioni MOLTO CONCRETE e actionable.
+Sei un consulente di brand visibility AI. Analizza queste risposte di modelli AI sul brand "${input.brand}" (settore: ${input.sector}, paese: ${input.country}) e per OGNI pilastro produci 2-3 raccomandazioni MOLTO CONCRETE e actionable.${modelCountLine}
 
 REGOLE:
 - Niente generiche tipo "migliora il SEO". Cita la causa specifica trovata nelle risposte AI.
