@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Radar, ArrowLeft, Loader2, AlertTriangle, Lightbulb, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { Radar, ArrowLeft, Loader2, AlertTriangle, Lightbulb, ChevronDown, ChevronUp, Sparkles, Stethoscope, ExternalLink } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { ScoreRadar } from "./score-radar";
+
+const CS_AUDIT_BASE = "https://suite.citationrate.com/audit";
 
 interface RunRow {
   id: string;
@@ -45,6 +47,15 @@ interface PromptRow {
   error_message: string | null;
 }
 
+interface DiagnosticRow {
+  pillar: string;
+  cs_parameter_id: string;
+  cs_status: "fail" | "partial" | "pass";
+  cs_audit_id: string;
+  cs_audit_date: string;
+  note: string | null;
+}
+
 const PILLAR_KEYS: Array<{ key: keyof Omit<ScoreRow, "total" | "breakdown">; tKey: string }> = [
   { key: "recognition", tKey: "brandProfile.pillarRecognition" },
   { key: "clarity", tKey: "brandProfile.pillarClarity" },
@@ -68,18 +79,21 @@ export function BrandProfileReport({
   initialScores,
   initialInsights,
   initialPrompts,
+  initialDiagnostics,
 }: {
   runId: string;
   initialRun: RunRow;
   initialScores: ScoreRow | null;
   initialInsights: InsightRow[];
   initialPrompts: PromptRow[];
+  initialDiagnostics: DiagnosticRow[];
 }) {
   const { t } = useTranslation();
   const [run, setRun] = useState<RunRow>(initialRun);
   const [scores, setScores] = useState<ScoreRow | null>(initialScores);
   const [insights, setInsights] = useState<InsightRow[]>(initialInsights);
   const [prompts] = useState<PromptRow[]>(initialPrompts);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticRow[]>(initialDiagnostics);
 
   const isPolling = run.status === "pending" || run.status === "running";
   const total = Number(scores?.total ?? 0);
@@ -97,6 +111,7 @@ export function BrandProfileReport({
         setRun(json.run);
         setScores(json.scores);
         if (Array.isArray(json.insights)) setInsights(json.insights);
+        if (Array.isArray(json.diagnostics)) setDiagnostics(json.diagnostics);
       } catch { /* swallow */ }
     };
     const id = setInterval(tick, 4000);
@@ -121,6 +136,20 @@ export function BrandProfileReport({
     }
     return acc;
   }, [prompts]);
+
+  const diagnosticsByPillar = useMemo(() => {
+    const acc: Record<string, DiagnosticRow[]> = {};
+    for (const d of diagnostics) {
+      if (!acc[d.pillar]) acc[d.pillar] = [];
+      acc[d.pillar].push(d);
+    }
+    return acc;
+  }, [diagnostics]);
+
+  const hasDiagnostics = diagnostics.length > 0;
+  const csAuditId = hasDiagnostics ? diagnostics[0].cs_audit_id : null;
+  const csAuditDate = hasDiagnostics ? diagnostics[0].cs_audit_date : null;
+  const showNoCSBanner = !hasDiagnostics && run.status === "completed";
 
   return (
     <>
@@ -220,11 +249,47 @@ export function BrandProfileReport({
             </div>
           )}
 
+          {hasDiagnostics && csAuditId && (
+            <div className="card p-4 border-primary/30 bg-primary/5 flex items-center gap-3">
+              <Stethoscope className="w-4 h-4 text-primary shrink-0" />
+              <p className="text-sm text-foreground flex-1">
+                {t("brandProfile.csLinkedHeading")}{" "}
+                <span className="text-muted-foreground">({csAuditDate})</span>
+              </p>
+              <a
+                href={`${CS_AUDIT_BASE}/${csAuditId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                {t("brandProfile.csOpenAudit")}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          )}
+
+          {showNoCSBanner && (
+            <div className="card p-4 border-amber-500/30 bg-amber-500/5 flex items-center gap-3">
+              <Stethoscope className="w-4 h-4 text-amber-400 shrink-0" />
+              <p className="text-sm text-foreground flex-1">{t("brandProfile.csEmptyHint")}</p>
+              <a
+                href="https://suite.citationrate.com/audit/new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline"
+              >
+                {t("brandProfile.csRunAudit")}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {PILLAR_KEYS.map((p) => {
               const sub = (scores.breakdown as any)?.[p.key as string];
               const tips = insightsByPillar[p.key as string] ?? [];
               const responses = promptsByPillar[p.key as string] ?? [];
+              const diag = diagnosticsByPillar[p.key as string] ?? [];
               const v = Number(scores[p.key] ?? 0);
               return (
                 <PillarCard
@@ -234,6 +299,7 @@ export function BrandProfileReport({
                   breakdown={sub}
                   insights={tips}
                   responses={responses}
+                  diagnostics={diag}
                   insightsLoading={insightsLoading}
                   t={t}
                 />
@@ -246,12 +312,19 @@ export function BrandProfileReport({
   );
 }
 
+function statusDot(status: "fail" | "partial" | "pass"): string {
+  if (status === "fail") return "bg-red-400";
+  if (status === "partial") return "bg-amber-400";
+  return "bg-emerald-400";
+}
+
 function PillarCard({
   title,
   score,
   breakdown,
   insights,
   responses,
+  diagnostics,
   insightsLoading,
   t,
 }: {
@@ -260,10 +333,12 @@ function PillarCard({
   breakdown: any;
   insights: string[];
   responses: PromptRow[];
+  diagnostics: DiagnosticRow[];
   insightsLoading: boolean;
   t: (key: string) => string;
 }) {
   const [showResponses, setShowResponses] = useState(false);
+  const failing = diagnostics.filter((d) => d.cs_status !== "pass");
 
   return (
     <div className="card p-5 space-y-4">
@@ -310,6 +385,32 @@ function PillarCard({
           <p className="text-xs text-muted-foreground">{t("brandProfile.noInsights")}</p>
         )}
       </div>
+
+      {/* CS diagnostics */}
+      {failing.length > 0 && (
+        <div className="border-t border-border pt-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Stethoscope className="w-4 h-4 text-primary" />
+            <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+              {t("brandProfile.csFindings")}
+            </span>
+          </div>
+          <ul className="space-y-1.5">
+            {failing.map((d) => (
+              <li key={d.cs_parameter_id} className="flex items-start gap-2 text-sm leading-relaxed">
+                <span
+                  className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${statusDot(d.cs_status)}`}
+                  aria-hidden
+                />
+                <span className="text-foreground">
+                  <span className="font-mono text-xs text-muted-foreground mr-1">{d.cs_parameter_id}</span>
+                  {d.note ?? t(`brandProfile.csStatus_${d.cs_status}`)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Raw responses toggle */}
       {responses.length > 0 && (

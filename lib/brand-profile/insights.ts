@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import type { DiagnosticEntry, DiagnosticPillar } from "./cs-bridge";
 
 const SONNET_MODEL = "claude-sonnet-4-5";
 
@@ -24,6 +25,7 @@ export interface InsightInput {
   };
   breakdown: any;
   responsesByPillar: Record<Pillar, string[]>;
+  diagnostics?: DiagnosticEntry[];
 }
 
 export interface InsightOutput {
@@ -55,8 +57,38 @@ const PILLAR_GUIDE: Record<Pillar, string> = {
     "Sentiment mide se le AI ti raccomandano o parlano positivamente. Score basso su Recommendation = ti citano ma non come prima scelta. Suggerisci: case study pubblici, testimonial verificabili, comparazioni vinte, recensioni high-quality.",
 };
 
+function diagnosticsByPillar(diagnostics: DiagnosticEntry[] | undefined): Record<DiagnosticPillar, DiagnosticEntry[]> {
+  const acc: Record<DiagnosticPillar, DiagnosticEntry[]> = {
+    clarity: [],
+    authority: [],
+    relevance: [],
+  };
+  if (!diagnostics) return acc;
+  for (const d of diagnostics) {
+    if (acc[d.pillar]) acc[d.pillar].push(d);
+  }
+  return acc;
+}
+
+function formatCSFindings(entries: DiagnosticEntry[]): string {
+  if (entries.length === 0) return "";
+  const fail = entries.filter((e) => e.cs_status === "fail");
+  const partial = entries.filter((e) => e.cs_status === "partial");
+  const pass = entries.filter((e) => e.cs_status === "pass");
+  const fmt = (e: DiagnosticEntry) =>
+    `${e.cs_parameter_id}${e.note ? ` "${e.note}"` : ""}`;
+  const lines: string[] = [];
+  if (fail.length > 0) lines.push(`MANCANTI/ROTTI: ${fail.map(fmt).join("; ")}`);
+  if (partial.length > 0) lines.push(`PARZIALI: ${partial.map(fmt).join("; ")}`);
+  if (pass.length > 0) lines.push(`OK: ${pass.map(fmt).join("; ")}`);
+  return `\n\nAudit Citability del sito (${entries[0].cs_audit_date}):\n${lines.join("\n")}`;
+}
+
 function buildPrompt(input: InsightInput): string {
   const lang = LANG_INSTRUCTIONS[input.locale] ?? LANG_INSTRUCTIONS.it;
+  const csByPillar = diagnosticsByPillar(input.diagnostics);
+  const hasCS = (input.diagnostics?.length ?? 0) > 0;
+
   const pillarBlocks = (Object.keys(input.responsesByPillar) as Pillar[])
     .map((p) => {
       const score = input.scores[p];
@@ -66,9 +98,17 @@ function buildPrompt(input: InsightInput): string {
       const responses = input.responsesByPillar[p]
         .map((r, i) => `[Risposta ${i + 1}]\n${r.slice(0, 1500)}`)
         .join("\n\n");
-      return `## ${p.toUpperCase()} — score ${Math.round(score)}/100\nGuida: ${PILLAR_GUIDE[p]}\nBreakdown: ${breakdown}\n\nRisposte AI raccolte:\n${responses}`;
+      const csBlock =
+        p === "clarity" || p === "authority" || p === "relevance"
+          ? formatCSFindings(csByPillar[p])
+          : "";
+      return `## ${p.toUpperCase()} — score ${Math.round(score)}/100\nGuida: ${PILLAR_GUIDE[p]}\nBreakdown: ${breakdown}${csBlock}\n\nRisposte AI raccolte:\n${responses}`;
     })
     .join("\n\n---\n\n");
+
+  const csRule = hasCS
+    ? `\n- Il sito è già stato auditato con Citability: usa i parametri MANCANTI/ROTTI come spiegazione causale specifica ("le AI confondono il settore perché manca P5 'Schema Product'") e suggerisci come ripararli prima di proporre azioni nuove.`
+    : "";
 
   return `${lang}
 
@@ -78,7 +118,7 @@ REGOLE:
 - Niente generiche tipo "migliora il SEO". Cita la causa specifica trovata nelle risposte AI.
 - Se le AI confondono il brand con un altro, dillo esplicitamente.
 - Se score è alto (>70) suggerisci come consolidare; se basso (<50) suggerisci come riparare.
-- Massimo 240 caratteri per ogni insight.
+- Massimo 240 caratteri per ogni insight.${csRule}
 
 ${pillarBlocks}
 
