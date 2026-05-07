@@ -67,7 +67,7 @@ export async function POST(request: Request) {
   });
   if (rpcErr) return apiError(`RPC error: ${rpcErr.message}`, 500);
   if (!rpcResult?.allowed) {
-    return apiError("Quota Brand Profile esaurita per questo ciclo", 402);
+    return apiError("Quota Brand Profile esaurita per questo mese", 402);
   }
 
   const { data: run, error: insertErr } = await (

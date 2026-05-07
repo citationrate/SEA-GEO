@@ -53,7 +53,7 @@ const BP_BENEFITS: BenefitRow[] = [
 ];
 
 const CS_BENEFITS: BenefitRow[] = [
-  { label: "Audit / ciclo", values: { demo: "1 / mese", base: "10", pro: "50", enterprise: "Illimitati" } },
+  { label: "Audit / mese", values: { demo: "1", base: "10", pro: "50", enterprise: "Illimitati" } },
   { label: "Parametri analizzati", values: { demo: "10", base: "10", pro: "56", enterprise: "56" } },
   { label: "URL per audit", values: { demo: "1", base: "3", pro: "5", enterprise: "Illimitati" } },
   { label: "Motori AI", values: { demo: "ChatGPT, Gemini", base: "3 motori", pro: "7 motori", enterprise: "7 motori" } },
