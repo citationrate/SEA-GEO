@@ -30,21 +30,36 @@ export function bpAccessAllowed(opts: { email?: string | null; isAdmin?: boolean
   return email !== "" && BP_WHITELIST_EMAILS.has(email);
 }
 
-export const BP_MODEL_CAPS: Record<string, number> = {
-  demo: 0,
-  free: 0,
-  base: 3,
-  pro: 5,
-  agency: 5,
-  enterprise: 7,
+/**
+ * Curated model pool per plan (server-side selection — the user no longer
+ * picks models from the wizard). Pools are append-only as the plan tier
+ * grows so a Pro run includes everything Base sees, plus extras.
+ *
+ * Cost ladder (cheapest first): claude-haiku < gpt-5.4-mini < gemini-2.5-flash
+ * < perplexity-sonar < claude-sonnet < gpt-5.5.
+ */
+export const BP_MODELS_BY_PLAN: Record<string, readonly string[]> = {
+  demo: ["claude-haiku"],
+  free: ["claude-haiku"],
+  base: ["claude-haiku", "gpt-5.4-mini"],
+  pro: ["claude-haiku", "gpt-5.4-mini", "gemini-2.5-flash", "perplexity-sonar"],
+  agency: ["claude-haiku", "gpt-5.4-mini", "gemini-2.5-flash", "perplexity-sonar"],
+  enterprise: [
+    "claude-haiku",
+    "gpt-5.4-mini",
+    "gemini-2.5-flash",
+    "perplexity-sonar",
+    "claude-sonnet",
+    "gpt-5.5",
+  ],
 };
 
 export function bpRunLimit(plan: string | null | undefined): number {
   return BP_RUN_LIMITS[(plan ?? "demo").toLowerCase()] ?? 0;
 }
 
-export function bpModelCap(plan: string | null | undefined): number {
-  return BP_MODEL_CAPS[(plan ?? "demo").toLowerCase()] ?? 0;
+export function bpModelsForPlan(plan: string | null | undefined): string[] {
+  return [...(BP_MODELS_BY_PLAN[(plan ?? "demo").toLowerCase()] ?? BP_MODELS_BY_PLAN.demo)];
 }
 
 const BP_COMPARE_PLANS = new Set(["pro", "agency", "enterprise"]);

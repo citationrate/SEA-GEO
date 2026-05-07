@@ -4,7 +4,7 @@ import { inngest } from "@/lib/inngest";
 import { apiError, requireAuth } from "@/lib/api-helpers";
 import { BRAND_PROFILE_START_EVENT } from "@/lib/brand-profile/inngest";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
-import { bpAccessAllowed } from "@/lib/brand-profile/plans";
+import { bpAccessAllowed, bpModelsForPlan } from "@/lib/brand-profile/plans";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,22 +18,14 @@ const PLAN_RUN_LIMITS: Record<string, number> = {
   enterprise: 999,
 };
 
-const PLAN_MODEL_CAPS: Record<string, number> = {
-  demo: 0,
-  free: 0,
-  base: 3,
-  pro: 5,
-  agency: 5,
-  enterprise: 7,
-};
-
 const StartSchema = z.object({
   brand: z.string().trim().min(2).max(120),
-  brand_url: z.string().trim().url().optional().nullable(),
+  brand_url: z.string().trim().url(),
   sector: z.string().trim().min(2).max(120),
   country: z.string().trim().toUpperCase().refine((c) => ["IT", "US", "GB", "ES", "FR", "DE"].includes(c)),
   locale: z.enum(["it", "en", "fr", "de", "es"]).default("it"),
-  models: z.array(z.string().trim().min(1)).min(1).max(7),
+  // models removed from the wizard — the server picks the pool by plan via
+  // bpModelsForPlan(). Schema stays silent on this field for forward compat.
 });
 
 export async function POST(request: Request) {
@@ -60,13 +52,13 @@ export async function POST(request: Request) {
 
   const plan = (profile?.plan as string | undefined)?.toLowerCase() ?? "demo";
   const maxRuns = PLAN_RUN_LIMITS[plan] ?? 0;
-  const maxModels = PLAN_MODEL_CAPS[plan] ?? 0;
+  const models = bpModelsForPlan(plan);
 
   if (maxRuns === 0) {
     return apiError("Brand Profile non disponibile sul tuo piano", 402);
   }
-  if (payload.models.length > maxModels) {
-    return apiError(`Massimo ${maxModels} modelli sul piano ${plan}`, 400);
+  if (models.length === 0) {
+    return apiError("Nessun modello disponibile per il tuo piano", 402);
   }
 
   const { data: rpcResult, error: rpcErr } = await (cr as any).rpc("try_consume_brand_profile", {
@@ -84,14 +76,14 @@ export async function POST(request: Request) {
     .insert({
       user_id: user.id,
       brand_name: payload.brand,
-      brand_url: payload.brand_url ?? null,
+      brand_url: payload.brand_url,
       sector: payload.sector,
       country: payload.country,
       locale: payload.locale,
-      models: payload.models,
+      models,
       plan_at_run: plan,
       status: "pending",
-      total_prompts: 15 * payload.models.length,
+      total_prompts: 15 * models.length,
     })
     .select("id")
     .single();
@@ -106,11 +98,11 @@ export async function POST(request: Request) {
       runId: run.id,
       userId: user.id,
       brand: payload.brand,
-      brandUrl: payload.brand_url ?? null,
+      brandUrl: payload.brand_url,
       sector: payload.sector,
       country: payload.country,
       locale: payload.locale,
-      models: payload.models,
+      models,
     },
   });
 
@@ -129,5 +121,8 @@ export async function GET() {
     .limit(50);
 
   if (queryErr) return apiError(queryErr.message, 500);
-  return NextResponse.json({ runs: runs ?? [] });
+  return NextResponse.json(
+    { runs: runs ?? [] },
+    { headers: { "Cache-Control": "private, no-store, no-cache, must-revalidate" } },
+  );
 }
