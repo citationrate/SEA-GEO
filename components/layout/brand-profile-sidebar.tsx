@@ -196,7 +196,7 @@ export function BrandProfileSidebar({ profile }: SidebarProps) {
       {/* Bottom: plan + logout */}
       <div className="border-t border-border p-2 space-y-1">
         <Link
-          href="/piano"
+          href="/brand-profile/piano"
           onClick={closeMobile}
           className={cn(
             "flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] text-sm font-sans transition-colors hover:bg-surface-2",

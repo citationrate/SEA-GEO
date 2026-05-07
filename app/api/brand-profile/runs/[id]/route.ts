@@ -23,16 +23,26 @@ export async function GET(
 
   if (!run) return apiError("Run non trovata", 404);
 
-  const [{ data: scores }, { data: diagnostics }, { data: insights }] = await Promise.all([
+  const [{ data: scores }, { data: diagnostics }, { data: insights }, { count: completedPrompts }] = await Promise.all([
     (bp.from("scores") as any).select("*").eq("run_id", params.id).maybeSingle(),
     (bp.from("diagnostics") as any).select("*").eq("run_id", params.id),
     (bp.from("insights") as any).select("*").eq("run_id", params.id),
+    (bp.from("prompt_results") as any)
+      .select("id", { count: "exact", head: true })
+      .eq("run_id", params.id),
   ]);
 
-  return NextResponse.json({
-    run,
-    scores: scores ?? null,
-    diagnostics: diagnostics ?? [],
-    insights: insights ?? [],
-  });
+  return NextResponse.json(
+    {
+      run,
+      scores: scores ?? null,
+      diagnostics: diagnostics ?? [],
+      insights: insights ?? [],
+      progress: {
+        completed: Number(completedPrompts ?? 0),
+        total: Number((run as any)?.total_prompts ?? 0),
+      },
+    },
+    { headers: { "Cache-Control": "private, no-store, no-cache, must-revalidate" } },
+  );
 }
