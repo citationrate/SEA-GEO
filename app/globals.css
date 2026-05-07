@@ -333,3 +333,38 @@ html.custom-cursor * { cursor: none !important; }
     }
   }
 }
+
+/* Brand Profile — print stylesheet for Export PDF.
+   Activated by window.print() from the report page. We invert the dark theme
+   so the printed page is readable on paper, hide chrome, and force-expand
+   collapsibles (raw responses inside PillarCard). */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  [data-bp-no-print] { display: none !important; }
+  [data-bp-print-area] { background: #ffffff !important; padding: 0 !important; }
+
+  [data-bp-print-area] .card {
+    border: 1px solid #d4d4d4 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  [data-bp-print-area] [data-bp-print-expand] { display: block !important; }
+  [data-bp-print-area] [data-bp-print-toggle] { display: none !important; }
+
+  [data-bp-print-area] .text-muted-foreground { color: #555555 !important; }
+  [data-bp-print-area] .text-foreground { color: #111111 !important; }
+  [data-bp-print-area] .bg-surface-2\/50 { background: #f5f5f0 !important; }
+  [data-bp-print-area] .border-border { border-color: #d4d4d4 !important; }
+}

@@ -35,11 +35,15 @@ export default async function BrandProfileLayout({ children }: { children: React
 
   return (
     <MobileNavProvider>
-      <div className="flex h-screen bg-ink overflow-hidden">
-        <BrandProfileSidebar profile={profile as any} />
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-          <TopBar />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+      <div className="flex h-screen bg-ink overflow-hidden print:block print:h-auto print:overflow-visible">
+        <div data-bp-no-print>
+          <BrandProfileSidebar profile={profile as any} />
+        </div>
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden print:overflow-visible">
+          <div data-bp-no-print>
+            <TopBar />
+          </div>
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 print:overflow-visible print:p-0">
             {children}
           </main>
         </div>

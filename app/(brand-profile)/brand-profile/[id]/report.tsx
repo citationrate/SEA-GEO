@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Radar, ArrowLeft, Loader2, AlertTriangle, Lightbulb, ChevronDown, ChevronUp, Sparkles, Stethoscope, ExternalLink } from "lucide-react";
+import { Radar, ArrowLeft, Loader2, AlertTriangle, Lightbulb, ChevronDown, ChevronUp, Sparkles, Stethoscope, ExternalLink, Printer } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { ScoreRadar } from "./score-radar";
 
@@ -80,6 +80,7 @@ export function BrandProfileReport({
   initialInsights,
   initialPrompts,
   initialDiagnostics,
+  canExport,
 }: {
   runId: string;
   initialRun: RunRow;
@@ -87,6 +88,7 @@ export function BrandProfileReport({
   initialInsights: InsightRow[];
   initialPrompts: PromptRow[];
   initialDiagnostics: DiagnosticRow[];
+  canExport: boolean;
 }) {
   const { t } = useTranslation();
   const [run, setRun] = useState<RunRow>(initialRun);
@@ -151,12 +153,15 @@ export function BrandProfileReport({
   const csAuditDate = hasDiagnostics ? diagnostics[0].cs_audit_date : null;
   const showNoCSBanner = !hasDiagnostics && run.status === "completed";
 
+  const canPrint = canExport && run.status === "completed" && scores != null;
+
   return (
-    <>
+    <div data-bp-print-area className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <Link
             href="/brand-profile"
+            data-bp-no-print
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
           >
             <ArrowLeft className="w-3 h-3" />
@@ -168,8 +173,22 @@ export function BrandProfileReport({
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             {run.sector} · {run.country}
+            {run.completed_at && (
+              <> · <span className="font-mono">{run.completed_at.slice(0, 10)}</span></>
+            )}
           </p>
         </div>
+        {canPrint && (
+          <button
+            type="button"
+            data-bp-no-print
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] text-sm border border-border text-foreground hover:bg-surface-2 transition-colors"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            {t("brandProfile.exportPdf")}
+          </button>
+        )}
       </div>
 
       {run.status === "failed" && (
@@ -260,6 +279,7 @@ export function BrandProfileReport({
                 href={`${CS_AUDIT_BASE}/${csAuditId}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                data-bp-no-print
                 className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
               >
                 {t("brandProfile.csOpenAudit")}
@@ -269,7 +289,7 @@ export function BrandProfileReport({
           )}
 
           {showNoCSBanner && (
-            <div className="card p-4 border-amber-500/30 bg-amber-500/5 flex items-center gap-3">
+            <div data-bp-no-print className="card p-4 border-amber-500/30 bg-amber-500/5 flex items-center gap-3">
               <Stethoscope className="w-4 h-4 text-amber-400 shrink-0" />
               <p className="text-sm text-foreground flex-1">{t("brandProfile.csEmptyHint")}</p>
               <a
@@ -308,7 +328,7 @@ export function BrandProfileReport({
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }
 
@@ -417,38 +437,41 @@ function PillarCard({
         <div className="border-t border-border pt-4">
           <button
             type="button"
+            data-bp-print-toggle
             onClick={() => setShowResponses((s) => !s)}
             className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             {showResponses ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             {showResponses ? t("brandProfile.hideRawResponses") : t("brandProfile.viewRawResponses")}
           </button>
-          {showResponses && (
-            <div className="mt-3 space-y-3">
-              {responses.map((r, i) => (
-                <div key={i} className="rounded-[2px] border border-border bg-surface-2/50 p-3 text-xs">
-                  <div className="flex items-center justify-between gap-2 mb-2 text-[11px] text-muted-foreground">
-                    <span className="font-mono">
-                      {t("brandProfile.rawResponseFromModel")} <span className="text-foreground">{r.model}</span>
+          <div
+            data-bp-print-expand
+            style={{ display: showResponses ? "block" : "none" }}
+            className="mt-3 space-y-3"
+          >
+            {responses.map((r, i) => (
+              <div key={i} className="rounded-[2px] border border-border bg-surface-2/50 p-3 text-xs">
+                <div className="flex items-center justify-between gap-2 mb-2 text-[11px] text-muted-foreground">
+                  <span className="font-mono">
+                    {t("brandProfile.rawResponseFromModel")} <span className="text-foreground">{r.model}</span>
+                  </span>
+                  {r.brand_mentioned != null && (
+                    <span className={r.brand_mentioned ? "text-emerald-400" : "text-muted-foreground"}>
+                      {r.brand_mentioned ? "✓" : "—"}
                     </span>
-                    {r.brand_mentioned != null && (
-                      <span className={r.brand_mentioned ? "text-emerald-400" : "text-muted-foreground"}>
-                        {r.brand_mentioned ? "✓" : "—"}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-muted-foreground mb-2 italic">{r.prompt_text}</p>
-                  {r.error_message ? (
-                    <p className="text-red-400">{r.error_message}</p>
-                  ) : r.response_raw ? (
-                    <p className="text-foreground whitespace-pre-wrap leading-relaxed">{r.response_raw}</p>
-                  ) : (
-                    <p className="text-muted-foreground">{t("brandProfile.rawResponseEmpty")}</p>
                   )}
                 </div>
-              ))}
-            </div>
-          )}
+                <p className="text-muted-foreground mb-2 italic">{r.prompt_text}</p>
+                {r.error_message ? (
+                  <p className="text-red-400">{r.error_message}</p>
+                ) : r.response_raw ? (
+                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">{r.response_raw}</p>
+                ) : (
+                  <p className="text-muted-foreground">{t("brandProfile.rawResponseEmpty")}</p>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
