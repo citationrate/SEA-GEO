@@ -1,11 +1,32 @@
 export const BP_RUN_LIMITS: Record<string, number> = {
-  demo: 0,
-  free: 0,
-  base: 1,
-  pro: 3,
-  agency: 3,
+  demo: 1,
+  free: 1,
+  base: 3,
+  pro: 10,
+  agency: 10,
   enterprise: 999,
 };
+
+/**
+ * Soft-launch whitelist. Brand Profile is hidden from production users until
+ * the public launch — only admins (profiles.is_admin = true) and a small set
+ * of internal email accounts can reach the (brand-profile) route group or
+ * call POST /api/brand-profile/runs.
+ *
+ * To launch publicly: drop this gate from `(brand-profile)/layout.tsx` and
+ * the runs API, and re-add the bp entry to ToolSwitcher TOOLS.
+ */
+export const BP_WHITELIST_EMAILS: ReadonlySet<string> = new Set([
+  "tutorial@citationrate.com",
+  "gianmariacipriano3@gmail.com",
+  "monzabrianzadascoprire@gmail.com",
+]);
+
+export function bpAccessAllowed(opts: { email?: string | null; isAdmin?: boolean | null }): boolean {
+  if (opts.isAdmin === true) return true;
+  const email = (opts.email ?? "").toLowerCase().trim();
+  return email !== "" && BP_WHITELIST_EMAILS.has(email);
+}
 
 export const BP_MODEL_CAPS: Record<string, number> = {
   demo: 0,

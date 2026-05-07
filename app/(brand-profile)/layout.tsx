@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
+import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
 import { BrandProfileSidebar } from "@/components/layout/brand-profile-sidebar";
 import { TopBar } from "@/components/layout/topbar";
 import { MobileNavProvider } from "@/components/layout/mobile-nav-context";
+import { bpAccessAllowed } from "@/lib/brand-profile/plans";
 
 export default async function BrandProfileLayout({ children }: { children: React.ReactNode }) {
   const auth = createServerClient();
@@ -16,6 +18,17 @@ export default async function BrandProfileLayout({ children }: { children: React
     }
   } catch {
     /* listFactors/AAL not available — fail open */
+  }
+
+  // Soft-launch gate: only admins (CR profiles.is_admin) or whitelisted emails
+  // can reach Brand Profile. Everyone else is bounced back to AVI.
+  const cr = createCitationRateServiceClient();
+  const { data: crProfile } = await (cr.from("profiles") as any)
+    .select("is_admin")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!bpAccessAllowed({ email: user.email, isAdmin: (crProfile as any)?.is_admin })) {
+    redirect("/dashboard");
   }
 
   const supabase = createDataClient();

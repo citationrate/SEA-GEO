@@ -4,16 +4,17 @@ import { inngest } from "@/lib/inngest";
 import { apiError, requireAuth } from "@/lib/api-helpers";
 import { BRAND_PROFILE_START_EVENT } from "@/lib/brand-profile/inngest";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
+import { bpAccessAllowed } from "@/lib/brand-profile/plans";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const PLAN_RUN_LIMITS: Record<string, number> = {
-  demo: 0,
-  free: 0,
-  base: 1,
-  pro: 3,
-  agency: 3,
+  demo: 1,
+  free: 1,
+  base: 3,
+  pro: 10,
+  agency: 10,
   enterprise: 999,
 };
 
@@ -48,9 +49,15 @@ export async function POST(request: Request) {
 
   const cr = createCitationRateServiceClient();
   const { data: profile } = await (cr.from("profiles") as any)
-    .select("plan")
+    .select("plan, is_admin")
     .eq("id", user.id)
     .single();
+
+  // Soft-launch gate (mirrors the (brand-profile)/layout.tsx check).
+  if (!bpAccessAllowed({ email: user.email, isAdmin: (profile as any)?.is_admin })) {
+    return apiError("Brand Profile non disponibile durante il soft launch", 403);
+  }
+
   const plan = (profile?.plan as string | undefined)?.toLowerCase() ?? "demo";
   const maxRuns = PLAN_RUN_LIMITS[plan] ?? 0;
   const maxModels = PLAN_MODEL_CAPS[plan] ?? 0;
