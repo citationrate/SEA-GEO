@@ -86,7 +86,13 @@ export const runBrandProfile = inngest.createFunction(
           batch.map(async (task) => {
             try {
               const t0 = Date.now();
-              const llm = await callAIModel(task.text, task.model, false, data.brandUrl ?? "");
+              const llm = await callAIModel(task.text, task.model, false, data.brandUrl ?? "", {
+                product: "brand_profile",
+                operation: "brand_profile",
+                userId: data.userId,
+                runId: data.runId,
+                meta: { pillar: task.pillar, prompt_index: task.index },
+              });
               const durationMs = Date.now() - t0;
               const responseRaw = llm.text ?? "";
               if (!responseRaw) {

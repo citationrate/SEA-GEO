@@ -449,7 +449,14 @@ async function executeAICall(
 
   let aiResult: AIModelResult;
   try {
-    aiResult = await callAIModel(promptText, task.model, task.browsing, task.brandDomain);
+    aiResult = await callAIModel(promptText, task.model, task.browsing, task.brandDomain, {
+      product: "avi",
+      operation: "avi_main",
+      projectId: task.projectId,
+      runId: task.runId,
+      promptId: promptRecord.id as string,
+      meta: { query_id: task.queryId, segment_id: task.segmentId, run_number: task.runNumber, browsing: task.browsing },
+    });
   } catch (e: any) {
     const crashMsg = e?.message ?? String(e);
     console.error("[executeAICall] callAIModel crashed:", crashMsg);
@@ -498,7 +505,16 @@ async function extractAndPersist(
   const enrichedSector = task.sectorKeywords.length > 0
     ? `${task.sector ?? "generic"} (keywords: ${task.sectorKeywords.join(", ")})`
     : task.sector ?? undefined;
-  const extraction = await extractFromResponse(rawText, task.targetBrand, enrichedSector, task.brandType ?? undefined, task.language ?? undefined, task.brandDomain);
+  const extraction = await extractFromResponse(
+    rawText, task.targetBrand, enrichedSector, task.brandType ?? undefined, task.language ?? undefined, task.brandDomain,
+    {
+      product: "avi",
+      projectId: task.projectId,
+      runId: task.runId,
+      promptId,
+      meta: { query_id: task.queryId, segment_id: task.segmentId, run_number: task.runNumber },
+    },
+  );
 
   // Detailed extraction logging
   console.log(`[extractAndPersist] model=${task.model} brand="${task.targetBrand}" brand_mentioned=${extraction.brand_mentioned} competitors_raw=${extraction.competitors_found.length} topics=${extraction.topics.length} responseLen=${rawText.length}`);
