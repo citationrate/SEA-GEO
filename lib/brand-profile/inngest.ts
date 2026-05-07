@@ -3,6 +3,7 @@ import { inngest } from "@/lib/inngest";
 import { createServiceClient } from "@/lib/supabase/service";
 import { fetchCSDiagnostics } from "./cs-bridge";
 import { extractByPillar, type PillarExtraction } from "./extractor";
+import { generateInsights, type Pillar as InsightPillar } from "./insights";
 import { buildPrompts, type Pillar } from "./prompts";
 import { computeScores } from "./scoring";
 
@@ -143,7 +144,7 @@ export const runBrandProfile = inngest.createFunction(
       for (const r of batchResults) if (r) allExtractions.push(r as PillarExtraction);
     }
 
-    await step.run("compute-scores", async () => {
+    const computed = await step.run("compute-scores", async () => {
       const { scores, breakdown } = computeScores(
         allExtractions.map((e) => ({ pillar: e.pillar as Pillar, data: e.data })),
       );
@@ -161,6 +162,60 @@ export const runBrandProfile = inngest.createFunction(
         },
         { onConflict: "run_id" },
       );
+      return { scores, breakdown };
+    });
+
+    await step.run("generate-insights", async () => {
+      try {
+        const { data: rows } = await (bp.from("prompt_results") as any)
+          .select("pillar, response_raw")
+          .eq("run_id", data.runId);
+        const responsesByPillar: Record<InsightPillar, string[]> = {
+          recognition: [],
+          clarity: [],
+          authority: [],
+          relevance: [],
+          sentiment: [],
+        };
+        for (const r of (rows ?? []) as any[]) {
+          const p = r.pillar as InsightPillar;
+          if (!p || !responsesByPillar[p]) continue;
+          if (r.response_raw && typeof r.response_raw === "string") {
+            responsesByPillar[p].push(r.response_raw as string);
+          }
+        }
+        const { insights, model } = await generateInsights({
+          brand: data.brand,
+          sector: data.sector,
+          country: data.country,
+          locale: data.locale,
+          scores: {
+            recognition: Number(computed.scores.recognition ?? 0),
+            clarity: Number(computed.scores.clarity ?? 0),
+            authority: Number(computed.scores.authority ?? 0),
+            relevance: Number(computed.scores.relevance ?? 0),
+            sentiment: Number(computed.scores.sentiment ?? 0),
+          },
+          breakdown: computed.breakdown,
+          responsesByPillar,
+        });
+        const rowsToInsert: any[] = [];
+        (Object.keys(insights) as InsightPillar[]).forEach((p) => {
+          insights[p].forEach((text) => {
+            rowsToInsert.push({
+              run_id: data.runId,
+              pillar: p,
+              insight_text: text,
+              model,
+            });
+          });
+        });
+        if (rowsToInsert.length > 0) {
+          await (bp.from("insights") as any).insert(rowsToInsert);
+        }
+      } catch (e) {
+        console.error("[brand-profile/generate-insights] non-fatal:", e);
+      }
     });
 
     await step.run("cs-bridge", async () => {
