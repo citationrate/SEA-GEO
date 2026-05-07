@@ -315,21 +315,21 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       {/* AVI Score + Last Run */}
       {lastAvi && (
         <div className="card p-5">
-          <div className="flex items-center gap-6">
-            <div className="text-center">
+          <div className="flex items-center gap-3 sm:gap-6">
+            <div className="text-center shrink-0">
               <p className="text-xs text-muted-foreground mb-1">AVI Score</p>
-              <p className="font-display font-bold text-3xl text-primary">{(lastAvi as any).avi_score}</p>
+              <p className="font-display font-bold text-2xl sm:text-3xl text-primary">{(lastAvi as any).avi_score}</p>
             </div>
-            <div className="h-12 w-px bg-border" />
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 flex-1">
+            <div className="h-12 w-px bg-border shrink-0" />
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 flex-1 min-w-0">
               {[
                 { labelKey: "dashboard.presence", value: (lastAvi as any).presence_score },
                 { labelKey: "dashboard.position", value: (lastAvi as any).rank_score },
                 { labelKey: "dashboard.sentiment", value: (lastAvi as any).sentiment_score },
               ].map((c) => (
-                <div key={c.labelKey} className="text-center">
-                  <p className="text-xs text-muted-foreground"><T k={c.labelKey} /></p>
-                  <p className="font-display font-semibold text-foreground">{Math.round(c.value || 0)}</p>
+                <div key={c.labelKey} className="text-center min-w-0">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate"><T k={c.labelKey} /></p>
+                  <p className="font-display font-semibold text-foreground text-sm sm:text-base">{Math.round(c.value || 0)}</p>
                 </div>
               ))}
             </div>
