@@ -23,3 +23,12 @@ export function bpRunLimit(plan: string | null | undefined): number {
 export function bpModelCap(plan: string | null | undefined): number {
   return BP_MODEL_CAPS[(plan ?? "demo").toLowerCase()] ?? 0;
 }
+
+const BP_COMPARE_PLANS = new Set(["pro", "agency", "enterprise"]);
+
+export function bpComparePlanAllowed(plan: string | null | undefined): boolean {
+  return BP_COMPARE_PLANS.has((plan ?? "demo").toLowerCase());
+}
+
+export const BP_COMPARE_MIN_RUNS = 2;
+export const BP_COMPARE_MAX_RUNS = 4;
