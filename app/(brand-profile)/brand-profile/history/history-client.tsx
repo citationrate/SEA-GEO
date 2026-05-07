@@ -306,7 +306,13 @@ export function HistoryClient({
                 const total = Number(it.scores?.total ?? 0);
                 const dateStr = (it.completed_at ?? it.started_at).slice(0, 10);
                 return (
-                  <tr key={it.id} className="border-b border-border last:border-0 hover:bg-surface-2/40 cursor-pointer">
+                  <tr
+                    key={it.id}
+                    className="border-b border-border last:border-0 cursor-pointer transition-colors"
+                    style={{ background: "transparent" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(126,184,154,0.06)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                  >
                     <td className="p-3 text-muted-foreground font-mono text-xs">
                       <Link href={`/brand-profile/${it.id}`} className="block">{dateStr}</Link>
                     </td>
