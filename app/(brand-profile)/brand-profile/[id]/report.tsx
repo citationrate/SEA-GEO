@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Radar, ArrowLeft, Loader2, AlertTriangle, Lightbulb, ChevronDown, ChevronUp, Sparkles, Stethoscope, ExternalLink, Printer } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Radar, ArrowLeft, Loader2, AlertTriangle, Lightbulb, ChevronDown, ChevronUp, Sparkles, Stethoscope, ExternalLink, Printer, RefreshCw } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { ScoreRadar } from "./score-radar";
 import { RunInProgressAnimation } from "./run-progress";
@@ -12,6 +13,7 @@ const CS_AUDIT_BASE = "https://suite.citationrate.com/audit";
 interface RunRow {
   id: string;
   brand_name: string;
+  brand_url: string | null;
   sector: string;
   country: string;
   locale: string;
@@ -99,7 +101,10 @@ export function BrandProfileReport({
   const [diagnostics, setDiagnostics] = useState<DiagnosticRow[]>(initialDiagnostics);
   const [openPillar, setOpenPillar] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [reRunning, setReRunning] = useState(false);
+  const [reRunError, setReRunError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ completed: number; total: number }>({ completed: 0, total: 0 });
+  const router = useRouter();
 
   const isPolling = run.status === "pending" || run.status === "running";
   const total = Number(scores?.total ?? 0);
@@ -209,32 +214,77 @@ export function BrandProfileReport({
             )}
           </p>
         </div>
-        {canPrint && (
-          <button
-            type="button"
-            data-bp-no-print
-            disabled={exporting}
-            onClick={async () => {
-              setExporting(true);
-              try {
-                const { exportBrandProfilePdf } = await import("@/lib/brand-profile/export-pdf");
-                await exportBrandProfilePdf({
-                  brandName: run.brand_name,
-                  date: run.completed_at ?? run.started_at,
-                });
-              } catch (e) {
-                console.error("[bp/export-pdf]", e);
-              } finally {
-                setExporting(false);
-              }
-            }}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] text-sm border border-border text-foreground hover:bg-surface-2 transition-colors disabled:opacity-60 disabled:cursor-wait"
-          >
-            {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />}
-            {exporting ? t("brandProfile.exportPdfBuilding") : t("brandProfile.exportPdf")}
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-wrap" data-bp-no-print>
+          {run.status === "completed" && run.brand_url && (
+            <button
+              type="button"
+              disabled={reRunning}
+              onClick={async () => {
+                setReRunError(null);
+                setReRunning(true);
+                try {
+                  const res = await fetch("/api/brand-profile/runs", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      brand: run.brand_name,
+                      brand_url: run.brand_url,
+                      sector: run.sector,
+                      country: run.country,
+                      locale: run.locale,
+                    }),
+                  });
+                  const json = await res.json();
+                  if (!res.ok) {
+                    setReRunError(json?.error ?? t("brandProfile.errorUnknown"));
+                    setReRunning(false);
+                    return;
+                  }
+                  router.push(`/brand-profile/${json.runId}`);
+                } catch (e) {
+                  setReRunError(e instanceof Error ? e.message : t("brandProfile.errorNetwork"));
+                  setReRunning(false);
+                }
+              }}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] text-sm border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-60 disabled:cursor-wait"
+            >
+              {reRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              {reRunning ? t("brandProfile.reRunRunning") : t("brandProfile.reRun")}
+            </button>
+          )}
+          {canPrint && (
+            <button
+              type="button"
+              disabled={exporting}
+              onClick={async () => {
+                setExporting(true);
+                try {
+                  const { exportBrandProfilePdf } = await import("@/lib/brand-profile/export-pdf");
+                  await exportBrandProfilePdf({
+                    brandName: run.brand_name,
+                    date: run.completed_at ?? run.started_at,
+                  });
+                } catch (e) {
+                  console.error("[bp/export-pdf]", e);
+                } finally {
+                  setExporting(false);
+                }
+              }}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] text-sm border border-border text-foreground hover:bg-surface-2 transition-colors disabled:opacity-60 disabled:cursor-wait"
+            >
+              {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />}
+              {exporting ? t("brandProfile.exportPdfBuilding") : t("brandProfile.exportPdf")}
+            </button>
+          )}
+        </div>
       </div>
+
+      {reRunError && (
+        <div className="card p-4 border-red-500/40 bg-red-500/5 flex items-start gap-3" data-bp-no-print>
+          <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+          <p className="text-sm text-foreground flex-1">{reRunError}</p>
+        </div>
+      )}
 
       {run.status === "failed" && (
         <div className="card p-5 border-red-500/40 bg-red-500/5">
