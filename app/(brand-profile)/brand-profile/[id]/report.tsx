@@ -67,6 +67,20 @@ const PILLAR_KEYS: Array<{ key: keyof Omit<ScoreRow, "total" | "breakdown">; tKe
   { key: "sentiment",   tKey: "brandProfile.pillarSentiment",   descKey: "brandProfile.pillarDescSentiment"   },
 ];
 
+function formatRunDate(iso: string): string {
+  // Display run date with time (e.g. "2026-05-07 12:23"). Falls back to the
+  // raw ISO string if the timestamp is malformed.
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
+    const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    return `${ymd} ${hm}`;
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
 function scoreColor(v: number | null | undefined): string {
   const n = Number(v ?? 0);
   if (n <= 30) return "text-red-400";
@@ -209,8 +223,8 @@ export function BrandProfileReport({
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             {run.sector} · {run.country}
-            {run.completed_at && (
-              <> · <span className="font-mono">{run.completed_at.slice(0, 10)}</span></>
+            {(run.completed_at ?? run.started_at) && (
+              <> · <span className="font-mono">{formatRunDate(run.completed_at ?? run.started_at)}</span></>
             )}
           </p>
         </div>
@@ -246,7 +260,19 @@ export function BrandProfileReport({
                   setReRunning(false);
                 }
               }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] text-sm border border-primary text-primary hover:bg-primary/10 transition-colors disabled:opacity-60 disabled:cursor-wait"
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-[2px] text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-wait"
+              style={{
+                background: "var(--primary)",
+                color: "var(--primary-foreground, var(--background))",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--primary-hover, var(--primary))";
+                e.currentTarget.style.opacity = "0.9";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "var(--primary)";
+                e.currentTarget.style.opacity = "1";
+              }}
             >
               {reRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
               {reRunning ? t("brandProfile.reRunRunning") : t("brandProfile.reRun")}
@@ -561,48 +587,108 @@ function PillarCard({
         </div>
       )}
 
-      {/* Raw responses toggle */}
+      {/* Raw responses — opens a modal instead of expanding inline (the
+          inline accordion blew up the page height with 6 responses × 5
+          pillars). Modal is closable with Esc + backdrop click. */}
       {responses.length > 0 && (
         <div className="border-t border-border pt-4">
           <button
             type="button"
             data-bp-print-toggle
-            onClick={() => setShowResponses((s) => !s)}
+            onClick={() => setShowResponses(true)}
             className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            {showResponses ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            {showResponses ? t("brandProfile.hideRawResponses") : t("brandProfile.viewRawResponses")}
+            <ChevronDown className="w-3 h-3" />
+            {t("brandProfile.viewRawResponses")}
           </button>
-          <div
-            data-bp-print-expand
-            style={{ display: showResponses ? "block" : "none" }}
-            className="mt-3 space-y-3"
-          >
-            {responses.map((r, i) => (
-              <div key={i} className="rounded-[2px] border border-border bg-surface-2/50 p-3 text-xs">
-                <div className="flex items-center justify-between gap-2 mb-2 text-[11px] text-muted-foreground">
-                  <span className="font-mono">
-                    {t("brandProfile.rawResponseFromModel")} <span className="text-foreground">{r.model}</span>
-                  </span>
-                  {r.brand_mentioned != null && (
-                    <span className={r.brand_mentioned ? "text-emerald-400" : "text-muted-foreground"}>
-                      {r.brand_mentioned ? "✓" : "—"}
-                    </span>
-                  )}
-                </div>
-                <p className="text-muted-foreground mb-2 italic">{r.prompt_text}</p>
-                {r.error_message ? (
-                  <p className="text-red-400">{r.error_message}</p>
-                ) : r.response_raw ? (
-                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">{r.response_raw}</p>
-                ) : (
-                  <p className="text-muted-foreground">{t("brandProfile.rawResponseEmpty")}</p>
-                )}
-              </div>
-            ))}
+          {/* Hidden duplicate so PDF export still includes the responses. */}
+          <div data-bp-print-expand style={{ display: "none" }} className="mt-3 space-y-3 print:!block">
+            {responses.map((r, i) => <RawResponseCard key={i} r={r} t={t} />)}
           </div>
         </div>
       )}
+
+      {showResponses && (
+        <RawResponsesModal title={title} responses={responses} onClose={() => setShowResponses(false)} t={t} />
+      )}
+    </div>
+  );
+}
+
+function RawResponseCard({ r, t }: { r: PromptRow; t: (key: string) => string }) {
+  return (
+    <div className="rounded-[2px] border border-border bg-surface-2/50 p-3 text-xs">
+      <div className="flex items-center justify-between gap-2 mb-2 text-[11px] text-muted-foreground">
+        <span className="font-mono">
+          {t("brandProfile.rawResponseFromModel")} <span className="text-foreground">{r.model}</span>
+        </span>
+        {r.brand_mentioned != null && (
+          <span className={r.brand_mentioned ? "text-emerald-400" : "text-muted-foreground"}>
+            {r.brand_mentioned ? "✓" : "—"}
+          </span>
+        )}
+      </div>
+      <p className="text-muted-foreground mb-2 italic">{r.prompt_text}</p>
+      {r.error_message ? (
+        <p className="text-red-400">{r.error_message}</p>
+      ) : r.response_raw ? (
+        <p className="text-foreground whitespace-pre-wrap leading-relaxed">{r.response_raw}</p>
+      ) : (
+        <p className="text-muted-foreground">{t("brandProfile.rawResponseEmpty")}</p>
+      )}
+    </div>
+  );
+}
+
+function RawResponsesModal({
+  title,
+  responses,
+  onClose,
+  t,
+}: {
+  title: string;
+  responses: PromptRow[];
+  onClose: () => void;
+  t: (key: string) => string;
+}) {
+  useEffect(() => {
+    const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onEsc);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onEsc);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)" }}
+      onClick={onClose}
+    >
+      <div
+        className="card w-full max-w-3xl max-h-[85vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border shrink-0">
+          <div className="min-w-0">
+            <h3 className="font-display font-semibold text-foreground text-lg truncate">{title}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("brandProfile.rawResponsesModalSubtitle").replace("{n}", String(responses.length))}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-[2px] text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors shrink-0"
+            aria-label="Close"
+          >
+            <ChevronUp className="w-4 h-4 rotate-45" />
+          </button>
+        </div>
+        <div className="overflow-y-auto p-5 space-y-3">
+          {responses.map((r, i) => <RawResponseCard key={i} r={r} t={t} />)}
+        </div>
+      </div>
     </div>
   );
 }

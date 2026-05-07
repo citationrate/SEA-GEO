@@ -11,7 +11,7 @@ import {
   Plus,
   GitCompare,
   TrendingUp,
-  FileDown,
+  Settings,
   PanelLeftClose,
   PanelLeftOpen,
   X,
@@ -75,7 +75,12 @@ export function BrandProfileSidebar({ profile }: SidebarProps) {
         historyUnlocked
           ? { href: "/brand-profile/history", icon: TrendingUp, label: t("brandProfileSidebar.history") || "Storico" }
           : { href: "#",  icon: TrendingUp,  label: t("brandProfileSidebar.history") || "Storico", soon: true },
-        { href: "#",  icon: FileDown,    label: t("brandProfileSidebar.export") || "Export PDF", soon: true },
+      ],
+    },
+    {
+      group: t("brandProfileSidebar.system") || "Sistema",
+      items: [
+        { href: "/settings", icon: Settings, label: t("brandProfileSidebar.settings") || "Impostazioni" },
       ],
     },
   ];

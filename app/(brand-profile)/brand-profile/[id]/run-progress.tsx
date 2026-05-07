@@ -67,9 +67,11 @@ export function RunInProgressAnimation({
           {status === "pending" ? t("brandProfile.runProgressQueued") : t("brandProfile.runProgressTitle")}
         </div>
 
-        {/* Radar SVG */}
-        <div className="relative w-[260px] h-[260px]">
-          <svg viewBox="-130 -130 260 260" className="w-full h-full" aria-hidden>
+        {/* Radar SVG — viewBox extended horizontally so the leftmost
+            ("Sentiment") and rightmost ("Notorietà") labels don't get
+            clipped at end-anchor when text extends past the radar radius. */}
+        <div className="relative w-[320px] h-[260px]">
+          <svg viewBox="-160 -130 320 260" className="w-full h-full" aria-hidden>
             <defs>
               <radialGradient id="bp-sweep-gradient" cx="0" cy="0" r="1">
                 <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.45" />
