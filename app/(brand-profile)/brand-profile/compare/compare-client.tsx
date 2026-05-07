@@ -301,19 +301,23 @@ export function CompareClient({ runs }: { runs: RunRow[] }) {
               </thead>
               <tbody>
                 {[...PILLAR_KEYS, { key: "total" as const, tKey: "brandProfile.scoreTotal" }].map(({ key, tKey }) => {
-                  const baseValue = Number((items[0].scores as any)?.[key] ?? 0);
+                  // Round both ends BEFORE subtracting so the delta lines up
+                  // with the integers shown in the cells (was: 47 - 39.6 = 7.4
+                  // → "+7" while users see "47 - 39 = 8").
+                  const baseValueRounded = Math.round(Number((items[0].scores as any)?.[key] ?? 0));
                   return (
                     <tr key={key} className="border-b border-border last:border-0">
                       <td className="p-3 text-foreground font-medium">{t(tKey)}</td>
                       {items.map((it, i) => {
                         const v = Number((it.scores as any)?.[key] ?? 0);
-                        const delta = i === 0 ? null : v - baseValue;
+                        const vRounded = Math.round(v);
+                        const delta = i === 0 ? null : vRounded - baseValueRounded;
                         return (
                           <td key={it.run.id} className="p-3 text-right">
-                            <span className={`font-mono font-semibold ${scoreColor(v)}`}>{Math.round(v)}</span>
+                            <span className={`font-mono font-semibold ${scoreColor(v)}`}>{vRounded}</span>
                             {delta !== null && (
                               <span className={`ml-2 text-xs font-mono ${deltaTone(delta)}`}>
-                                {delta > 0 ? "+" : ""}{Math.round(delta)}
+                                {delta > 0 ? "+" : ""}{delta}
                               </span>
                             )}
                           </td>
@@ -328,7 +332,6 @@ export function CompareClient({ runs }: { runs: RunRow[] }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {items.map((it, i) => {
-              const failing = it.diagnostics.filter((d) => d.cs_status !== "pass").length;
               return (
                 <Link
                   key={it.run.id}
@@ -345,12 +348,6 @@ export function CompareClient({ runs }: { runs: RunRow[] }) {
                     <div>{it.run.sector}</div>
                     <div>{it.run.country} · {it.run.locale}</div>
                     <div>{(it.run.completed_at ?? "").slice(0, 10)}</div>
-                    <div>{it.run.models.length} {t("brandProfile.modelsLabel")}</div>
-                    {failing > 0 && (
-                      <div className="text-amber-400">
-                        {failing} {t("brandProfile.compareFailingParams")}
-                      </div>
-                    )}
                   </div>
                 </Link>
               );

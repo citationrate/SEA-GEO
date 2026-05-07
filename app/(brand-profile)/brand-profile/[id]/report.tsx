@@ -99,6 +99,7 @@ export function BrandProfileReport({
   initialDiagnostics,
   canExport,
   userPlan,
+  isAdmin,
 }: {
   runId: string;
   initialRun: RunRow;
@@ -108,6 +109,7 @@ export function BrandProfileReport({
   initialDiagnostics: DiagnosticRow[];
   canExport: boolean;
   userPlan: string;
+  isAdmin: boolean;
 }) {
   const { t } = useTranslation();
   const [run, setRun] = useState<RunRow>(initialRun);
@@ -611,6 +613,7 @@ export function BrandProfileReport({
                   responses={responses}
                   diagnostics={diag}
                   insightsLoading={insightsLoading}
+                  isAdmin={isAdmin}
                   t={t}
                 />
               );
@@ -620,12 +623,6 @@ export function BrandProfileReport({
       )}
     </div>
   );
-}
-
-function statusDot(status: "fail" | "partial" | "pass"): string {
-  if (status === "fail") return "bg-red-400";
-  if (status === "partial") return "bg-amber-400";
-  return "bg-emerald-400";
 }
 
 // PillarCard is memoized: the parent re-renders every 4s while polling and
@@ -640,6 +637,7 @@ const PillarCard = memo(function PillarCard({
   responses,
   diagnostics,
   insightsLoading,
+  isAdmin,
   t,
 }: {
   title: string;
@@ -649,10 +647,13 @@ const PillarCard = memo(function PillarCard({
   responses: PromptRow[];
   diagnostics: DiagnosticRow[];
   insightsLoading: boolean;
+  isAdmin: boolean;
   t: (key: string) => string;
 }) {
   const [showResponses, setShowResponses] = useState(false);
-  const failing = diagnostics.filter((d) => d.cs_status !== "pass");
+  // diagnostics are intentionally not surfaced inline anymore — the user
+  // wanted P-codes/parameter-name leakage out of the BP UI. The CS deep-link
+  // banner at the top of the report covers the "go see specifics" path.
 
   return (
     <div className="card p-5 space-y-4">
@@ -700,36 +701,10 @@ const PillarCard = memo(function PillarCard({
         )}
       </div>
 
-      {/* CS diagnostics */}
-      {failing.length > 0 && (
-        <div className="border-t border-border pt-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Stethoscope className="w-4 h-4 text-primary" />
-            <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
-              {t("brandProfile.csFindings")}
-            </span>
-          </div>
-          <ul className="space-y-1.5">
-            {failing.map((d) => (
-              <li key={d.cs_parameter_id} className="flex items-start gap-2 text-sm leading-relaxed">
-                <span
-                  className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${statusDot(d.cs_status)}`}
-                  aria-hidden
-                />
-                <span className="text-foreground">
-                  <span className="font-mono text-xs text-muted-foreground mr-1">{d.cs_parameter_id}</span>
-                  {d.note ?? t(`brandProfile.csStatus_${d.cs_status}`)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Raw responses — opens a modal instead of expanding inline (the
-          inline accordion blew up the page height with 6 responses × 5
-          pillars). Modal is closable with Esc + backdrop click. */}
-      {responses.length > 0 && (
+      {/* Raw AI responses — admin-only. The plain user doesn't need to see
+          the verbatim AI text; the takeaway is in the "Cosa fare" insights
+          above. Admins keep access for QA / debugging. */}
+      {isAdmin && responses.length > 0 && (
         <div className="border-t border-border pt-4">
           <button
             type="button"

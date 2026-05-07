@@ -288,9 +288,6 @@ export function HistoryClient({
                 <th className="text-left p-3 font-mono text-xs uppercase tracking-wider text-muted-foreground">
                   {t("brandProfile.historyColCountry")}
                 </th>
-                <th className="text-left p-3 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                  {t("brandProfile.historyColModels")}
-                </th>
                 <th className="text-right p-3">
                   <button onClick={() => toggleSort("score")} className="inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground ml-auto">
                     {t("brandProfile.scoreTotal")} {sortIcon("score")}
@@ -324,9 +321,6 @@ export function HistoryClient({
                     </td>
                     <td className="p-3 text-muted-foreground">
                       <Link href={`/brand-profile/${it.id}`} className="block">{it.country}</Link>
-                    </td>
-                    <td className="p-3 text-muted-foreground text-xs">
-                      <Link href={`/brand-profile/${it.id}`} className="block">{it.models.length}</Link>
                     </td>
                     <td className="p-3 text-right">
                       <Link href={`/brand-profile/${it.id}`} className="block">

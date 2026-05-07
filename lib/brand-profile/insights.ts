@@ -112,7 +112,7 @@ function buildPrompt(input: InsightInput): string {
     .join("\n\n---\n\n");
 
   const csRule = hasCS
-    ? `\n- Il sito è già stato auditato con Citability: usa i parametri MANCANTI/ROTTI come spiegazione causale specifica ("le AI confondono il settore perché manca P5 'Schema Product'") e suggerisci come ripararli prima di proporre azioni nuove.`
+    ? `\n- Il sito è già stato auditato con Citability: usa i parametri MANCANTI/ROTTI come spiegazione causale, MA NON CITARE MAI il codice del parametro (es. "P5", "P10") né il nome tecnico del parametro nel testo dell'insight. Descrivi la causa in linguaggio piano (es. "manca markup Schema.org Product sulle pagine prodotto") e suggerisci la riparazione concreta.`
     : "";
 
   const responsesPerPillar = input.responsesByPillar.recognition.length;
@@ -126,7 +126,9 @@ REGOLE:
 - Niente generiche tipo "migliora il SEO". Cita la causa specifica trovata nelle risposte AI.
 - Se le AI confondono il brand con un altro, dillo esplicitamente.
 - Se score è alto (>70) suggerisci come consolidare; se basso (<50) suggerisci come riparare.
-- Massimo 240 caratteri per ogni insight.${csRule}
+- Massimo 240 caratteri per ogni insight.
+- VIETATO citare istituzioni accademiche, osservatori, atenei o università generici (es. Politecnico Milano, Università Bocconi, Osservatorio Digital Innovation) come azione consigliata, A MENO CHE il brand operi davvero in quel mondo o ci sia un legame esplicito visibile nelle risposte AI raccolte. Per la maggior parte dei brand sono suggerimenti irrealistici e non actionable: preferisci azioni che il brand può eseguire da solo (PR su testate di settore vere, contenuti propri, partnership di prodotto).
+- VIETATO citare codici tecnici di parametri (P1, P5, P10, P49 ecc.) o nomi tecnici interni nel testo dell'insight. L'utente vede solo il testo finale; usa linguaggio business-friendly.${csRule}
 
 ${pillarBlocks}
 
