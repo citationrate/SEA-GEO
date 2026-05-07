@@ -95,7 +95,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}} />
         <script dangerouslySetInnerHTML={{ __html: `
           try {
-            var t = localStorage.getItem('seageo-theme');
+            var c = document.cookie.match(/(?:^|; )cr-theme=([^;]*)/);
+            var t = c ? decodeURIComponent(c[1]) : localStorage.getItem('seageo-theme');
             if (t === 'light') document.documentElement.classList.add('light');
           } catch(e) {}
         `}} />
