@@ -69,8 +69,10 @@ export function RunInProgressAnimation({
 
         {/* Radar SVG — viewBox extended horizontally so the leftmost
             ("Sentiment") and rightmost ("Notorietà") labels don't get
-            clipped at end-anchor when text extends past the radar radius. */}
-        <div className="relative w-[320px] h-[260px]">
+            clipped at end-anchor when text extends past the radar radius.
+            Mobile: width caps at 100% of parent so very small phones
+            (<320px) don't trigger horizontal scrolling. */}
+        <div className="relative w-full max-w-[320px] aspect-[320/260]">
           <svg viewBox="-160 -130 320 260" className="w-full h-full" aria-hidden>
             <defs>
               <radialGradient id="bp-sweep-gradient" cx="0" cy="0" r="1">

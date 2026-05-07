@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Radar, ArrowLeft, Loader2, AlertTriangle, Lightbulb, ChevronDown, ChevronUp, Sparkles, Stethoscope, ExternalLink, Printer, RefreshCw } from "lucide-react";
@@ -209,7 +209,7 @@ export function BrandProfileReport({
   const isDemoUser = userPlan === "demo" || userPlan === "free";
   const csTriggerStorageKey = `bp-cs-trigger-${runId}`;
 
-  const triggerCsAudit = async () => {
+  const triggerCsAudit = useCallback(async () => {
     if (!run.brand_url) {
       setCsTriggerError(t("brandProfile.csTriggerNeedUrl"));
       setCsTriggerState("error");
@@ -268,7 +268,7 @@ export function BrandProfileReport({
       setCsTriggerError(e instanceof Error ? e.message : t("brandProfile.errorNetwork"));
       setCsTriggerState("error");
     }
-  };
+  }, [run.brand_url, run.brand_name, run.sector, run.country, csTriggerStorageKey, t]);
 
   // Demo users: auto-fire the CS audit once the BP run is complete and we
   // know there's no recent CS audit to compare against. localStorage flag
@@ -344,7 +344,7 @@ export function BrandProfileReport({
                   setReRunning(false);
                 }
               }}
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-[2px] text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-wait"
+              className="inline-flex items-center gap-2 px-5 py-2 min-h-[44px] md:min-h-0 rounded-[2px] text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-wait"
               style={{
                 background: "var(--primary)",
                 color: "var(--primary-foreground, var(--background))",
@@ -380,7 +380,7 @@ export function BrandProfileReport({
                   setExporting(false);
                 }
               }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] text-sm border border-border text-foreground hover:bg-surface-2 transition-colors disabled:opacity-60 disabled:cursor-wait"
+              className="inline-flex items-center gap-2 px-3 py-1.5 min-h-[44px] md:min-h-0 rounded-[2px] text-sm border border-border text-foreground hover:bg-surface-2 transition-colors disabled:opacity-60 disabled:cursor-wait"
             >
               {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />}
               {exporting ? t("brandProfile.exportPdfBuilding") : t("brandProfile.exportPdf")}
@@ -628,7 +628,11 @@ function statusDot(status: "fail" | "partial" | "pass"): string {
   return "bg-emerald-400";
 }
 
-function PillarCard({
+// PillarCard is memoized: the parent re-renders every 4s while polling and
+// nothing on the cards changes once the run is completed. Skipping these
+// re-renders is cheap-but-meaningful given each card runs through ~5
+// children + a status filter loop.
+const PillarCard = memo(function PillarCard({
   title,
   score,
   breakdown,
@@ -748,7 +752,7 @@ function PillarCard({
       )}
     </div>
   );
-}
+});
 
 function RawResponseCard({ r, t }: { r: PromptRow; t: (key: string) => string }) {
   return (
