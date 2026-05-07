@@ -98,6 +98,7 @@ export function BrandProfileReport({
   initialPrompts,
   initialDiagnostics,
   canExport,
+  userPlan,
 }: {
   runId: string;
   initialRun: RunRow;
@@ -106,6 +107,7 @@ export function BrandProfileReport({
   initialPrompts: PromptRow[];
   initialDiagnostics: DiagnosticRow[];
   canExport: boolean;
+  userPlan: string;
 }) {
   const { t } = useTranslation();
   const [run, setRun] = useState<RunRow>(initialRun);
@@ -118,6 +120,8 @@ export function BrandProfileReport({
   const [reRunning, setReRunning] = useState(false);
   const [reRunError, setReRunError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ completed: number; total: number }>({ completed: 0, total: 0 });
+  const [csTriggerState, setCsTriggerState] = useState<"idle" | "triggering" | "triggered" | "error">("idle");
+  const [csTriggerError, setCsTriggerError] = useState<string | null>(null);
   const router = useRouter();
 
   const isPolling = run.status === "pending" || run.status === "running";
@@ -202,6 +206,86 @@ export function BrandProfileReport({
   const csAuditId = hasDiagnostics ? diagnostics[0].cs_audit_id : null;
   const csAuditDate = hasDiagnostics ? diagnostics[0].cs_audit_date : null;
   const showNoCSBanner = !hasDiagnostics && run.status === "completed";
+  const isDemoUser = userPlan === "demo" || userPlan === "free";
+  const csTriggerStorageKey = `bp-cs-trigger-${runId}`;
+
+  const triggerCsAudit = async () => {
+    if (!run.brand_url) {
+      setCsTriggerError(t("brandProfile.csTriggerNeedUrl"));
+      setCsTriggerState("error");
+      return;
+    }
+    setCsTriggerState("triggering");
+    setCsTriggerError(null);
+    try {
+      // Get the user's Supabase session — same auth project as CR backend, so
+      // the access_token works for both. Lazy-import the client to keep this
+      // out of the initial bundle for cold renders.
+      const sbMod = await import("@/lib/supabase/client");
+      const sb = sbMod.createClient();
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session?.access_token) {
+        setCsTriggerError(t("brandProfile.errorNetwork"));
+        setCsTriggerState("error");
+        return;
+      }
+      const CR_BACKEND = process.env.NEXT_PUBLIC_CR_BACKEND_URL ||
+        (process.env.NODE_ENV === "development"
+          ? "http://localhost:8000"
+          : "https://citationrate-backend-production.up.railway.app");
+      const res = await fetch(`${CR_BACKEND}/audit/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          brand: run.brand_name,
+          topic: "",
+          // KNOW = generic knowledge sector. The user can re-pick the proper
+          // CS sector code from CS itself; we pass the BP free-text sector
+          // as label for display.
+          sector: "KNOW",
+          sector_label: run.sector,
+          urls: [run.brand_url],
+          country: run.country,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setCsTriggerError(
+          err?.detail ?? `${res.status}: ${t("brandProfile.errorUnknown")}`,
+        );
+        setCsTriggerState("error");
+        return;
+      }
+      // Don't await the SSE stream — the audit is queued/started immediately.
+      // Cancel the reader so we don't keep the connection alive client-side.
+      try { res.body?.getReader().cancel(); } catch {}
+      try { localStorage.setItem(csTriggerStorageKey, "1"); } catch {}
+      setCsTriggerState("triggered");
+    } catch (e) {
+      setCsTriggerError(e instanceof Error ? e.message : t("brandProfile.errorNetwork"));
+      setCsTriggerState("error");
+    }
+  };
+
+  // Demo users: auto-fire the CS audit once the BP run is complete and we
+  // know there's no recent CS audit to compare against. localStorage flag
+  // makes this a one-shot per BP run id.
+  useEffect(() => {
+    if (!showNoCSBanner) return;
+    if (!isDemoUser) return;
+    if (csTriggerState !== "idle") return;
+    let alreadyFired = false;
+    try { alreadyFired = !!localStorage.getItem(csTriggerStorageKey); } catch {}
+    if (alreadyFired) {
+      setCsTriggerState("triggered");
+      return;
+    }
+    void triggerCsAudit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showNoCSBanner, isDemoUser]);
 
   const canPrint = canExport && run.status === "completed" && scores != null;
 
@@ -444,18 +528,69 @@ export function BrandProfileReport({
           )}
 
           {showNoCSBanner && (
-            <div data-bp-no-print className="card p-4 border-amber-500/30 bg-amber-500/5 flex items-center gap-3">
-              <Stethoscope className="w-4 h-4 text-amber-400 shrink-0" />
-              <p className="text-sm text-foreground flex-1">{t("brandProfile.csEmptyHint")}</p>
-              <a
-                href="https://suite.citationrate.com/audit/new"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline"
-              >
-                {t("brandProfile.csRunAudit")}
-                <ExternalLink className="w-3 h-3" />
-              </a>
+            <div data-bp-no-print>
+              {csTriggerState === "triggering" && (
+                <div className="card p-4 border-primary/30 bg-primary/5 flex items-center gap-3">
+                  <Loader2 className="w-4 h-4 text-primary shrink-0 animate-spin" />
+                  <p className="text-sm text-foreground flex-1">
+                    {isDemoUser ? t("brandProfile.csTriggerDemoStarting") : t("brandProfile.csTriggerStarting")}
+                  </p>
+                </div>
+              )}
+              {csTriggerState === "triggered" && (
+                <div className="card p-4 border-primary/40 bg-primary/[0.06] flex items-center gap-3">
+                  <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                  <p className="text-sm text-foreground flex-1">
+                    {isDemoUser ? t("brandProfile.csTriggerDemoSuccess") : t("brandProfile.csTriggerSuccess")}
+                  </p>
+                  <a
+                    href="https://suite.citationrate.com/dashboard"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline shrink-0"
+                  >
+                    {t("brandProfile.csTriggerOpenCS")}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+              {csTriggerState === "error" && (
+                <div className="card p-4 border-red-500/40 bg-red-500/5 flex items-start gap-3">
+                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-foreground">{csTriggerError ?? t("brandProfile.errorUnknown")}</p>
+                    {!isDemoUser && (
+                      <button
+                        type="button"
+                        onClick={() => { void triggerCsAudit(); }}
+                        className="mt-2 text-xs text-primary hover:underline"
+                      >
+                        {t("brandProfile.csTriggerRetry")}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+              {csTriggerState === "idle" && !isDemoUser && (
+                <div className="card p-4 border-amber-500/30 bg-amber-500/5 flex items-center gap-3">
+                  <Stethoscope className="w-4 h-4 text-amber-400 shrink-0" />
+                  <p className="text-sm text-foreground flex-1">
+                    {t("brandProfile.csTriggerPaidPrompt")}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { void triggerCsAudit(); }}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[2px] text-xs font-semibold transition-colors"
+                    style={{
+                      background: "var(--primary)",
+                      color: "var(--primary-foreground, var(--background))",
+                    }}
+                  >
+                    <Stethoscope className="w-3.5 h-3.5" />
+                    {t("brandProfile.csTriggerPaidCta")}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
