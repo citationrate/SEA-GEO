@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Radar, ArrowLeft, Loader2, AlertTriangle, Lightbulb, ChevronDown, ChevronUp, Sparkles, Stethoscope, ExternalLink, Printer } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { ScoreRadar } from "./score-radar";
+import { RunInProgressAnimation } from "./run-progress";
 
 const CS_AUDIT_BASE = "https://suite.citationrate.com/audit";
 
@@ -98,6 +99,7 @@ export function BrandProfileReport({
   const [diagnostics, setDiagnostics] = useState<DiagnosticRow[]>(initialDiagnostics);
   const [openPillar, setOpenPillar] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [progress, setProgress] = useState<{ completed: number; total: number }>({ completed: 0, total: 0 });
 
   const isPolling = run.status === "pending" || run.status === "running";
   const total = Number(scores?.total ?? 0);
@@ -106,16 +108,43 @@ export function BrandProfileReport({
   useEffect(() => {
     if (!isPolling) return;
     let cancelled = false;
+    // Ask for notification permission once so we can ping the user when the
+    // run completes — they may have navigated away ("vai pure ad altro").
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => { /* user denied — no-op */ });
+    }
+    const previousStatus = run.status;
     const tick = async () => {
       try {
         const res = await fetch(`/api/brand-profile/runs/${runId}`, { cache: "no-store" });
         if (!res.ok) return;
         const json = await res.json();
         if (cancelled) return;
+        const nextStatus = json.run?.status as string | undefined;
+        // Browser notification when the run flips to a terminal state and the
+        // user is on a different tab.
+        if (
+          (nextStatus === "completed" || nextStatus === "failed") &&
+          previousStatus !== nextStatus &&
+          typeof document !== "undefined" &&
+          document.visibilityState === "hidden" &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        ) {
+          try {
+            new Notification(
+              nextStatus === "completed"
+                ? `Brand Profile pronto — ${json.run?.brand_name ?? ""}`
+                : `Brand Profile fallito — ${json.run?.brand_name ?? ""}`,
+              { body: window.location.href, icon: "/favicon.ico" },
+            );
+          } catch { /* notification API can throw on iframe / restricted contexts */ }
+        }
         setRun(json.run);
         setScores(json.scores);
         if (Array.isArray(json.insights)) setInsights(json.insights);
         if (Array.isArray(json.diagnostics)) setDiagnostics(json.diagnostics);
+        if (json.progress) setProgress(json.progress);
       } catch { /* swallow */ }
     };
     const id = setInterval(tick, 4000);
@@ -222,14 +251,13 @@ export function BrandProfileReport({
       )}
 
       {isPolling && (
-        <div className="card p-5 border-amber-500/40 bg-amber-500/5">
-          <div className="flex items-center gap-3">
-            <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />
-            <p className="text-sm text-foreground">
-              {run.status === "pending" ? t("brandProfile.pollingPending") : t("brandProfile.pollingRunning")}
-            </p>
-          </div>
-        </div>
+        <RunInProgressAnimation
+          brand={run.brand_name}
+          status={run.status as "pending" | "running"}
+          completed={progress.completed}
+          total={progress.total > 0 ? progress.total : run.total_prompts}
+          locale={run.locale}
+        />
       )}
 
       {scores && run.status === "completed" && (

@@ -1,0 +1,29 @@
+import { redirect } from "next/navigation";
+import { createServerClient } from "@/lib/supabase/server";
+import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
+import { PianoClient } from "./piano-client";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const metadata = { title: "Piano · Brand Profile" };
+
+export default async function BrandProfilePianoPage() {
+  const auth = createServerClient();
+  const { data: { session } } = await auth.auth.getSession();
+  const user = session?.user ?? null;
+  if (!user) redirect("/login");
+
+  const cr = createCitationRateServiceClient();
+  const { data: profile } = await (cr.from("profiles") as any)
+    .select("plan, plan_expires_at")
+    .eq("id", user.id)
+    .maybeSingle();
+  const plan = ((profile as any)?.plan as string | undefined)?.toLowerCase() ?? "demo";
+  const planExpires = (profile as any)?.plan_expires_at as string | null | undefined;
+
+  return (
+    <div className="space-y-6 max-w-[1200px]">
+      <PianoClient plan={plan} planExpires={planExpires ?? null} />
+    </div>
+  );
+}
