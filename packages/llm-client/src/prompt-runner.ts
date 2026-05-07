@@ -30,6 +30,10 @@ export const API_MODEL_ID: Record<string, string> = {
   "gpt-5.4": "gpt-5.4-2026-03-05",
   "gpt-5.5": "gpt-5.5",
   "grok-4.3": "grok-4.3",
+  "grok-4.20-non-reasoning": "grok-4.20-non-reasoning",
+  // Legacy: grok-4-1-fast retired by xAI on 2026-05-15. Kept here so historical
+  // DB rows still resolve to a sane apiModel when read back, but isModelAvailable()
+  // now returns false for this ID (LEGACY_MODEL_IDS) so no NEW calls go out.
   "grok-4-1-fast": "grok-4-1-fast",
   "perplexity-sonar": "sonar",
   "perplexity-sonar-pro": "sonar-pro",
