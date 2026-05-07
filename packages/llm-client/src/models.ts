@@ -34,9 +34,11 @@ export const AI_MODELS: AIModel[] = [
   { id: "gemini-2.5-pro",     label: "Gemini 2.5 Pro",      desc: "Massima precisione",                   provider: "google" },
   { id: "gemini-3.1-pro",     label: "Gemini 3.1 Pro",     desc: "Massima precisione",                    provider: "google" },
   // xAI
-  { id: "grok-4.3",        label: "Grok 4.3",        desc: "Massima qualità con web search nativo", provider: "xai", expensive: true },
-  { id: "grok-4-1-fast",   label: "Grok 4.1 Fast",   desc: "Veloce ed economico, web search nativo",     provider: "xai" },
+  { id: "grok-4.3",                label: "Grok 4.3",       desc: "Massima qualità con web search nativo",  provider: "xai", expensive: true },
+  { id: "grok-4.20-non-reasoning", label: "Grok 4.20 Fast", desc: "Veloce ed economico, web search nativo", provider: "xai" },
   // Legacy (kept for backward compat with existing DB data, hidden from UI)
+  // grok-4-1-fast retired by xAI on 2026-05-15 (see docs.x.ai/developers/migration/may-15-retirement)
+  { id: "grok-4-1-fast",   label: "Grok 4.1 Fast",   desc: "Generazione precedente (ritirato 15/05/2026)", provider: "xai" },
   { id: "grok-3",          label: "Grok 3",          desc: "Generazione precedente",                     provider: "xai" },
   { id: "grok-3-mini",     label: "Grok 3 Mini",     desc: "Generazione precedente",                     provider: "xai" },
   // Perplexity
@@ -71,6 +73,7 @@ const LEGACY_MODEL_IDS = new Set([
   "gpt-4o-mini",
   "grok-3",
   "grok-3-mini",
+  "grok-4-1-fast",
 ]);
 
 /** Models explicitly on hold (not yet ready for production). */
@@ -141,7 +144,7 @@ export const PROVIDER_GROUPS: ProviderGroup[] = [
   {
     id: "xai", label: "xAI", badge: "Grok", color: "text-gray-400",
     models: [
-      { id: "grok-4-1-fast", label: "Grok 4.1 Fast", descriptionKey: "modelDescriptions.grok-4-1-fast" },
+      { id: "grok-4.20-non-reasoning", label: "Grok 4.20 Fast", descriptionKey: "modelDescriptions.grok-4-20-fast" },
       { id: "grok-4.3", label: "Grok 4.3", descriptionKey: "modelDescriptions.grok-4-3", expensive: true, proOnly: true },
     ],
   },
@@ -188,6 +191,6 @@ export const COMPARISON_MODEL_IDS = [
   "claude-haiku",
   "gpt-5.4-mini",
   "gemini-2.5-flash",
-  "grok-4-1-fast",
+  "grok-4.20-non-reasoning",
   "perplexity-sonar",
 ] as const;
