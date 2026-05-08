@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, Loader2, MessageSquare, Sparkles, AlertTriangle, ToggleLeft, ToggleRight, CheckSquare, Square, Power, PowerOff } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, MessageSquare, Sparkles, AlertTriangle, ToggleLeft, ToggleRight, CheckSquare, Square, Power, PowerOff, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslation } from "@/lib/i18n/context";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
+import SmartSuggestionsModal from "./smart-suggestions-modal";
 
 interface Query {
   id: string;
@@ -49,6 +50,10 @@ export default function QueriesPage() {
 
   const [tofuText, setTofuText] = useState("");
   const [mofuText, setMofuText] = useState("");
+  // Sprint 3 — Smart Suggestions modal state
+  const [smartOpen, setSmartOpen] = useState(false);
+  const [projectSector, setProjectSector] = useState<string | null>(null);
+  const [projectCountry, setProjectCountry] = useState<string | null>(null);
 
   // Filters
   const [filterSetType, setFilterSetType] = useState<FilterSetType>("all");
@@ -67,10 +72,14 @@ export default function QueriesPage() {
     fetchQueries();
     createClient()
       .from("projects")
-      .select("target_brand")
+      .select("target_brand, sector, country")
       .eq("id", projectId)
       .single()
-      .then(({ data }: { data: any }) => { if (data?.target_brand) setTargetBrand(data.target_brand); });
+      .then(({ data }: { data: any }) => {
+        if (data?.target_brand) setTargetBrand(data.target_brand);
+        if (data?.sector) setProjectSector(data.sector);
+        if (data?.country) setProjectCountry(data.country);
+      });
   }, []);
 
   const containsBrand = useCallback(
@@ -237,15 +246,33 @@ export default function QueriesPage() {
               {activeCount}/{queries.length} query {t("queries.active") || "active"} &middot; {t("queries.addOrGenerate")}
             </p>
           </div>
-          <a
-            href={`/projects/${projectId}/queries/generate`}
-            className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-primary/85 transition-colors"
-          >
-            <Sparkles className="w-4 h-4" />
-            {t("settings.generatePromptAI")}
-          </a>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSmartOpen(true)}
+              className="flex items-center gap-2 border border-border text-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-muted/40 transition-colors"
+              title="Smart Suggestions by sector"
+            >
+              <TrendingUp className="w-4 h-4" />
+              Suggerisci da settore
+            </button>
+            <a
+              href={`/projects/${projectId}/queries/generate`}
+              className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-primary/85 transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+              {t("settings.generatePromptAI")}
+            </a>
+          </div>
         </div>
       </div>
+      <SmartSuggestionsModal
+        open={smartOpen}
+        onClose={() => setSmartOpen(false)}
+        projectId={projectId}
+        defaultSector={projectSector}
+        defaultCountry={projectCountry}
+        onAdded={() => fetchQueries()}
+      />
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
