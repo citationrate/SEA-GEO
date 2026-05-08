@@ -2,9 +2,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Ticket, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Send, Smartphone, Shield, Download, Camera, X } from "lucide-react";
+import { User, Ticket, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Send, Shield, Download, Camera, X } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
-import { TwoFactorModal } from "@/components/two-factor-modal";
 import { createClient as createAuthClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
@@ -66,66 +65,6 @@ export function SettingsClient({
   const [savingCookies, setSavingCookies] = useState(false);
   const [exportingData, setExportingData] = useState(false);
 
-  // 2FA (TOTP via Supabase Auth)
-  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
-  const [twoFAFactorId, setTwoFAFactorId] = useState<string | null>(null);
-  const [twoFALoading, setTwoFALoading] = useState(true);
-  const [twoFAModalOpen, setTwoFAModalOpen] = useState(false);
-
-  // Load current MFA state on mount
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const sb = createAuthClient();
-        const { data } = await sb.auth.mfa.listFactors();
-        const verified = data?.totp?.find((f) => f.status === "verified");
-        if (cancelled) return;
-        if (verified) {
-          setTwoFAEnabled(true);
-          setTwoFAFactorId(verified.id);
-        } else {
-          setTwoFAEnabled(false);
-          setTwoFAFactorId(null);
-        }
-      } catch {
-        /* ignore */
-      } finally {
-        if (!cancelled) setTwoFALoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function handleTwoFAToggle() {
-    if (twoFALoading) return;
-    if (!twoFAEnabled) {
-      // Turn ON → open enroll modal
-      setTwoFAModalOpen(true);
-      return;
-    }
-    // Turn OFF → confirm + unenroll
-    const ok = window.confirm(
-      t("settings.twoFactorDisableConfirm") ||
-        "Sei sicuro di voler disattivare l'autenticazione a due fattori?",
-    );
-    if (!ok || !twoFAFactorId) return;
-    setTwoFALoading(true);
-    try {
-      const sb = createAuthClient();
-      const { error: unErr } = await sb.auth.mfa.unenroll({ factorId: twoFAFactorId });
-      if (unErr) {
-        alert(unErr.message);
-        return;
-      }
-      setTwoFAEnabled(false);
-      setTwoFAFactorId(null);
-    } finally {
-      setTwoFALoading(false);
-    }
-  }
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -395,39 +334,6 @@ export function SettingsClient({
             {t("settings.resetPassword") || "Reimposta password"}
           </button>
         </div>
-
-        {/* 2FA via SMS */}
-        <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
-          <div className="flex items-start gap-3 min-w-0">
-            <Smartphone className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground">
-                {t("settings.twoFactorTitle") || "Autenticazione a due fattori (SMS)"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {t("settings.twoFactorDesc") || "Aggiungi un livello di sicurezza extra al tuo account"}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={twoFAEnabled}
-            aria-label={t("settings.twoFactorTitle") || "Autenticazione a due fattori"}
-            onClick={handleTwoFAToggle}
-            disabled={twoFALoading}
-            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:opacity-50 ${
-              twoFAEnabled ? "bg-primary" : "bg-white/15"
-            }`}
-          >
-            <span
-              aria-hidden
-              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
-                twoFAEnabled ? "translate-x-[22px]" : "translate-x-[2px]"
-              }`}
-            />
-          </button>
-        </div>
       </div>
 
       {/* Sessione */}
@@ -587,12 +493,12 @@ export function SettingsClient({
                   className="input-base w-full resize-none"
                 />
               </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <p className="text-xs text-muted-foreground break-all min-w-0">{t("settings.supportFrom") || "Da:"} {email}</p>
                 <button
                   onClick={sendSupportMessage}
                   disabled={sendingSupport || !supportSubject.trim() || supportMessage.trim().length < 3}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0 self-stretch sm:self-auto whitespace-nowrap"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0 self-stretch md:self-auto whitespace-nowrap"
                 >
                   {sendingSupport ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                   {sendingSupport ? (t("common.sending") || "Invio...") : (t("settings.sendMessage") || "Invia messaggio")}
@@ -620,14 +526,6 @@ export function SettingsClient({
         />
       )}
 
-      <TwoFactorModal
-        open={twoFAModalOpen}
-        onClose={() => setTwoFAModalOpen(false)}
-        onEnrolled={(id) => {
-          setTwoFAEnabled(true);
-          setTwoFAFactorId(id);
-        }}
-      />
     </>
   );
 }
