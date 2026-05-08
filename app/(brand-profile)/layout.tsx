@@ -33,10 +33,11 @@ export default async function BrandProfileLayout({ children }: { children: React
       .eq("user_id", user.id)
       .maybeSingle(),
   ]);
-  if (!bpAccessAllowed({ email: user.email, isAdmin: (crProfile as any)?.is_admin })) {
+  const crPlan = ((crProfile as any)?.plan as string | undefined)?.toLowerCase() ?? "demo";
+  if (!bpAccessAllowed({ email: user.email, isAdmin: (crProfile as any)?.is_admin, plan: crPlan })) {
     redirect("/dashboard");
   }
-  const bpPlan = ((crProfile as any)?.plan as string | undefined)?.toLowerCase() ?? "demo";
+  const bpPlan = crPlan;
   const bpRunsUsed = Number((usage as any)?.brand_profile_runs_used ?? 0);
   const bpRunsTotal = bpRunLimit(bpPlan);
 

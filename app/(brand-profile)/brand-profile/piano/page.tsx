@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
+import { isShowcase } from "@/lib/showcase";
 import { PianoClient } from "./piano-client";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,12 @@ export default async function BrandProfilePianoPage() {
     .maybeSingle();
   const plan = ((profile as any)?.plan as string | undefined)?.toLowerCase() ?? "demo";
   const planExpires = (profile as any)?.plan_expires_at as string | null | undefined;
+
+  // Showcase accounts (vetrina) shouldn't see the pricing/upgrade flow.
+  // Same rationale as the CS suite /piano redirect.
+  if (isShowcase(plan)) {
+    redirect("/brand-profile");
+  }
 
   return (
     <div className="space-y-6 max-w-[1200px]">
