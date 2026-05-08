@@ -2,7 +2,7 @@
  * One-click unsubscribe endpoint.
  * GET /api/email/unsubscribe?id={tracking_id}
  *
- * - Sets marketing_consent = false on profiles
+ * - Sets email_unsubscribed = true on profiles
  * - Sets unsubscribed_at on lifecycle_emails
  * - Redirects to /unsubscribe confirmation page
  */
@@ -31,9 +31,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${baseUrl}/unsubscribe?status=error`, 302);
     }
 
-    // Set marketing_consent = false on profiles
+    // Set email_unsubscribed = true on profiles
     await (cr.from("profiles") as any)
-      .update({ marketing_consent: false })
+      .update({ email_unsubscribed: true })
       .eq("id", emailRecord.user_id);
 
     // Set unsubscribed_at on lifecycle_emails

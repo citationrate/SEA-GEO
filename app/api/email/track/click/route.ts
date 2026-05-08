@@ -64,10 +64,10 @@ async function handleClick(
     user_agent: req.headers.get("user-agent") || null,
   });
 
-  // If custom unsub link: also set marketing_consent = false
+  // If custom unsub link: also set email_unsubscribed = true
   if (isUnsub && existing.user_id) {
     await (cr.from("profiles") as any)
-      .update({ marketing_consent: false })
+      .update({ email_unsubscribed: true })
       .eq("id", existing.user_id);
 
     await (cr.from("lifecycle_emails") as any)

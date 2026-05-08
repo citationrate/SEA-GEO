@@ -55,23 +55,35 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
     };
   }
 
-  // 1b. Check if user has unsubscribed (marketing_consent = false).
-  // Lifecycle/service emails (D1-D6, 1A-1C) are sent under legitimate interest
-  // (GDPR art. 6.1.f) — they don't require marketing consent.
-  // Only "campaign" (manual bulk sends from CRM) respect marketing_consent.
+  // 1b. Check unsubscribe / marketing consent.
+  // - email_unsubscribed = true → user clicked unsubscribe → block ALL emails
+  // - marketing_consent = false → no marketing consent → block only campaigns,
+  //   service/lifecycle emails (D1-D6, 1A-1C) still go through (GDPR art. 6.1.f)
   const SERVICE_EMAIL_TYPES: ReadonlySet<string> = new Set([
     "W0", "D1", "D2", "D3", "D4_CS", "D4_AVI", "D5_CS", "D5_AVI", "D6",
     "1A", "1B", "1C",
   ]);
 
-  if (!SERVICE_EMAIL_TYPES.has(input.emailType)) {
+  {
     const { data: profile } = await (cr.from("profiles") as any)
-      .select("marketing_consent")
+      .select("email_unsubscribed, marketing_consent")
       .eq("id", input.userId)
       .maybeSingle();
 
-    if (profile && profile.marketing_consent === false) {
-      console.log(`[lifecycle] ${input.emailType} skipped for ${input.userId}: user unsubscribed`);
+    // Hard unsubscribe: block everything (service + marketing)
+    if (profile && profile.email_unsubscribed === true) {
+      console.log(`[lifecycle] ${input.emailType} skipped for ${input.userId}: email_unsubscribed`);
+      return {
+        ok: false,
+        skipped: "already_sent" as const,
+        finalRecipient: input.recipientEmail,
+        isTest: false,
+      };
+    }
+
+    // No marketing consent: block non-service emails only
+    if (!SERVICE_EMAIL_TYPES.has(input.emailType) && profile && profile.marketing_consent === false) {
+      console.log(`[lifecycle] ${input.emailType} skipped for ${input.userId}: no marketing_consent`);
       return {
         ok: false,
         skipped: "already_sent" as const,
