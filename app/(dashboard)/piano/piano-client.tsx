@@ -72,7 +72,7 @@ function getCsFeatures(t: (k: string) => string): PlanFeature[] {
     { label: t("piano.csAudits"),             demo: "1",                             base: `10${t("piano.perMonth")}`,  pro: `50${t("piano.perMonth")}`,   enterprise: t("piano.unlimited") },
     { label: t("piano.csMaxUrls"),            demo: "1",                             base: "3",                         pro: "5",                          enterprise: t("piano.unlimited") },
     { label: t("piano.csScorePerAi"),         demo: t("piano.csScorePerAi7"),        base: true,                        pro: true,                         enterprise: true },
-    { label: t("piano.csInsights"),           demo: false,                           base: "10",                        pro: t("piano.csInsightsAll"),     enterprise: t("piano.csInsightsAll") },
+    { label: t("piano.csInsights"),           demo: t("piano.csInsightsDemo"),       base: "20",                        pro: t("piano.csInsightsAll"),     enterprise: t("piano.csInsightsAll") },
     { label: t("piano.csCompetitor"),         demo: false,                           base: true,                        pro: true,                         enterprise: true },
     { label: t("piano.csPdf"),                demo: false,                           base: t("piano.csPdfLimited"),     pro: t("piano.csPdfComplete"),     enterprise: t("piano.csPdfComplete") },
     { label: t("piano.csInsightsPerAi"),      demo: false,                           base: false,                       pro: true,                         enterprise: true },
