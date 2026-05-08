@@ -43,9 +43,29 @@ export function BrandProfileSidebar({ profile, bpRunsUsed = 0, bpRunsTotal = 0 }
   const { isOpen: mobileOpen, close: closeMobile } = useMobileNav();
   const [collapsed, setCollapsed] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [extrasBalance, setExtrasBalance] = useState<number | null>(null);
   const hasUnreadNews = useHasUnreadNews();
 
   useEffect(() => { closeMobile(); }, [pathname, closeMobile]);
+
+  // Surface the BP extras balance in the account card when > 0. Fetched
+  // client-side because the SSR sidebar props don't currently include it,
+  // and we want the value to refresh after a successful checkout return.
+  useEffect(() => {
+    let cancelled = false;
+    const refetch = async () => {
+      try {
+        const res = await fetch("/api/brand-profile/quota", { cache: "no-store" });
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (!cancelled) setExtrasBalance(Number(json?.extras_balance ?? 0));
+      } catch { /* swallow */ }
+    };
+    void refetch();
+    const onFocus = () => { void refetch(); };
+    window.addEventListener("focus", onFocus);
+    return () => { cancelled = true; window.removeEventListener("focus", onFocus); };
+  }, [pathname]);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -339,6 +359,14 @@ export function BrandProfileSidebar({ profile, bpRunsUsed = 0, bpRunsTotal = 0 }
                   {t("brandProfileSidebar.runsThisMonth") || "run/mese"}
                 </span>
               </div>
+              {!isUnlimited && extrasBalance !== null && extrasBalance > 0 && (
+                <div className="text-[10px] font-mono tabular-nums text-primary">
+                  +{extrasBalance}{" "}
+                  <span className="text-primary/70">
+                    {t("brandProfileSidebar.extraRuns") || "run extra"}
+                  </span>
+                </div>
+              )}
             </div>
           </Link>
         )}

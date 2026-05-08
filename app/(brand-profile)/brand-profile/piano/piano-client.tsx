@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -11,8 +11,11 @@ import {
   Activity,
   BarChart3,
   ExternalLink,
+  Zap,
+  Loader2,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
+import { bpPacksForPlan, type BpExtraPack } from "@/lib/brand-profile/extra-packs";
 
 type ToolKey = "bp" | "cs" | "avi";
 type PlanKey = "demo" | "base" | "pro" | "enterprise";
@@ -103,6 +106,81 @@ export function PianoClient({ plan, planExpires }: { plan: string; planExpires: 
     ? "demo"
     : (["base", "pro", "enterprise"].includes(planLower) ? (planLower as PlanKey) : "demo");
 
+  // Live extras balance (refreshed on mount + after returning from Stripe).
+  const [extrasBalance, setExtrasBalance] = useState<number | null>(null);
+  const [purchasingPack, setPurchasingPack] = useState<string | null>(null);
+  const [purchaseToast, setPurchaseToast] = useState<{ kind: "success" | "cancel" | "error"; msg: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/brand-profile/quota", { cache: "no-store" });
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (!cancelled) setExtrasBalance(Number(json?.extras_balance ?? 0));
+      } catch { /* swallow */ }
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Read Stripe redirect signal once on mount and clean it from the URL so
+  // the toast doesn't reappear on a refresh.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const flag = params.get("bp_extras");
+    if (!flag) return;
+    if (flag === "success") {
+      setPurchaseToast({
+        kind: "success",
+        msg: t("brandProfile.extras.toastSuccess") || "Pagamento ricevuto: i run extra sono stati accreditati.",
+      });
+    } else if (flag === "cancel") {
+      setPurchaseToast({
+        kind: "cancel",
+        msg: t("brandProfile.extras.toastCancel") || "Acquisto annullato. Nessun addebito.",
+      });
+    }
+    params.delete("bp_extras");
+    params.delete("pack");
+    const next = params.toString();
+    const cleanUrl = window.location.pathname + (next ? `?${next}` : "");
+    window.history.replaceState({}, "", cleanUrl);
+  }, [t]);
+
+  const purchasePack = async (pack: BpExtraPack) => {
+    setPurchasingPack(pack.id);
+    setPurchaseToast(null);
+    try {
+      const res = await fetch("/api/brand-profile/extras/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pack_id: pack.id }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.url) {
+        setPurchaseToast({
+          kind: "error",
+          msg: json?.error || t("brandProfile.extras.toastError") || "Errore checkout",
+        });
+        return;
+      }
+      window.location.href = json.url;
+    } catch (e: any) {
+      setPurchaseToast({
+        kind: "error",
+        msg: e?.message || t("brandProfile.extras.toastError") || "Errore checkout",
+      });
+    } finally {
+      setPurchasingPack(null);
+    }
+  };
+
+  const availablePacks = bpPacksForPlan(planLower);
+  const showExtrasSection = !isFreeOrDemo && currentPlan !== "enterprise";
+
   return (
     <>
       <div>
@@ -152,6 +230,118 @@ export function PianoClient({ plan, planExpires }: { plan: string; planExpires: 
           </a>
         )}
       </div>
+
+      {/* Extra-runs packs (Base + Pro only) */}
+      {showExtrasSection && availablePacks.length > 0 && (
+        <div className="card p-5 space-y-4">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-primary" />
+                <h2 className="font-display text-lg font-semibold text-foreground">
+                  {t("brandProfile.extras.title") || "Pacchetti run extra"}
+                </h2>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+                {t("brandProfile.extras.subtitle") ||
+                  "Hai esaurito i run del mese? Aggiungi run extra al volo. I run acquistati non scadono e si consumano solo dopo la quota mensile del piano."}
+              </p>
+            </div>
+            {extrasBalance !== null && (
+              <div className="text-right">
+                <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+                  {t("brandProfile.extras.balance") || "Run extra disponibili"}
+                </div>
+                <div className="text-2xl font-display font-semibold text-foreground tabular-nums">
+                  {extrasBalance}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {purchaseToast && (
+            <div
+              className={`text-sm rounded-[2px] px-3 py-2 border ${
+                purchaseToast.kind === "success"
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                  : purchaseToast.kind === "cancel"
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                    : "border-red-500/40 bg-red-500/10 text-red-300"
+              }`}
+            >
+              {purchaseToast.msg}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {availablePacks.map((pack) => {
+              const eur = (pack.priceCents / 100).toFixed(0);
+              const perRun = (pack.priceCents / 100 / pack.runs).toFixed(2);
+              const isLoading = purchasingPack === pack.id;
+              return (
+                <div
+                  key={pack.id}
+                  className="border border-border rounded-[2px] p-4 flex flex-col gap-3 bg-surface-1"
+                >
+                  <div>
+                    <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+                      +{pack.runs} run
+                    </div>
+                    <div className="text-2xl font-display font-bold text-foreground tabular-nums mt-1">
+                      €{eur}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      €{perRun}{t("brandProfile.extras.perRunSuffix") || " / run"}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isLoading || purchasingPack !== null}
+                    onClick={() => purchasePack(pack)}
+                    className="mt-auto inline-flex items-center justify-center gap-2 px-3 py-2 rounded-[2px] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        {t("common.loading") || "Caricamento…"}
+                      </>
+                    ) : (
+                      t("brandProfile.extras.buyCta") || "Acquista"
+                    )}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {planLower === "pro" && (
+            <p className="text-xs text-muted-foreground">
+              {t("brandProfile.extras.proUpsell") ||
+                "Acquisti spesso pacchetti extra? Il piano Enterprise sblocca run illimitati e consulenza dedicata."}{" "}
+              <a
+                href="mailto:citationrate@gmail.com?subject=Richiesta%20piano%20Enterprise"
+                className="text-primary hover:underline"
+              >
+                {t("brandProfile.extras.contactEnterprise") || "Contattaci"}
+              </a>
+            </p>
+          )}
+          {planLower === "base" && (
+            <p className="text-xs text-muted-foreground">
+              {t("brandProfile.extras.baseUpsell") ||
+                "Hai bisogno di più di 10 run al mese? Il piano Pro include 10 run, Confronto e altri vantaggi a €159/mese."}{" "}
+              <a
+                href="https://suite.citationrate.com/piano?upgrade=pro"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                {t("brandProfile.extras.upgradePro") || "Passa a Pro"}
+              </a>
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Plan cards row (price/feature highlight) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
