@@ -5,6 +5,7 @@ import { TopBar } from "@/components/layout/topbar";
 import { OnboardingTour } from "@/components/onboarding-tour";
 import { MobileNavProvider } from "@/components/layout/mobile-nav-context";
 import { TrackingInit } from "@/components/tracking-init";
+import { isShowcase } from "@/lib/showcase";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const auth = createServerClient();
@@ -37,6 +38,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     });
     ({ data: profile } = await (supabase.from("profiles") as any)
       .select("*").eq("id", user.id).single());
+  }
+
+  // Showcase accounts (vetrina/manual-grant): no AVI access. Bounce them to
+  // /brand-profile, which is the only AVI-side surface they're allowed to
+  // see. Standard AVI users (demo|base|pro|enterprise) hit the early-return
+  // is `false` here and fall through to the normal render.
+  if (isShowcase((profile as any)?.plan)) {
+    redirect("/brand-profile");
   }
 
   return (

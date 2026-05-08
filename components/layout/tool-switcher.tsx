@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Activity, BarChart3, Radar, ArrowLeftRight, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useTranslation } from "@/lib/i18n/context";
+import { isShowcase } from "@/lib/showcase";
 
 export type Tool = "cs" | "avi" | "bp";
 
@@ -49,15 +50,21 @@ export function ToolSwitcher({
   current,
   collapsed,
   bpUnlocked = false,
+  plan = null,
 }: {
   current: Tool;
   collapsed?: boolean;
   bpUnlocked?: boolean;
+  plan?: string | null;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const TOOLS: ToolDef[] = bpUnlocked ? [...TOOLS_BASE, BP_TOOL] : TOOLS_BASE;
+  // Showcase plan (vetrina accounts): no AVI access, only CS + Brand Profile
+  // appear in the switcher.
+  const showcase = isShowcase(plan);
+  const baseTools = showcase ? TOOLS_BASE.filter((tt) => tt.id !== "avi") : TOOLS_BASE;
+  const TOOLS: ToolDef[] = (bpUnlocked || showcase) ? [...baseTools, BP_TOOL] : baseTools;
 
   useEffect(() => {
     if (!open) return;

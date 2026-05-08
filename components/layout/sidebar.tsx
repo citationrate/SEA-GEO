@@ -270,7 +270,8 @@ export function Sidebar({ profile }: SidebarProps) {
         <ToolSwitcher
           current="avi"
           collapsed={collapsed && !mobileOpen}
-          bpUnlocked={bpAccessAllowed({ email: profile?.email })}
+          bpUnlocked={bpAccessAllowed({ email: profile?.email, plan: profile?.plan })}
+          plan={profile?.plan}
         />
       </div>
 

@@ -64,10 +64,11 @@ export function BrandProfileSidebar({ profile, bpRunsUsed = 0, bpRunsTotal = 0 }
   const isBase = profile?.plan === "base";
   const isEnterprise = profile?.plan === "enterprise";
   const isAgency = profile?.plan === "agency";
-  const compareUnlocked = isPro || isEnterprise || isAgency;
-  const historyUnlocked = isBase || isPro || isEnterprise || isAgency;
-  const planLabel = isDemo ? "Demo" : isBase ? "Base" : isPro ? "Pro" : isEnterprise ? "Enterprise" : profile?.plan ?? "Demo";
-  const planColor = isBase ? "#60a5fa" : isPro || isEnterprise ? "#c4a882" : undefined;
+  const isShowcasePlan = profile?.plan === "enterprise_showcase";
+  const compareUnlocked = isPro || isEnterprise || isAgency || isShowcasePlan;
+  const historyUnlocked = isBase || isPro || isEnterprise || isAgency || isShowcasePlan;
+  const planLabel = isDemo ? "Demo" : isBase ? "Base" : isPro ? "Pro" : isEnterprise || isShowcasePlan ? "Enterprise" : profile?.plan ?? "Demo";
+  const planColor = isBase ? "#60a5fa" : isPro || isEnterprise || isShowcasePlan ? "#c4a882" : undefined;
 
   const fullName = (profile?.full_name ?? "").trim();
   const email = profile?.email ?? "";
@@ -219,31 +220,35 @@ export function BrandProfileSidebar({ profile, bpRunsUsed = 0, bpRunsTotal = 0 }
             "Strumenti" group label removed per user feedback; the switcher
             now sits as a single dropdown without a header. */}
         <div>
-          <ToolSwitcher current="bp" collapsed={collapsed && !mobileOpen} />
+          <ToolSwitcher current="bp" collapsed={collapsed && !mobileOpen} plan={profile?.plan} />
         </div>
       </nav>
 
       {/* Bottom: plan + impostazioni + logout + account card */}
       <div className="border-t border-border p-2 space-y-1">
-        <Link
-          href="/brand-profile/piano"
-          prefetch
-          onClick={closeMobile}
-          className={cn(
-            "flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] text-sm font-sans transition-colors hover:bg-surface-2",
-            collapsed && !mobileOpen && "justify-center px-0",
-            PRESS_FEEDBACK,
-          )}
-          style={planColor ? { color: planColor } : { color: "var(--muted-foreground)" }}
-          title={collapsed && !mobileOpen ? `${t("sidebar.piano")} · ${planLabel}` : undefined}
-        >
-          {isDemo ? <Sparkles className="w-[15px] h-[15px] flex-shrink-0" /> : <CreditCard className="w-[15px] h-[15px] flex-shrink-0" />}
-          {(!collapsed || mobileOpen) && (
-            <span className="truncate text-xs">
-              {t("sidebar.piano")} · <span className="font-medium uppercase">{planLabel}</span>
-            </span>
-          )}
-        </Link>
+        {/* Showcase accounts (enterprise_showcase) hide the Piano link —
+            their plan is manually managed and the pricing flow is irrelevant. */}
+        {!isShowcasePlan && (
+          <Link
+            href="/brand-profile/piano"
+            prefetch
+            onClick={closeMobile}
+            className={cn(
+              "flex items-center gap-2.5 px-2 py-1.5 rounded-[2px] text-sm font-sans transition-colors hover:bg-surface-2",
+              collapsed && !mobileOpen && "justify-center px-0",
+              PRESS_FEEDBACK,
+            )}
+            style={planColor ? { color: planColor } : { color: "var(--muted-foreground)" }}
+            title={collapsed && !mobileOpen ? `${t("sidebar.piano")} · ${planLabel}` : undefined}
+          >
+            {isDemo ? <Sparkles className="w-[15px] h-[15px] flex-shrink-0" /> : <CreditCard className="w-[15px] h-[15px] flex-shrink-0" />}
+            {(!collapsed || mobileOpen) && (
+              <span className="truncate text-xs">
+                {t("sidebar.piano")} · <span className="font-medium uppercase">{planLabel}</span>
+              </span>
+            )}
+          </Link>
+        )}
         <Link
           href="/brand-profile/settings"
           prefetch

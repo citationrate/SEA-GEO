@@ -45,12 +45,14 @@ export async function POST(request: Request) {
     .eq("id", user.id)
     .single();
 
-  // Soft-launch gate (mirrors the (brand-profile)/layout.tsx check).
-  if (!bpAccessAllowed({ email: user.email, isAdmin: (profile as any)?.is_admin })) {
+  const plan = (profile?.plan as string | undefined)?.toLowerCase() ?? "demo";
+
+  // Soft-launch gate (mirrors the (brand-profile)/layout.tsx check). Pass
+  // `plan` so showcase accounts (enterprise_showcase) bypass the email
+  // whitelist — Brand Profile is one of their two enabled tools.
+  if (!bpAccessAllowed({ email: user.email, isAdmin: (profile as any)?.is_admin, plan })) {
     return apiError("Brand Profile non disponibile durante il soft launch", 403);
   }
-
-  const plan = (profile?.plan as string | undefined)?.toLowerCase() ?? "demo";
   const maxRuns = PLAN_RUN_LIMITS[plan] ?? 0;
   const models = bpModelsForPlan(plan);
 

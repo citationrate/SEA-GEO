@@ -5,6 +5,7 @@ export const BP_RUN_LIMITS: Record<string, number> = {
   pro: 10,
   agency: 10,
   enterprise: 999,
+  enterprise_showcase: 999,
 };
 
 /**
@@ -24,8 +25,11 @@ export const BP_WHITELIST_EMAILS: ReadonlySet<string> = new Set([
   "tecla.casalone@studenti.iulm.it",
 ]);
 
-export function bpAccessAllowed(opts: { email?: string | null; isAdmin?: boolean | null }): boolean {
+export function bpAccessAllowed(opts: { email?: string | null; isAdmin?: boolean | null; plan?: string | null }): boolean {
   if (opts.isAdmin === true) return true;
+  // Showcase accounts (vetrina) get BP unconditionally — they don't use AVI
+  // and Brand Profile is one of their two enabled tools.
+  if (opts.plan === "enterprise_showcase") return true;
   const email = (opts.email ?? "").toLowerCase().trim();
   return email !== "" && BP_WHITELIST_EMAILS.has(email);
 }
@@ -54,6 +58,7 @@ export const BP_MODELS_BY_PLAN: Record<string, readonly string[]> = {
   pro: BP_MODEL_POOL,
   agency: BP_MODEL_POOL,
   enterprise: BP_MODEL_POOL,
+  enterprise_showcase: BP_MODEL_POOL,
 };
 
 export function bpRunLimit(plan: string | null | undefined): number {
@@ -64,7 +69,7 @@ export function bpModelsForPlan(plan: string | null | undefined): string[] {
   return [...(BP_MODELS_BY_PLAN[(plan ?? "demo").toLowerCase()] ?? BP_MODELS_BY_PLAN.demo)];
 }
 
-const BP_COMPARE_PLANS = new Set(["pro", "agency", "enterprise"]);
+const BP_COMPARE_PLANS = new Set(["pro", "agency", "enterprise", "enterprise_showcase"]);
 
 export function bpComparePlanAllowed(plan: string | null | undefined): boolean {
   return BP_COMPARE_PLANS.has((plan ?? "demo").toLowerCase());
@@ -73,12 +78,13 @@ export function bpComparePlanAllowed(plan: string | null | undefined): boolean {
 export const BP_COMPARE_MIN_RUNS = 2;
 export const BP_COMPARE_MAX_RUNS = 4;
 
-const BP_HISTORY_PLANS = new Set(["base", "pro", "agency", "enterprise"]);
+const BP_HISTORY_PLANS = new Set(["base", "pro", "agency", "enterprise", "enterprise_showcase"]);
 
 export function bpHistoryPlanAllowed(plan: string | null | undefined): boolean {
   return BP_HISTORY_PLANS.has((plan ?? "demo").toLowerCase());
 }
 
 export function bpTimeSeriesAllowed(plan: string | null | undefined): boolean {
-  return (plan ?? "demo").toLowerCase() === "enterprise";
+  const p = (plan ?? "demo").toLowerCase();
+  return p === "enterprise" || p === "enterprise_showcase";
 }
