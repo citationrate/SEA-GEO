@@ -15,6 +15,11 @@ const nextConfig = {
     remotePatterns: [
       { hostname: "lh3.googleusercontent.com" },
       { hostname: "avatars.githubusercontent.com" },
+      // Supabase Storage (avatars bucket on CitationRate + seageo1).
+      // Avatars are served from /storage/v1/object/public/avatars/<id>/...
+      // and the CSP img-src already allows *.supabase.co.
+      { hostname: "tzcxlchrcspqsayehrky.supabase.co" },
+      { hostname: "ubvkzstxviqwgufppiko.supabase.co" },
     ],
   },
   async headers() {
