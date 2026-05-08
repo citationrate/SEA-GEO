@@ -79,6 +79,7 @@ export async function POST(request: Request) {
       },
       automatic_tax: { enabled: true },
       tax_id_collection: { enabled: true },
+      allow_promotion_codes: true,
     };
     const stripeCustomerId = (profile as any)?.stripe_customer_id as string | undefined;
     if (stripeCustomerId) {
