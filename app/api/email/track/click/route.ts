@@ -39,17 +39,18 @@ async function handleClick(
   const now = new Date().toISOString();
 
   const { data: existing } = await (cr.from("lifecycle_emails") as any)
-    .select("id, user_id, click_count, first_clicked_at")
+    .select("id, user_id, click_count, first_clicked_at, open_count, first_opened_at")
     .eq("tracking_id", trackingId)
     .maybeSingle();
 
   if (!existing) return;
 
-  // Update click counts
+  // Update click counts + auto-mark as opened (if clicked, must have been opened)
   await (cr.from("lifecycle_emails") as any)
     .update({
       click_count: (existing.click_count || 0) + 1,
       ...(existing.first_clicked_at ? {} : { first_clicked_at: now }),
+      ...(!existing.open_count ? { open_count: 1, first_opened_at: now } : {}),
     })
     .eq("id", existing.id);
 
