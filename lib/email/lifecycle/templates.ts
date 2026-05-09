@@ -95,7 +95,7 @@ export function tplW0(input: BaseInput) {
   ].join("");
 
   return {
-    subject: `Benvenuto in CitationRate, ${nIt}`,
+    subject: `Welcome to CitationRate | Benvenuto in CitationRate`,
     html: emailLayout({
       lang: "it",
       preview: `Tutto pronto: 1 audit + 40 prompt AVI in 30 secondi.`,
@@ -147,7 +147,7 @@ export function tpl1A(input: BaseInput & { daysSinceSignup: number }) {
   ].join("");
 
   return {
-    subject: `Hai 1 audit + 40 prompt AVI in attesa, ${nIt}`,
+    subject: `Your free audit is waiting | Hai 1 audit + 40 prompt AVI in attesa`,
     html: emailLayout({
       lang: "it",
       preview: `Il tuo audit gratuito è pronto, dura 30 secondi e non richiede alcun pagamento.`,
@@ -207,7 +207,7 @@ export function tpl1B(input: BaseInput & { brand: string; scores: AuditScores; s
   ].join("");
 
   return {
-    subject: `${brand}: il tuo audit è pronto`,
+    subject: `${brand}: your audit is ready | Il tuo audit è pronto`,
     html: emailLayout({
       lang: "it",
       preview: `Score ${Math.round(scores.global)}/100 — vediamo come rendere ${brand} più citabile dai motori AI.`,
@@ -271,7 +271,7 @@ export function tpl1C(input: BaseInput & { brand: string; country?: string | nul
   ].join("");
 
   return {
-    subject: `${brand} sui motori AI: AVI ${Math.round(result.aviScore)}/100`,
+    subject: `${brand} on AI engines: AVI ${Math.round(result.aviScore)}/100 | ${brand} sui motori AI`,
     html: emailLayout({
       lang: "it",
       preview: `Presenza ${presenceRound}% — i competitor si prendono la conversazione nel resto.`,
@@ -310,7 +310,7 @@ export function tplD1(input: BaseInput) {
   ].join("");
 
   return {
-    subject: `Pronto per il tuo primo audit, ${nIt}?`,
+    subject: `Ready for your first audit? | Pronto per il tuo primo audit?`,
     html: emailLayout({
       lang: "it",
       preview: `1 audit + 40 prompt AVI gratuiti, in 30 secondi.`,
@@ -363,7 +363,7 @@ export function tplD2(input: BaseInput & { sector?: string; city?: string }) {
   ].join("");
 
   return {
-    subject: `La tua azienda esiste per ChatGPT?`,
+    subject: `Does your business exist for ChatGPT? | La tua azienda esiste per ChatGPT?`,
     html: emailLayout({
       lang: "it",
       preview: `Prova il test — per la maggior parte dei brand la risposta è no.`,
@@ -398,7 +398,7 @@ export function tplD3(input: BaseInput) {
   ].join("");
 
   return {
-    subject: `Ultimo promemoria, ${nIt}`,
+    subject: `Last reminder | Ultimo promemoria`,
     html: emailLayout({
       lang: "it",
       preview: `Il tuo audit gratuito resta in attesa senza scadenza.`,
@@ -458,7 +458,7 @@ export function tplD4_CS(input: BaseInput & { brand: string; auditId: string; sc
   ].join("");
 
   return {
-    subject: `${brand}: il tuo report è pronto`,
+    subject: `${brand}: your report is ready | Il tuo report è pronto`,
     html: emailLayout({
       lang: "it",
       preview: `Score ${Math.round(scores.global)}/100 — apri il report completo.`,
@@ -515,7 +515,7 @@ export function tplD4_AVI(input: BaseInput & { brand: string; projectId: string;
   ].join("");
 
   return {
-    subject: `${brand}: il tuo run AVI è pronto`,
+    subject: `${brand}: your AVI run is ready | Il tuo run AVI è pronto`,
     html: emailLayout({
       lang: "it",
       preview: `AVI ${Math.round(result.aviScore)}/100 — apri i risultati.`,
@@ -557,7 +557,7 @@ export function tplD5_CS(input: BaseInput & { brand: string; globalScore: number
   ].join("");
 
   return {
-    subject: `Cosa c'è nel piano Base, ${nIt}`,
+    subject: `What's in the Base plan | Cosa c'è nel piano Base`,
     html: emailLayout({
       lang: "it",
       preview: `La demo è una fotografia — Base ti dice cosa modificare.`,
@@ -603,7 +603,7 @@ export function tplD5_AVI(input: BaseInput & { brand: string; aviScore: number }
   ].join("");
 
   return {
-    subject: `Cosa c'è oltre i 40 prompt, ${nIt}`,
+    subject: `What's beyond the 40 prompts | Cosa c'è oltre i 40 prompt`,
     html: emailLayout({
       lang: "it",
       preview: `La demo dà una situazione generale — Base mostra il quadro reale.`,
@@ -647,7 +647,7 @@ export function tplD6(input: BaseInput & { plan: "base" | "pro" | "enterprise"; 
   ].join("");
 
   return {
-    subject: `Tutto ok con CitationRate, ${nIt}?`,
+    subject: `Everything OK with CitationRate? | Tutto ok con CitationRate?`,
     html: emailLayout({
       lang: "it",
       preview: `Check rapido per assicurarci che stai sfruttando al meglio il tuo piano.`,

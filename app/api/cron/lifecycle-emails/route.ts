@@ -196,7 +196,10 @@ async function renderTemplate(type: EmailType, c: any, lang: "it" | "en"): Promi
 
   const vars = candidateVars(type, c);
   const bodyIt = interpolate(tpl.body_it, vars);
-  const subject = interpolate(tpl.subject_it, vars);
+  // Subject: EN | IT (bilingual subject line)
+  const subjectIt = interpolate(tpl.subject_it, vars);
+  const subjectEn = tpl.subject_en ? interpolate(tpl.subject_en, vars) : null;
+  const subject = subjectEn ? `${subjectEn} | ${subjectIt}` : subjectIt;
   const preview = interpolate(tpl.preview_it || "", vars);
 
   // Compose bilingual body: IT + divider + EN (if EN exists)
