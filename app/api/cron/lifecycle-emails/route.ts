@@ -155,7 +155,7 @@ function fixCtaButtons(html: string): string {
       const fullAttrs = before + after;
       if (fullAttrs.includes("background") && fullAttrs.includes("display:block")) return match;
       const plainText = text.replace(/<[^>]*>/g, "").trim();
-      if (plainText.length > 2 && plainText === plainText.toUpperCase() && /[A-Z]/.test(plainText)) {
+      if (plainText.length > 2) {
         return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 28px;"><tr><td align="center"><a href="${url}" style="display:block;background:#7eb89a;color:#0d1a14;font-family:Arial,'Helvetica Neue',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;padding:18px 32px;text-align:center;">${plainText}</a></td></tr></table>`;
       }
       return match;
