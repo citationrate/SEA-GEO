@@ -49,6 +49,7 @@ export const LLM_PRICING: Record<string, LLMPricing> = {
 
   // Anthropic
   "claude-haiku-4-5-20251001": { input: 1.00, output: 5.00,  cachedInput: 0.10, webSearchPer1k: 10 },
+  "claude-sonnet-4-5":         { input: 3.00, output: 15.00, cachedInput: 0.30, webSearchPer1k: 10 },
   "claude-sonnet-4-6":         { input: 3.00, output: 15.00, cachedInput: 0.30, webSearchPer1k: 10 },
   "claude-opus-4-7":           { input: 5.00, output: 25.00, cachedInput: 0.50, webSearchPer1k: 10 },
 
