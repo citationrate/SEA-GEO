@@ -34,10 +34,15 @@ export async function POST(request: Request) {
   }
 
   const cr = createCitationRateServiceClient();
+  // NB: profiles has no `email` column — the auth email lives on
+  // auth.users.email and we already have it via the requireAuth() user
+  // object. Including a non-existent column makes PostgREST 400 the
+  // whole row, so `profile` falls back to null and the plan check below
+  // misreads everyone as "demo" → 403 "riservato al piano PRO".
   const { data: profile } = await (cr.from("profiles") as any)
-    .select("plan, is_admin, email, stripe_customer_id")
+    .select("plan, is_admin, stripe_customer_id")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!bpAccessAllowed({ email: user.email, isAdmin: (profile as any)?.is_admin })) {
     return apiError("Brand Profile non disponibile durante il soft launch", 403);
@@ -85,8 +90,8 @@ export async function POST(request: Request) {
     if (stripeCustomerId) {
       params.customer = stripeCustomerId;
       params.customer_update = { address: "auto", name: "auto" };
-    } else {
-      params.customer_email = user.email ?? (profile as any)?.email;
+    } else if (user.email) {
+      params.customer_email = user.email;
     }
     const session = await stripe.checkout.sessions.create(params);
     return NextResponse.json({ url: session.url });
