@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   Globe, X, Loader2, ExternalLink, Search,
   Lightbulb, Newspaper, Star, ShoppingCart,
   MessageCircle, BookOpen, HelpCircle, Swords,
-  Crown, Lock, Zap, FileText,
+  Crown, Lock, Zap, FileText, Cpu,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
+import { MODEL_MAP, PROVIDER_CONFIG } from "@citationrate/llm-client";
 
 /* ─── Types ─── */
 interface SourceDomain {
@@ -55,6 +57,8 @@ export function SourcesClient({
   brandConsultedPct,
   brand,
   projectId,
+  availableModels,
+  selectedModel,
 }: {
   domains: SourceDomain[];
   totalCitations: number;
@@ -63,10 +67,23 @@ export function SourcesClient({
   brandConsultedPct: number;
   brand: string;
   projectId: string | null;
+  availableModels: string[];
+  selectedModel: string | null;
 }) {
   const { t, locale } = useTranslation();
   const usage = useUsage();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [filter, setFilter] = useState<string | null>(null);
+
+  function setModelFilter(model: string | null) {
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
+    if (model) params.set("model", model);
+    else params.delete("model");
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  }
   const [drawerDomain, setDrawerDomain] = useState<SourceDomain | null>(null);
   const [insights, setInsights] = useState<Insight[] | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
@@ -180,6 +197,45 @@ export function SourcesClient({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Model filter */}
+      {availableModels.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="inline-flex items-center gap-1 text-[11px] font-mono uppercase tracking-widest text-muted-foreground mr-1">
+            <Cpu className="w-3 h-3" /> {t("sources.modelFilter") || "Modello"}
+          </span>
+          <button
+            onClick={() => setModelFilter(null)}
+            className={`px-3 py-1.5 rounded-[2px] text-xs font-medium border transition-all ${
+              selectedModel === null
+                ? "border-primary text-primary bg-primary/15"
+                : "border-border text-muted-foreground hover:border-foreground/40"
+            }`}
+          >
+            {t("common.all")}
+          </button>
+          {availableModels.map((id) => {
+            const m = MODEL_MAP.get(id);
+            const label = m?.label ?? id;
+            const provColor = m ? PROVIDER_CONFIG[m.provider]?.color ?? "" : "";
+            const active = selectedModel === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setModelFilter(active ? null : id)}
+                className={`px-3 py-1.5 rounded-[2px] text-xs font-medium border transition-all flex items-center gap-1.5 ${
+                  active
+                    ? "border-primary text-primary bg-primary/15"
+                    : "border-border text-muted-foreground hover:border-foreground/40"
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${provColor.replace("text-", "bg-")}`} />
+                {label}
+              </button>
+            );
+          })}
         </div>
       )}
 

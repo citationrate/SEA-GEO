@@ -626,12 +626,14 @@ async function extractAndPersist(
   }));
   const mergedSources = mergeSources(aiSources, extractorSources);
 
-  // Batch upsert sources (source_origin preserved from ExtractedSource via mergeSources)
+  // Batch upsert sources (source_origin preserved from ExtractedSource via mergeSources).
+  // Per-model row so the Sources page can filter citations by the AI model that produced them.
   const sourceRows = mergedSources
     .filter(s => s.domain && task.projectId)
     .map(s => ({
       project_id: task.projectId,
       run_id: task.runId,
+      model: task.model,
       url: s.url || "https://" + s.domain,
       domain: s.domain,
       source_type: s.source_type || "other",
@@ -642,7 +644,7 @@ async function extractAndPersist(
 
   if (sourceRows.length > 0) {
     const { error } = await (supabase.from("sources") as any)
-      .upsert(sourceRows, { onConflict: "project_id,domain" });
+      .upsert(sourceRows, { onConflict: "project_id,domain,model" });
     if (error) console.error("Sources upsert error:", error.message);
   }
 

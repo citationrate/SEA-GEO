@@ -46,36 +46,28 @@ export default async function SourcesPage({
 
   const selectedModel = searchParams.model || null;
 
-  // ── Phase 1: parallel run lookups (filtered + unfiltered) ──
-  // The model-filtered list and the full active-runs list are both queried
-  // off the same project set; firing them in parallel halves the wait.
-  const [allRunsRes, filteredRunsRes] = await Promise.all([
-    targetIds.length > 0
-      ? supabase.from("analysis_runs").select("id, models_used").in("project_id", targetIds).is("deleted_at", null)
-      : Promise.resolve({ data: [] as any[] }),
-    selectedModel && targetIds.length > 0
-      ? supabase
-          .from("analysis_runs")
-          .select("id")
-          .in("project_id", targetIds)
-          .is("deleted_at", null)
-          .contains("models_used", [selectedModel])
-      : Promise.resolve({ data: null }),
-  ]);
-  const allRuns = ((allRunsRes as any).data ?? []) as any[];
+  // ── Phase 1: active runs in scope (drives both available-models list and source filter) ──
+  const { data: allRunsRaw } = targetIds.length > 0
+    ? await supabase.from("analysis_runs").select("id, models_used").in("project_id", targetIds).is("deleted_at", null)
+    : { data: [] as any[] };
+  const allRuns = (allRunsRaw ?? []) as any[];
   const activeRunIds = allRuns.map((r: any) => r.id);
-  const filteredRunIds = selectedModel
-    ? (((filteredRunsRes as any).data ?? []) as any[]).map((r: any) => r.id)
-    : activeRunIds;
 
-  // ── Phase 2: sources fetch (depends on the run id set we just resolved) ──
+  // Models available for the chip selector = union of every active run's models_used.
+  const availableModels = Array.from(
+    new Set(allRuns.flatMap((r: any) => (r.models_used as string[] | null) ?? [])),
+  );
+
+  // ── Phase 2: sources fetch — model filter applied directly on the row, not via runs ──
   let sourcesList: any[] = [];
-  if (filteredRunIds.length > 0) {
-    const { data: sources } = await supabase
+  if (activeRunIds.length > 0) {
+    let q = supabase
       .from("sources")
       .select("*")
       .in("project_id", targetIds)
-      .in("run_id", filteredRunIds);
+      .in("run_id", activeRunIds);
+    if (selectedModel) q = q.eq("model", selectedModel);
+    const { data: sources } = await q;
     sourcesList = (sources ?? []) as any[];
   }
 
@@ -150,6 +142,8 @@ export default async function SourcesPage({
         brandConsultedPct={brandConsultedPct}
         brand={brand}
         projectId={selectedId ?? projectIds[0] ?? null}
+        availableModels={availableModels}
+        selectedModel={selectedModel}
       />
     </div>
   );
