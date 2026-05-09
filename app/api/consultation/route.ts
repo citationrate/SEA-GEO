@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
 import { z } from "zod";
 
 const schema = z.object({
@@ -15,6 +14,21 @@ const schema = z.object({
   note: z.string().optional(),
 });
 
+async function sendBrevo(apiKey: string, payload: Record<string, any>) {
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Brevo error");
+  return data;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -24,8 +38,10 @@ export async function POST(request: Request) {
     }
 
     const d = parsed.data;
-
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const brevoKey = process.env.BREVO_API_KEY;
+    if (!brevoKey) {
+      return NextResponse.json({ error: "Servizio email non configurato." }, { status: 503 });
+    }
 
     const htmlBody = wrapEmail(`
       <h2 style="color:#f5f0e8;font-size:18px;margin:0 0 20px;">Nuova richiesta di consulenza</h2>
@@ -42,24 +58,25 @@ export async function POST(request: Request) {
         <tr><td style="padding:6px 0;color:#888;font-size:13px">Note</td><td style="padding:6px 0;color:#aaa;font-size:13px">${d.note ? esc(d.note) : "—"}</td></tr>
       </table>`);
 
-    const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@aicitationrate.com";
-    const fromAddress = `AI Visibility Index <${fromEmail}>`;
+    const fromEmail = process.env.BREVO_FROM_EMAIL || "info@citationrate.com";
+    const toEmail = process.env.CONSULTATION_EMAIL || "info@citationrate.com";
 
     // Send to team
-    await resend.emails.send({
-      from: fromAddress,
-      to: process.env.CONSULTATION_EMAIL || "info@citationrate.com",
+    await sendBrevo(brevoKey, {
+      sender: { name: "AI Visibility Index", email: fromEmail },
+      to: [{ email: toEmail }],
+      replyTo: { email: d.email },
       subject: `Nuova richiesta di consulenza — ${d.nome} (${d.azienda})`,
-      html: htmlBody,
-      replyTo: d.email,
+      htmlContent: htmlBody,
     });
 
-    // Send confirmation to user (branded template)
-    await resend.emails.send({
-      from: fromAddress,
-      to: d.email,
+    // Send confirmation to user
+    await sendBrevo(brevoKey, {
+      sender: { name: "AI Visibility Index", email: fromEmail },
+      to: [{ email: d.email }],
+      replyTo: { email: "support@citationrate.com" },
       subject: "Abbiamo ricevuto la tua richiesta di consulenza",
-      html: wrapEmail(`
+      htmlContent: wrapEmail(`
       <h2 style="color:#f5f0e8;font-size:18px;margin:0 0 12px;">Richiesta ricevuta</h2>
       <p style="color:#aaa;font-size:14px;line-height:1.6;margin:0 0 8px;">
         Ciao <strong style="color:#f5f0e8;">${esc(d.nome)}</strong>,

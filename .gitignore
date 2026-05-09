@@ -8,3 +8,4 @@ coverage
 .vercel
 tsconfig.tsbuildinfo
 .env*.local
+en-templates-data.json

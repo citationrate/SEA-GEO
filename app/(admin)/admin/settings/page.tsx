@@ -13,7 +13,7 @@ export default function AdminSettingsPage() {
     { key: "GOOGLE_AI_API_KEY", set: !!process.env.GOOGLE_AI_API_KEY },
     { key: "PERPLEXITY_API_KEY", set: !!process.env.PERPLEXITY_API_KEY },
     { key: "XAI_API_KEY", set: !!process.env.XAI_API_KEY },
-    { key: "RESEND_API_KEY", set: !!process.env.RESEND_API_KEY },
+    { key: "BREVO_API_KEY", set: !!process.env.BREVO_API_KEY },
     { key: "INNGEST_EVENT_KEY", set: !!process.env.INNGEST_EVENT_KEY },
     { key: "INNGEST_SIGNING_KEY", set: !!process.env.INNGEST_SIGNING_KEY },
     { key: "CONSULTATION_EMAIL", set: !!process.env.CONSULTATION_EMAIL },

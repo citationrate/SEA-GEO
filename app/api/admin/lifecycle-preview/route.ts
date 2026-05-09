@@ -1,8 +1,7 @@
 /**
  * Preview endpoint per QA visivo lifecycle emails.
  *
- * Genera dati fake per tutti gli 11 template e invia il batch al
- * RESEND_FROM_EMAIL configurato (oppure all'indirizzo passato in ?to=).
+ * Genera dati fake per tutti gli 11 template e invia il batch via Brevo.
  *
  * Auth: header `Authorization: Bearer {CRON_SECRET}` o `?secret=`.
  *
@@ -14,7 +13,6 @@
  */
 
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
 import {
   tpl1A,
   tpl1B,
@@ -34,9 +32,9 @@ import type { SupportedLang } from "@/lib/email/lifecycle/lang-detect";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "noreply@aicitationrate.com";
+const FROM_EMAIL = process.env.BREVO_FROM_EMAIL || "info@citationrate.com";
 const FROM_NAME = "Team CitationRate";
-const REPLY_TO = "hello@aicitationrate.com";
+const REPLY_TO = "support@citationrate.com";
 
 function authorized(request: Request): boolean {
   const secret = (process.env.CRON_SECRET || "").trim();
@@ -114,10 +112,10 @@ export async function GET(request: Request) {
   const onlyType = url.searchParams.get("type") as EmailType | null;
   const lang = (url.searchParams.get("lang") as SupportedLang) || "it";
 
-  if (!process.env.RESEND_API_KEY) {
-    return NextResponse.json({ error: "RESEND_API_KEY missing" }, { status: 500 });
+  const brevoKey = process.env.BREVO_API_KEY;
+  if (!brevoKey) {
+    return NextResponse.json({ error: "BREVO_API_KEY missing" }, { status: 500 });
   }
-  const resend = new Resend(process.env.RESEND_API_KEY);
 
   const all = buildAll(lang);
   const filtered = onlyType ? all.filter((e) => e.type === onlyType) : all;
@@ -126,23 +124,28 @@ export async function GET(request: Request) {
 
   for (const mail of filtered) {
     try {
-      const r = await resend.emails.send({
-        from: `${FROM_NAME} <${FROM_EMAIL}>`,
-        to,
-        replyTo: REPLY_TO,
-        subject: `[PREVIEW ${lang.toUpperCase()}] ${mail.subject}`,
-        html: mail.html,
-        headers: { "X-Lifecycle-Preview": "1", "X-Lifecycle-Type": mail.type },
-        tags: [
-          { name: "preview", value: "1" },
-          { name: "type", value: mail.type },
-          { name: "lang", value: lang },
-        ],
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": brevoKey,
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          sender: { name: FROM_NAME, email: FROM_EMAIL },
+          to: [{ email: to }],
+          replyTo: { email: REPLY_TO },
+          subject: `[PREVIEW ${lang.toUpperCase()}] ${mail.subject}`,
+          htmlContent: mail.html,
+          headers: { "X-Lifecycle-Preview": "1", "X-Lifecycle-Type": mail.type },
+          tags: [mail.type, lang, "preview"],
+        }),
       });
-      if (r.error) {
-        results.push({ type: mail.type, ok: false, error: r.error.message });
+      const data = await res.json();
+      if (!res.ok) {
+        results.push({ type: mail.type, ok: false, error: data.message || "Brevo error" });
       } else {
-        results.push({ type: mail.type, ok: true, messageId: r.data?.id });
+        results.push({ type: mail.type, ok: true, messageId: data.messageId });
       }
     } catch (e: any) {
       results.push({ type: mail.type, ok: false, error: e?.message || "unknown" });

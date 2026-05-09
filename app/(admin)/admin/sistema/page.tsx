@@ -36,7 +36,7 @@ export default async function AdminSystemPage() {
     { label: "Anthropic API", ok: !!process.env.ANTHROPIC_API_KEY, detail: process.env.ANTHROPIC_API_KEY ? "Configurata" : "Mancante" },
     { label: "OpenAI API", ok: !!process.env.OPENAI_API_KEY, detail: process.env.OPENAI_API_KEY ? "Configurata" : "Mancante" },
     { label: "Google AI API", ok: !!process.env.GOOGLE_AI_API_KEY, detail: process.env.GOOGLE_AI_API_KEY ? "Configurata" : "Mancante" },
-    { label: "Resend API", ok: !!process.env.RESEND_API_KEY, detail: process.env.RESEND_API_KEY ? "Configurata" : "Mancante" },
+    { label: "Brevo API", ok: !!process.env.BREVO_API_KEY, detail: process.env.BREVO_API_KEY ? "Configurata" : "Mancante" },
     { label: "Inngest", ok: !!process.env.INNGEST_EVENT_KEY, detail: process.env.INNGEST_EVENT_KEY ? "Configurata" : "Mancante" },
   ];
 

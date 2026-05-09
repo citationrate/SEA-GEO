@@ -1,8 +1,7 @@
-import { Resend } from "resend";
 import { timingSafeEqual } from "crypto";
 
 const ALERT_RECIPIENTS = ["citationrate@gmail.com", "gianmariacipriano3@gmail.com"];
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "noreply@aicitationrate.com";
+const FROM_EMAIL = process.env.BREVO_FROM_EMAIL || "info@citationrate.com";
 const FROM_NAME = "Alerts CitationRate";
 
 export function verifyWebhookSecret(request: Request): boolean {
@@ -15,22 +14,34 @@ export function verifyWebhookSecret(request: Request): boolean {
 }
 
 export async function sendAlertEmail(subject: string, html: string): Promise<{ ok: boolean; error?: string; id?: string }> {
-  if (!process.env.RESEND_API_KEY) {
-    console.error("[alert-email] RESEND_API_KEY not configured");
-    return { ok: false, error: "RESEND_API_KEY missing" };
+  const brevoKey = process.env.BREVO_API_KEY;
+  if (!brevoKey) {
+    console.error("[alert-email] BREVO_API_KEY not configured");
+    return { ok: false, error: "BREVO_API_KEY missing" };
   }
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const result = await resend.emails.send({
-    from: `${FROM_NAME} <${FROM_EMAIL}>`,
-    to: ALERT_RECIPIENTS,
-    subject,
-    html,
+
+  // Brevo requires sending to each recipient individually or as array of objects
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": brevoKey,
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    },
+    body: JSON.stringify({
+      sender: { name: FROM_NAME, email: FROM_EMAIL },
+      to: ALERT_RECIPIENTS.map(email => ({ email })),
+      subject,
+      htmlContent: html,
+    }),
   });
-  if (result.error) {
-    console.error("[alert-email] resend error:", result.error);
-    return { ok: false, error: result.error.message };
+
+  const data = await res.json();
+  if (!res.ok) {
+    console.error("[alert-email] brevo error:", data);
+    return { ok: false, error: data.message };
   }
-  return { ok: true, id: result.data?.id };
+  return { ok: true, id: data.messageId };
 }
 
 export function deriveSource(rawUserMetaData: any, rawAppMetaData: any): string {

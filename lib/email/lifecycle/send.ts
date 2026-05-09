@@ -1,5 +1,5 @@
 /**
- * Resend wrapper per lifecycle emails.
+ * Brevo wrapper per lifecycle emails.
  * Supporta:
  *   - LIFECYCLE_DRY_RUN=true → non spedisce, logga e basta
  *   - LIFECYCLE_RECIPIENT_OVERRIDE=foo@bar.com → manda SOLO a quell'indirizzo, prefissa subject
@@ -7,15 +7,14 @@
  * Inserisce sempre una riga in `lifecycle_emails` per dedup.
  */
 
-import { Resend } from "resend";
 import { randomUUID } from "crypto";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
 import { injectTracking } from "./inject-tracking";
 import type { EmailType } from "./templates";
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "noreply@aicitationrate.com";
+const FROM_EMAIL = process.env.BREVO_FROM_EMAIL || "info@citationrate.com";
 const FROM_NAME = "Team CitationRate";
-const REPLY_TO = "citationrate@gmail.com";
+const REPLY_TO = "support@citationrate.com";
 
 interface SendInput {
   userId: string;
@@ -109,9 +108,7 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
     };
   }
 
-  // 2. Recipient override (testing). Trimmed because Vercel env vars copy-pasted
-  // from a terminal often carry a trailing newline, and Resend rejects an
-  // address that ends with whitespace — silently dropping every cron run.
+  // 2. Recipient override (testing).
   const override = process.env.LIFECYCLE_RECIPIENT_OVERRIDE?.trim() || undefined;
   const isTest = !!override;
   const finalRecipient = override || input.recipientEmail;
@@ -140,16 +137,16 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
     return { ok: true, messageId: fakeId, skipped: "dry_run", finalRecipient, isTest: true };
   }
 
-  // 4. Send via Resend
-  if (!process.env.RESEND_API_KEY) {
+  // 4. Send via Brevo
+  const brevoKey = process.env.BREVO_API_KEY;
+  if (!brevoKey) {
     return {
       ok: false,
-      error: "RESEND_API_KEY missing",
+      error: "BREVO_API_KEY missing",
       finalRecipient,
       isTest,
     };
   }
-  const resend = new Resend(process.env.RESEND_API_KEY);
 
   // Inject open pixel + click tracking before sending
   const trackingId = randomUUID();
@@ -158,35 +155,41 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
     unsubscribeUrl: tpl?.unsubscribe_url || undefined,
   });
 
-  const sendResult = await resend.emails.send({
-    from: `${FROM_NAME} <${FROM_EMAIL}>`,
-    to: finalRecipient,
-    replyTo: REPLY_TO,
-    subject: finalSubject,
-    html: trackedHtml,
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
     headers: {
-      "X-Lifecycle-Type": input.emailType,
-      "X-User-Id": input.userId,
-      "X-Real-Recipient": input.recipientEmail,
+      "api-key": brevoKey,
+      "Content-Type": "application/json",
+      "Accept": "application/json",
     },
-    tags: [
-      { name: "type", value: input.emailType },
-      { name: "lang", value: input.lang },
-      { name: "test", value: isTest ? "1" : "0" },
-    ],
+    body: JSON.stringify({
+      sender: { name: FROM_NAME, email: FROM_EMAIL },
+      to: [{ email: finalRecipient }],
+      replyTo: { email: REPLY_TO },
+      subject: finalSubject,
+      htmlContent: trackedHtml,
+      headers: {
+        "X-Lifecycle-Type": input.emailType,
+        "X-User-Id": input.userId,
+        "X-Real-Recipient": input.recipientEmail,
+      },
+      tags: [input.emailType, input.lang, isTest ? "test" : "production"],
+    }),
   });
 
-  if (sendResult.error) {
-    console.error(`[lifecycle] resend error for ${input.emailType}:`, sendResult.error);
+  const data = await res.json();
+
+  if (!res.ok) {
+    console.error(`[lifecycle] brevo error for ${input.emailType}:`, data);
     return {
       ok: false,
-      error: sendResult.error.message || "resend_unknown_error",
+      error: data.message || "brevo_unknown_error",
       finalRecipient,
       isTest,
     };
   }
 
-  const messageId = sendResult.data?.id;
+  const messageId = data.messageId;
   if (!messageId) {
     return { ok: false, error: "no_message_id", finalRecipient, isTest };
   }
@@ -206,7 +209,6 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
 
   if (insertError) {
     console.warn(`[lifecycle] log insert failed for ${input.emailType} ${input.userId}:`, insertError.message);
-    // mail già spedita, non rollback. Tracking degraded ma nessun impatto utente.
   }
 
   return { ok: true, messageId, finalRecipient, isTest };
