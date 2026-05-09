@@ -93,7 +93,38 @@ export async function POST(request: Request) {
     } else if (user.email) {
       params.customer_email = user.email;
     }
-    const session = await stripe.checkout.sessions.create(params);
+
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create(params);
+    } catch (createErr: any) {
+      // Recover from a stale stripe_customer_id (test-mode leftover from
+      // the test→live migration, or a customer deleted in the dashboard).
+      // Stripe surfaces this as a "No such customer: 'cus_xxx'" 400. We
+      // null the bad ID on the profile and retry once with customer_email
+      // so the user can complete the purchase without a manual support
+      // ticket. A future invoice webhook will repopulate stripe_customer_id
+      // with the new live customer Stripe creates for this checkout.
+      const msg = String(createErr?.message || "");
+      const isMissingCustomer =
+        createErr?.code === "resource_missing" ||
+        /no such customer/i.test(msg);
+      if (!isMissingCustomer || !stripeCustomerId) throw createErr;
+
+      console.warn("[bp-extras-checkout] Stale stripe_customer_id, recovering:", {
+        userId: user.id,
+        badCustomer: stripeCustomerId,
+      });
+      await (cr.from("profiles") as any)
+        .update({ stripe_customer_id: null })
+        .eq("id", user.id);
+
+      delete params.customer;
+      delete params.customer_update;
+      if (user.email) params.customer_email = user.email;
+      session = await stripe.checkout.sessions.create(params);
+    }
+
     return NextResponse.json({ url: session.url });
   } catch (e: any) {
     console.error("[bp-extras-checkout] Stripe error:", e);
