@@ -36,3 +36,9 @@ export type { ExtractedSource, SourceOrigin } from "./sources-extractor";
 
 // Competitor name canonicalization
 export { extractBrandOnly, canonicalizeCompetitorName } from "./competitor-names";
+
+// Cost tracking — wrap any LLM call with trackedAICall(args, fn) and a row
+// is written to api_call_logs (Supabase CitationRate). Used by BP for the
+// extractor + insights calls that don't go through callAIModel.
+export { trackedAICall } from "./cost-tracker";
+export type { TrackedCallArgs } from "./cost-tracker";

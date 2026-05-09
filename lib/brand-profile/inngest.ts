@@ -113,13 +113,16 @@ export const runBrandProfile = inngest.createFunction(
                 return null;
               }
 
-              const ext = await extractByPillar({
-                pillar: task.pillar,
-                brand: data.brand,
-                sector: data.sector,
-                prompt_text: task.text,
-                response_raw: responseRaw,
-              });
+              const ext = await extractByPillar(
+                {
+                  pillar: task.pillar,
+                  brand: data.brand,
+                  sector: data.sector,
+                  prompt_text: task.text,
+                  response_raw: responseRaw,
+                },
+                { userId: data.userId, runId: data.runId },
+              );
 
               const d = ext.data as any;
               await (bp.from("prompt_results") as any).insert({
@@ -214,23 +217,26 @@ export const runBrandProfile = inngest.createFunction(
             responsesByPillar[p].push(r.response_raw as string);
           }
         }
-        const { insights, model } = await generateInsights({
-          brand: data.brand,
-          sector: data.sector,
-          country: data.country,
-          locale: data.locale,
-          scores: {
-            recognition: Number(computed.scores.recognition ?? 0),
-            clarity: Number(computed.scores.clarity ?? 0),
-            authority: Number(computed.scores.authority ?? 0),
-            relevance: Number(computed.scores.relevance ?? 0),
-            sentiment: Number(computed.scores.sentiment ?? 0),
+        const { insights, model } = await generateInsights(
+          {
+            brand: data.brand,
+            sector: data.sector,
+            country: data.country,
+            locale: data.locale,
+            scores: {
+              recognition: Number(computed.scores.recognition ?? 0),
+              clarity: Number(computed.scores.clarity ?? 0),
+              authority: Number(computed.scores.authority ?? 0),
+              relevance: Number(computed.scores.relevance ?? 0),
+              sentiment: Number(computed.scores.sentiment ?? 0),
+            },
+            breakdown: computed.breakdown,
+            responsesByPillar,
+            diagnostics,
+            modelCount: models.length,
           },
-          breakdown: computed.breakdown,
-          responsesByPillar,
-          diagnostics,
-          modelCount: models.length,
-        });
+          { userId: data.userId, runId: data.runId },
+        );
         const rowsToInsert: any[] = [];
         (Object.keys(insights) as InsightPillar[]).forEach((p) => {
           insights[p].forEach((text) => {
