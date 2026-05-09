@@ -1,7 +1,15 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { trackedAICall } from "@citationrate/llm-client";
 import type { DiagnosticEntry, DiagnosticPillar } from "./cs-bridge";
 
 const SONNET_MODEL = "claude-sonnet-4-5";
+
+/** Optional tracking — flows from inngest.ts so the Sonnet insights call
+ * lands in api_call_logs alongside the BP main + extractor calls. */
+export interface BpInsightsTracking {
+  userId?: string | null;
+  runId?: string | null;
+}
 
 let _client: Anthropic | null = null;
 function client(): Anthropic {
@@ -144,17 +152,30 @@ Rispondi SOLO con un JSON object di questa forma:
 Niente preamboli, niente markdown, solo JSON valido.`;
 }
 
-export async function generateInsights(input: InsightInput): Promise<{
+export async function generateInsights(
+  input: InsightInput,
+  tracking?: BpInsightsTracking,
+): Promise<{
   insights: InsightOutput;
   model: string;
 }> {
   const prompt = buildPrompt(input);
   const c = client();
-  const resp = await c.messages.create({
-    model: SONNET_MODEL,
-    max_tokens: 2000,
-    messages: [{ role: "user", content: prompt }],
-  });
+  const resp = await trackedAICall(
+    {
+      product: "brand_profile" as const,
+      operation: "bp_insights",
+      provider: "anthropic" as const,
+      apiModel: SONNET_MODEL,
+      userId: tracking?.userId ?? null,
+      runId: tracking?.runId ?? null,
+    },
+    () => c.messages.create({
+      model: SONNET_MODEL,
+      max_tokens: 2000,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  );
 
   const text = resp.content
     .filter((b) => b.type === "text")

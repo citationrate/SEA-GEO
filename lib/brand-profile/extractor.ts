@@ -1,7 +1,15 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { trackedAICall } from "@citationrate/llm-client";
 import type { Pillar } from "./prompts";
 
 const HAIKU_MODEL = "claude-haiku-4-5-20251001";
+
+/** Optional tracking context — flows from inngest.ts so each Haiku
+ * extraction lands in api_call_logs alongside the BP main calls. */
+export interface BpExtractTracking {
+  userId?: string | null;
+  runId?: string | null;
+}
 
 let _client: Anthropic | null = null;
 function client(): Anthropic {
@@ -149,24 +157,39 @@ function systemPrompt(pillar: Pillar, brand: string): string {
   return `${role}\n\n${pillarHint[pillar]}`;
 }
 
-export async function extractByPillar(ctx: ExtractionContext): Promise<PillarExtraction> {
+export async function extractByPillar(
+  ctx: ExtractionContext,
+  tracking?: BpExtractTracking,
+): Promise<PillarExtraction> {
   const sys = systemPrompt(ctx.pillar, ctx.brand);
   const userMsg = `Prompt sent to the AI:\n${ctx.prompt_text}\n\nAI response to analyze:\n${ctx.response_raw}`;
 
-  const resp = await client().messages.create({
-    model: HAIKU_MODEL,
-    max_tokens: 1024,
-    system: sys,
-    tools: [
-      {
-        name: "extract",
-        description: `Extract ${ctx.pillar} signals from the AI response`,
-        input_schema: SCHEMAS[ctx.pillar] as Anthropic.Tool.InputSchema,
-      },
-    ],
-    tool_choice: { type: "tool", name: "extract" },
-    messages: [{ role: "user", content: userMsg }],
-  });
+  const callArgs = {
+    product: "brand_profile" as const,
+    operation: "bp_extractor",
+    provider: "anthropic" as const,
+    apiModel: HAIKU_MODEL,
+    userId: tracking?.userId ?? null,
+    runId: tracking?.runId ?? null,
+    meta: { pillar: ctx.pillar },
+  };
+
+  const resp = await trackedAICall(callArgs, () =>
+    client().messages.create({
+      model: HAIKU_MODEL,
+      max_tokens: 1024,
+      system: sys,
+      tools: [
+        {
+          name: "extract",
+          description: `Extract ${ctx.pillar} signals from the AI response`,
+          input_schema: SCHEMAS[ctx.pillar] as Anthropic.Tool.InputSchema,
+        },
+      ],
+      tool_choice: { type: "tool", name: "extract" },
+      messages: [{ role: "user", content: userMsg }],
+    })
+  );
 
   const toolUse = resp.content.find((c): c is Anthropic.ToolUseBlock => c.type === "tool_use");
   if (!toolUse) throw new Error(`Haiku did not return a tool_use block for pillar=${ctx.pillar}`);
