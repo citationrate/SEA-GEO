@@ -72,13 +72,31 @@ const RESPONSES_API_MODELS = new Set(["gpt-5.4", "gpt-5.4-mini", "gpt-5.5"]);
  * Call an AI model with retry logic and source extraction.
  * Supports OpenAI, Anthropic, Google, Perplexity, Azure, and xAI providers.
  */
+export interface CallAIOptions {
+  /**
+   * Sampling temperature passed to the LLM. Defaults to 0.7 to keep AVI
+   * runs (creative ranking, broad recall) backward-compatible. Brand
+   * Profile sets this to 0 because each pillar score is a 1/N average over
+   * a handful of prompts — at T=0.7 a single re-roll can flip a "brand
+   * mentioned" answer into a "not mentioned" one and shift the pillar by
+   * 15-20 points in 5 minutes. T=0 yields output that is reproducible
+   * within tokenizer noise.
+   *
+   * NB: Anthropic clamps to [0,1]; OpenAI accepts [0,2]; Perplexity does
+   * too. We pass the value through as-is per provider.
+   */
+  temperature?: number;
+}
+
 export async function callAIModel(
   prompt: string,
   model: string,
   browsing = false,
   brandDomain?: string | null,
   trackingContext?: CallTrackingContext,
+  callOptions?: CallAIOptions,
 ): Promise<AIModelResult> {
+  const temperature = callOptions?.temperature ?? 0.7;
   const empty: AIModelResult = { text: "", sources: [] };
 
   // Skip models on hold
@@ -112,6 +130,7 @@ export async function callAIModel(
               anthropic.messages.create({
                 model: apiModel,
                 max_tokens: maxTokens,
+                temperature: Math.min(1, Math.max(0, temperature)),
                 messages: [{ role: "user", content: prompt }],
                 tools: [{
                   type: "web_search_20250305",
@@ -157,6 +176,7 @@ export async function callAIModel(
           anthropic.messages.create({
             model: apiModel,
             max_tokens: maxTokens,
+            temperature: Math.min(1, Math.max(0, temperature)),
             messages: [{ role: "user", content: prompt }],
           })
         );
@@ -269,7 +289,7 @@ export async function callAIModel(
               model: apiModel,
               messages: [{ role: "user", content: prompt }],
               max_tokens: 4096,
-              temperature: 0.7,
+              temperature,
             }),
           });
           if (!res.ok) {
@@ -328,7 +348,7 @@ export async function callAIModel(
             body: JSON.stringify({
               messages: [{ role: "user", content: prompt }],
               max_tokens: 4096,
-              temperature: 0.7,
+              temperature,
             }),
           },
         );
@@ -385,6 +405,7 @@ export async function callAIModel(
         const completion = await maybeTrack(trackingContext, { provider: "xai", apiModel }, () =>
           client.chat.completions.create({
             model: apiModel,
+            temperature,
             max_tokens: 4096,
             messages: [{ role: "user", content: prompt }],
           })
@@ -496,7 +517,7 @@ export async function callAIModel(
       const completion = await maybeTrack(trackingContext, { provider: "openai", apiModel }, () =>
         openai.chat.completions.create({
           model: apiModel,
-          temperature: 0.7,
+          temperature,
           max_tokens: 4096,
           messages: [{ role: "user", content: prompt }],
         })

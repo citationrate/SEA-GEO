@@ -92,6 +92,12 @@ export const runBrandProfile = inngest.createFunction(
                 userId: data.userId,
                 runId: data.runId,
                 meta: { pillar: task.pillar, prompt_index: task.index },
+              }, {
+                // Pillar scores are 1/N averages over a handful of prompts;
+                // at T=0.7 a single re-roll can flip a "brand mentioned" answer
+                // and shift a pillar by 15-20 pts in 5 minutes. T=0 makes
+                // back-to-back runs reproducible within tokenizer noise.
+                temperature: 0,
               });
               const durationMs = Date.now() - t0;
               const responseRaw = llm.text ?? "";
