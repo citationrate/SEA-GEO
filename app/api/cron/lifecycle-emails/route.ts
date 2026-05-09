@@ -147,6 +147,22 @@ const BILINGUAL_DIVIDER = `
   </div>
 `;
 
+/** Transform plain <a> tags (from CRM editor) into styled email buttons */
+function fixCtaButtons(html: string): string {
+  return html.replace(
+    /<a\s([^>]*?)href="([^"]*)"([^>]*?)>([\s\S]*?)<\/a>/gi,
+    (match, before, url, after, text) => {
+      const fullAttrs = before + after;
+      if (fullAttrs.includes("background") && fullAttrs.includes("display:block")) return match;
+      const plainText = text.replace(/<[^>]*>/g, "").trim();
+      if (plainText.length > 2 && plainText === plainText.toUpperCase() && /[A-Z]/.test(plainText)) {
+        return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 28px;"><tr><td align="center"><a href="${url}" style="display:block;background:#7eb89a;color:#0d1a14;font-family:Arial,'Helvetica Neue',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;padding:18px 32px;text-align:center;">${plainText}</a></td></tr></table>`;
+      }
+      return match;
+    }
+  );
+}
+
 /** Replace {nome}, {brand}, {days}, etc. in template body */
 function interpolate(body: string, vars: Record<string, string | number | null | undefined>): string {
   let result = body;
@@ -195,7 +211,7 @@ async function renderTemplate(type: EmailType, c: any, lang: "it" | "en"): Promi
   }
 
   const vars = candidateVars(type, c);
-  const bodyIt = interpolate(tpl.body_it, vars);
+  const bodyIt = fixCtaButtons(interpolate(tpl.body_it, vars));
   // Subject: EN | IT (bilingual subject line)
   const subjectIt = interpolate(tpl.subject_it, vars);
   const subjectEn = tpl.subject_en ? interpolate(tpl.subject_en, vars) : null;
@@ -205,7 +221,7 @@ async function renderTemplate(type: EmailType, c: any, lang: "it" | "en"): Promi
   // Compose bilingual body: IT + divider + EN (if EN exists)
   let bodyInner = bodyIt;
   if (tpl.body_en) {
-    const bodyEn = interpolate(tpl.body_en, vars);
+    const bodyEn = fixCtaButtons(interpolate(tpl.body_en, vars));
     bodyInner = bodyIt + BILINGUAL_DIVIDER + bodyEn;
   }
 

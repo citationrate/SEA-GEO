@@ -135,8 +135,6 @@ export function heading(line1: string, accentLine?: string): string {
 export function emailLayout(opts: { preview: string; bodyInner: string; lang?: string }): string {
   const lang = opts.lang || "it";
   const f = {
-    team: "Team CitationRate",
-    reply: "Se hai domande, rispondi a questa mail. Ci siamo.<br><em style=\"color:" + colors.textMuted + ";font-size:14px;\">If you have questions, just reply to this email. We're here.</em>",
     address: "CitationRate &middot; suite.citationrate.com &middot; avi.citationrate.com",
   };
 
@@ -176,11 +174,6 @@ export function emailLayout(opts: { preview: string; bodyInner: string; lang?: s
               </div>
               <!-- Divider -->
               <div style="margin-top:36px;height:0.5px;background:${colors.divider};"></div>
-              <!-- Footer signature -->
-              <div style="margin-top:24px;font-family:${fonts.ui};font-size:15px;color:${colors.textMuted};line-height:1.65;">
-                ${f.reply}<br>
-                <strong style="color:${colors.primary};">&mdash; ${escapeHtml(f.team)}</strong>
-              </div>
             </td>
           </tr>
         </table>
