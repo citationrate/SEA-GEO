@@ -372,9 +372,52 @@ export function BrandProfileReport({
                 setExporting(true);
                 try {
                   const { exportBrandProfilePdf } = await import("@/lib/brand-profile/export-pdf");
+                  // Map run + scores + insights into the PDF generator's
+                  // shape. Sub-metrics come from scores.breakdown which is a
+                  // free-form jsonb keyed by pillar — we surface only the
+                  // numeric leaves and let the generator skip the section
+                  // if empty.
+                  const pdfPillars = PILLAR_KEYS.map((p) => {
+                    const sub = (scores?.breakdown as any)?.[p.key as string] ?? {};
+                    const subMetrics: Array<{ label: string; value: number }> = [];
+                    for (const [k, v] of Object.entries(sub)) {
+                      if (typeof v === "number" && Number.isFinite(v)) {
+                        subMetrics.push({
+                          label: t(`brandProfile.subMetric_${p.key}_${k}`) || k,
+                          value: Number(v),
+                        });
+                      }
+                    }
+                    return {
+                      title: t(p.tKey),
+                      description: t(p.descKey),
+                      score: Number((scores as any)?.[p.key] ?? 0),
+                      subMetrics,
+                      insights: insightsByPillar[p.key as string] ?? [],
+                    };
+                  });
                   await exportBrandProfilePdf({
                     brandName: run.brand_name,
+                    sector: run.sector,
+                    country: run.country,
+                    locale: run.locale,
                     date: run.completed_at ?? run.started_at,
+                    scoreTotal: Number(scores?.total ?? 0),
+                    pillars: pdfPillars,
+                    labels: {
+                      productName: t("brandProfile.title") || "Brand Profile",
+                      overallScore: t("brandProfile.overallScore") || "Score complessivo",
+                      pillarsAtAGlance: t("brandProfile.pillarsAtAGlance") || "I 5 pilastri",
+                      cosaFare: t("brandProfile.cosaFare") || "Cosa fare",
+                      page: t("brandProfile.page") || "Pagina",
+                      of: t("brandProfile.of") || "di",
+                      radarTitle: t("brandProfile.radarTitle") || "Radar dei pilastri",
+                      scoreLabelCritical: t("brandProfile.scoreLabelCritical") || "Critico",
+                      scoreLabelLow: t("brandProfile.scoreLabelLow") || "Basso",
+                      scoreLabelMedium: t("brandProfile.scoreLabelMedium") || "Moderato",
+                      scoreLabelGood: t("brandProfile.scoreLabelGood") || "Buono",
+                      scoreLabelExcellent: t("brandProfile.scoreLabelExcellent") || "Eccellente",
+                    },
                   });
                 } catch (e) {
                   console.error("[bp/export-pdf]", e);
@@ -425,7 +468,7 @@ export function BrandProfileReport({
       {scores && run.status === "completed" && (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="card p-6 lg:col-span-2">
+            <div className="card p-6 lg:col-span-2" data-bp-print-radar>
               <ScoreRadar
                 scores={{
                   recognition: Number(scores.recognition ?? 0),
