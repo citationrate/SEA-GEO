@@ -54,14 +54,27 @@ function scoreRecognition(rows: RecognitionExtraction[]): { score: number; break
 function scoreClarity(rows: ClarityExtraction[]): { score: number; breakdown: PillarBreakdown["clarity"] } {
   if (rows.length === 0) return { score: 0, breakdown: { factual: 0, no_confusion: 0 } };
 
+  // Smoothing parallel to scoreAuthority(): flatten the bimodal cliff in
+  // factual that pushed the pillar by 8-10 pts run-to-run when one model
+  // happened to fill 1 fewer claim. New tiers + a baseline floor when the
+  // brand isn't mentioned at all (instead of 0, which double-amplified
+  // randomness in low-recognition brands).
+  //
+  //   not mentioned      → 30  (was 0)
+  //   mentioned, 0 facts → 30  (was 20)
+  //   mentioned, 1 fact  → 55  (was 60)
+  //   mentioned, ≥2 fact → 80  (was 100)
+  //
+  // Top scorers cap at 80 — same rationale as Authority: a "perfect 100"
+  // on a small sample is suspicious, not a real signal of clarity.
   const factualPoints = rows.map((r) => {
-    if (!r.brand_mentioned) return 0;
+    if (!r.brand_mentioned) return 30;
     const claims = r.factual_claims ?? {};
     const filled = [claims.sector, claims.headquarters, claims.ceo, claims.founded_year].filter(
       (v) => v !== undefined && v !== null && v !== "",
     ).length;
-    const base = filled >= 2 ? 100 : filled === 1 ? 60 : 20;
-    const penalty = Math.min(30, (r.uncertainty_flags?.length ?? 0) * 10);
+    const base = filled >= 2 ? 80 : filled === 1 ? 55 : 30;
+    const penalty = Math.min(25, (r.uncertainty_flags?.length ?? 0) * 8);
     return Math.max(0, base - penalty);
   });
   const factual = avg(factualPoints);
