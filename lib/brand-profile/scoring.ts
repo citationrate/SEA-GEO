@@ -78,22 +78,29 @@ function scoreClarity(rows: ClarityExtraction[]): { score: number; breakdown: Pi
 function scoreAuthority(rows: AuthorityExtraction[]): { score: number; breakdown: PillarBreakdown["authority"] } {
   if (rows.length === 0) return { score: 0, breakdown: { presence: 0, tone: 0 } };
 
-  // Authority "presence" = does the AI cite OUR brand as a source/expert,
-  // not whether the AI mentions any third-party experts. Previously this
-  // returned 100 whenever a response had any source list, which was almost
-  // always true — pushing the pillar score artificially high (e.g. 91 with
-  // 1/6 mentions). Now we tie it to brand_mentioned, in line with the other
-  // pillars.
-  const presencePoints = rows.map((r) => (r.brand_mentioned ? 100 : 0));
-  const presence = avg(presencePoints);
+  // Authority "presence" = does the AI cite OUR brand as a source/expert.
+  // With only 6 calls per pillar, the raw mentions/N estimate is bimodal:
+  // a single flip between consecutive runs swung the pillar by ~50 pts
+  // (0 mentions → score 0, 1 mention → score ~30+tone). Caused by
+  // perplexity-sonar's web-search results shifting slightly between runs.
+  //
+  // Fix: Beta(α=1, β=3) prior smoothing on presence + tone floor=40 when
+  // zero mentions. The prior pulls toward "low Authority" (which is true
+  // for most brands), and the tone floor avoids the cliff where 0 mentions
+  // also drops tone to 0. Top scorers (6/6 mentions) still land ~72 — high
+  // but not the suspicious "perfect 100" the unsmoothed version produced.
+  const PRIOR_ALPHA = 1;
+  const PRIOR_BETA = 3;
+  const TONE_FLOOR_NO_MENTIONS = 40;
 
-  // Tone is only meaningful for responses where the brand was actually
-  // mentioned — otherwise tone_authoritative describes the response in
-  // general, not the brand. Average over mentioned rows only.
+  const mentions = rows.filter((r) => r.brand_mentioned).length;
+  const n = rows.length;
+  const presence = ((mentions + PRIOR_ALPHA) / (n + PRIOR_ALPHA + PRIOR_BETA)) * 100;
+
   const tonePoints = rows
     .filter((r) => r.brand_mentioned)
     .map((r) => Math.max(0, Math.min(1, r.tone_authoritative ?? 0)) * 100);
-  const tone = tonePoints.length === 0 ? 0 : avg(tonePoints);
+  const tone = tonePoints.length === 0 ? TONE_FLOOR_NO_MENTIONS : avg(tonePoints);
 
   return {
     score: clamp(0.6 * presence + 0.4 * tone),
