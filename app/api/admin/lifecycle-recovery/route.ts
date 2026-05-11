@@ -370,7 +370,16 @@ export async function GET(request: Request) {
 
   for (const c of c1bFiltered) {
     const lang = detectLang({ email: c.email });
-    const vars = { nome: c.full_name || "", brand: c.brand, globalScore: c.global };
+    const engineKeys: Record<string, string> = {
+      ChatGPT: "chatgpt", Claude: "claude", Gemini: "gemini",
+      Perplexity: "perplexity", Copilot: "copilot", AIMode: "aimode", Grok: "grok",
+    };
+    const engineVars: Record<string, string> = {};
+    for (const [displayName, varName] of Object.entries(engineKeys)) {
+      const v = c.scores_per_engine?.[displayName];
+      engineVars[varName] = typeof v === "number" ? String(Math.round(v)) : "";
+    }
+    const vars = { nome: c.full_name || "", brand: c.brand, globalScore: c.global, ...engineVars };
     const rendered = await renderFromDb(cr, "1B", vars);
     if (!rendered) { failed++; results.push({ type: "1B", email: c.email, ok: false, error: "template_missing" }); continue; }
     const r = await sendLifecycleEmail({

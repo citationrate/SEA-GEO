@@ -177,18 +177,37 @@ function interpolate(body: string, vars: Record<string, string | number | null |
 /** Build template variables from candidate data */
 function candidateVars(type: EmailType, c: any): Record<string, string | number | null> {
   const scores = c.scores || {};
-  const engines = scores?.per_engine || scores?.engines || {};
-  const global = Number(scores?.global ?? scores?.score ?? 0);
   const aviScore = c.avi_score ? Math.round(Number(c.avi_score)) : null;
   const presence = c.presence_score ? Math.round(Number(c.presence_score)) : null;
   const sentiment = c.sentiment_score ? Math.round(Number(c.sentiment_score)) : null;
   const avgRank = c.avg_brand_rank ? Number(c.avg_brand_rank).toFixed(1) : null;
 
+  // Per-engine scores — scores is flat: { ChatGPT: 60, Claude: 58, ... }
+  const engineKeys: Record<string, string> = {
+    ChatGPT: "chatgpt", Claude: "claude", Gemini: "gemini",
+    Perplexity: "perplexity", Copilot: "copilot", AIMode: "aimode", Grok: "grok",
+  };
+  const engineVars: Record<string, string> = {};
+  const engineValues: number[] = [];
+  for (const [displayName, varName] of Object.entries(engineKeys)) {
+    const v = scores[displayName];
+    if (typeof v === "number" || (typeof v === "string" && !isNaN(Number(v)))) {
+      const n = Math.round(Number(v));
+      engineVars[varName] = String(n);
+      engineValues.push(n);
+    } else {
+      engineVars[varName] = "";
+    }
+  }
+  const global = engineValues.length > 0
+    ? Math.round(engineValues.reduce((a, b) => a + b, 0) / engineValues.length)
+    : 0;
+
   return {
     nome: c.full_name || "",
     brand: c.brand || "",
     days: c.days_since_signup ?? "",
-    globalScore: global ? String(Math.round(global)) : "",
+    globalScore: global ? String(global) : "",
     aviScore: aviScore ? String(aviScore) : "",
     presence: presence ? String(presence) : "",
     sentiment: sentiment ? String(sentiment) : "",
@@ -199,6 +218,7 @@ function candidateVars(type: EmailType, c: any): Record<string, string | number 
     auditId: c.audit_id || "",
     projectId: c.project_id || "",
     runId: c.run_id || "",
+    ...engineVars,
   };
 }
 
