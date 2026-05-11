@@ -1,3 +1,5 @@
+import { isShowcase } from "@/lib/showcase";
+
 export const BP_RUN_LIMITS: Record<string, number> = {
   demo: 1,
   free: 1,
@@ -28,8 +30,9 @@ export const BP_WHITELIST_EMAILS: ReadonlySet<string> = new Set([
 export function bpAccessAllowed(opts: { email?: string | null; isAdmin?: boolean | null; plan?: string | null }): boolean {
   if (opts.isAdmin === true) return true;
   // Showcase accounts (vetrina) get BP unconditionally — they don't use AVI
-  // and Brand Profile is one of their two enabled tools.
-  if (opts.plan === "enterprise_showcase") return true;
+  // and Brand Profile is one of their two enabled tools. Uses isShowcase()
+  // so the email whitelist (hybrid Pro+showcase accounts) is honored.
+  if (isShowcase(opts.plan, opts.email)) return true;
   const email = (opts.email ?? "").toLowerCase().trim();
   return email !== "" && BP_WHITELIST_EMAILS.has(email);
 }
