@@ -124,6 +124,10 @@ export function BrandProfileReport({
   const [progress, setProgress] = useState<{ completed: number; total: number }>({ completed: 0, total: 0 });
   const [csTriggerState, setCsTriggerState] = useState<"idle" | "triggering" | "triggered" | "error">("idle");
   const [csTriggerError, setCsTriggerError] = useState<string | null>(null);
+  // Previous completed run for the same brand_name — used to detect
+  // run-to-run variability and show the "score può variare" banner only
+  // from the 2nd run onward, when at least one pillar moved > 10 pts.
+  const [prevScores, setPrevScores] = useState<Pick<ScoreRow, "recognition" | "clarity" | "authority" | "relevance" | "sentiment"> | null>(null);
   const router = useRouter();
 
   const isPolling = run.status === "pending" || run.status === "running";
@@ -176,6 +180,42 @@ export function BrandProfileReport({
     tick();
     return () => { cancelled = true; clearInterval(id); };
   }, [isPolling, runId]);
+
+  // Pull previous completed run's scores for the same brand_name — used
+  // for the variability banner. Triggered only when the current run is
+  // completed and we have a brand name to query by.
+  useEffect(() => {
+    if (run.status !== "completed" || !run.brand_name) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const url = `/api/brand-profile/runs/previous?brand_name=${encodeURIComponent(run.brand_name)}&before=${encodeURIComponent(run.id)}`;
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (!cancelled) setPrevScores(json?.scores ?? null);
+      } catch { /* swallow — banner just won't render */ }
+    })();
+    return () => { cancelled = true; };
+  }, [run.id, run.brand_name, run.status]);
+
+  // Variability flag: at least one pillar moved by more than 10 pts vs
+  // the previous run for the same brand. Threshold mirrors the empirical
+  // ±10 pt swing we see on Authority/Relevance from web-search variance.
+  const variability = useMemo(() => {
+    if (!prevScores || !scores) return null;
+    const keys: Array<keyof typeof prevScores> = [
+      "recognition", "clarity", "authority", "relevance", "sentiment",
+    ];
+    const pairs = keys.map((k) => ({
+      key: k as string,
+      curr: Number((scores as any)[k] ?? 0),
+      prev: Number((prevScores as any)[k] ?? 0),
+    }));
+    const drifted = pairs.filter((p) => Math.abs(p.curr - p.prev) > 10);
+    if (drifted.length === 0) return null;
+    return { drifted, max: Math.max(...drifted.map((p) => Math.abs(p.curr - p.prev))) };
+  }, [scores, prevScores]);
 
   const insightsByPillar = useMemo(() => {
     const acc: Record<string, string[]> = {};
@@ -463,6 +503,24 @@ export function BrandProfileReport({
           total={progress.total > 0 ? progress.total : run.total_prompts}
           locale={run.locale}
         />
+      )}
+
+      {scores && run.status === "completed" && variability && (
+        <div
+          data-bp-no-print
+          className="card p-4 border-amber-500/30 bg-amber-500/[0.04] flex items-start gap-3"
+        >
+          <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="text-sm text-foreground">
+            <div className="font-medium mb-1">
+              {t("brandProfile.variabilityTitle") || "I punteggi possono variare tra run consecutive"}
+            </div>
+            <div className="text-muted-foreground text-xs leading-relaxed">
+              {t("brandProfile.variabilityBody") ||
+                "Almeno un pilastro è cambiato di più di 10 punti rispetto alla run precedente per questo brand. È un comportamento intrinseco di alcuni motori AI (in particolare quelli con web search live, come Perplexity Sonar): le loro risposte cambiano leggermente da una run all'altra. Lo score complessivo resta stabile entro ±5 pt sui brand maturi."}
+            </div>
+          </div>
+        </div>
       )}
 
       {scores && run.status === "completed" && (

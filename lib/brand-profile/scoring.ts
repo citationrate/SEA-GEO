@@ -102,21 +102,37 @@ function scoreAuthority(rows: AuthorityExtraction[]): { score: number; breakdown
   // for most brands), and the tone floor avoids the cliff where 0 mentions
   // also drops tone to 0. Top scorers (6/6 mentions) still land ~72 — high
   // but not the suspicious "perfect 100" the unsmoothed version produced.
-  const PRIOR_ALPHA = 1;
-  const PRIOR_BETA = 3;
-  const TONE_FLOOR_NO_MENTIONS = 40;
+  // Stronger smoothing than the previous Beta(1,3): Setup C-light test
+  // showed Authority still swung ±22 pts on Notion (mature brand!) because
+  // (a) the Beta wasn't aggressive enough and (b) the binary presence had
+  // weight 0.6 while the continuous tone only 0.4.
+  //
+  // Three combined changes:
+  //   1. Beta(2,6) — pulls harder toward the low-prior baseline.
+  //   2. Tone "pooled smoothing" — unmentioned rows contribute tone=50
+  //      (neutral) instead of being excluded; eliminates the cliff between
+  //      0 mentions (tone=floor) and 1+ mentions (tone=real ~70).
+  //   3. Inverted weights: tone (continuous, low-variance) now 0.6 vs
+  //      presence (binary, high-variance) 0.4.
+  //
+  // Expected effect: Δ run-to-run for Authority drops from ~20pt to ~8pt
+  // on samples of N=10 (Setup C-light).
+  const PRIOR_ALPHA = 2;
+  const PRIOR_BETA = 6;
+  const TONE_NEUTRAL_UNMENTIONED = 50;
 
   const mentions = rows.filter((r) => r.brand_mentioned).length;
   const n = rows.length;
   const presence = ((mentions + PRIOR_ALPHA) / (n + PRIOR_ALPHA + PRIOR_BETA)) * 100;
 
-  const tonePoints = rows
-    .filter((r) => r.brand_mentioned)
-    .map((r) => Math.max(0, Math.min(1, r.tone_authoritative ?? 0)) * 100);
-  const tone = tonePoints.length === 0 ? TONE_FLOOR_NO_MENTIONS : avg(tonePoints);
+  const tonePoints = rows.map((r) => {
+    if (!r.brand_mentioned) return TONE_NEUTRAL_UNMENTIONED;
+    return Math.max(0, Math.min(1, r.tone_authoritative ?? 0)) * 100;
+  });
+  const tone = avg(tonePoints);
 
   return {
-    score: clamp(0.6 * presence + 0.4 * tone),
+    score: clamp(0.4 * presence + 0.6 * tone),
     breakdown: { presence: clamp(presence), tone: clamp(tone) },
   };
 }
@@ -124,9 +140,21 @@ function scoreAuthority(rows: AuthorityExtraction[]): { score: number; breakdown
 function scoreRelevance(rows: RelevanceExtraction[]): { score: number; breakdown: PillarBreakdown["relevance"] } {
   if (rows.length === 0) return { score: 0, breakdown: { product_match: 0, coherence: 0 } };
 
+  // Setup C-light test showed Relevance swinging ±18.8 pts on the young
+  // brand "Citation Rate" because product_match was bimodal: 0 products
+  // listed → 30, ≥1 product → 100, with weight 0.7. Same Authority story.
+  //
+  // Same fix pattern: softer tiers + inverted weights so coherence
+  // (continuous) dominates over product_match (discrete).
+  //
+  //   not mentioned          → 30 (was 0)
+  //   mentioned, 0 products  → 40 (was 30)
+  //   mentioned, ≥1 product  → 75 (was 100)
+  //
+  // Top scorers cap at 75 — matching the Authority cap rationale.
   const matchPoints = rows.map((r) => {
-    if (!r.brand_mentioned) return 0;
-    return (r.products_mentioned?.length ?? 0) > 0 ? 100 : 30;
+    if (!r.brand_mentioned) return 30;
+    return (r.products_mentioned?.length ?? 0) > 0 ? 75 : 40;
   });
   const product_match = avg(matchPoints);
 
@@ -134,7 +162,7 @@ function scoreRelevance(rows: RelevanceExtraction[]): { score: number; breakdown
   const coherence = avg(coherencePoints);
 
   return {
-    score: clamp(0.7 * product_match + 0.3 * coherence),
+    score: clamp(0.3 * product_match + 0.7 * coherence),
     breakdown: { product_match: clamp(product_match), coherence: clamp(coherence) },
   };
 }
