@@ -346,8 +346,18 @@ export function CompareClient({ runs }: { runs: RunRow[] }) {
                   </div>
                   <div className="text-xs text-muted-foreground space-y-0.5">
                     <div>{it.run.sector}</div>
-                    <div>{it.run.country} · {it.run.locale}</div>
-                    <div>{(it.run.completed_at ?? "").slice(0, 10)}</div>
+                    <div>{it.run.country}</div>
+                    <div>
+                      {(() => {
+                        const iso = it.run.completed_at ?? "";
+                        if (!iso) return "";
+                        const d = new Date(iso);
+                        if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
+                        const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                        const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                        return `${ymd} ${hm}`;
+                      })()}
+                    </div>
                   </div>
                 </Link>
               );
