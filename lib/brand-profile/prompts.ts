@@ -112,11 +112,20 @@ function fill(template: string, ctx: PromptContext): string {
     .replaceAll("{country}", countryName(ctx.country, ctx.locale));
 }
 
+/**
+ * Number of prompts kept per pillar. Cut from 3 to 2 with Setup C-light
+ * (5 models × 2 prompts/pillar = 10 samples/pillar vs the previous
+ * 2 models × 3 prompts/pillar = 6 samples/pillar). The 3rd prompt in each
+ * pillar was largely redundant with the first two (e.g. recognition had
+ * "main brands", "top 10", "market leaders" — overlapping signal).
+ */
+const PROMPTS_PER_PILLAR = 2;
+
 export function buildPrompts(ctx: PromptContext): BrandProfilePrompt[] {
   const templates = ctx.locale === "it" ? TEMPLATES_IT : TEMPLATES_EN;
   const out: BrandProfilePrompt[] = [];
   for (const pillar of PILLARS) {
-    templates[pillar].forEach((tpl, index) => {
+    templates[pillar].slice(0, PROMPTS_PER_PILLAR).forEach((tpl, index) => {
       out.push({ pillar, index, text: fill(tpl, ctx) });
     });
   }

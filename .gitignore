@@ -9,3 +9,7 @@ coverage
 tsconfig.tsbuildinfo
 .env*.local
 en-templates-data.json
+
+# BP one-off test scripts (not part of production build)
+scripts/
+
