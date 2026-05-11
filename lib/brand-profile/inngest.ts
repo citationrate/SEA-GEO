@@ -204,56 +204,119 @@ export const runBrandProfile = inngest.createFunction(
 
     await step.run("generate-insights", async () => {
       try {
-        const { data: rows } = await (bp.from("prompt_results") as any)
-          .select("pillar, response_raw")
-          .eq("run_id", data.runId);
-        const responsesByPillar: Record<InsightPillar, string[]> = {
-          recognition: [],
-          clarity: [],
-          authority: [],
-          relevance: [],
-          sentiment: [],
+        // Insights stability: if the user just re-ran the same brand and
+        // every pillar moved by ≤5 pts vs the previous completed run within
+        // the last 30 days, REUSE that run's insights instead of asking
+        // Sonnet for a fresh set. Two reasons:
+        //   1) UX: users complained that bullets change between runs even
+        //      when the score is essentially unchanged. Sonnet picks 3 of
+        //      hundreds of plausible actions; consistency feels broken.
+        //   2) Cost: each fresh insights call is ~$0.05; on a "monitoring"
+        //      pattern (weekly re-runs of stable brands) this is wasted.
+        const PILLAR_STABILITY_THRESHOLD = 5;
+        const CACHE_WINDOW_DAYS = 30;
+
+        const currScores = {
+          recognition: Number(computed.scores.recognition ?? 0),
+          clarity: Number(computed.scores.clarity ?? 0),
+          authority: Number(computed.scores.authority ?? 0),
+          relevance: Number(computed.scores.relevance ?? 0),
+          sentiment: Number(computed.scores.sentiment ?? 0),
         };
-        for (const r of (rows ?? []) as any[]) {
-          const p = r.pillar as InsightPillar;
-          if (!p || !responsesByPillar[p]) continue;
-          if (r.response_raw && typeof r.response_raw === "string") {
-            responsesByPillar[p].push(r.response_raw as string);
+
+        const since = new Date(Date.now() - CACHE_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+        const { data: prevRun } = await (bp.from("runs") as any)
+          .select("id, started_at")
+          .eq("user_id", data.userId)
+          .eq("brand_name", data.brand)
+          .eq("status", "completed")
+          .neq("id", data.runId)
+          .gte("started_at", since)
+          .order("started_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        let reusedFromRunId: string | null = null;
+        if (prevRun) {
+          const { data: prevScores } = await (bp.from("scores") as any)
+            .select("recognition, clarity, authority, relevance, sentiment")
+            .eq("run_id", prevRun.id)
+            .maybeSingle();
+          if (prevScores) {
+            const maxDelta = Math.max(
+              Math.abs(currScores.recognition - Number(prevScores.recognition ?? 0)),
+              Math.abs(currScores.clarity - Number(prevScores.clarity ?? 0)),
+              Math.abs(currScores.authority - Number(prevScores.authority ?? 0)),
+              Math.abs(currScores.relevance - Number(prevScores.relevance ?? 0)),
+              Math.abs(currScores.sentiment - Number(prevScores.sentiment ?? 0)),
+            );
+            if (maxDelta <= PILLAR_STABILITY_THRESHOLD) {
+              const { data: prevInsights } = await (bp.from("insights") as any)
+                .select("pillar, insight_text, model")
+                .eq("run_id", prevRun.id);
+              if (prevInsights && (prevInsights as any[]).length > 0) {
+                const cloned = (prevInsights as any[]).map((row) => ({
+                  run_id: data.runId,
+                  pillar: row.pillar,
+                  insight_text: row.insight_text,
+                  model: row.model,
+                }));
+                await (bp.from("insights") as any).insert(cloned);
+                reusedFromRunId = prevRun.id;
+                console.log(`[brand-profile/insights] reused from run=${prevRun.id} (maxDelta=${maxDelta.toFixed(1)})`);
+                return;
+              }
+            }
           }
         }
-        const { insights, model } = await generateInsights(
-          {
-            brand: data.brand,
-            sector: data.sector,
-            country: data.country,
-            locale: data.locale,
-            scores: {
-              recognition: Number(computed.scores.recognition ?? 0),
-              clarity: Number(computed.scores.clarity ?? 0),
-              authority: Number(computed.scores.authority ?? 0),
-              relevance: Number(computed.scores.relevance ?? 0),
-              sentiment: Number(computed.scores.sentiment ?? 0),
+
+        // Cache miss → generate fresh
+        if (reusedFromRunId === null) {
+          const { data: rows } = await (bp.from("prompt_results") as any)
+            .select("pillar, response_raw")
+            .eq("run_id", data.runId);
+          const responsesByPillar: Record<InsightPillar, string[]> = {
+            recognition: [],
+            clarity: [],
+            authority: [],
+            relevance: [],
+            sentiment: [],
+          };
+          for (const r of (rows ?? []) as any[]) {
+            const p = r.pillar as InsightPillar;
+            if (!p || !responsesByPillar[p]) continue;
+            if (r.response_raw && typeof r.response_raw === "string") {
+              responsesByPillar[p].push(r.response_raw as string);
+            }
+          }
+          const { insights, model } = await generateInsights(
+            {
+              brand: data.brand,
+              sector: data.sector,
+              country: data.country,
+              locale: data.locale,
+              scores: currScores,
+              breakdown: computed.breakdown,
+              responsesByPillar,
+              diagnostics,
+              modelCount: models.length,
             },
-            breakdown: computed.breakdown,
-            responsesByPillar,
-            diagnostics,
-            modelCount: models.length,
-          },
-          { userId: data.userId, runId: data.runId },
-        );
-        const rowsToInsert: any[] = [];
-        (Object.keys(insights) as InsightPillar[]).forEach((p) => {
-          insights[p].forEach((text) => {
-            rowsToInsert.push({
-              run_id: data.runId,
-              pillar: p,
-              insight_text: text,
-              model,
+            { userId: data.userId, runId: data.runId },
+          );
+          const rowsToInsert: any[] = [];
+          (Object.keys(insights) as InsightPillar[]).forEach((p) => {
+            insights[p].forEach((text) => {
+              rowsToInsert.push({
+                run_id: data.runId,
+                pillar: p,
+                insight_text: text,
+                model,
+              });
             });
           });
-        });
-        if (rowsToInsert.length > 0) {
-          await (bp.from("insights") as any).insert(rowsToInsert);
+          if (rowsToInsert.length > 0) {
+            await (bp.from("insights") as any).insert(rowsToInsert);
+          }
         }
       } catch (e) {
         console.error("[brand-profile/generate-insights] non-fatal:", e);
