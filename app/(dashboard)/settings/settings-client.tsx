@@ -6,6 +6,7 @@ import { User, Ticket, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Send,
 import { useTranslation } from "@/lib/i18n/context";
 import { createClient as createAuthClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { isShowcase } from "@/lib/showcase";
 
 type SettingsTab = "account" | "voucher" | "supporto" | "privacy";
 
@@ -16,6 +17,10 @@ interface SettingsClientProps {
   plan: string;
   notifyAnalysisComplete: boolean;
   avatarUrl?: string | null;
+  /** Page context. Affects voucher placeholder + minor copy. Default
+      "dashboard" (AVI dashboard /settings); pass "brand-profile" when
+      rendering from the BP settings route. */
+  context?: "dashboard" | "brand-profile";
 }
 
 async function patchProfile(data: Record<string, unknown>) {
@@ -34,6 +39,7 @@ export function SettingsClient({
   plan,
   notifyAnalysisComplete: initialNotifyAnalysis,
   avatarUrl: initialAvatarUrl,
+  context = "dashboard",
 }: SettingsClientProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -210,13 +216,14 @@ export function SettingsClient({
 
   return (
     <>
-      {/* Tab Navigation */}
+      {/* Tab Navigation — showcase non vede la tab Privacy (account
+          comodato, niente gestione GDPR self-service / delete account). */}
       <div className="flex items-center gap-1 mb-6 overflow-x-auto pb-1" style={{ borderBottom: "1px solid var(--border)" }}>
         {([
           { key: "account" as SettingsTab, label: "Account" },
           { key: "voucher" as SettingsTab, label: "Voucher" },
           { key: "supporto" as SettingsTab, label: t("settings.supportTab") || "Supporto" },
-          { key: "privacy" as SettingsTab, label: t("settings.privacyTab") || "Privacy" },
+          ...(isShowcase(plan) ? [] : [{ key: "privacy" as SettingsTab, label: t("settings.privacyTab") || "Privacy" }]),
         ]).map((tab) => (
           <button
             key={tab.key}
@@ -442,7 +449,7 @@ export function SettingsClient({
                 value={voucher}
                 onChange={(e) => setVoucher(e.target.value.toUpperCase())}
                 onKeyDown={(e) => e.key === "Enter" && redeemVoucher()}
-                placeholder={t("settings.voucherPlaceholder")}
+                placeholder={context === "brand-profile" ? t("settings.voucherPlaceholderBp") : t("settings.voucherPlaceholder")}
                 className="input-base flex-1 font-mono uppercase tracking-wider"
               />
               <button
