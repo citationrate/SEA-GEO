@@ -181,6 +181,17 @@ export function BrandProfileReport({
     return () => { cancelled = true; clearInterval(id); };
   }, [isPolling, runId]);
 
+  // When a polling run transitions to completed/failed, refresh the
+  // sidebar's runs counter (it pulls /api/brand-profile/quota on focus,
+  // but we never lose focus if the user stays on this page during the
+  // 1-2 min wait). router.refresh() re-renders the BP layout RSC tree
+  // so bpRunsUsed jumps from N→N+1 the moment the run finishes.
+  useEffect(() => {
+    if (run.status === "completed" || run.status === "failed") {
+      router.refresh();
+    }
+  }, [run.status, router]);
+
   // Pull previous completed run's scores for the same brand_name — used
   // for the variability banner. Triggered only when the current run is
   // completed and we have a brand name to query by.
@@ -417,13 +428,163 @@ export function BrandProfileReport({
                   // free-form jsonb keyed by pillar — we surface only the
                   // numeric leaves and let the generator skip the section
                   // if empty.
+                  // PDF labels — hard-coded per locale because the keys
+                  // weren't in lib/i18n/translations.ts and t() falls back
+                  // to the literal key (a truthy string), making the `||`
+                  // fallback dead. Sub-metric labels share the same map.
+                  // The 11 PDF labels + 12 sub-metric labels live here
+                  // instead of bloating translations.ts with 115 keys.
+                  type PdfLocale = "it" | "en" | "fr" | "de" | "es";
+                  const lc: PdfLocale = (["it","en","fr","de","es"] as PdfLocale[])
+                    .includes(run.locale as PdfLocale)
+                    ? (run.locale as PdfLocale) : "it";
+                  const PDF_LABELS: Record<PdfLocale, any> = {
+                    it: {
+                      productName: "Brand Profile",
+                      overallScore: "Score complessivo",
+                      pillarsAtAGlance: "I 5 pilastri",
+                      cosaFare: "Cosa fare",
+                      page: "Pagina",
+                      of: "di",
+                      radarTitle: "Radar dei pilastri",
+                      scoreLabelCritical: "Critico",
+                      scoreLabelLow: "Basso",
+                      scoreLabelMedium: "Moderato",
+                      scoreLabelGood: "Buono",
+                      scoreLabelExcellent: "Eccellente",
+                    },
+                    en: {
+                      productName: "Brand Profile",
+                      overallScore: "Overall score",
+                      pillarsAtAGlance: "5 pillars at a glance",
+                      cosaFare: "What to do",
+                      page: "Page",
+                      of: "of",
+                      radarTitle: "Pillars radar",
+                      scoreLabelCritical: "Critical",
+                      scoreLabelLow: "Low",
+                      scoreLabelMedium: "Medium",
+                      scoreLabelGood: "Good",
+                      scoreLabelExcellent: "Excellent",
+                    },
+                    fr: {
+                      productName: "Brand Profile",
+                      overallScore: "Score global",
+                      pillarsAtAGlance: "Les 5 piliers",
+                      cosaFare: "À faire",
+                      page: "Page",
+                      of: "sur",
+                      radarTitle: "Radar des piliers",
+                      scoreLabelCritical: "Critique",
+                      scoreLabelLow: "Faible",
+                      scoreLabelMedium: "Moyen",
+                      scoreLabelGood: "Bon",
+                      scoreLabelExcellent: "Excellent",
+                    },
+                    de: {
+                      productName: "Brand Profile",
+                      overallScore: "Gesamt-Score",
+                      pillarsAtAGlance: "Die 5 Pillars",
+                      cosaFare: "Maßnahmen",
+                      page: "Seite",
+                      of: "von",
+                      radarTitle: "Pillar-Radar",
+                      scoreLabelCritical: "Kritisch",
+                      scoreLabelLow: "Niedrig",
+                      scoreLabelMedium: "Mittel",
+                      scoreLabelGood: "Gut",
+                      scoreLabelExcellent: "Hervorragend",
+                    },
+                    es: {
+                      productName: "Brand Profile",
+                      overallScore: "Puntuación global",
+                      pillarsAtAGlance: "Los 5 pilares",
+                      cosaFare: "Qué hacer",
+                      page: "Página",
+                      of: "de",
+                      radarTitle: "Radar de pilares",
+                      scoreLabelCritical: "Crítico",
+                      scoreLabelLow: "Bajo",
+                      scoreLabelMedium: "Medio",
+                      scoreLabelGood: "Bueno",
+                      scoreLabelExcellent: "Excelente",
+                    },
+                  };
+                  const SUB_METRIC_LABELS: Record<PdfLocale, Record<string, string>> = {
+                    it: {
+                      recognition_position: "Posizione",
+                      recognition_presence: "Presenza",
+                      clarity_factual: "Fatti corretti",
+                      clarity_no_confusion: "Niente confusione",
+                      authority_tone: "Tono autorevole",
+                      authority_presence: "Citato come fonte",
+                      relevance_coherence: "Coerenza",
+                      relevance_product_match: "Match prodotti",
+                      sentiment_tone: "Tono",
+                      sentiment_sentiment: "Sentiment",
+                      sentiment_recommendation: "Raccomandazione",
+                    },
+                    en: {
+                      recognition_position: "Position",
+                      recognition_presence: "Presence",
+                      clarity_factual: "Factual accuracy",
+                      clarity_no_confusion: "No confusion",
+                      authority_tone: "Authoritative tone",
+                      authority_presence: "Cited as source",
+                      relevance_coherence: "Coherence",
+                      relevance_product_match: "Product match",
+                      sentiment_tone: "Tone",
+                      sentiment_sentiment: "Sentiment",
+                      sentiment_recommendation: "Recommendation",
+                    },
+                    fr: {
+                      recognition_position: "Position",
+                      recognition_presence: "Présence",
+                      clarity_factual: "Précision factuelle",
+                      clarity_no_confusion: "Aucune confusion",
+                      authority_tone: "Ton d'autorité",
+                      authority_presence: "Cité comme source",
+                      relevance_coherence: "Cohérence",
+                      relevance_product_match: "Correspondance produits",
+                      sentiment_tone: "Ton",
+                      sentiment_sentiment: "Sentiment",
+                      sentiment_recommendation: "Recommandation",
+                    },
+                    de: {
+                      recognition_position: "Position",
+                      recognition_presence: "Präsenz",
+                      clarity_factual: "Faktische Genauigkeit",
+                      clarity_no_confusion: "Keine Verwechslung",
+                      authority_tone: "Autoritativer Ton",
+                      authority_presence: "Als Quelle zitiert",
+                      relevance_coherence: "Kohärenz",
+                      relevance_product_match: "Produktübereinstimmung",
+                      sentiment_tone: "Ton",
+                      sentiment_sentiment: "Sentiment",
+                      sentiment_recommendation: "Empfehlung",
+                    },
+                    es: {
+                      recognition_position: "Posición",
+                      recognition_presence: "Presencia",
+                      clarity_factual: "Precisión factual",
+                      clarity_no_confusion: "Sin confusión",
+                      authority_tone: "Tono autoritativo",
+                      authority_presence: "Citado como fuente",
+                      relevance_coherence: "Coherencia",
+                      relevance_product_match: "Coincidencia productos",
+                      sentiment_tone: "Tono",
+                      sentiment_sentiment: "Sentimiento",
+                      sentiment_recommendation: "Recomendación",
+                    },
+                  };
+                  const subMetricMap = SUB_METRIC_LABELS[lc];
                   const pdfPillars = PILLAR_KEYS.map((p) => {
                     const sub = (scores?.breakdown as any)?.[p.key as string] ?? {};
                     const subMetrics: Array<{ label: string; value: number }> = [];
                     for (const [k, v] of Object.entries(sub)) {
                       if (typeof v === "number" && Number.isFinite(v)) {
                         subMetrics.push({
-                          label: t(`brandProfile.subMetric_${p.key}_${k}`) || k,
+                          label: subMetricMap[`${p.key}_${k}`] ?? k,
                           value: Number(v),
                         });
                       }
@@ -444,20 +605,7 @@ export function BrandProfileReport({
                     date: run.completed_at ?? run.started_at,
                     scoreTotal: Number(scores?.total ?? 0),
                     pillars: pdfPillars,
-                    labels: {
-                      productName: t("brandProfile.title") || "Brand Profile",
-                      overallScore: t("brandProfile.overallScore") || "Score complessivo",
-                      pillarsAtAGlance: t("brandProfile.pillarsAtAGlance") || "I 5 pilastri",
-                      cosaFare: t("brandProfile.cosaFare") || "Cosa fare",
-                      page: t("brandProfile.page") || "Pagina",
-                      of: t("brandProfile.of") || "di",
-                      radarTitle: t("brandProfile.radarTitle") || "Radar dei pilastri",
-                      scoreLabelCritical: t("brandProfile.scoreLabelCritical") || "Critico",
-                      scoreLabelLow: t("brandProfile.scoreLabelLow") || "Basso",
-                      scoreLabelMedium: t("brandProfile.scoreLabelMedium") || "Moderato",
-                      scoreLabelGood: t("brandProfile.scoreLabelGood") || "Buono",
-                      scoreLabelExcellent: t("brandProfile.scoreLabelExcellent") || "Eccellente",
-                    },
+                    labels: PDF_LABELS[lc],
                   });
                 } catch (e) {
                   console.error("[bp/export-pdf]", e);

@@ -20,12 +20,16 @@ interface RunPayload {
   models: string[];
 }
 
-const BATCH_SIZE = 5;
+// 50 main tasks (10 prompts × 5 models) processed in parallel batches.
+// Bumped 5→10: rate limits OK on all 5 providers (lowest is Gemini Flash
+// free at 15 RPM; 10 parallel finishes in <1s well inside that budget).
+// Reduces wall-clock from ~2 min to ~1 min and halves Inngest step overhead.
+const BATCH_SIZE = 10;
 
 export const runBrandProfile = inngest.createFunction(
   {
     id: "brand-profile-run",
-    concurrency: { limit: 5 },
+    concurrency: { limit: 10 },
     retries: 2,
     onFailure: async ({ event: failEvent }) => {
       try {
