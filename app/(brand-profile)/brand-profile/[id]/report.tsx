@@ -988,7 +988,7 @@ const PillarCard = memo(function PillarCard({
 function InsightBullet({ text }: { text: string }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const PREVIEW_LIMIT = 180;
+  const PREVIEW_LIMIT = 300;
   const needsTruncation = text.length > PREVIEW_LIMIT;
   const preview = useMemo(() => {
     if (!needsTruncation) return text;
