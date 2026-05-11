@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-helpers";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
+import { bpRunLimit } from "@/lib/brand-profile/plans";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,14 +14,6 @@ export const dynamic = "force-dynamic";
  * this to keep the sidebar runs counter and the Piano page in sync without
  * a full page reload.
  */
-const PLAN_RUN_LIMITS: Record<string, number> = {
-  demo: 1,
-  free: 1,
-  base: 3,
-  pro: 10,
-  agency: 10,
-  enterprise: 999,
-};
 
 export async function GET() {
   const { user, error } = await requireAuth();
@@ -43,7 +36,7 @@ export async function GET() {
     {
       plan,
       monthly_used: monthlyUsed,
-      monthly_limit: PLAN_RUN_LIMITS[plan] ?? 0,
+      monthly_limit: bpRunLimit(plan),
       extras_balance: extrasBalance,
     },
     { headers: { "Cache-Control": "private, no-store" } },

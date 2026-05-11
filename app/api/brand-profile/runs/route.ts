@@ -4,19 +4,10 @@ import { inngest } from "@/lib/inngest";
 import { apiError, requireAuth } from "@/lib/api-helpers";
 import { BRAND_PROFILE_START_EVENT } from "@/lib/brand-profile/inngest";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
-import { bpAccessAllowed, bpModelsForPlan } from "@/lib/brand-profile/plans";
+import { bpAccessAllowed, bpModelsForPlan, bpRunLimit } from "@/lib/brand-profile/plans";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const PLAN_RUN_LIMITS: Record<string, number> = {
-  demo: 1,
-  free: 1,
-  base: 3,
-  pro: 10,
-  agency: 10,
-  enterprise: 999,
-};
 
 const StartSchema = z.object({
   brand: z.string().trim().min(2).max(120),
@@ -53,7 +44,9 @@ export async function POST(request: Request) {
   if (!bpAccessAllowed({ email: user.email, isAdmin: (profile as any)?.is_admin, plan })) {
     return apiError("Brand Profile non disponibile durante il soft launch", 403);
   }
-  const maxRuns = PLAN_RUN_LIMITS[plan] ?? 0;
+  // Use the canonical limit map from lib/brand-profile/plans.ts so showcase
+  // accounts (enterprise_showcase=999) don't fall through to maxRuns=0.
+  const maxRuns = bpRunLimit(plan);
   const models = bpModelsForPlan(plan);
 
   if (maxRuns === 0) {
