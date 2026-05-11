@@ -936,7 +936,7 @@ const PillarCard = memo(function PillarCard({
             {insights.map((s, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-foreground leading-relaxed">
                 <Sparkles className="w-3 h-3 text-primary mt-1 shrink-0" />
-                <span>{s}</span>
+                <InsightBullet text={s} />
               </li>
             ))}
           </ul>
@@ -977,6 +977,43 @@ const PillarCard = memo(function PillarCard({
     </div>
   );
 });
+
+/**
+ * "Cosa fare" bullet with collapsible long text. Shows ~180 chars preview
+ * + "…altro" toggle when the bullet exceeds the threshold. Splits the
+ * preview at a word boundary so we never cut mid-word (the server-side
+ * sanitize() already trims to ~600 chars at word boundary, this is the
+ * second pass purely for layout).
+ */
+function InsightBullet({ text }: { text: string }) {
+  const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const PREVIEW_LIMIT = 180;
+  const needsTruncation = text.length > PREVIEW_LIMIT;
+  const preview = useMemo(() => {
+    if (!needsTruncation) return text;
+    const sliced = text.slice(0, PREVIEW_LIMIT);
+    const lastSpace = sliced.lastIndexOf(" ");
+    const cut = lastSpace > PREVIEW_LIMIT * 0.7 ? lastSpace : PREVIEW_LIMIT;
+    return text.slice(0, cut).trimEnd();
+  }, [text, needsTruncation]);
+
+  if (!needsTruncation) return <span>{text}</span>;
+  return (
+    <span>
+      {expanded ? text : <>{preview}…</>}{" "}
+      <button
+        type="button"
+        onClick={() => setExpanded((s) => !s)}
+        className="text-xs text-primary hover:underline font-medium"
+      >
+        {expanded
+          ? t("brandProfile.showLess") || "mostra meno"
+          : t("brandProfile.showMore") || "altro"}
+      </button>
+    </span>
+  );
+}
 
 function RawResponseCard({ r, t }: { r: PromptRow; t: (key: string) => string }) {
   return (

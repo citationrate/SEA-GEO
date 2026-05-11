@@ -202,9 +202,23 @@ export async function generateInsights(
     }
   }
 
+  // Cap each bullet at ~600 chars to avoid pathological Sonnet outputs.
+  // Truncate at word boundary instead of mid-word (the previous 280-char
+  // slice produced bullets like "...più vendute in Ital" or "...con descri"
+  // because Sonnet wrote up to ~400-450 chars and the slice cut on a code
+  // unit, not a token). The UI shows a "...altro" toggle so the user can
+  // still read the long ones expanded.
+  const truncateAtWord = (s: string, max: number): string => {
+    if (s.length <= max) return s;
+    const sliced = s.slice(0, max);
+    const lastSpace = sliced.lastIndexOf(" ");
+    return (lastSpace > max * 0.7 ? sliced.slice(0, lastSpace) : sliced).trimEnd();
+  };
   const sanitize = (arr: any): string[] =>
     Array.isArray(arr)
-      ? arr.filter((s) => typeof s === "string" && s.trim().length > 0).map((s) => String(s).slice(0, 280))
+      ? arr
+          .filter((s) => typeof s === "string" && s.trim().length > 0)
+          .map((s) => truncateAtWord(String(s).trim(), 600))
       : [];
 
   return {
