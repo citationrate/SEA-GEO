@@ -33,6 +33,7 @@ export default async function BrandProfileSettingsPage() {
         plan={p.plan ?? "demo"}
         notifyAnalysisComplete={p.notify_analysis_complete ?? true}
         avatarUrl={p.avatar_url ?? null}
+        context="brand-profile"
       />
     </div>
   );

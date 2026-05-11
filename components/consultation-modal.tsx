@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { X, Loader2, CheckCircle, Send } from "lucide-react";
 import { useConsultation } from "@/lib/consultation-context";
 import { useTranslation } from "@/lib/i18n/context";
@@ -8,48 +9,61 @@ import { useTranslation } from "@/lib/i18n/context";
 export function ConsultationModal() {
   const { open, closeModal } = useConsultation();
   const { t } = useTranslation();
+  const pathname = usePathname() || "";
+  // BP route → tenta prima consultationBp.* (override BP-specific), poi
+  // fallback a consultation.* per le keys generiche (mgmt, sect, avail,
+  // labels form). Così duplichiamo solo le copy che contengono "AVI".
+  const isBp = pathname.startsWith("/brand-profile");
+  const tk = (suffix: string) => {
+    if (isBp) {
+      const bpKey = `consultationBp.${suffix}`;
+      const bpVal = t(bpKey);
+      if (bpVal && bpVal !== bpKey) return bpVal;
+    }
+    return t(`consultation.${suffix}`);
+  };
 
   const OBIETTIVI = [
-    { value: "obj1", label: t("consultation.obj1"), desc: t("consultation.obj1Desc") },
-    { value: "obj2", label: t("consultation.obj2"), desc: t("consultation.obj2Desc") },
-    { value: "obj3", label: t("consultation.obj3"), desc: t("consultation.obj3Desc") },
-    { value: "obj4", label: t("consultation.obj4"), desc: t("consultation.obj4Desc") },
-    { value: "obj5", label: t("consultation.obj5"), desc: t("consultation.obj5Desc") },
-    { value: "obj6", label: t("consultation.obj6"), desc: t("consultation.obj6Desc") },
+    { value: "obj1", label: tk("obj1"), desc: tk("obj1Desc") },
+    { value: "obj2", label: tk("obj2"), desc: tk("obj2Desc") },
+    { value: "obj3", label: tk("obj3"), desc: tk("obj3Desc") },
+    { value: "obj4", label: tk("obj4"), desc: tk("obj4Desc") },
+    { value: "obj5", label: tk("obj5"), desc: tk("obj5Desc") },
+    { value: "obj6", label: tk("obj6"), desc: tk("obj6Desc") },
   ];
 
   const GESTIONE = [
-    { value: "mgmt1", label: t("consultation.mgmt1") },
-    { value: "mgmt2", label: t("consultation.mgmt2") },
-    { value: "mgmt3", label: t("consultation.mgmt3") },
-    { value: "mgmt4", label: t("consultation.mgmt4") },
-    { value: "altro", label: t("consultation.mgmt5") },
+    { value: "mgmt1", label: tk("mgmt1") },
+    { value: "mgmt2", label: tk("mgmt2") },
+    { value: "mgmt3", label: tk("mgmt3") },
+    { value: "mgmt4", label: tk("mgmt4") },
+    { value: "altro", label: tk("mgmt5") },
   ];
 
   const SETTORI = [
-    { value: "sect1", label: t("consultation.sect1") },
-    { value: "sect2", label: t("consultation.sect2") },
-    { value: "sect3", label: t("consultation.sect3") },
-    { value: "sect4", label: t("consultation.sect4") },
-    { value: "sect5", label: t("consultation.sect5") },
-    { value: "sect6", label: t("consultation.sect6") },
-    { value: "sect7", label: t("consultation.sect7") },
-    { value: "sect8", label: t("consultation.sect8") },
-    { value: "sect9", label: t("consultation.sect9") },
-    { value: "sect10", label: t("consultation.sect10") },
-    { value: "sect11", label: t("consultation.sect11") },
-    { value: "sect12", label: t("consultation.sect12") },
-    { value: "sect13", label: t("consultation.sect13") },
-    { value: "sect14", label: t("consultation.sect14") },
-    { value: "sect15", label: t("consultation.sect15") },
-    { value: "altro", label: t("consultation.sect16") },
+    { value: "sect1", label: tk("sect1") },
+    { value: "sect2", label: tk("sect2") },
+    { value: "sect3", label: tk("sect3") },
+    { value: "sect4", label: tk("sect4") },
+    { value: "sect5", label: tk("sect5") },
+    { value: "sect6", label: tk("sect6") },
+    { value: "sect7", label: tk("sect7") },
+    { value: "sect8", label: tk("sect8") },
+    { value: "sect9", label: tk("sect9") },
+    { value: "sect10", label: tk("sect10") },
+    { value: "sect11", label: tk("sect11") },
+    { value: "sect12", label: tk("sect12") },
+    { value: "sect13", label: tk("sect13") },
+    { value: "sect14", label: tk("sect14") },
+    { value: "sect15", label: tk("sect15") },
+    { value: "altro", label: tk("sect16") },
   ];
 
   const DISPONIBILITA = [
-    { value: "avail1", label: t("consultation.avail1") },
-    { value: "avail2", label: t("consultation.avail2") },
-    { value: "avail3", label: t("consultation.avail3") },
-    { value: "avail4", label: t("consultation.avail4") },
+    { value: "avail1", label: tk("avail1") },
+    { value: "avail2", label: tk("avail2") },
+    { value: "avail3", label: tk("avail3") },
+    { value: "avail4", label: tk("avail4") },
   ];
 
   const [nome, setNome] = useState("");
@@ -137,11 +151,11 @@ export function ConsultationModal() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || t("consultation.sendError"));
+        throw new Error(data.error || tk("sendError"));
       }
       setSubmitted(true);
     } catch (err) {
-      setApiError(err instanceof Error ? err.message : t("consultation.sendErrorRetry"));
+      setApiError(err instanceof Error ? err.message : tk("sendErrorRetry"));
     } finally {
       setSubmitting(false);
     }
@@ -156,12 +170,12 @@ export function ConsultationModal() {
         <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={closeModal} />
         <div className="relative bg-surface border border-border rounded-[2px] w-full max-w-md p-8 text-center space-y-4 shadow-2xl animate-fade-in">
           <CheckCircle className="w-12 h-12 text-primary mx-auto" />
-          <h2 className="font-display text-xl font-semibold text-foreground">{t("consultation.successTitle")}</h2>
+          <h2 className="font-display text-xl font-semibold text-foreground">{tk("successTitle")}</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            {t("consultation.successDesc")}
+            {tk("successDesc")}
           </p>
           <button onClick={closeModal} className="bg-primary text-primary-foreground text-sm font-semibold px-6 py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors">
-            {t("consultation.close")}
+            {tk("close")}
           </button>
         </div>
       </div>
@@ -178,8 +192,8 @@ export function ConsultationModal() {
         {/* Header */}
         <div className="sticky top-0 bg-surface border-b border-border px-6 py-4 flex items-center justify-between z-10">
           <div>
-            <h2 className="font-display text-xl font-semibold text-foreground">{t("consultation.title")}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">{t("consultation.subtitle")}</p>
+            <h2 className="font-display text-xl font-semibold text-foreground">{tk("title")}</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">{tk("subtitle")}</p>
           </div>
           <button onClick={closeModal} className="text-muted-foreground hover:text-foreground transition-colors">
             <X className="w-5 h-5" />
@@ -189,31 +203,31 @@ export function ConsultationModal() {
         <div className="px-6 py-5 space-y-6">
 
           {/* SECTION 1 — Informazioni */}
-          <Section title={t("consultation.sectionInfo")}>
+          <Section title={tk("sectionInfo")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label={t("consultation.nameLabel")} error={hasErr("nome")}>
-                <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder={t("consultation.namePlaceholder")} className={inputCls(hasErr("nome"))} />
+              <Field label={tk("nameLabel")} error={hasErr("nome")}>
+                <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder={tk("namePlaceholder")} className={inputCls(hasErr("nome"))} />
               </Field>
-              <Field label={t("consultation.companyLabel")} error={hasErr("azienda")}>
-                <input type="text" value={azienda} onChange={(e) => setAzienda(e.target.value)} placeholder={t("consultation.companyPlaceholder")} className={inputCls(hasErr("azienda"))} />
+              <Field label={tk("companyLabel")} error={hasErr("azienda")}>
+                <input type="text" value={azienda} onChange={(e) => setAzienda(e.target.value)} placeholder={tk("companyPlaceholder")} className={inputCls(hasErr("azienda"))} />
               </Field>
             </div>
-            <Field label={t("consultation.emailLabel")} error={hasErr("email")}>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("consultation.emailPlaceholder")} className={inputCls(hasErr("email"))} />
+            <Field label={tk("emailLabel")} error={hasErr("email")}>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tk("emailPlaceholder")} className={inputCls(hasErr("email"))} />
             </Field>
           </Section>
 
           {/* SECTION 2 — Brand / Progetto */}
-          <Section title={t("consultation.sectionBrand")}>
-            <Field label={t("consultation.urlLabel")} error={hasErr("urls")}>
-              <textarea value={urls} onChange={(e) => setUrls(e.target.value)} placeholder={t("consultation.urlPlaceholder")} rows={3} className={inputCls(hasErr("urls"))} />
-              <p className="text-[11px] text-muted-foreground mt-1">{t("consultation.urlHelper")}</p>
+          <Section title={tk("sectionBrand")}>
+            <Field label={tk("urlLabel")} error={hasErr("urls")}>
+              <textarea value={urls} onChange={(e) => setUrls(e.target.value)} placeholder={tk("urlPlaceholder")} rows={3} className={inputCls(hasErr("urls"))} />
+              <p className="text-[11px] text-muted-foreground mt-1">{tk("urlHelper")}</p>
             </Field>
           </Section>
 
           {/* SECTION 3 — Obiettivo */}
-          <Section title={t("consultation.sectionObjective")}>
-            {hasErr("obiettivo") && <p className="text-xs text-destructive mb-1">{t("consultation.selectObjective")}</p>}
+          <Section title={tk("sectionObjective")}>
+            {hasErr("obiettivo") && <p className="text-xs text-destructive mb-1">{tk("selectObjective")}</p>}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {OBIETTIVI.map((o) => (
                 <RadioCard key={o.value} selected={obiettivo === o.value} onClick={() => setObiettivo(o.value)} label={o.label} desc={o.desc} error={hasErr("obiettivo")} />
@@ -222,41 +236,41 @@ export function ConsultationModal() {
           </Section>
 
           {/* SECTION 4 — Cosa non è chiaro */}
-          <Section title={t("consultation.sectionUnclear")}>
-            <p className="text-xs text-muted-foreground mb-1.5">{t("consultation.unclearDesc")}</p>
-            <textarea value={datiNonChiari} onChange={(e) => setDatiNonChiari(e.target.value)} placeholder={t("consultation.unclearPlaceholder")} rows={3} className="input-base w-full" />
-            <p className="text-[11px] text-muted-foreground mt-1">{t("consultation.unclearHelper")}</p>
+          <Section title={tk("sectionUnclear")}>
+            <p className="text-xs text-muted-foreground mb-1.5">{tk("unclearDesc")}</p>
+            <textarea value={datiNonChiari} onChange={(e) => setDatiNonChiari(e.target.value)} placeholder={tk("unclearPlaceholder")} rows={3} className="input-base w-full" />
+            <p className="text-[11px] text-muted-foreground mt-1">{tk("unclearHelper")}</p>
           </Section>
 
           {/* SECTION 5 — Gestione */}
-          <Section title={t("consultation.sectionManagement")}>
-            {hasErr("gestione") && <p className="text-xs text-destructive mb-1">{t("consultation.selectOption")}</p>}
+          <Section title={tk("sectionManagement")}>
+            {hasErr("gestione") && <p className="text-xs text-destructive mb-1">{tk("selectOption")}</p>}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {GESTIONE.map((g) => (
                 <RadioCard key={g.value} selected={gestione === g.value} onClick={() => setGestione(g.value)} label={g.label} error={hasErr("gestione")} />
               ))}
             </div>
             {gestione === "altro" && (
-              <input type="text" value={gestioneAltro} onChange={(e) => setGestioneAltro(e.target.value)} placeholder={t("consultation.managementOtherPlaceholder")} className={inputCls(hasErr("gestioneAltro"))} />
+              <input type="text" value={gestioneAltro} onChange={(e) => setGestioneAltro(e.target.value)} placeholder={tk("managementOtherPlaceholder")} className={inputCls(hasErr("gestioneAltro"))} />
             )}
           </Section>
 
           {/* SECTION 6 — Settore */}
-          <Section title={t("consultation.sectionSector")}>
-            {hasErr("settore") && <p className="text-xs text-destructive mb-1">{t("consultation.selectSector")}</p>}
+          <Section title={tk("sectionSector")}>
+            {hasErr("settore") && <p className="text-xs text-destructive mb-1">{tk("selectSector")}</p>}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {SETTORI.map((s) => (
                 <RadioCard key={s.value} selected={settore === s.value} onClick={() => setSettore(s.value)} label={s.label} error={hasErr("settore")} />
               ))}
             </div>
             {settore === "altro" && (
-              <input type="text" value={settoreAltro} onChange={(e) => setSettoreAltro(e.target.value)} placeholder={t("consultation.sectorOtherPlaceholder")} className={inputCls(hasErr("settoreAltro"))} />
+              <input type="text" value={settoreAltro} onChange={(e) => setSettoreAltro(e.target.value)} placeholder={tk("sectorOtherPlaceholder")} className={inputCls(hasErr("settoreAltro"))} />
             )}
           </Section>
 
           {/* SECTION 7 — Disponibilità */}
-          <Section title={t("consultation.sectionAvailability")}>
-            {hasErr("disponibilita") && <p className="text-xs text-destructive mb-1">{t("consultation.selectTimeSlot")}</p>}
+          <Section title={tk("sectionAvailability")}>
+            {hasErr("disponibilita") && <p className="text-xs text-destructive mb-1">{tk("selectTimeSlot")}</p>}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {DISPONIBILITA.map((d) => (
                 <button
@@ -275,17 +289,17 @@ export function ConsultationModal() {
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1">{t("consultation.availabilityHelper")}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">{tk("availabilityHelper")}</p>
           </Section>
 
           {/* SECTION 8 — Note */}
-          <Section title={t("consultation.sectionNotes")}>
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("consultation.notesPlaceholder")} rows={4} className="input-base w-full" style={{ minHeight: 120 }} />
+          <Section title={tk("sectionNotes")}>
+            <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={tk("notesPlaceholder")} rows={4} className="input-base w-full" style={{ minHeight: 120 }} />
           </Section>
 
           {/* Errors & Submit */}
           {errors.size > 0 && (
-            <p className="text-sm text-destructive font-medium">{t("consultation.fillRequired")}</p>
+            <p className="text-sm text-destructive font-medium">{tk("fillRequired")}</p>
           )}
           {apiError && <p className="text-sm text-destructive">{apiError}</p>}
 
@@ -296,7 +310,7 @@ export function ConsultationModal() {
             className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-3 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            {submitting ? t("consultation.sending") : t("consultation.sendRequest")}
+            {submitting ? tk("sending") : tk("sendRequest")}
           </button>
         </div>
       </div>
