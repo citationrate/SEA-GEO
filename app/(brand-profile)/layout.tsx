@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
@@ -5,6 +6,16 @@ import { BrandProfileSidebar } from "@/components/layout/brand-profile-sidebar";
 import { TopBar } from "@/components/layout/topbar";
 import { MobileNavProvider } from "@/components/layout/mobile-nav-context";
 import { bpAccessAllowed, bpRunLimit } from "@/lib/brand-profile/plans";
+
+// Override root metadata: dentro le route BP il tab del browser non deve
+// più mostrare "| AVI" (il template root applica "%s | AVI" a tutte le
+// pagine). Qui ridichiariamo il template per il sotto-albero BP.
+export const metadata: Metadata = {
+  title: {
+    default: "Brand Profile",
+    template: "%s · Brand Profile",
+  },
+};
 
 export default async function BrandProfileLayout({ children }: { children: React.ReactNode }) {
   const auth = createServerClient();
