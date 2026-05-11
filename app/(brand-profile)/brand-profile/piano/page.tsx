@@ -24,7 +24,7 @@ export default async function BrandProfilePianoPage() {
 
   // Showcase accounts (vetrina) shouldn't see the pricing/upgrade flow.
   // Same rationale as the CS suite /piano redirect.
-  if (isShowcase(plan)) {
+  if (isShowcase(plan, (profile as any)?.email ?? user.email)) {
     redirect("/brand-profile");
   }
 

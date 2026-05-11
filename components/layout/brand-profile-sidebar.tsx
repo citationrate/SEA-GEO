@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { useTranslation } from "@/lib/i18n/context";
+import { isShowcase } from "@/lib/showcase";
 import {
   Radar,
   ListChecks,
@@ -84,7 +85,9 @@ export function BrandProfileSidebar({ profile, bpRunsUsed = 0, bpRunsTotal = 0 }
   const isBase = profile?.plan === "base";
   const isEnterprise = profile?.plan === "enterprise";
   const isAgency = profile?.plan === "agency";
-  const isShowcasePlan = profile?.plan === "enterprise_showcase";
+  // Use the helper so the email whitelist (hybrid Pro+showcase accounts
+  // like Antonio Lupi) is honored alongside plan='enterprise_showcase'.
+  const isShowcasePlan = isShowcase(profile?.plan, profile?.email);
   const compareUnlocked = isPro || isEnterprise || isAgency || isShowcasePlan;
   const historyUnlocked = isBase || isPro || isEnterprise || isAgency || isShowcasePlan;
   const planLabel = isDemo ? "Demo" : isBase ? "Base" : isPro ? "Pro" : isEnterprise || isShowcasePlan ? "Enterprise" : profile?.plan ?? "Demo";
@@ -240,7 +243,7 @@ export function BrandProfileSidebar({ profile, bpRunsUsed = 0, bpRunsTotal = 0 }
             "Strumenti" group label removed per user feedback; the switcher
             now sits as a single dropdown without a header. */}
         <div>
-          <ToolSwitcher current="bp" collapsed={collapsed && !mobileOpen} plan={profile?.plan} />
+          <ToolSwitcher current="bp" collapsed={collapsed && !mobileOpen} plan={profile?.plan} email={profile?.email} />
         </div>
       </nav>
 

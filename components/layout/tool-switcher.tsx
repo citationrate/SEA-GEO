@@ -51,18 +51,20 @@ export function ToolSwitcher({
   collapsed,
   bpUnlocked = false,
   plan = null,
+  email = null,
 }: {
   current: Tool;
   collapsed?: boolean;
   bpUnlocked?: boolean;
   plan?: string | null;
+  email?: string | null;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   // Showcase plan (vetrina accounts): no AVI access, only CS + Brand Profile
   // appear in the switcher.
-  const showcase = isShowcase(plan);
+  const showcase = isShowcase(plan, email);
   const baseTools = showcase ? TOOLS_BASE.filter((tt) => tt.id !== "avi") : TOOLS_BASE;
   const TOOLS: ToolDef[] = (bpUnlocked || showcase) ? [...baseTools, BP_TOOL] : baseTools;
 
