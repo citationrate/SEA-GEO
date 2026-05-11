@@ -223,7 +223,7 @@ export function SettingsClient({
           { key: "account" as SettingsTab, label: "Account" },
           { key: "voucher" as SettingsTab, label: "Voucher" },
           { key: "supporto" as SettingsTab, label: t("settings.supportTab") || "Supporto" },
-          ...(isShowcase(plan) ? [] : [{ key: "privacy" as SettingsTab, label: t("settings.privacyTab") || "Privacy" }]),
+          ...(isShowcase(plan, email) ? [] : [{ key: "privacy" as SettingsTab, label: t("settings.privacyTab") || "Privacy" }]),
         ]).map((tab) => (
           <button
             key={tab.key}

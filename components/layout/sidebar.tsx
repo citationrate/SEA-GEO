@@ -272,6 +272,7 @@ export function Sidebar({ profile }: SidebarProps) {
           collapsed={collapsed && !mobileOpen}
           bpUnlocked={bpAccessAllowed({ email: profile?.email, plan: profile?.plan })}
           plan={profile?.plan}
+          email={profile?.email}
         />
       </div>
 

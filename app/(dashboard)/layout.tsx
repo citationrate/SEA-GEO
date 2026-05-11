@@ -44,7 +44,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // /brand-profile, which is the only AVI-side surface they're allowed to
   // see. Standard AVI users (demo|base|pro|enterprise) hit the early-return
   // is `false` here and fall through to the normal render.
-  if (isShowcase((profile as any)?.plan)) {
+  if (isShowcase((profile as any)?.plan, (profile as any)?.email ?? user.email)) {
     redirect("/brand-profile");
   }
 
