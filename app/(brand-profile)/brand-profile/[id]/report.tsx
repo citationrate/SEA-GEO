@@ -7,6 +7,7 @@ import { Radar, ArrowLeft, Loader2, AlertTriangle, Lightbulb, ChevronDown, Chevr
 import { useTranslation } from "@/lib/i18n/context";
 import { ScoreRadar } from "./score-radar";
 import { RunInProgressAnimation } from "./run-progress";
+import { CsPromptModal } from "./cs-prompt-modal";
 
 const CS_AUDIT_BASE = "https://suite.citationrate.com/audit";
 
@@ -124,6 +125,7 @@ export function BrandProfileReport({
   const [progress, setProgress] = useState<{ completed: number; total: number }>({ completed: 0, total: 0 });
   const [csTriggerState, setCsTriggerState] = useState<"idle" | "triggering" | "triggered" | "error">("idle");
   const [csTriggerError, setCsTriggerError] = useState<string | null>(null);
+  const [csPromptOpen, setCsPromptOpen] = useState(false);
   // Previous completed run for the same brand_name — used to detect
   // run-to-run variability and show the "score può variare" banner only
   // from the 2nd run onward, when at least one pillar moved > 10 pts.
@@ -323,26 +325,45 @@ export function BrandProfileReport({
     }
   }, [run.brand_url, run.brand_name, run.sector, run.country, csTriggerStorageKey, t]);
 
-  // Demo users: auto-fire the CS audit once the BP run is complete and we
-  // know there's no recent CS audit to compare against. localStorage flag
-  // makes this a one-shot per BP run id.
+  // Demo users: prompt (NOT auto-fire) once the BP run is complete and we
+  // know there's no recent CS audit to compare against. Two localStorage
+  // flags make this one-shot per BP run id:
+  //   - csTriggerStorageKey  → audit already accepted/triggered
+  //   - csPromptDeclinedKey  → user declined the modal (don't ask again)
+  const csPromptDeclinedKey = `bp-cs-prompt-declined-${runId}`;
   useEffect(() => {
     if (!showNoCSBanner) return;
     if (!isDemoUser) return;
     if (csTriggerState !== "idle") return;
     let alreadyFired = false;
-    try { alreadyFired = !!localStorage.getItem(csTriggerStorageKey); } catch {}
+    let declined = false;
+    try {
+      alreadyFired = !!localStorage.getItem(csTriggerStorageKey);
+      declined = !!localStorage.getItem(csPromptDeclinedKey);
+    } catch {}
     if (alreadyFired) {
       setCsTriggerState("triggered");
       return;
     }
-    void triggerCsAudit();
+    if (declined) return;
+    setCsPromptOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showNoCSBanner, isDemoUser]);
+
+  const handleCsPromptAccept = useCallback(async () => {
+    await triggerCsAudit();
+    setCsPromptOpen(false);
+  }, [triggerCsAudit]);
+
+  const handleCsPromptDecline = useCallback(() => {
+    try { localStorage.setItem(csPromptDeclinedKey, "1"); } catch {}
+    setCsPromptOpen(false);
+  }, [csPromptDeclinedKey]);
 
   const canPrint = canExport && run.status === "completed" && scores != null;
 
   return (
+    <>
     <div data-bp-print-area className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
@@ -871,6 +892,14 @@ export function BrandProfileReport({
         </>
       )}
     </div>
+    <CsPromptModal
+      open={csPromptOpen}
+      brand={run.brand_name}
+      pending={csTriggerState === "triggering"}
+      onAccept={handleCsPromptAccept}
+      onDecline={handleCsPromptDecline}
+    />
+    </>
   );
 }
 
