@@ -260,6 +260,18 @@ export function modelIdToBrand(modelId: string): { brand: string; logo: string }
   return null;
 }
 
+/** Reverse mapping: dal modello al provider id (per /edit dove i progetti
+ *  esistenti hanno gia' models_config valorizzato). */
+export function modelIdToProviderId(modelId: string): AviProviderCard["id"] | null {
+  const id = modelId.toLowerCase();
+  if (id.startsWith("gpt-") || id.startsWith("copilot-")) return "openai";
+  if (id.startsWith("claude-")) return "anthropic";
+  if (id.startsWith("gemini-")) return "google";
+  if (id.startsWith("grok-")) return "xai";
+  if (id.startsWith("perplexity-") || id.startsWith("sonar")) return "perplexity";
+  return null;
+}
+
 /** Same mapping for provider IDs (used by AVI_PROVIDER_CARDS). */
 export function providerIdToLogo(providerId: AviProviderCard["id"]): string {
   switch (providerId) {

@@ -313,6 +313,23 @@ export default function GenerateQueriesPage() {
         <div data-tour="query-wizard-step1" className="card p-6 space-y-5">
           <h2 className="font-display font-semibold text-foreground">{t("generateQueries.stepBrandContext")}</h2>
 
+          {/* Luogo della rilevazione — PRIMO campo: circoscrive l'ambito
+              geografico/territoriale delle query AI. E' il riferimento per
+              tutto cio' che viene generato. */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+              Luogo della rilevazione
+              <span className="text-xs font-normal text-muted-foreground">(circoscrive l&apos;ambito delle query)</span>
+            </label>
+            <input
+              type="text"
+              value={luogo}
+              onChange={(e) => setLuogo(e.target.value)}
+              placeholder="Es. Italia, Milano, EMEA…"
+              className="input-base w-full"
+            />
+          </div>
+
           {/* Categoria */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">

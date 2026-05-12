@@ -22,6 +22,7 @@ export {
   AVI_DEMO_PROVIDERS,
   providersToModelIds,
   modelIdToBrand,
+  modelIdToProviderId,
   providerIdToLogo,
   isModelAvailable,
   filterAvailableModels,

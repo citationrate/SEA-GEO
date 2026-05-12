@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, Loader2, Sparkles, AlertTriangle, ToggleLeft, ToggleRight, CheckSquare, Square, Power, PowerOff, Pencil, Globe } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, Sparkles, AlertTriangle, ToggleLeft, ToggleRight, CheckSquare, Square, Power, PowerOff, Pencil, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -46,22 +46,14 @@ export default function QueriesPage() {
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
 
   const [manualText, setManualText] = useState("");
-  // Sprint 3 — Smart Suggestions modal state
-  const [smartOpen, setSmartOpen] = useState(false);
   const [projectSector, setProjectSector] = useState<string | null>(null);
   const [projectCountry, setProjectCountry] = useState<string | null>(null);
 
-  // Luogo della rilevazione: parametro per circoscrivere l'ambito delle query
-  // AI (es. "Italia", "Milano", "EMEA"). Persistito per-progetto in localStorage
-  // e passato alla pagina genera query come URL param ?luogo=.
-  const luogoKey = `aiv:queries_luogo:${projectId}`;
-  const [luogo, setLuogo] = useState("");
-  useEffect(() => {
-    try { const v = localStorage.getItem(luogoKey); if (v) setLuogo(v); } catch {}
-  }, [luogoKey]);
-  useEffect(() => {
-    try { localStorage.setItem(luogoKey, luogo); } catch {}
-  }, [luogoKey, luogo]);
+  // Accordion esclusivo per le 2 sezioni: solo una aperta alla volta.
+  // Click sull'header: se gia' aperta si chiude, altrimenti apre quella e chiude
+  // l'altra. Default: nessuna aperta.
+  type OpenSection = "ai" | "manual" | null;
+  const [openSection, setOpenSection] = useState<OpenSection>(null);
 
   // Filters (set_type only — funnel TOFU/MOFU rimosso dalla UI)
   const [filterSetType, setFilterSetType] = useState<FilterSetType>("all");
@@ -256,7 +248,7 @@ export default function QueriesPage() {
   const aiQueries = filteredQueries.filter((q) => q.set_type && q.set_type !== "manual");
   const manualQueries = filteredQueries.filter((q) => !q.set_type || q.set_type === "manual");
 
-  const generateHref = `/projects/${projectId}/queries/generate${luogo.trim() ? `?luogo=${encodeURIComponent(luogo.trim())}` : ""}`;
+  const generateHref = `/projects/${projectId}/queries/generate`;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
@@ -334,99 +326,103 @@ export default function QueriesPage() {
         </div>
       )}
 
-      <div className="space-y-6">
-        {/* Query AI — generate dal wizard. Vuoto: l'intera card e' cliccabile
-            e porta a /queries/generate. Con contenuto: lista editabile inline.
-            Bottone + sempre verso /queries/generate (anche quando ci sono
-            gia' query AI, per aggiungerne altre). */}
-        <div className="card p-5 space-y-4">
-          <div className="flex items-center gap-2">
+      <div className="space-y-3">
+        {/* Query AI — accordion. Click sull'header: apre solo questa sezione
+            (l'altra si chiude). Bottone + dentro l'header porta sempre al
+            wizard, anche quando ci sono gia' query AI. */}
+        <div className="card overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setOpenSection(openSection === "ai" ? null : "ai")}
+            className="w-full flex items-center gap-2 px-5 py-4 hover:bg-muted/30 transition-colors text-left"
+            aria-expanded={openSection === "ai"}
+          >
             <Sparkles className="w-4 h-4 text-primary" />
             <h2 className="font-display font-semibold text-foreground">Query AI</h2>
             <span className="badge badge-muted text-[12px]">{aiQueries.length}</span>
+            <ChevronDown className={`w-4 h-4 text-muted-foreground ml-auto transition-transform ${openSection === "ai" ? "rotate-180" : ""}`} />
             <a
               href={generateHref}
-              className="ml-auto bg-primary text-primary-foreground p-2 rounded-[2px] hover:bg-primary/85 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+              className="bg-primary text-primary-foreground p-2 rounded-[2px] hover:bg-primary/85 transition-colors"
               title="Genera nuove query con AI"
             >
               <Plus className="w-4 h-4" />
             </a>
-          </div>
+          </button>
 
-          {/* Luogo della rilevazione: circoscrive l'ambito delle query AI
-              (es. "Italia", "Milano", "EMEA"). Passato a /queries/generate
-              via URL param. Persistito in localStorage per il progetto. */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-primary" />
-              Luogo della rilevazione
-              <span className="text-muted-foreground font-normal">(circoscrive l&apos;ambito delle query AI)</span>
-            </label>
-            <input
-              type="text"
-              value={luogo}
-              onChange={(e) => setLuogo(e.target.value)}
-              placeholder="Es. Italia, Milano, EMEA…"
-              className="input-base w-full text-sm"
-            />
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
-          ) : aiQueries.length === 0 ? (
-            <a
-              href={generateHref}
-              className="block rounded-[2px] border border-dashed border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-colors p-6 text-center"
-            >
-              <Sparkles className="w-5 h-5 text-primary mx-auto mb-2" />
-              <p className="text-sm font-medium text-foreground">Genera le tue prime query con AI</p>
-              <p className="text-xs text-muted-foreground mt-1">Clicca per aprire il wizard</p>
-            </a>
-          ) : (
-            <ul className="space-y-2">
-              {aiQueries.map((q) => (
-                <QueryItem key={q.id} query={q} onDelete={deleteQuery} onToggle={toggleQuery} onUpdateText={updateQueryText} selected={selected.has(q.id)} onSelect={toggleSelect} />
-              ))}
-            </ul>
+          {openSection === "ai" && (
+            <div className="px-5 pb-5 pt-1 space-y-4 border-t border-border">
+              {loading ? (
+                <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+              ) : aiQueries.length === 0 ? (
+                <a
+                  href={generateHref}
+                  className="block rounded-[2px] border border-dashed border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-colors p-6 text-center"
+                >
+                  <Sparkles className="w-5 h-5 text-primary mx-auto mb-2" />
+                  <p className="text-sm font-medium text-foreground">Genera le tue prime query con AI</p>
+                  <p className="text-xs text-muted-foreground mt-1">Clicca per aprire il wizard</p>
+                </a>
+              ) : (
+                <ul className="space-y-2">
+                  {aiQueries.map((q) => (
+                    <QueryItem key={q.id} query={q} onDelete={deleteQuery} onToggle={toggleQuery} onUpdateText={updateQueryText} selected={selected.has(q.id)} onSelect={toggleSelect} />
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Query Manuali — sezione unica per inserire e modificare a mano. */}
-        <div className="card p-5 space-y-4">
-          <div className="flex items-center gap-2">
+        {/* Query Manuali — accordion. Click sull'header: apre questa sezione e
+            chiude l'AI. Dentro: input per aggiungere + lista editabile. */}
+        <div className="card overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setOpenSection(openSection === "manual" ? null : "manual")}
+            className="w-full flex items-center gap-2 px-5 py-4 hover:bg-muted/30 transition-colors text-left"
+            aria-expanded={openSection === "manual"}
+          >
             <Pencil className="w-4 h-4 text-accent" />
             <h2 className="font-display font-semibold text-foreground">Query Manuali</h2>
             <span className="badge badge-muted text-[12px]">{manualQueries.length}</span>
-          </div>
-          <p className="text-xs text-muted-foreground">Inserisci query specifiche da monitorare. Premi Invio o + per aggiungere.</p>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={manualText}
-              onChange={(e) => setManualText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addManualQuery(manualText))}
-              placeholder="Scrivi una query da monitorare…"
-              className="input-base flex-1"
-            />
-            <button
-              onClick={() => addManualQuery(manualText)}
-              disabled={submitting || !manualText.trim()}
-              className="bg-primary text-primary-foreground p-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
-            >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            </button>
-          </div>
-          {containsBrand(manualText) && <BrandWarning brand={targetBrand} />}
-          {loading ? (
-            <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
-          ) : manualQueries.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">Nessuna query manuale. Aggiungine una sopra.</p>
-          ) : (
-            <ul className="space-y-2">
-              {manualQueries.map((q) => (
-                <QueryItem key={q.id} query={q} onDelete={deleteQuery} onToggle={toggleQuery} onUpdateText={updateQueryText} selected={selected.has(q.id)} onSelect={toggleSelect} />
-              ))}
-            </ul>
+            <ChevronDown className={`w-4 h-4 text-muted-foreground ml-auto transition-transform ${openSection === "manual" ? "rotate-180" : ""}`} />
+          </button>
+
+          {openSection === "manual" && (
+            <div className="px-5 pb-5 pt-1 space-y-4 border-t border-border">
+              <p className="text-xs text-muted-foreground">Inserisci query specifiche da monitorare. Premi Invio o + per aggiungere.</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={manualText}
+                  onChange={(e) => setManualText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addManualQuery(manualText))}
+                  placeholder="Scrivi una query da monitorare…"
+                  className="input-base flex-1"
+                />
+                <button
+                  onClick={() => addManualQuery(manualText)}
+                  disabled={submitting || !manualText.trim()}
+                  className="bg-primary text-primary-foreground p-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
+                >
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                </button>
+              </div>
+              {containsBrand(manualText) && <BrandWarning brand={targetBrand} />}
+              {loading ? (
+                <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+              ) : manualQueries.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Nessuna query manuale. Aggiungine una sopra.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {manualQueries.map((q) => (
+                    <QueryItem key={q.id} query={q} onDelete={deleteQuery} onToggle={toggleQuery} onUpdateText={updateQueryText} selected={selected.has(q.id)} onSelect={toggleSelect} />
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
         </div>
       </div>
