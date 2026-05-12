@@ -192,6 +192,16 @@ export default function NewProjectPage() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // Auto-analyze del sito mentre l'utente digita (debounce 800ms): da feedback
+  // visibile immediato (spinner inline + pannello). analyzedUrlRef dentro
+  // analyzeSite evita ri-analisi della stessa URL se l'utente fa anche blur.
+  useEffect(() => {
+    const trimmed = websiteUrl.trim();
+    if (trimmed.length < 5 || !trimmed.includes(".")) return;
+    const t = setTimeout(() => { analyzeSite(trimmed); }, 800);
+    return () => clearTimeout(t);
+  }, [websiteUrl, analyzeSite]);
+
   // Prefill from query string — used by the CS→AVI bridge on the suite audit
   // detail page ("misura l'impatto dei fix"). Runs once on mount.
   // We intentionally skip `sector`: the CS 15-sector taxonomy doesn't map 1:1
@@ -358,7 +368,9 @@ export default function NewProjectPage() {
       <form onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA" && (e.target as HTMLElement).getAttribute("type") !== "submit") e.preventDefault(); }} className="card p-6 space-y-5">
         {/* Nome progetto */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">{t("projects.projectName")}</label>
+          <label className="text-sm font-medium text-foreground">
+            {t("projects.projectName")} <span className="text-destructive" aria-hidden>*</span>
+          </label>
           <input type="text" required value={name} onChange={(e) => setName(e.target.value)}
             placeholder={t("projects.projectNamePlaceholder")} className="input-base"
             data-coachmark="avi-project-name-input" />
@@ -367,23 +379,55 @@ export default function NewProjectPage() {
         {/* Brand rilevato */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-            {t("projects.targetBrand")}
+            {t("projects.targetBrand")} <span className="text-destructive" aria-hidden>*</span>
             <InfoTooltip text={t("projects.targetBrandTooltip")} />
           </label>
           <input type="text" required value={targetBrand} onChange={(e) => setTargetBrand(e.target.value)}
             placeholder={t("projects.targetBrandPlaceholder")} className="input-base" />
         </div>
 
-        {/* Sito web */}
+        {/* Lingua di rilevazione — promossa in cima per dare il contesto
+            linguistico prima dell'analyze-site (che ne dipende). */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-            {t("projects.website")}
+            <Globe className="w-3.5 h-3.5 text-primary" />
+            {t("projects.detectionLanguage")} <span className="text-destructive" aria-hidden>*</span>
+            <InfoTooltip text={t("projects.detectionLanguageTooltip")} />
+          </label>
+          <select
+            value={language}
+            onChange={(e) => {
+              const val = e.target.value as DetectionLang;
+              setLanguage(val);
+              if (websiteUrl.trim().length >= 5) { analyzedUrlRef.current = ""; analyzeSite(websiteUrl); }
+            }}
+            className="input-base w-full"
+          >
+            {LANG_OPTIONS.map((l) => (
+              <option key={l.value} value={l.value}>{l.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Sito web — debounced auto-analyze + inline spinner per feedback immediato. */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+            {t("projects.website")} <span className="text-destructive" aria-hidden>*</span>
             <InfoTooltip text={t("projects.websiteTooltip")} />
           </label>
           <div className="relative">
-            <input type="text" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)}
+            <input
+              type="text"
+              required
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
               onBlur={() => analyzeSite(websiteUrl)}
-              placeholder={t("projects.websitePlaceholder")} className="input-base" />
+              placeholder={t("projects.websitePlaceholder")}
+              className="input-base pr-10"
+            />
+            {siteAnalysisLoading && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary pointer-events-none" />
+            )}
           </div>
           {siteAnalysisLoading && (
             <div className="flex items-center gap-3 rounded-[2px] border border-primary/30 bg-primary/5 px-4 py-3 animate-pulse">
@@ -462,9 +506,14 @@ export default function NewProjectPage() {
         })()}
 
         {/* Contesto di mercato — campo primario, sostituisce settore/competitor
-            come fonte di contesto per la generazione query AI. */}
+            come fonte di contesto per la generazione query AI. Opzionale. */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">{t("projects.marketContext")}</label>
+          <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+            {t("projects.marketContext")}
+            <span className="text-xs font-normal text-muted-foreground">
+              {t("projects.marketContextOptionalHint")}
+            </span>
+          </label>
           <textarea value={marketContext} onChange={(e) => setMarketContext(e.target.value)}
             placeholder={t("projects.marketContextPlaceholder")} rows={4} className="input-base resize-none" />
         </div>
@@ -567,28 +616,6 @@ export default function NewProjectPage() {
           </summary>
 
           <div className="px-4 pb-4 pt-2 space-y-4 border-t border-border">
-            {/* Lingua di rilevazione */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                <Globe className="w-3.5 h-3.5 text-primary" />
-                {t("projects.detectionLanguage")}
-                <InfoTooltip text={t("projects.detectionLanguageTooltip")} />
-              </label>
-              <select
-                value={language}
-                onChange={(e) => {
-                  const val = e.target.value as DetectionLang;
-                  setLanguage(val);
-                  if (websiteUrl.trim().length >= 5) { analyzedUrlRef.current = ""; analyzeSite(websiteUrl); }
-                }}
-                className="input-base w-full"
-              >
-                {LANG_OPTIONS.map((l) => (
-                  <option key={l.value} value={l.value}>{l.label}</option>
-                ))}
-              </select>
-            </div>
-
             {/* Settore e Tipo Brand */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
