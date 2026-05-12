@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, Loader2, MessageSquare, Sparkles, AlertTriangle, ToggleLeft, ToggleRight, CheckSquare, Square, Power, PowerOff, TrendingUp } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, Sparkles, AlertTriangle, ToggleLeft, ToggleRight, CheckSquare, Square, Power, PowerOff, Pencil, Globe } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslation } from "@/lib/i18n/context";
-import { InfoTooltip } from "@/components/ui/info-tooltip";
-import SmartSuggestionsModal from "./smart-suggestions-modal";
 
 interface Query {
   id: string;
@@ -32,7 +30,6 @@ const SET_TYPE_LABELS: Record<string, string> = {
 };
 
 type FilterSetType = "all" | "generale" | "verticale" | "persona" | "manual";
-type FilterFunnel = "all" | "tofu" | "mofu";
 
 export default function QueriesPage() {
   const params = useParams();
@@ -48,16 +45,26 @@ export default function QueriesPage() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
 
-  const [tofuText, setTofuText] = useState("");
-  const [mofuText, setMofuText] = useState("");
+  const [manualText, setManualText] = useState("");
   // Sprint 3 — Smart Suggestions modal state
   const [smartOpen, setSmartOpen] = useState(false);
   const [projectSector, setProjectSector] = useState<string | null>(null);
   const [projectCountry, setProjectCountry] = useState<string | null>(null);
 
-  // Filters
+  // Luogo della rilevazione: parametro per circoscrivere l'ambito delle query
+  // AI (es. "Italia", "Milano", "EMEA"). Persistito per-progetto in localStorage
+  // e passato alla pagina genera query come URL param ?luogo=.
+  const luogoKey = `aiv:queries_luogo:${projectId}`;
+  const [luogo, setLuogo] = useState("");
+  useEffect(() => {
+    try { const v = localStorage.getItem(luogoKey); if (v) setLuogo(v); } catch {}
+  }, [luogoKey]);
+  useEffect(() => {
+    try { localStorage.setItem(luogoKey, luogo); } catch {}
+  }, [luogoKey, luogo]);
+
+  // Filters (set_type only — funnel TOFU/MOFU rimosso dalla UI)
   const [filterSetType, setFilterSetType] = useState<FilterSetType>("all");
-  const [filterFunnel, setFilterFunnel] = useState<FilterFunnel>("all");
 
   async function fetchQueries() {
     const res = await fetch(`/api/queries?project_id=${projectId}`);
@@ -90,7 +97,10 @@ export default function QueriesPage() {
     [targetBrand],
   );
 
-  async function addQuery(text: string, stage: "tofu" | "mofu") {
+  // Add manual query: nessun funnel stage selezionato (default DB = tofu),
+  // l'engine non lo usa per ordinamento utente. Tutto cio' che si scrive a
+  // mano viene marcato come set_type="manual" implicito (default DB).
+  async function addManualQuery(text: string) {
     if (!text.trim()) return;
     setSubmitting(true);
     setError("");
@@ -98,19 +108,35 @@ export default function QueriesPage() {
       const res = await fetch("/api/queries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, text: text.trim(), funnel_stage: stage }),
+        body: JSON.stringify({ project_id: projectId, text: text.trim(), funnel_stage: "tofu" }),
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || t("common.error"));
       }
-      if (stage === "tofu") setTofuText("");
-      else setMofuText("");
+      setManualText("");
       await fetchQueries();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function updateQueryText(id: string, text: string) {
+    try {
+      const res = await fetch("/api/queries", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, text }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || t("common.error"));
+      }
+      setQueries((prev) => prev.map((q) => q.id === id ? { ...q, text } : q));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("common.error"));
     }
   }
 
@@ -221,13 +247,16 @@ export default function QueriesPage() {
     return queries.filter((q) => {
       const st = q.set_type || "manual";
       if (filterSetType !== "all" && st !== filterSetType) return false;
-      if (filterFunnel !== "all" && q.funnel_stage !== filterFunnel) return false;
       return true;
     });
-  }, [queries, filterSetType, filterFunnel]);
+  }, [queries, filterSetType]);
 
-  const tofuQueries = filteredQueries.filter((q) => q.funnel_stage === "tofu");
-  const mofuQueries = filteredQueries.filter((q) => q.funnel_stage === "mofu");
+  // Split per origine: AI = generata da wizard (set_type non manual);
+  // Manual = inserita a mano dall'utente.
+  const aiQueries = filteredQueries.filter((q) => q.set_type && q.set_type !== "manual");
+  const manualQueries = filteredQueries.filter((q) => !q.set_type || q.set_type === "manual");
+
+  const generateHref = `/projects/${projectId}/queries/generate${luogo.trim() ? `?luogo=${encodeURIComponent(luogo.trim())}` : ""}`;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
@@ -247,16 +276,8 @@ export default function QueriesPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSmartOpen(true)}
-              className="flex items-center gap-2 border border-border text-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-muted/40 transition-colors"
-              title="Smart Suggestions by sector"
-            >
-              <TrendingUp className="w-4 h-4" />
-              Suggerisci da settore
-            </button>
             <a
-              href={`/projects/${projectId}/queries/generate`}
+              href={generateHref}
               className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-primary/85 transition-colors"
             >
               <Sparkles className="w-4 h-4" />
@@ -265,56 +286,8 @@ export default function QueriesPage() {
           </div>
         </div>
       </div>
-      <SmartSuggestionsModal
-        open={smartOpen}
-        onClose={() => setSmartOpen(false)}
-        projectId={projectId}
-        defaultSector={projectSector}
-        defaultCountry={projectCountry}
-        onAdded={() => fetchQueries()}
-      />
 
       {error && <p className="text-sm text-destructive">{error}</p>}
-
-      {/* Filter pills */}
-      {hasGeneratedQueries && (
-        <div className="flex flex-wrap gap-4">
-          {/* Set type filter */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground mr-1">{t("queries.filterType")}</span>
-            {(["all", "generale", "verticale", "persona", "manual"] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setFilterSetType(v)}
-                className={`text-[13px] px-2 py-1 rounded-[2px] border transition-colors ${
-                  filterSetType === v
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {v === "all" ? t("common.all") : v === "generale" ? t("queries.filterGeneral") : v === "verticale" ? t("queries.filterVertical") : v === "persona" ? t("queries.filterPersonas") : t("queries.filterManual")}
-              </button>
-            ))}
-          </div>
-          {/* Funnel filter */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground mr-1">{t("generateQueries.funnelFilter")}</span>
-            {(["all", "tofu", "mofu"] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setFilterFunnel(v)}
-                className={`text-[13px] px-2 py-1 rounded-[2px] border transition-colors ${
-                  filterFunnel === v
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {v === "all" ? t("common.all") : v.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Bulk actions bar */}
       {selected.size > 0 && (
@@ -361,82 +334,97 @@ export default function QueriesPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* TOFU */}
+      <div className="space-y-6">
+        {/* Query AI — generate dal wizard. Vuoto: l'intera card e' cliccabile
+            e porta a /queries/generate. Con contenuto: lista editabile inline.
+            Bottone + sempre verso /queries/generate (anche quando ci sono
+            gia' query AI, per aggiungerne altre). */}
         <div className="card p-5 space-y-4">
           <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-primary" />
-            <h2 className="font-display font-semibold text-foreground">TOFU</h2>
-            <InfoTooltip text={t("queries.tofuTooltip")} />
-            <span className="badge badge-muted text-[12px]">{tofuQueries.length}</span>
+            <Sparkles className="w-4 h-4 text-primary" />
+            <h2 className="font-display font-semibold text-foreground">Query AI</h2>
+            <span className="badge badge-muted text-[12px]">{aiQueries.length}</span>
+            <a
+              href={generateHref}
+              className="ml-auto bg-primary text-primary-foreground p-2 rounded-[2px] hover:bg-primary/85 transition-colors"
+              title="Genera nuove query con AI"
+            >
+              <Plus className="w-4 h-4" />
+            </a>
           </div>
-          <p className="text-xs text-muted-foreground">{t("queries.tofuDesc")}</p>
-          <div className="flex gap-2">
+
+          {/* Luogo della rilevazione: circoscrive l'ambito delle query AI
+              (es. "Italia", "Milano", "EMEA"). Passato a /queries/generate
+              via URL param. Persistito in localStorage per il progetto. */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5 text-primary" />
+              Luogo della rilevazione
+              <span className="text-muted-foreground font-normal">(circoscrive l&apos;ambito delle query AI)</span>
+            </label>
             <input
               type="text"
-              value={tofuText}
-              onChange={(e) => setTofuText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addQuery(tofuText, "tofu"))}
-              placeholder={t("queries.tofuPlaceholder")}
-              className="input-base flex-1"
+              value={luogo}
+              onChange={(e) => setLuogo(e.target.value)}
+              placeholder="Es. Italia, Milano, EMEA…"
+              className="input-base w-full text-sm"
             />
-            <button
-              onClick={() => addQuery(tofuText, "tofu")}
-              disabled={submitting || !tofuText.trim()}
-              className="bg-primary text-primary-foreground p-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
-            >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            </button>
           </div>
-          {containsBrand(tofuText) && <BrandWarning brand={targetBrand} />}
+
           {loading ? (
             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
-          ) : tofuQueries.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">{t("queries.noQueryTofu")}</p>
+          ) : aiQueries.length === 0 ? (
+            <a
+              href={generateHref}
+              className="block rounded-[2px] border border-dashed border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-colors p-6 text-center"
+            >
+              <Sparkles className="w-5 h-5 text-primary mx-auto mb-2" />
+              <p className="text-sm font-medium text-foreground">Genera le tue prime query con AI</p>
+              <p className="text-xs text-muted-foreground mt-1">Clicca per aprire il wizard</p>
+            </a>
           ) : (
             <ul className="space-y-2">
-              {tofuQueries.map((q) => (
-                <QueryItem key={q.id} query={q} onDelete={deleteQuery} onToggle={toggleQuery} selected={selected.has(q.id)} onSelect={toggleSelect} />
+              {aiQueries.map((q) => (
+                <QueryItem key={q.id} query={q} onDelete={deleteQuery} onToggle={toggleQuery} onUpdateText={updateQueryText} selected={selected.has(q.id)} onSelect={toggleSelect} />
               ))}
             </ul>
           )}
         </div>
 
-        {/* MOFU */}
+        {/* Query Manuali — sezione unica per inserire e modificare a mano. */}
         <div className="card p-5 space-y-4">
           <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-accent" />
-            <h2 className="font-display font-semibold text-foreground">MOFU</h2>
-            <InfoTooltip text={t("queries.mofuTooltip")} />
-            <span className="badge badge-muted text-[12px]">{mofuQueries.length}</span>
+            <Pencil className="w-4 h-4 text-accent" />
+            <h2 className="font-display font-semibold text-foreground">Query Manuali</h2>
+            <span className="badge badge-muted text-[12px]">{manualQueries.length}</span>
           </div>
-          <p className="text-xs text-muted-foreground">{t("queries.mofuDesc")}</p>
+          <p className="text-xs text-muted-foreground">Inserisci query specifiche da monitorare. Premi Invio o + per aggiungere.</p>
           <div className="flex gap-2">
             <input
               type="text"
-              value={mofuText}
-              onChange={(e) => setMofuText(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addQuery(mofuText, "mofu"))}
-              placeholder={t("generateQueries.queryPlaceholder")}
+              value={manualText}
+              onChange={(e) => setManualText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addManualQuery(manualText))}
+              placeholder="Scrivi una query da monitorare…"
               className="input-base flex-1"
             />
             <button
-              onClick={() => addQuery(mofuText, "mofu")}
-              disabled={submitting || !mofuText.trim()}
+              onClick={() => addManualQuery(manualText)}
+              disabled={submitting || !manualText.trim()}
               className="bg-primary text-primary-foreground p-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             </button>
           </div>
-          {containsBrand(mofuText) && <BrandWarning brand={targetBrand} />}
+          {containsBrand(manualText) && <BrandWarning brand={targetBrand} />}
           {loading ? (
             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
-          ) : mofuQueries.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">{t("queries.noQueryMofu")}</p>
+          ) : manualQueries.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Nessuna query manuale. Aggiungine una sopra.</p>
           ) : (
             <ul className="space-y-2">
-              {mofuQueries.map((q) => (
-                <QueryItem key={q.id} query={q} onDelete={deleteQuery} onToggle={toggleQuery} selected={selected.has(q.id)} onSelect={toggleSelect} />
+              {manualQueries.map((q) => (
+                <QueryItem key={q.id} query={q} onDelete={deleteQuery} onToggle={toggleQuery} onUpdateText={updateQueryText} selected={selected.has(q.id)} onSelect={toggleSelect} />
               ))}
             </ul>
           )}
@@ -458,12 +446,20 @@ function BrandWarning({ brand }: { brand: string }) {
   );
 }
 
-function QueryItem({ query, onDelete, onToggle, selected, onSelect }: { query: Query; onDelete: (id: string) => void; onToggle: (id: string, active: boolean) => void; selected: boolean; onSelect: (id: string) => void }) {
+function QueryItem({ query, onDelete, onToggle, onUpdateText, selected, onSelect }: { query: Query; onDelete: (id: string) => void; onToggle: (id: string, active: boolean) => void; onUpdateText: (id: string, text: string) => void; selected: boolean; onSelect: (id: string) => void }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(query.text);
   const setType = query.set_type || "manual";
   const colorCls = SET_TYPE_COLORS[setType] || SET_TYPE_COLORS.manual;
   const label = SET_TYPE_LABELS[setType] || "MAN";
   const isActive = query.is_active !== false;
+
+  function commitEdit() {
+    const trimmed = editText.trim();
+    if (trimmed && trimmed !== query.text) onUpdateText(query.id, trimmed);
+    setEditing(false);
+  }
 
   return (
     <li className={`flex items-start justify-between gap-2 rounded-[2px] px-3 py-2 border group transition-colors ${
@@ -486,7 +482,28 @@ function QueryItem({ query, onDelete, onToggle, selected, onSelect }: { query: Q
             : <ToggleLeft className="w-5 h-5 text-muted-foreground/50" />
           }
         </button>
-        <span className={`text-sm ${isActive ? "text-foreground" : "text-muted-foreground line-through"}`}>{query.text}</span>
+        {editing ? (
+          <input
+            type="text"
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            onBlur={commitEdit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); commitEdit(); }
+              if (e.key === "Escape") { setEditText(query.text); setEditing(false); }
+            }}
+            autoFocus
+            className="input-base flex-1 text-sm py-1"
+          />
+        ) : (
+          <span
+            className={`text-sm cursor-text flex-1 ${isActive ? "text-foreground hover:text-primary" : "text-muted-foreground line-through"} transition-colors`}
+            onClick={() => { setEditText(query.text); setEditing(true); }}
+            title="Clicca per modificare"
+          >
+            {query.text}
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
         {setType !== "manual" && (

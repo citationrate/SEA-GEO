@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft, ArrowRight, Sparkles, Loader2, Plus, X,
   ChevronLeft, MessageCircleQuestion, Check,
@@ -29,7 +29,12 @@ const QUERY_COUNT_OPTIONS = [
 export default function GenerateQueriesPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const projectId = params.id as string;
+  // Luogo della rilevazione passato come URL param dalla pagina /queries.
+  // Pre-popola il campo luogo (gia' nello state) cosi' le query AI sono
+  // circoscritte al territorio scelto.
+  const luogoParam = searchParams.get("luogo")?.trim() || "";
 
   const { t, locale } = useTranslation();
 
@@ -81,8 +86,12 @@ export default function GenerateQueriesPage() {
     fetch(`/api/projects/${projectId}`).then((r) => r.json()).then((proj) => {
       if (proj?.sector && !categoria) setCategoria(proj.sector);
     }).catch(() => {});
+
+    // Luogo passato dalla pagina /queries (input "Luogo della rilevazione"):
+    // pre-popola il campo. Se gia' valorizzato, non sovrascrivere.
+    if (luogoParam && !luogo) setLuogo(luogoParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, [projectId, luogoParam]);
 
   // Auto-AI-intake: appena la categoria e' stabile (>=3 char, debounce 1500ms),
   // chiama generateAiQuestions in modo che le 3 domande appaiano da sole.

@@ -68,15 +68,22 @@ export async function PATCH(request: Request) {
     if (error) return error;
 
     const body = await request.json();
-    const { id, is_active } = body;
-    if (!id || typeof is_active !== "boolean") {
-      return NextResponse.json({ error: "id and is_active required" }, { status: 400 });
+    const { id, is_active, text } = body;
+    if (!id) {
+      return NextResponse.json({ error: "id required" }, { status: 400 });
     }
+    if (typeof is_active !== "boolean" && (typeof text !== "string" || !text.trim())) {
+      return NextResponse.json({ error: "must update is_active or text" }, { status: 400 });
+    }
+
+    const patch: Record<string, unknown> = {};
+    if (typeof is_active === "boolean") patch.is_active = is_active;
+    if (typeof text === "string" && text.trim()) patch.text = text.trim();
 
     // Use service client to bypass RLS
     const svc = createServiceClient();
     const { error: dbError } = await (svc.from("queries") as any)
-      .update({ is_active })
+      .update(patch)
       .eq("id", id);
 
     if (dbError) {

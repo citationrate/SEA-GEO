@@ -15,7 +15,7 @@ import { BotMount } from "@/components/BotMount";
 import { buildProjectContext, normalizeLang } from "@/lib/bot-context";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
 import { PROVIDER_GROUPS, PRO_ONLY_MODEL_IDS, ENTERPRISE_ONLY_MODEL_IDS, MODEL_MAP, modelIdToBrand } from "@citationrate/llm-client";
-import Image from "next/image";
+import { BrandLogo } from "@/components/brand-logos";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const auth = createServerClient();
@@ -237,7 +237,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               className={`badge text-[12px] inline-flex items-center gap-1.5 ${isLocked ? "badge-muted text-amber-500 border-amber-500/30 bg-amber-500/10" : "badge-primary"}`}
               title={lockTitle}
             >
-              {brand && <Image src={brand.logo} alt="" width={14} height={14} className="shrink-0" />}
+              {brand && <BrandLogo id={m} size={14} />}
               {brand?.brand ?? exactLabel}
             </span>
           );
