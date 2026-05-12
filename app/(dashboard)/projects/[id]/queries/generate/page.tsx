@@ -319,7 +319,7 @@ export default function GenerateQueriesPage() {
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
               Luogo della rilevazione
-              <span className="text-xs font-normal text-muted-foreground">(circoscrive l&apos;ambito delle query)</span>
+              <InfoTooltip text="Area geografica o territoriale a cui circoscrivere l'ambito delle query (es. Italia, Milano, EMEA). Serve come riferimento per la generazione AI." />
             </label>
             <input
               type="text"

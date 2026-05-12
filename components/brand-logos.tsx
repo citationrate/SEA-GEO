@@ -64,22 +64,19 @@ export function GeminiLogo({ size = 16, className = "" }: LogoProps) {
   );
 }
 
-/** Grok / xAI — slashed circle mark (icons8-style). Monochrome → currentColor. */
+/** Grok / xAI — marchio X (xAI fa parte di X Corp). Path simple-icons CC0.
+ *  Monochrome → currentColor. */
 export function GrokLogo({ size = 16, className = "text-foreground" }: LogoProps) {
   return (
     <svg
       viewBox="0 0 24 24"
       width={size}
       height={size}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
+      fill="currentColor"
       className={className}
       aria-hidden="true"
     >
-      <circle cx="12" cy="12" r="9" />
-      <line x1="6.3" y1="17.7" x2="17.7" y2="6.3" />
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
     </svg>
   );
 }
