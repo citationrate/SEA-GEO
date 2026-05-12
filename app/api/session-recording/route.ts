@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       .insert({
         user_id,
         page_url: page_url || null,
+        source: "avi",
         started_at: new Date().toISOString(),
         ended_at: new Date().toISOString(),
         duration_seconds: 0,
