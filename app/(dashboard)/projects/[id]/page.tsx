@@ -9,7 +9,7 @@ import { OpenAnalysisButton } from "./open-analysis-button";
 import { ArchivedRunsSection } from "./archived-runs-section";
 import ProjectVolumesPanel from "./project-volumes-panel";
 import { AutoLaunch } from "./auto-launch";
-import { ProjectOnboardingChecklist } from "./onboarding-checklist";
+import { ProjectTutorialClient } from "./project-tutorial-client";
 import { T } from "@/components/translated-label";
 import { BotMount } from "@/components/BotMount";
 import { buildProjectContext, normalizeLang } from "@/lib/bot-context";
@@ -208,12 +208,12 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         </div>
       </div>
 
-      {/* Project maturity / onboarding checklist — always visible */}
-      <ProjectOnboardingChecklist
-        projectId={params.id}
-        queryCount={(queries ?? []).length}
-        segmentCount={(segments ?? []).length}
-        runsCount={allRuns.length}
+      {/* Tutorial iniziale in stile Citability Score: niente checklist visibile
+          ma una serie di coachmark contestuali che guidano il primo utente sui
+          passaggi chiave del flow (Query, Lancia Analisi, Impostazioni). */}
+      <ProjectTutorialClient
+        hasQueries={(queries ?? []).length > 0}
+        hasRuns={allRuns.length > 0}
       />
 
       {/* Modelli AI configurati */}

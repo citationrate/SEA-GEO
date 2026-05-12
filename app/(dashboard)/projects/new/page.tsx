@@ -346,8 +346,9 @@ export default function NewProjectPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-      {/* Idle coachmark: surfaces if the user lingers 45s on the form
-          without typing the project name — points at the first input. */}
+      {/* Coachmark contestuali stile Citability Score: ciascuno si arma dopo
+          ~45s di inattivita' e punta al passo successivo del flow.
+          Sticky-dismissed in localStorage. */}
       <ContextualCoachmark
         id="avi-project-name-input"
         anchorSelector='[data-coachmark="avi-project-name-input"]'
@@ -356,6 +357,15 @@ export default function NewProjectPage() {
         description={t("coach.aviProjectNewDesc")}
         ctaLabel={t("coach.aviProjectNewCta")}
         position="bottom"
+      />
+      <ContextualCoachmark
+        id="avi-project-providers"
+        anchorSelector='[data-coachmark="avi-providers"]'
+        idleSeconds={60}
+        title="Scegli i provider AI"
+        description="Seleziona i modelli AI su cui misurare la tua visibilita'. Demo usa ChatGPT + Gemini, Base e Pro ti permettono di aggiungere Claude, Grok e Sonar."
+        ctaLabel="Capito"
+        position="top"
       />
       <div>
         <a href="/projects" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
@@ -521,7 +531,7 @@ export default function NewProjectPage() {
 
         {/* AI Provider selection — card per provider; il modello specifico
             viene risolto in base al piano (providersToModelIds in models.ts). */}
-        <div className="space-y-2">
+        <div className="space-y-2" data-coachmark="avi-providers">
           <label className="text-sm font-medium text-foreground">{t("projects.aiModels")}</label>
 
           {planId === "demo" ? (
