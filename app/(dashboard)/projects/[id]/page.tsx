@@ -352,54 +352,36 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         </div>
       )}
 
-      <div data-tour="project-queries" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Query AI — generate via wizard, raggruppa tutte le set_type
-            (generale/verticale/persona) e tutti i funnel stage (tofu/mofu). */}
-        <div className="card p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <h2 className="font-display font-semibold text-foreground">Query AI</h2>
-              <span className="badge badge-muted text-[12px]">{aiQueries.length}</span>
-            </div>
-            <a href={`/projects/${params.id}/queries`} data-tour="add-query-btn" className="text-xs text-primary hover:text-primary/70 transition-colors">
-              <Plus className="w-4 h-4" />
-            </a>
+      {/* Query — card unica con totali + breakdown AI/Manuali. Click ovunque
+          porta a /queries dove l'utente trova le 2 sezioni separate (accordion).
+          Tiene l'header coerente con segmenti/altri box del progetto. */}
+      <a
+        href={`/projects/${params.id}/queries`}
+        data-tour="project-queries"
+        data-coachmark="add-query-btn"
+        className="card p-5 space-y-3 block hover:bg-muted/20 transition-colors"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-primary" />
+            <h2 className="font-display font-semibold text-foreground">Query</h2>
+            <span className="badge badge-muted text-[12px]">{aiQueries.length + manualQueries.length}</span>
           </div>
-          {aiQueries.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">Nessuna query AI ancora. Generale dal wizard.</p>
-          ) : (
-            <ul className="space-y-2">
-              {aiQueries.map((q: any) => (
-                <QueryBadgeItem key={q.id} query={q} />
-              ))}
-            </ul>
-          )}
+          <span className="text-xs text-primary hover:text-primary/70 transition-colors">Gestisci →</span>
         </div>
-
-        {/* Query Manuali — quelle inserite a mano dall'utente (set_type = "manual"). */}
-        <div className="card p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-accent" />
-              <h2 className="font-display font-semibold text-foreground">Query Manuali</h2>
-              <span className="badge badge-muted text-[12px]">{manualQueries.length}</span>
-            </div>
-            <a href={`/projects/${params.id}/queries`} className="text-xs text-primary hover:text-primary/70 transition-colors">
-              <Plus className="w-4 h-4" />
-            </a>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-[2px] border border-border bg-muted/30 px-3 py-2 flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+            <span className="text-sm text-foreground">Query AI</span>
+            <span className="badge badge-muted text-[12px] ml-auto">{aiQueries.length}</span>
           </div>
-          {manualQueries.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">Nessuna query manuale. Aggiungile dal pulsante +.</p>
-          ) : (
-            <ul className="space-y-2">
-              {manualQueries.map((q: any) => (
-                <QueryBadgeItem key={q.id} query={q} />
-              ))}
-            </ul>
-          )}
+          <div className="rounded-[2px] border border-border bg-muted/30 px-3 py-2 flex items-center gap-2">
+            <MessageSquare className="w-3.5 h-3.5 text-accent shrink-0" />
+            <span className="text-sm text-foreground">Query Manuali</span>
+            <span className="badge badge-muted text-[12px] ml-auto">{manualQueries.length}</span>
+          </div>
         </div>
-      </div>
+      </a>
 
       {/* Segmenti audience */}
       <div className="card p-5 space-y-4">
