@@ -5,6 +5,7 @@ import { TopBar } from "@/components/layout/topbar";
 import { OnboardingTour } from "@/components/onboarding-tour";
 import { MobileNavProvider } from "@/components/layout/mobile-nav-context";
 import { TrackingInit } from "@/components/tracking-init";
+import { SessionRecorder } from "@/components/session-recorder";
 import { isShowcase } from "@/lib/showcase";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -60,6 +61,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
         <OnboardingTour onboardingCompleted={!!(profile as any)?.onboarding_completed} />
         <TrackingInit userId={user.id} email={user.email} />
+        <SessionRecorder userId={user.id} email={user.email} />
       </div>
     </MobileNavProvider>
   );
