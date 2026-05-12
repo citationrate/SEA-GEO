@@ -2,18 +2,33 @@
 
 import { useRouter } from "next/navigation";
 import { PlayCircle } from "lucide-react";
+import { toast } from "sonner";
 import { useTranslation } from "@/lib/i18n/context";
 
+/**
+ * "Rivedi tutorial" — sostituisce il vecchio onboarding-tour (overlay
+ * multi-step) con il reset delle dismissal dei contextual coachmark.
+ * Dopo il click, i coachmark "avi-*" tornano a comparire dopo idle
+ * sulle pagine relative.
+ */
 export function RestartTourButton() {
   const router = useRouter();
   const { t } = useTranslation();
 
   function handleClick() {
-    localStorage.removeItem("seageo_onboarding_done");
+    try {
+      // Cancella tutte le dismissal "coachmark.avi-*" e la chiave legacy.
+      const keysToClear: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith("coachmark.") || key === "seageo_onboarding_done")) {
+          keysToClear.push(key);
+        }
+      }
+      keysToClear.forEach((k) => localStorage.removeItem(k));
+    } catch {}
+    toast.success("Tutorial riattivato — naviga tra le pagine per rivederlo");
     router.push("/dashboard");
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent("restart-onboarding-tour"));
-    }, 100);
   }
 
   return (

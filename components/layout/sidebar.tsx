@@ -247,8 +247,16 @@ export function Sidebar({ profile }: SidebarProps) {
       <div className="hidden md:block px-2 pb-1 flex-shrink-0">
         <button
           onClick={() => {
-            localStorage.removeItem("seageo_onboarding_done");
-            window.dispatchEvent(new Event("restart-onboarding-tour"));
+            // Reset di tutte le dismissal coachmark.* + legacy flag.
+            // I coachmark contestuali ricompariranno dopo idle.
+            try {
+              const keys: string[] = [];
+              for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && (k.startsWith("coachmark.") || k === "seageo_onboarding_done")) keys.push(k);
+              }
+              keys.forEach((k) => localStorage.removeItem(k));
+            } catch {}
             closeMobile();
           }}
           className={cn(
