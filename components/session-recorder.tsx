@@ -89,7 +89,7 @@ export function SessionRecorder({ userId, email }: { userId: string; email?: str
             eventsRef.current.push(event);
             pendingRef.current.push(event);
           },
-          maskAllInputs: true,
+          maskAllInputs: false,
           sampling: {
             mousemove: true,
             mouseInteraction: true,
