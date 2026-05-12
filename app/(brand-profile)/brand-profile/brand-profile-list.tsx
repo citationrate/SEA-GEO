@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Radar, Plus, Globe, Clock } from "lucide-react";
+import { Radar, Plus, Globe, Clock, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { useTranslation } from "@/lib/i18n/context";
 
 interface RunItem {
@@ -63,6 +64,27 @@ export function BrandProfileList({
   // run). The /api/brand-profile/runs endpoint returns the same shape and
   // sends `Cache-Control: private, no-store` so this is always fresh.
   const [runs, setRuns] = useState<RunItem[]>(initialRuns);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (runId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm(t("brandProfile.deleteConfirm"))) return;
+    setDeletingId(runId);
+    try {
+      const res = await fetch(`/api/brand-profile/runs/${runId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("delete failed");
+      setRuns((prev) => prev.filter((r) => r.id !== runId));
+      toast.success(t("brandProfile.deleted"));
+    } catch {
+      toast.error(t("brandProfile.deleteError"));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     const refetch = async () => {
@@ -145,27 +167,38 @@ export function BrandProfileList({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {runs.map((r) => (
-            <Link
-              key={r.id}
-              href={`/brand-profile/${r.id}`}
-              className="card p-5 hover:border-primary/40 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <h3 className="font-display font-semibold text-foreground line-clamp-1">{r.brand_name}</h3>
-                <StatusBadge status={r.status} />
-              </div>
-              <p className="text-xs text-muted-foreground line-clamp-1">{r.sector}</p>
-              <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1">
-                  <Globe className="w-3 h-3" />
-                  {r.country}
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {formatDate(r.started_at, locale)}
-                </span>
-              </div>
-            </Link>
+            <div key={r.id} className="relative">
+              <Link
+                href={`/brand-profile/${r.id}`}
+                className="card p-5 block hover:border-primary/40 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-2 mb-3 pr-8">
+                  <h3 className="font-display font-semibold text-foreground line-clamp-1">{r.brand_name}</h3>
+                  <StatusBadge status={r.status} />
+                </div>
+                <p className="text-xs text-muted-foreground line-clamp-1">{r.sector}</p>
+                <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <Globe className="w-3 h-3" />
+                    {r.country}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {formatDate(r.started_at, locale)}
+                  </span>
+                </div>
+              </Link>
+              <button
+                type="button"
+                onClick={(e) => handleDelete(r.id, e)}
+                disabled={deletingId === r.id}
+                title={t("brandProfile.deleteTitle")}
+                aria-label={t("brandProfile.deleteTitle")}
+                className="absolute bottom-3 right-3 w-7 h-7 flex items-center justify-center rounded-[2px] text-muted-foreground hover:text-red-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           ))}
         </div>
       )}

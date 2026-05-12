@@ -46,3 +46,31 @@ export async function GET(
     { headers: { "Cache-Control": "private, no-store, no-cache, must-revalidate" } },
   );
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: { id: string } },
+) {
+  const { user, error } = await requireAuth();
+  if (error) return error;
+
+  const svc = createServiceClient();
+  const bp = svc.schema("brand_profile" as any);
+
+  const { data: run } = await (bp.from("runs") as any)
+    .select("id")
+    .eq("id", params.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!run) return apiError("Run non trovata", 404);
+
+  const { error: delErr } = await (bp.from("runs") as any)
+    .delete()
+    .eq("id", params.id)
+    .eq("user_id", user.id);
+
+  if (delErr) return apiError(`Delete failed: ${delErr.message}`, 500);
+
+  return NextResponse.json({ ok: true });
+}
