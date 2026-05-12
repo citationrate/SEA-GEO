@@ -2,31 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, X, Loader2, Lock, Check, Search, ChevronDown, Globe, Sparkles } from "lucide-react";
-import { PROVIDER_GROUPS, DEMO_MODEL_IDS } from "@citationrate/llm-client";
+import { ArrowLeft, X, Loader2, Lock, Check, Search, ChevronDown, Globe, Sparkles, ChevronRight } from "lucide-react";
+import { AVI_PROVIDER_CARDS, AVI_DEMO_PROVIDERS, providersToModelIds, DEMO_MODEL_IDS } from "@citationrate/llm-client";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
 import { trackAviStartTrialOnce } from "@/lib/meta-track";
 import { ContextualCoachmark } from "@/components/contextual-coachmark";
 
-interface ModelOption {
-  id: string;
-  label: string;
-  description: string;
-  expensive?: boolean;
-  proOnly?: boolean;
-  enterpriseOnly?: boolean;
-}
-
-interface ProviderOption {
-  id: string;
-  label: string;
-  badge: string;
-  color: string;
-  models: ModelOption[];
-  comingSoon?: boolean;
-}
 
 const COUNTRY_CODES = [
   "GLOBAL",
@@ -57,7 +40,6 @@ const COUNTRY_CODES = [
 
 const BASE_MODEL_LIMIT = 3;
 const PRO_MODEL_LIMIT = 5;
-const ENTERPRISE_MODEL_LIMIT = 10;
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -82,21 +64,6 @@ export default function NewProjectPage() {
   const [isPro, setIsPro] = useState(false);
   const [planId, setPlanId] = useState<"demo" | "base" | "pro" | "enterprise">("demo");
 
-  const AVAILABLE_PROVIDERS: ProviderOption[] = PROVIDER_GROUPS.map((g) => ({
-    id: g.id,
-    label: g.label,
-    badge: g.badge,
-    color: g.color,
-    comingSoon: g.comingSoon,
-    models: g.models.map((m) => ({
-      id: m.id,
-      label: m.label,
-      description: t(m.descriptionKey),
-      expensive: m.expensive,
-      proOnly: m.proOnly,
-      enterpriseOnly: m.enterpriseOnly,
-    })),
-  }));
 
   const SECTORS = [
     { value: "Turismo", label: t("sectors.tourism") },
@@ -267,28 +234,29 @@ export default function NewProjectPage() {
     c.toLowerCase().includes(countrySearch.toLowerCase())
   );
 
-  // Plan-aware cap: 10 for Enterprise, 5 for Pro, 3 for Base.
-  // Multiple models per provider are allowed (e.g. all 3 OpenAI models).
-  const modelCap = planId === "enterprise" ? ENTERPRISE_MODEL_LIMIT
+  // Plan-aware provider cap. One provider = one model in models_config (the
+  // specific model id is resolved per plan via providersToModelIds — e.g.
+  // Pro gets grok-4.3, Demo/Base get grok-4.20-non-reasoning).
+  const providerCap = planId === "enterprise" ? AVI_PROVIDER_CARDS.length
     : planId === "pro" ? PRO_MODEL_LIMIT
     : BASE_MODEL_LIMIT;
 
-  const [selectedModels, setSelectedModels] = useState<string[]>(["gpt-5.4-mini"]);
-  const atLimit = selectedModels.length >= modelCap;
+  const [selectedProviders, setSelectedProviders] = useState<string[]>(["openai"]);
+  const atLimit = selectedProviders.length >= providerCap;
 
-  function toggleModel(modelId: string) {
-    setSelectedModels((prev) => {
-      if (prev.includes(modelId)) {
-        return prev.filter((m) => m !== modelId);
+  function toggleProvider(providerId: string) {
+    setSelectedProviders((prev) => {
+      if (prev.includes(providerId)) {
+        return prev.filter((p) => p !== providerId);
       }
-      if (prev.length >= modelCap) return prev;
-      return [...prev, modelId];
+      if (prev.length >= providerCap) return prev;
+      return [...prev, providerId];
     });
   }
 
   function getModelsConfig(): string[] {
     if (planId === "demo") return [...DEMO_MODEL_IDS];
-    return selectedModels;
+    return providersToModelIds(selectedProviders, planId);
   }
 
   function addCompetitorsFromRaw(raw: string) {
@@ -320,7 +288,7 @@ export default function NewProjectPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (planId !== "demo" && selectedModels.length === 0) {
+    if (planId !== "demo" && selectedProviders.length === 0) {
       setError(t("projects.selectAtLeastOne"));
       return;
     }
@@ -404,63 +372,6 @@ export default function NewProjectPage() {
           </label>
           <input type="text" required value={targetBrand} onChange={(e) => setTargetBrand(e.target.value)}
             placeholder={t("projects.targetBrandPlaceholder")} className="input-base" />
-        </div>
-
-        {/* Lingua di rilevazione */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-            <Globe className="w-3.5 h-3.5 text-primary" />
-            {t("projects.detectionLanguage")}
-            <InfoTooltip text={t("projects.detectionLanguageTooltip")} />
-          </label>
-          <select
-            value={language}
-            onChange={(e) => {
-              const val = e.target.value as DetectionLang;
-              setLanguage(val);
-              if (websiteUrl.trim().length >= 5) { analyzedUrlRef.current = ""; analyzeSite(websiteUrl); }
-            }}
-            className="input-base w-full"
-          >
-            {LANG_OPTIONS.map((l) => (
-              <option key={l.value} value={l.value}>{l.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Settore e Tipo Brand */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              {t("projects.sector")}
-              <InfoTooltip text={t("projects.sectorTooltip")} />
-            </label>
-            <select value={sector} onChange={(e) => { setSector(e.target.value); if (e.target.value !== "Altro") setCustomSector(""); }} className="input-base">
-              <option value="">{t("projects.selectSector")}</option>
-              {SECTORS.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </select>
-            {sector === "Altro" && (
-              <input type="text" value={customSector} onChange={(e) => setCustomSector(e.target.value)}
-                placeholder={t("projects.selectSector")} className="input-base mt-1.5" />
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              {t("projects.brandType")}
-              <InfoTooltip text={t("projects.brandTypeTooltip")} />
-            </label>
-            <select value={brandType} onChange={(e) => { setBrandType(e.target.value); if (e.target.value !== "altro") setCustomBrandType(""); }} className="input-base">
-              {BRAND_TYPES.map((bt) => (
-                <option key={bt.value} value={bt.value}>{bt.label}</option>
-              ))}
-            </select>
-            {brandType === "altro" && (
-              <input type="text" value={customBrandType} onChange={(e) => setCustomBrandType(e.target.value)}
-                placeholder={t("projects.brandType")} className="input-base mt-1.5" />
-            )}
-          </div>
         </div>
 
         {/* Sito web */}
@@ -550,148 +461,34 @@ export default function NewProjectPage() {
           );
         })()}
 
-        {/* Competitor */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">{t("projects.knownCompetitors")}</label>
-          <input type="text" value={competitorInput} onChange={(e) => setCompetitorInput(e.target.value)}
-            onKeyDown={handleCompetitorKeyDown}
-            onBlur={() => { if (competitorInput.trim()) addCompetitorsFromRaw(competitorInput); }}
-            onPaste={(e) => { const text = e.clipboardData?.getData("text"); if (text && (text.includes(",") || text.includes(";"))) { e.preventDefault(); addCompetitorsFromRaw(text); } }}
-            placeholder={t("projects.competitorPlaceholder")} className="input-base" />
-          <p className="text-xs text-muted-foreground mt-1">{t("projects.competitorHint")}</p>
-          {competitors.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {competitors.map((c) => (
-                <span key={c} className="badge badge-primary flex items-center gap-1">
-                  {c}
-                  <button type="button" onClick={() => removeCompetitor(c)} className="hover:text-foreground transition-colors">
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          {suggestedCompetitors.length > 0 && (
-            <div className="mt-3 rounded-[2px] border border-primary/30 bg-primary/5 p-3 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <p className="text-xs font-semibold text-foreground truncate">{t("projects.suggestedCompetitorsTitle")}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={dismissAllSuggestions}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                >
-                  {t("projects.suggestionsDismissAll")}
-                </button>
-              </div>
-              <p className="text-xs text-muted-foreground">{t("projects.suggestedCompetitorsHint")}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {suggestedCompetitors.map((name) => (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={() => acceptSuggestedCompetitor(name)}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border border-primary/30 bg-transparent text-foreground hover:bg-primary/10 transition-colors"
-                  >
-                    <span aria-hidden>+</span>
-                    {name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Contesto */}
+        {/* Contesto di mercato — campo primario, sostituisce settore/competitor
+            come fonte di contesto per la generazione query AI. */}
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">{t("projects.marketContext")}</label>
           <textarea value={marketContext} onChange={(e) => setMarketContext(e.target.value)}
             placeholder={t("projects.marketContextPlaceholder")} rows={4} className="input-base resize-none" />
         </div>
 
-        {/* Paese */}
-        <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              {t("projects.country")}
-              <InfoTooltip text={t("projects.countryTooltip")} />
-            </label>
-            <div ref={countryRef} className="relative">
-              <button type="button" onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
-                className="input-base w-full flex items-center justify-between text-left">
-                <span className={countries.length > 0 ? "text-foreground" : "text-muted-foreground"}>
-                  {countries.length > 0 ? `${countries.length} ${countries.length === 1 ? t("projects.selected") : t("projects.selectedPlural")}` : t("projects.selectCountries")}
-                </span>
-                <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-              </button>
-              {countries.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {countries.map((c) => (
-                    <span key={c} className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border border-primary/30 bg-primary/5 text-foreground">
-                      {c}
-                      <button type="button" onClick={() => setCountries(countries.filter((x) => x !== c))} className="hover:text-destructive transition-colors">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              {countryDropdownOpen && (
-                <div className="absolute z-20 mt-1 w-full bg-[#111416] border border-border rounded-[2px] shadow-xl max-h-60 overflow-hidden">
-                  <div className="p-2 border-b border-border">
-                    <div className="flex items-center gap-2 input-base">
-                      <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      <input type="text" value={countrySearch} onChange={(e) => setCountrySearch(e.target.value)}
-                        placeholder={t("projects.searchCountry")}
-                        className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground flex-1" autoFocus />
-                    </div>
-                  </div>
-                  <div className="overflow-y-auto max-h-44">
-                    {filteredCountries.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-3">{t("common.noResults")}</p>
-                    ) : (
-                      filteredCountries.map((c) => {
-                        const isSelected = countries.includes(c);
-                        return (
-                          <button key={c} type="button"
-                            onClick={() => { setCountries(isSelected ? countries.filter((x) => x !== c) : [...countries, c]); }}
-                            className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
-                              isSelected ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-muted/30"
-                            }`}>
-                            <div className={`w-3.5 h-3.5 rounded-[2px] border flex items-center justify-center shrink-0 ${
-                              isSelected ? "border-primary bg-primary" : "border-muted-foreground"
-                            }`}>
-                              {isSelected && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
-                            </div>
-                            {c}
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-        </div>
-
-        {/* Modelli AI */}
+        {/* AI Provider selection — card per provider; il modello specifico
+            viene risolto in base al piano (providersToModelIds in models.ts). */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">{t("projects.aiModels")}</label>
 
-          {/* Demo plan: fixed models, not selectable */}
           {planId === "demo" ? (
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                {t("projects.demoModelsDesc")}
-              </p>
+              <p className="text-xs text-muted-foreground">{t("projects.demoModelsDesc")}</p>
               <div className="flex flex-wrap gap-2">
-                {DEMO_MODEL_IDS.map((modelId) => (
-                  <span key={modelId} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-sm border border-primary/30 bg-primary/5 text-sm font-medium text-foreground">
-                    <Check className="w-3.5 h-3.5 text-primary" />
-                    {modelId === "gpt-5.4-mini" ? "GPT-5.4 Mini" : "Gemini 2.5 Flash"}
-                  </span>
-                ))}
+                {AVI_DEMO_PROVIDERS.map((pid) => {
+                  const p = AVI_PROVIDER_CARDS.find((x) => x.id === pid);
+                  if (!p) return null;
+                  return (
+                    <span key={p.id} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-sm border border-primary/30 bg-primary/5 text-sm font-medium text-foreground">
+                      <Check className="w-3.5 h-3.5 text-primary" />
+                      <span className={p.color}>{p.label}</span>
+                      <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{p.badge}</span>
+                    </span>
+                  );
+                })}
               </div>
               <div className="flex items-start gap-2">
                 <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
@@ -702,106 +499,254 @@ export default function NewProjectPage() {
             <>
               <p className="text-xs text-muted-foreground">
                 {t("projects.selectProviderModel")}
-                {` (${t("projects.maxModels").replace("{n}", String(modelCap))})`}
+                {` (${t("projects.maxModels").replace("{n}", String(providerCap))})`}
               </p>
-              <div className="space-y-2">
-                {AVAILABLE_PROVIDERS.map((provider) => {
-                  const isSoon = !!provider.comingSoon;
-                  const providerSelectedCount = provider.models.filter((m) => selectedModels.includes(m.id)).length;
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {AVI_PROVIDER_CARDS.map((p) => {
+                  const isSelected = selectedProviders.includes(p.id);
+                  const capReached = !isSelected && atLimit;
                   return (
-                    <div key={provider.id}
-                      className={`rounded-sm border transition-all ${
-                        isSoon ? "border-border opacity-50"
-                          : providerSelectedCount > 0 ? "border-primary/50 bg-primary/5"
-                          : "border-border"
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => !capReached && toggleProvider(p.id)}
+                      disabled={capReached}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-sm border text-left transition-all ${
+                        isSelected
+                          ? "border-primary/50 bg-primary/5"
+                          : capReached
+                            ? "border-border opacity-50 cursor-not-allowed"
+                            : "border-border hover:bg-muted/30"
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${
+                        isSelected ? "border-primary bg-primary" : "border-muted-foreground"
                       }`}>
-                      <div className={`w-full flex items-center gap-3 px-4 py-3 text-left ${isSoon ? "cursor-not-allowed" : ""}`}>
-                        <span className={`text-sm font-semibold ${isSoon ? "text-muted-foreground" : provider.color}`}>{provider.label}</span>
-                        <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{provider.badge}</span>
-                        {!isSoon && providerSelectedCount > 0 && (
-                          <span className="font-mono text-[0.625rem] tracking-wide text-primary ml-auto">
-                            {providerSelectedCount}/{provider.models.length}
-                          </span>
-                        )}
-                        {isSoon && (
-                          <span className="font-mono text-[0.69rem] tracking-wide text-amber-500 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded-[2px] ml-auto">SOON</span>
+                        {isSelected && (
+                          <svg className="w-2.5 h-2.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
                         )}
                       </div>
-
-                      {!isSoon && (
-                        <div className="px-4 pb-3 pt-0 space-y-0.5">
-                          {provider.models.map((model) => {
-                            const isSelected = selectedModels.includes(model.id);
-                            const enterpriseLocked = !!model.enterpriseOnly && planId !== "enterprise";
-                            const proLocked = !!model.proOnly && !isPro;
-                            const locked = enterpriseLocked || proLocked;
-                            const capReached = !isSelected && atLimit;
-                            const disabled = locked || capReached;
-                            const lockBadge = enterpriseLocked ? "ENT" : proLocked ? "PRO" : null;
-                            const lockTitle = enterpriseLocked
-                              ? "Disponibile solo dal piano Enterprise"
-                              : proLocked ? `${t("compare.proOnly")} — €159${t("piano.perMonth")} ${t("piano.plusVat")}` : undefined;
-                            return (
-                              <label key={model.id} onClick={() => !disabled && toggleModel(model.id)}
-                                className={`flex items-center gap-2 p-2 rounded-[2px] transition-colors ${
-                                  locked ? "opacity-70 cursor-not-allowed"
-                                    : capReached ? "opacity-50 cursor-not-allowed"
-                                    : isSelected ? "bg-primary/10 cursor-pointer"
-                                    : "hover:bg-muted/30 cursor-pointer"
-                                }`}
-                                title={lockTitle ?? (capReached ? t("projects.modelLimitReached").replace("{n}", String(modelCap)) : undefined)}>
-                                <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 ${
-                                  locked ? "border-muted-foreground/40"
-                                    : isSelected ? "border-primary bg-primary"
-                                    : "border-muted-foreground"
-                                }`}>
-                                  {isSelected && !locked && (
-                                    <svg className="w-2 h-2 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className={`text-sm font-medium ${locked ? "text-muted-foreground" : isSelected ? "text-primary" : "text-foreground"}`}>{model.label}</span>
-                                    {lockBadge && <span className="font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">{lockBadge}</span>}
-                                  </div>
-                                  <p className="text-xs text-muted-foreground">{model.description}</p>
-                                </div>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-sm font-semibold ${isSelected ? "text-primary" : p.color}`}>{p.label}</div>
+                        <div className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{p.badge}</div>
+                      </div>
+                    </button>
                   );
                 })}
               </div>
-
               <div className="flex items-center justify-between">
                 <div className="flex items-start gap-2">
                   <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
                   <p className="text-xs text-muted-foreground">{t("projects.modelsFixed")}</p>
                 </div>
                 <p className="text-xs text-muted-foreground shrink-0 ml-4">
-                  <span className="text-foreground font-bold">{selectedModels.length}</span>
-                  {` / ${modelCap} ${t("projects.modelsOf")}`}
+                  <span className="text-foreground font-bold">{selectedProviders.length}</span>
+                  {` / ${providerCap} ${t("projects.modelsOf")}`}
                 </p>
               </div>
-
-              {atLimit && planId !== "enterprise" && (
+              {atLimit && (
                 <p className="text-xs text-[#c4a882]">
-                  {t("projects.modelLimitReached").replace("{n}", String(modelCap))}
+                  {t("projects.modelLimitReached").replace("{n}", String(providerCap))}
                 </p>
               )}
             </>
           )}
         </div>
 
+        {/* Avanzato — campi opzionali per affinamento.
+            Mantenuti per backward compat e per dare segnali extra all'extractor
+            (sector → Claude Haiku) e al deterministic generator (competitor → slot MOFU).
+            Default ragionevoli se lasciati vuoti. */}
+        <details className="group rounded-sm border border-border">
+          <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer list-none text-sm font-medium text-foreground hover:bg-muted/30 transition-colors">
+            <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-90" />
+            {t("projects.advancedOptions") || "Opzioni avanzate"}
+            <span className="text-xs font-normal text-muted-foreground ml-auto">{t("projects.advancedOptionsHint") || "lingua, settore, competitor, paese"}</span>
+          </summary>
+
+          <div className="px-4 pb-4 pt-2 space-y-4 border-t border-border">
+            {/* Lingua di rilevazione */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-primary" />
+                {t("projects.detectionLanguage")}
+                <InfoTooltip text={t("projects.detectionLanguageTooltip")} />
+              </label>
+              <select
+                value={language}
+                onChange={(e) => {
+                  const val = e.target.value as DetectionLang;
+                  setLanguage(val);
+                  if (websiteUrl.trim().length >= 5) { analyzedUrlRef.current = ""; analyzeSite(websiteUrl); }
+                }}
+                className="input-base w-full"
+              >
+                {LANG_OPTIONS.map((l) => (
+                  <option key={l.value} value={l.value}>{l.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Settore e Tipo Brand */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                  {t("projects.sector")}
+                  <InfoTooltip text={t("projects.sectorTooltip")} />
+                </label>
+                <select value={sector} onChange={(e) => { setSector(e.target.value); if (e.target.value !== "Altro") setCustomSector(""); }} className="input-base">
+                  <option value="">{t("projects.selectSector")}</option>
+                  {SECTORS.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+                {sector === "Altro" && (
+                  <input type="text" value={customSector} onChange={(e) => setCustomSector(e.target.value)}
+                    placeholder={t("projects.selectSector")} className="input-base mt-1.5" />
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                  {t("projects.brandType")}
+                  <InfoTooltip text={t("projects.brandTypeTooltip")} />
+                </label>
+                <select value={brandType} onChange={(e) => { setBrandType(e.target.value); if (e.target.value !== "altro") setCustomBrandType(""); }} className="input-base">
+                  {BRAND_TYPES.map((bt) => (
+                    <option key={bt.value} value={bt.value}>{bt.label}</option>
+                  ))}
+                </select>
+                {brandType === "altro" && (
+                  <input type="text" value={customBrandType} onChange={(e) => setCustomBrandType(e.target.value)}
+                    placeholder={t("projects.brandType")} className="input-base mt-1.5" />
+                )}
+              </div>
+            </div>
+
+            {/* Competitor */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">{t("projects.knownCompetitors")}</label>
+              <input type="text" value={competitorInput} onChange={(e) => setCompetitorInput(e.target.value)}
+                onKeyDown={handleCompetitorKeyDown}
+                onBlur={() => { if (competitorInput.trim()) addCompetitorsFromRaw(competitorInput); }}
+                onPaste={(e) => { const text = e.clipboardData?.getData("text"); if (text && (text.includes(",") || text.includes(";"))) { e.preventDefault(); addCompetitorsFromRaw(text); } }}
+                placeholder={t("projects.competitorPlaceholder")} className="input-base" />
+              <p className="text-xs text-muted-foreground mt-1">{t("projects.competitorHint")}</p>
+              {competitors.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {competitors.map((c) => (
+                    <span key={c} className="badge badge-primary flex items-center gap-1">
+                      {c}
+                      <button type="button" onClick={() => removeCompetitor(c)} className="hover:text-foreground transition-colors">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {suggestedCompetitors.length > 0 && (
+                <div className="mt-3 rounded-[2px] border border-primary/30 bg-primary/5 p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <p className="text-xs font-semibold text-foreground truncate">{t("projects.suggestedCompetitorsTitle")}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={dismissAllSuggestions}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                    >
+                      {t("projects.suggestionsDismissAll")}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t("projects.suggestedCompetitorsHint")}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {suggestedCompetitors.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => acceptSuggestedCompetitor(name)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border border-primary/30 bg-transparent text-foreground hover:bg-primary/10 transition-colors"
+                      >
+                        <span aria-hidden>+</span>
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Paese */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                {t("projects.country")}
+                <InfoTooltip text={t("projects.countryTooltip")} />
+              </label>
+              <div ref={countryRef} className="relative">
+                <button type="button" onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
+                  className="input-base w-full flex items-center justify-between text-left">
+                  <span className={countries.length > 0 ? "text-foreground" : "text-muted-foreground"}>
+                    {countries.length > 0 ? `${countries.length} ${countries.length === 1 ? t("projects.selected") : t("projects.selectedPlural")}` : t("projects.selectCountries")}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                </button>
+                {countries.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {countries.map((c) => (
+                      <span key={c} className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border border-primary/30 bg-primary/5 text-foreground">
+                        {c}
+                        <button type="button" onClick={() => setCountries(countries.filter((x) => x !== c))} className="hover:text-destructive transition-colors">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {countryDropdownOpen && (
+                  <div className="absolute z-20 mt-1 w-full bg-[#111416] border border-border rounded-[2px] shadow-xl max-h-60 overflow-hidden">
+                    <div className="p-2 border-b border-border">
+                      <div className="flex items-center gap-2 input-base">
+                        <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        <input type="text" value={countrySearch} onChange={(e) => setCountrySearch(e.target.value)}
+                          placeholder={t("projects.searchCountry")}
+                          className="bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground flex-1" autoFocus />
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto max-h-44">
+                      {filteredCountries.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-3">{t("common.noResults")}</p>
+                      ) : (
+                        filteredCountries.map((c) => {
+                          const isSelected = countries.includes(c);
+                          return (
+                            <button key={c} type="button"
+                              onClick={() => { setCountries(isSelected ? countries.filter((x) => x !== c) : [...countries, c]); }}
+                              className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
+                                isSelected ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-muted/30"
+                              }`}>
+                              <div className={`w-3.5 h-3.5 rounded-[2px] border flex items-center justify-center shrink-0 ${
+                                isSelected ? "border-primary bg-primary" : "border-muted-foreground"
+                              }`}>
+                                {isSelected && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
+                              </div>
+                              {c}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </details>
+
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <button type="submit" disabled={loading || (planId !== "demo" && selectedModels.length === 0)}
+        <button type="submit" disabled={loading || (planId !== "demo" && selectedProviders.length === 0)}
           className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50">
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           {loading ? t("common.saving") : t("projects.createProject")}

@@ -18,10 +18,13 @@ export {
   VISIBLE_MODEL_IDS,
   DEMO_MODEL_IDS,
   COMPARISON_MODEL_IDS,
+  AVI_PROVIDER_CARDS,
+  AVI_DEMO_PROVIDERS,
+  providersToModelIds,
   isModelAvailable,
   filterAvailableModels,
 } from "./models";
-export type { AIModel, ProviderGroup } from "./models";
+export type { AIModel, ProviderGroup, AviProviderCard } from "./models";
 
 // Source/URL extraction utilities (annotations, web search, grounding, text fallback)
 export {

@@ -186,6 +186,64 @@ export const VISIBLE_MODEL_IDS = new Set(
 /** Demo plan: fixed models, not selectable */
 export const DEMO_MODEL_IDS = ["gpt-5.4-mini", "gemini-2.5-flash"] as const;
 
+/**
+ * Provider-level selection for the snello project creation form.
+ * User picks providers (ChatGPT / Gemini / Claude / Grok / Sonar) without
+ * choosing the specific model: the resolution is automatic per plan.
+ *
+ * - Demo / Base: tier "value" (mid-price, with browsing + articolato)
+ * - Pro: Grok upgrades to reasoning (grok-4.3); others identical to Base
+ *
+ * Mantenuto separato da PROVIDER_GROUPS (legacy granular UI) per evitare
+ * di toccare la pagina di confronto/edit che continua a usare quella.
+ */
+export interface AviProviderCard {
+  id: "openai" | "google" | "anthropic" | "xai" | "perplexity";
+  label: string;
+  badge: string;
+  color: string;
+}
+
+export const AVI_PROVIDER_CARDS: readonly AviProviderCard[] = [
+  { id: "openai",     label: "OpenAI",     badge: "ChatGPT",   color: "text-green-500"  },
+  { id: "google",     label: "Google",     badge: "Gemini",    color: "text-blue-500"   },
+  { id: "anthropic",  label: "Anthropic",  badge: "Claude",    color: "text-orange-500" },
+  { id: "xai",        label: "xAI",        badge: "Grok",      color: "text-gray-400"   },
+  { id: "perplexity", label: "Perplexity", badge: "Sonar",     color: "text-cyan-500"   },
+];
+
+type AviPlan = "demo" | "base" | "pro" | "enterprise";
+
+const PROVIDER_DEFAULT_MODELS: Record<AviProviderCard["id"], Record<AviPlan, string>> = {
+  openai: {
+    demo: "gpt-5.4-mini", base: "gpt-5.4-mini", pro: "gpt-5.4-mini", enterprise: "gpt-5.4-mini",
+  },
+  google: {
+    demo: "gemini-2.5-flash", base: "gemini-2.5-flash", pro: "gemini-2.5-flash", enterprise: "gemini-2.5-flash",
+  },
+  anthropic: {
+    demo: "claude-haiku", base: "claude-haiku", pro: "claude-haiku", enterprise: "claude-haiku",
+  },
+  xai: {
+    demo: "grok-4.20-non-reasoning", base: "grok-4.20-non-reasoning", pro: "grok-4.3", enterprise: "grok-4.3",
+  },
+  perplexity: {
+    demo: "perplexity-sonar", base: "perplexity-sonar", pro: "perplexity-sonar", enterprise: "perplexity-sonar",
+  },
+};
+
+export function providersToModelIds(providers: string[], plan: AviPlan): string[] {
+  return providers
+    .map((p) => {
+      const mapping = PROVIDER_DEFAULT_MODELS[p as AviProviderCard["id"]];
+      return mapping ? mapping[plan] : null;
+    })
+    .filter((id): id is string => id !== null);
+}
+
+/** Providers preselected for Demo plan (fixed, mirrors DEMO_MODEL_IDS). */
+export const AVI_DEMO_PROVIDERS: readonly AviProviderCard["id"][] = ["openai", "google"];
+
 /** Comparison module: fixed models, always no-browsing, Pro only */
 export const COMPARISON_MODEL_IDS = [
   "claude-haiku",
