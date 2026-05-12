@@ -244,6 +244,33 @@ export function providersToModelIds(providers: string[], plan: AviPlan): string[
 /** Providers preselected for Demo plan (fixed, mirrors DEMO_MODEL_IDS). */
 export const AVI_DEMO_PROVIDERS: readonly AviProviderCard["id"][] = ["openai", "google"];
 
+/**
+ * Brand-level label for a model id. Used in UI pills to hide the specific
+ * model version behind the user-facing brand name (ChatGPT, Claude, Gemini,
+ * Grok, Sonar). The exact model label stays available via MODEL_MAP for
+ * tooltips / debugging.
+ */
+export function modelIdToBrand(modelId: string): { brand: string; logo: string } | null {
+  const id = modelId.toLowerCase();
+  if (id.startsWith("gpt-") || id.startsWith("copilot-")) return { brand: "ChatGPT", logo: "/brand-logos/chatgpt.png" };
+  if (id.startsWith("claude-")) return { brand: "Claude", logo: "/brand-logos/claude.svg" };
+  if (id.startsWith("gemini-")) return { brand: "Gemini", logo: "/brand-logos/gemini.svg" };
+  if (id.startsWith("grok-")) return { brand: "Grok", logo: "/brand-logos/grok.png" };
+  if (id.startsWith("perplexity-") || id.startsWith("sonar")) return { brand: "Sonar", logo: "/brand-logos/perplexity.svg" };
+  return null;
+}
+
+/** Same mapping for provider IDs (used by AVI_PROVIDER_CARDS). */
+export function providerIdToLogo(providerId: AviProviderCard["id"]): string {
+  switch (providerId) {
+    case "openai":     return "/brand-logos/chatgpt.png";
+    case "anthropic":  return "/brand-logos/claude.svg";
+    case "google":     return "/brand-logos/gemini.svg";
+    case "xai":        return "/brand-logos/grok.png";
+    case "perplexity": return "/brand-logos/perplexity.svg";
+  }
+}
+
 /** Comparison module: fixed models, always no-browsing, Pro only */
 export const COMPARISON_MODEL_IDS = [
   "claude-haiku",

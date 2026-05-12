@@ -13,6 +13,7 @@ import { RunDetailClient } from "./run-detail-client";
 import { BrandNarrative } from "./brand-narrative";
 import { LowScoreBridge } from "./low-score-bridge";
 import { GalacticSiegeGame } from "@/components/galactic-siege-game";
+import { CancelRunButton } from "./cancel-run-button";
 import { BotMount } from "@/components/BotMount";
 import { buildRunContext, normalizeLang } from "@/lib/bot-context";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
@@ -360,9 +361,12 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
               style={{ width: `${r.total_prompts > 0 ? Math.max(Math.round((r.completed_prompts / r.total_prompts) * 100), 2) : 0}%` }}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            <span className="text-foreground font-medium">{r.completed_prompts}</span> / {r.total_prompts} prompt completati
-          </p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              <span className="text-foreground font-medium">{r.completed_prompts}</span> / {r.total_prompts} prompt completati
+            </p>
+            <CancelRunButton runId={params.runId} />
+          </div>
           <div className="pt-2">
             <GalacticSiegeGame />
           </div>

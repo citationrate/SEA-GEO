@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { MessageSquare, Users, Play, Check, Sparkles, BarChart3, TrendingUp } from "lucide-react";
+import { useState, useEffect } from "react";
+import { MessageSquare, Users, Play, Check, Sparkles, BarChart3, TrendingUp, X } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { QuickStartModal } from "@/components/quick-start-modal";
 
@@ -18,6 +18,21 @@ export function ProjectOnboardingChecklist({
 }) {
   const { t } = useTranslation();
   const [quickStartOpen, setQuickStartOpen] = useState(false);
+
+  // Dismiss persistente per-progetto: l'utente puo' chiudere la checklist
+  // anche senza completarla. Lo state vive in localStorage (no DB needed).
+  const dismissKey = `aiv:onboarding_dismissed:${projectId}`;
+  const [dismissed, setDismissed] = useState<boolean>(false);
+  useEffect(() => {
+    try { if (localStorage.getItem(dismissKey) === "1") setDismissed(true); } catch {}
+  }, [dismissKey]);
+
+  function handleDismiss() {
+    try { localStorage.setItem(dismissKey, "1"); } catch {}
+    setDismissed(true);
+  }
+
+  if (dismissed) return null;
 
   const step1Done = queryCount >= 2;
   const step2Done = segmentCount > 0;
@@ -68,7 +83,18 @@ export function ProjectOnboardingChecklist({
           <Sparkles className="w-4 h-4 text-primary" />
           <h2 className="font-display font-semibold text-foreground">{t("projectDetail.setuptitle")}</h2>
         </div>
-        <span className="text-xs text-muted-foreground font-mono">{completedMilestones}/{totalMilestones} · {progress}%</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground font-mono">{completedMilestones}/{totalMilestones} · {progress}%</span>
+          <button
+            type="button"
+            onClick={handleDismiss}
+            aria-label="Chiudi setup"
+            title="Chiudi (puoi sempre riprenderlo)"
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <p className="text-xs text-muted-foreground">{t("projectDetail.setupsubtitle")}</p>

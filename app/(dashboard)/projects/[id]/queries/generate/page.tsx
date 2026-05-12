@@ -75,7 +75,25 @@ export default function GenerateQueriesPage() {
     fetch(`/api/queries?project_id=${projectId}`).then((r) => r.json()).then((qs) => {
       if (Array.isArray(qs)) setExistingQueryCount(qs.filter((q: any) => q.is_active !== false).length);
     }).catch(() => {});
+
+    // Prefill della categoria dal sector del progetto: snellisce un campo
+    // perché l'utente di solito ripete quello che gia' c'è nel progetto.
+    fetch(`/api/projects/${projectId}`).then((r) => r.json()).then((proj) => {
+      if (proj?.sector && !categoria) setCategoria(proj.sector);
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
+
+  // Auto-AI-intake: appena la categoria e' stabile (>=3 char, debounce 1500ms),
+  // chiama generateAiQuestions in modo che le 3 domande appaiano da sole.
+  // L'utente non deve cliccare un bottone "Aiutami a definire": piu' snello.
+  useEffect(() => {
+    const trimmed = categoria.trim();
+    if (trimmed.length < 3 || showAiIntake || aiQuestionsLoading || aiQuestions.length > 0) return;
+    const t = setTimeout(() => { generateAiQuestions(); }, 1500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoria]);
 
   // Enterprise: effectively unlimited per Piano table ("Generazione query AI" = ✓).
   // Cap at 9999 just to keep the math finite (backend has no monthly limit).
@@ -301,35 +319,10 @@ export default function GenerateQueriesPage() {
             />
           </div>
 
-          {/* Mercato */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              {t("generateQueries.market")} *
-              <InfoTooltip text={t("generateQueries.marketTooltip")} />
-            </label>
-            <input
-              type="text"
-              value={mercato}
-              onChange={(e) => setMercato(e.target.value)}
-              placeholder={t("generateQueries.marketPlaceholder")}
-              className="input-base w-full"
-            />
-          </div>
-
-          {/* Luogo */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              {t("generateQueries.place")}
-              <InfoTooltip text={t("generateQueries.placeTooltip")} />
-            </label>
-            <input
-              type="text"
-              value={luogo}
-              onChange={(e) => setLuogo(e.target.value)}
-              placeholder={t("generateQueries.placePlaceholder")}
-              className="input-base w-full"
-            />
-          </div>
+          {/* Mercato e Luogo rimossi dalla UI snella: vengono ereditati dal
+              progetto (market_context + country). L'engine continua a usare
+              gli slot se valorizzati altrove; lasciati vuoti, prevale il
+              market_context globale del progetto. */}
 
           {/* Punti di forza */}
           <TagInput
@@ -357,28 +350,12 @@ export default function GenerateQueriesPage() {
 
           {/* AI Conversational Intake */}
           <div className="border-t border-border pt-5 space-y-3">
-            {!showAiIntake ? (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-foreground font-medium">
-                    {t("generateQueries.aiIntakeQuestion")}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{t("generateQueries.aiIntakeOptional")}</p>
-                </div>
-                <button
-                  onClick={generateAiQuestions}
-                  disabled={aiQuestionsLoading || !categoria.trim()}
-                  className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors disabled:opacity-50 shrink-0"
-                >
-                  {aiQuestionsLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <MessageCircleQuestion className="w-4 h-4" />
-                  )}
-                  {t("generateQueries.aiIntakeYes")} &rarr;
-                </button>
+            {aiQuestionsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span>{t("generateQueries.aiIntakeTitle")}…</span>
               </div>
-            ) : (
+            ) : showAiIntake && aiQuestions.length > 0 ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <MessageCircleQuestion className="w-4 h-4 text-primary" />
@@ -400,14 +377,8 @@ export default function GenerateQueriesPage() {
                     />
                   </div>
                 ))}
-                <button
-                  onClick={() => { setShowAiIntake(false); setAiQuestions([]); setAiAnswers(["", "", ""]); }}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {t("generateQueries.aiIntakeClose")}
-                </button>
               </div>
-            )}
+            ) : null}
           </div>
 
           <div className="flex justify-end pt-2">
@@ -477,54 +448,9 @@ export default function GenerateQueriesPage() {
             )}
           </div>
 
-          {/* TOFU / MOFU split selector */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              {t("generateQueries.tofuMofuDistribution")}
-              <InfoTooltip text={t("generateQueries.tofuMofuTooltip")} />
-            </label>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-primary">TOFU</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={tofuPercent}
-                  onChange={(e) => setTofuPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
-                  className="input-base w-16 text-center"
-                />
-                <span className="text-xs text-muted-foreground">%</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-[#7eb89a]">MOFU</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={100 - tofuPercent}
-                  onChange={(e) => setTofuPercent(100 - Math.min(100, Math.max(0, Number(e.target.value))))}
-                  className="input-base w-16 text-center"
-                />
-                <span className="text-xs text-muted-foreground">%</span>
-              </div>
-            </div>
-            {/* Visual bar */}
-            <div className="h-2.5 rounded-full overflow-hidden flex bg-muted">
-              <div
-                className="h-full bg-primary transition-all duration-300"
-                style={{ width: `${tofuPercent}%` }}
-              />
-              <div
-                className="h-full bg-[#7eb89a] transition-all duration-300"
-                style={{ width: `${100 - tofuPercent}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-[12px] text-muted-foreground">
-              <span>{Math.round((queryCount === -1 ? customCount : queryCount) * tofuPercent / 100)} query TOFU</span>
-              <span>{(queryCount === -1 ? customCount : queryCount) - Math.round((queryCount === -1 ? customCount : queryCount) * tofuPercent / 100)} query MOFU</span>
-            </div>
-          </div>
+          {/* Split TOFU/MOFU mantenuto internamente a 60/40 (default sensato per
+              coprire awareness + comparison). Nascosto dalla UI: l'utente non
+              deve pensare al funnel, l'engine ci pensa per coprire panoramica. */}
 
           {/* Limit warning (only if exceeded) */}
           {wouldExceed && (
@@ -583,45 +509,24 @@ export default function GenerateQueriesPage() {
             </button>
           </div>
 
-          {/* TOFU queries */}
-          {(() => {
-            const tofuQueries = generatedQueries.map((q, i) => ({ ...q, idx: i })).filter((q) => q.funnel_stage === "TOFU");
-            const mofuQueries = generatedQueries.map((q, i) => ({ ...q, idx: i })).filter((q) => q.funnel_stage === "MOFU");
-            return (
-              <>
-                {tofuQueries.length > 0 && (
-                  <div className="card p-5 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span className={`font-mono text-[0.69rem] tracking-wide uppercase px-2 py-0.5 rounded-[2px] border ${FUNNEL_COLORS.TOFU}`}>TOFU</span>
-                      <span className="text-xs text-muted-foreground">{tofuQueries.filter((q) => selectedIndexes.has(q.idx)).length}/{tofuQueries.length}</span>
-                    </div>
-                    <div className="space-y-1.5">
-                      {tofuQueries.map((q) => (
-                        <QueryPreviewRow key={q.idx} query={q} idx={q.idx} selected={selectedIndexes.has(q.idx)} onToggle={toggleQuery} onEdit={(idx, text) => {
-                          setGeneratedQueries((prev) => prev.map((p, i) => i === idx ? { ...p, text } : p));
-                        }} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {mofuQueries.length > 0 && (
-                  <div className="card p-5 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span className={`font-mono text-[0.69rem] tracking-wide uppercase px-2 py-0.5 rounded-[2px] border ${FUNNEL_COLORS.MOFU}`}>MOFU</span>
-                      <span className="text-xs text-muted-foreground">{mofuQueries.filter((q) => selectedIndexes.has(q.idx)).length}/{mofuQueries.length}</span>
-                    </div>
-                    <div className="space-y-1.5">
-                      {mofuQueries.map((q) => (
-                        <QueryPreviewRow key={q.idx} query={q} idx={q.idx} selected={selectedIndexes.has(q.idx)} onToggle={toggleQuery} onEdit={(idx, text) => {
-                          setGeneratedQueries((prev) => prev.map((p, i) => i === idx ? { ...p, text } : p));
-                        }} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            );
-          })()}
+          {/* Lista unica delle query AI: TOFU/MOFU non sono piu' visibili in UI
+              (rimangono nei dati per l'engine, ordinati TOFU prima poi MOFU). */}
+          {generatedQueries.length > 0 && (
+            <div className="card p-5 space-y-1.5">
+              {generatedQueries
+                .map((q, i) => ({ ...q, idx: i }))
+                .sort((a, b) => {
+                  // TOFU prima, MOFU dopo — mantiene ordine senza esporre la categoria
+                  if (a.funnel_stage === b.funnel_stage) return a.idx - b.idx;
+                  return a.funnel_stage === "TOFU" ? -1 : 1;
+                })
+                .map((q) => (
+                  <QueryPreviewRow key={q.idx} query={q} idx={q.idx} selected={selectedIndexes.has(q.idx)} onToggle={toggleQuery} onEdit={(idx, text) => {
+                    setGeneratedQueries((prev) => prev.map((p, i) => i === idx ? { ...p, text } : p));
+                  }} />
+                ))}
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex justify-between">

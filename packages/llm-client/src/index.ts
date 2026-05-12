@@ -21,6 +21,8 @@ export {
   AVI_PROVIDER_CARDS,
   AVI_DEMO_PROVIDERS,
   providersToModelIds,
+  modelIdToBrand,
+  providerIdToLogo,
   isModelAvailable,
   filterAvailableModels,
 } from "./models";

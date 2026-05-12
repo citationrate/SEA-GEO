@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, X, Loader2, Lock, Check, Search, ChevronDown, Globe, Sparkles, ChevronRight } from "lucide-react";
-import { AVI_PROVIDER_CARDS, AVI_DEMO_PROVIDERS, providersToModelIds, DEMO_MODEL_IDS } from "@citationrate/llm-client";
+import { AVI_PROVIDER_CARDS, AVI_DEMO_PROVIDERS, providersToModelIds, providerIdToLogo, DEMO_MODEL_IDS } from "@citationrate/llm-client";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
+import Image from "next/image";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
 import { trackAviStartTrialOnce } from "@/lib/meta-track";
@@ -532,9 +533,9 @@ export default function NewProjectPage() {
                   if (!p) return null;
                   return (
                     <span key={p.id} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-sm border border-primary/30 bg-primary/5 text-sm font-medium text-foreground">
+                      <Image src={providerIdToLogo(p.id)} alt="" width={16} height={16} className="shrink-0" />
+                      <span className="font-mono text-[0.69rem] tracking-wide text-foreground">{p.badge}</span>
                       <Check className="w-3.5 h-3.5 text-primary" />
-                      <span className={p.color}>{p.label}</span>
-                      <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{p.badge}</span>
                     </span>
                   );
                 })}
@@ -577,9 +578,10 @@ export default function NewProjectPage() {
                           </svg>
                         )}
                       </div>
+                      <Image src={providerIdToLogo(p.id)} alt="" width={20} height={20} className="shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className={`text-sm font-semibold ${isSelected ? "text-primary" : p.color}`}>{p.label}</div>
-                        <div className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{p.badge}</div>
+                        <div className={`text-sm font-semibold ${isSelected ? "text-primary" : "text-foreground"}`}>{p.badge}</div>
+                        <div className="font-mono text-[0.62rem] tracking-wide text-muted-foreground">{p.label}</div>
                       </div>
                     </button>
                   );

@@ -14,7 +14,8 @@ import { T } from "@/components/translated-label";
 import { BotMount } from "@/components/BotMount";
 import { buildProjectContext, normalizeLang } from "@/lib/bot-context";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
-import { PROVIDER_GROUPS, PRO_ONLY_MODEL_IDS, ENTERPRISE_ONLY_MODEL_IDS, MODEL_MAP } from "@citationrate/llm-client";
+import { PROVIDER_GROUPS, PRO_ONLY_MODEL_IDS, ENTERPRISE_ONLY_MODEL_IDS, MODEL_MAP, modelIdToBrand } from "@citationrate/llm-client";
+import Image from "next/image";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const auth = createServerClient();
@@ -108,8 +109,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     };
   });
 
-  const tofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "tofu");
-  const mofuQueries = (queries ?? []).filter((q: any) => q.funnel_stage === "mofu");
+  // Split per origine: AI (set_type generale/verticale/persona) vs Manuali
+  // (set_type = "manual"). Il funnel_stage TOFU/MOFU resta in DB per l'engine
+  // ma non viene piu' esposto come categoria UI.
+  const aiQueries = (queries ?? []).filter((q: any) => q.set_type && q.set_type !== "manual");
+  const manualQueries = (queries ?? []).filter((q: any) => !q.set_type || q.set_type === "manual");
 
   const proj = project as any;
 
@@ -198,7 +202,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               queryCount={(queries ?? []).length}
               segmentCount={(segments ?? []).length}
               modelsConfig={(proj.models_config as string[]) ?? ["gpt-5.4-mini"]}
-              mofuCount={mofuQueries.length}
+              mofuCount={(queries ?? []).filter((q: any) => q.funnel_stage === "mofu").length}
             />
           </div>
         </div>
@@ -220,16 +224,21 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           const isLockedPro = lockedProModels.includes(m);
           const isLockedEnterprise = lockedEnterpriseModels.includes(m);
           const isLocked = isLockedPro || isLockedEnterprise;
+          const exactLabel = MODEL_MAP.get(m)?.label ?? m;
+          const brand = modelIdToBrand(m);
+          // Tooltip mostra sempre la versione tecnica esatta (debugging + power user).
+          // Eventuale messaggio di lock-plan prevale.
           const lockTitle = isLockedEnterprise
             ? "Enterprise-only — escluso dalle prossime analisi finché non passi a Enterprise"
-            : isLockedPro ? "Pro-only — escluso dalle prossime analisi finché non passi a Pro" : undefined;
+            : isLockedPro ? "Pro-only — escluso dalle prossime analisi finché non passi a Pro" : exactLabel;
           return (
             <span
               key={m}
-              className={`badge text-[12px] ${isLocked ? "badge-muted text-amber-500 border-amber-500/30 bg-amber-500/10" : "badge-primary"}`}
+              className={`badge text-[12px] inline-flex items-center gap-1.5 ${isLocked ? "badge-muted text-amber-500 border-amber-500/30 bg-amber-500/10" : "badge-primary"}`}
               title={lockTitle}
             >
-              {MODEL_MAP.get(m)?.label ?? m}
+              {brand && <Image src={brand.logo} alt="" width={14} height={14} className="shrink-0" />}
+              {brand?.brand ?? exactLabel}
             </span>
           );
         })}
@@ -244,28 +253,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         )}
       </div>
 
-      {/* Banner: nuovi modelli disponibili nel piano */}
-      {canAddMore && (
-        <div className="flex items-start gap-2.5 px-4 py-3 rounded-[3px] border border-primary/20 bg-primary/5">
-          <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-          <div className="flex-1 text-sm">
-            <p className="text-foreground">
-              <span className="font-semibold">Modelli AI nuovi disponibili</span>
-              {" — "}
-              <span className="text-muted-foreground">{newModels.slice(0, 3).map((m) => m.label).join(", ")}{newModels.length > 3 ? ` +${newModels.length - 3}` : ""}</span>
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Aggiungili al progetto per misurare la tua presenza anche su queste AI. Lo storico esistente non cambia.
-            </p>
-          </div>
-          <a
-            href={`/projects/${params.id}/edit#models`}
-            className="text-xs font-medium text-primary hover:text-primary/80 whitespace-nowrap shrink-0"
-          >
-            Aggiungi →
-          </a>
-        </div>
-      )}
 
       {/* Banner: modelli pro-only ereditati (soft skip) */}
       {lockedProModels.length > 0 && (
@@ -366,46 +353,47 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       )}
 
       <div data-tour="project-queries" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Query TOFU */}
+        {/* Query AI — generate via wizard, raggruppa tutte le set_type
+            (generale/verticale/persona) e tutti i funnel stage (tofu/mofu). */}
         <div className="card p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-primary" />
-              <h2 className="font-display font-semibold text-foreground">Query TOFU</h2>
-              <span className="badge badge-muted text-[12px]">{tofuQueries.length}</span>
+              <Sparkles className="w-4 h-4 text-primary" />
+              <h2 className="font-display font-semibold text-foreground">Query AI</h2>
+              <span className="badge badge-muted text-[12px]">{aiQueries.length}</span>
             </div>
             <a href={`/projects/${params.id}/queries`} data-tour="add-query-btn" className="text-xs text-primary hover:text-primary/70 transition-colors">
               <Plus className="w-4 h-4" />
             </a>
           </div>
-          {tofuQueries.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center"><T k="queries.noQueryTofu" /></p>
+          {aiQueries.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Nessuna query AI ancora. Generale dal wizard.</p>
           ) : (
             <ul className="space-y-2">
-              {tofuQueries.map((q: any) => (
+              {aiQueries.map((q: any) => (
                 <QueryBadgeItem key={q.id} query={q} />
               ))}
             </ul>
           )}
         </div>
 
-        {/* Query MOFU */}
+        {/* Query Manuali — quelle inserite a mano dall'utente (set_type = "manual"). */}
         <div className="card p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-accent" />
-              <h2 className="font-display font-semibold text-foreground">Query MOFU</h2>
-              <span className="badge badge-muted text-[12px]">{mofuQueries.length}</span>
+              <h2 className="font-display font-semibold text-foreground">Query Manuali</h2>
+              <span className="badge badge-muted text-[12px]">{manualQueries.length}</span>
             </div>
             <a href={`/projects/${params.id}/queries`} className="text-xs text-primary hover:text-primary/70 transition-colors">
               <Plus className="w-4 h-4" />
             </a>
           </div>
-          {mofuQueries.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center"><T k="queries.noQueryMofu" /></p>
+          {manualQueries.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Nessuna query manuale. Aggiungile dal pulsante +.</p>
           ) : (
             <ul className="space-y-2">
-              {mofuQueries.map((q: any) => (
+              {manualQueries.map((q: any) => (
                 <QueryBadgeItem key={q.id} query={q} />
               ))}
             </ul>
