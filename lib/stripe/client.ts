@@ -83,10 +83,17 @@ export async function createSubscriptionCheckout(
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: successUrl,
     cancel_url: cancelUrl,
-    metadata: { user_id: userId },
+    metadata: { user_id: userId, legal_version: "1.0" },
     subscription_data: { metadata: { user_id: userId } },
     automatic_tax: { enabled: true },
     tax_id_collection: { enabled: true },
+    consent_collection: { terms_of_service: "required" },
+    custom_text: {
+      terms_of_service_acceptance: {
+        message:
+          "Accettando confermi di aver letto le [Condizioni di Vendita](https://suite.citationrate.com/legal/sale).",
+      },
+    },
   };
   if (stripeCustomerId) {
     params.customer = stripeCustomerId;
@@ -111,9 +118,16 @@ export async function createOneTimeCheckout(
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: successUrl,
     cancel_url: cancelUrl,
-    metadata: { user_id: userId },
+    metadata: { user_id: userId, legal_version: "1.0" },
     automatic_tax: { enabled: true },
     tax_id_collection: { enabled: true },
+    consent_collection: { terms_of_service: "required" },
+    custom_text: {
+      terms_of_service_acceptance: {
+        message:
+          "Accettando confermi di aver letto le [Condizioni di Vendita](https://suite.citationrate.com/legal/sale).",
+      },
+    },
   };
   if (stripeCustomerId) {
     params.customer = stripeCustomerId;

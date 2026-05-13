@@ -9,8 +9,6 @@ import {
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
 import { useConsultation } from "@/lib/consultation-context";
-import ScrollToAcceptModal from "@/components/scroll-to-accept-modal";
-import SaleTermsText from "@/components/sale-terms-text";
 
 interface PianoClientProps {
   plan: string;
@@ -116,8 +114,6 @@ export function PianoClient({
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [subscribing, setSubscribing] = useState<string | null>(null);
-  const [showSaleTerms, setShowSaleTerms] = useState(false);
-  const [pendingPriceEnv, setPendingPriceEnv] = useState<string | null>(null);
   const [purchaseResult, setPurchaseResult] = useState<"success" | "cancel" | null>(null);
   const { t } = useTranslation();
   const { openModal: openConsultation } = useConsultation();
@@ -154,15 +150,7 @@ export function PianoClient({
   const comparisonsLimit = limits.comparisons + liveExtraComparisons;
   const packages = isBase ? BASE_PACKAGES : isPro ? PRO_PACKAGES : [];
 
-  function handleSubscribe(priceEnv: string) {
-    setPendingPriceEnv(priceEnv);
-    setShowSaleTerms(true);
-  }
-
-  async function proceedToCheckout() {
-    const priceEnv = pendingPriceEnv;
-    if (!priceEnv) return;
-    setShowSaleTerms(false);
+  async function handleSubscribe(priceEnv: string) {
     setSubscribing(priceEnv);
     try {
       const res = await fetch("/api/stripe/create-checkout", {
@@ -174,7 +162,7 @@ export function PianoClient({
       if (data.url) window.location.href = data.url;
       else alert(data.error || "Errore");
     } catch { alert("Errore di rete"); }
-    finally { setSubscribing(null); setPendingPriceEnv(null); }
+    finally { setSubscribing(null); }
   }
 
   async function handleBuyPackage(priceEnv: string) {
@@ -535,15 +523,6 @@ export function PianoClient({
           {/* <InvoiceHistory /> — temporarily hidden, invoices are issued manually */}
         </div>
       )}
-
-      {/* Sale terms modal */}
-      <ScrollToAcceptModal
-        open={showSaleTerms}
-        onAccept={proceedToCheckout}
-        onClose={() => { setShowSaleTerms(false); setPendingPriceEnv(null); }}
-      >
-        <SaleTermsText />
-      </ScrollToAcceptModal>
 
       {/* Purchase result modal (Stripe return) */}
       {purchaseResult && (
