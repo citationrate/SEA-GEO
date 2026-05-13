@@ -252,7 +252,7 @@ export default function NewProjectPage() {
     : planId === "pro" ? PRO_MODEL_LIMIT
     : BASE_MODEL_LIMIT;
 
-  const [selectedProviders, setSelectedProviders] = useState<string[]>(["openai"]);
+  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const atLimit = selectedProviders.length >= providerCap;
 
   function toggleProvider(providerId: string) {

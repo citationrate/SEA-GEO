@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Play, Sparkles, RefreshCw, Wallet } from "lucide-react";
+import { Loader2, Play, Sparkles, RefreshCw, Wallet, Lock } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { COMPARISON_MODEL_IDS, PROVIDER_GROUPS } from "@citationrate/llm-client";
 import { useUsage } from "@/lib/hooks/useUsage";
+import { BrandLogo } from "@/components/brand-logos";
 
 const RUNS_PER_QUERY = 3;
 
@@ -290,10 +291,8 @@ export function NewCompetitiveForm({
       {/* Model selector — provider cards like project creation */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-foreground">{t("competitiveForm.aiModels")}</label>
-        <p className="text-xs text-muted-foreground">
-          {t("competitiveForm.aiModelsDesc")}
-        </p>
-        <div className="space-y-2">
+        <p className="text-xs text-muted-foreground">{t("competitiveForm.aiModelsDesc")}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {COMPARISON_PROVIDERS.map((p) => {
             const isSelected = selectedModels.has(p.modelId);
             return (
@@ -301,10 +300,10 @@ export function NewCompetitiveForm({
                 key={p.modelId}
                 type="button"
                 onClick={() => toggleModel(p.modelId)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm border transition-all text-left ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-sm border text-left transition-all ${
                   isSelected
                     ? "border-primary/50 bg-primary/5"
-                    : "border-border hover:border-border/80"
+                    : "border-border hover:bg-muted/30"
                 }`}
               >
                 <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center shrink-0 ${
@@ -316,21 +315,24 @@ export function NewCompetitiveForm({
                     </svg>
                   )}
                 </div>
+                <BrandLogo id={p.providerId} size={20} />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-semibold ${isSelected ? p.color : "text-muted-foreground"}`}>{p.providerLabel}</span>
-                    <span className="font-mono text-[0.69rem] tracking-wide text-muted-foreground">{p.badge}</span>
-                    <span className={`text-sm font-medium ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>— {p.modelLabel}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{t(p.descriptionKey)}</p>
+                  <div className={`text-sm font-semibold ${isSelected ? "text-primary" : "text-foreground"}`}>{p.badge}</div>
+                  <div className="font-mono text-[0.62rem] tracking-wide text-muted-foreground">{p.modelLabel}</div>
                 </div>
               </button>
             );
           })}
         </div>
-        <p className="text-xs text-muted-foreground">
-          <span className="text-foreground font-bold">{selectedModels.size}</span> {t("competitiveForm.modelWord")} {t("competitiveForm.selectedSummary")} · {RUNS_PER_QUERY} {t("competitiveForm.runsPerQuery")}
-        </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-start gap-2">
+            <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground">{t("projects.modelsFixed")}</p>
+          </div>
+          <p className="text-xs text-muted-foreground shrink-0 ml-4">
+            <span className="text-foreground font-bold">{selectedModels.size}</span> {t("competitiveForm.modelWord")} {t("competitiveForm.selectedSummary")} · {RUNS_PER_QUERY} {t("competitiveForm.runsPerQuery")}
+          </p>
+        </div>
       </div>
 
       {/* Query source selector — shown when wallet has confronti */}

@@ -7,7 +7,6 @@ import { ProjectAVITrend } from "./project-avi-trend";
 import { DeleteProjectButton } from "./delete-project-button";
 import { OpenAnalysisButton } from "./open-analysis-button";
 import { ArchivedRunsSection } from "./archived-runs-section";
-import ProjectVolumesPanel from "./project-volumes-panel";
 import { AutoLaunch } from "./auto-launch";
 import { ProjectTutorialClient } from "./project-tutorial-client";
 import { T } from "@/components/translated-label";
@@ -466,15 +465,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       {/* AVI Trend Chart */}
       {trendData.length > 0 && (
         <ProjectAVITrend data={trendData} models={allModels} />
-      )}
-
-      {/* Sprint 2 — AI Volumes per project query (cached, refreshed on each viz) */}
-      {Array.isArray(queries) && queries.length > 0 && (
-        <ProjectVolumesPanel
-          projectId={params.id}
-          country={(project as any).country}
-          queries={(queries as any).map((q: any) => ({ id: q.id, text: q.text, is_active: q.is_active }))}
-        />
       )}
 
       {/* Archived runs */}
