@@ -8,8 +8,10 @@ export const metadata = { title: "Risultati" };
 export default async function ResultsPage() {
   const auth = createServerClient();
   // Cookie-only auth — middleware already gates this route.
-  const { data: { session } } = await auth.auth.getSession();
-  const user = session?.user ?? null;
+  // SECURITY: getUser() validates the JWT with Supabase Auth; getSession() reads only
+  // the cookie and can return a stale identity (cross-account contamination from
+  // chunked-cookie remnants after Suite->AVI handoff).
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) redirect("/login");
 
   const supabase = createDataClient();

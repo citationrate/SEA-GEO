@@ -10,8 +10,9 @@ export const metadata = { title: "Piano · Brand Profile" };
 
 export default async function BrandProfilePianoPage() {
   const auth = createServerClient();
-  const { data: { session } } = await auth.auth.getSession();
-  const user = session?.user ?? null;
+  // SECURITY: getUser() validates the JWT; getSession() only reads the cookie
+  // and can return a stale identity after cross-account handoffs.
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) redirect("/login");
 
   const cr = createCitationRateServiceClient();

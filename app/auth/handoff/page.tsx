@@ -29,16 +29,25 @@ function HandoffInner() {
     // Use the same singleton client the whole app uses
     const supabase = createClient();
 
-    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-      .then(({ data, error: err }) => {
-        if (err || !data.session) {
-          console.error("[handoff] setSession failed:", err?.message);
-          setError("Sessione non valida. Riprova il login.");
-          return;
-        }
-        console.log("[handoff] Session set OK, redirecting to", safeNext || "/dashboard");
-        // Use window.location for a full page load (not client-side navigation)
-        window.location.href = safeNext || "/dashboard";
+    // Hardening: clear any local session state BEFORE adopting the new one.
+    // Without this, residual chunked cookies from a previous account on the
+    // same browser can survive (signOut local wipes the browser's view of
+    // sb-auth-* cookies) and contaminate the new identity. scope:'local'
+    // does NOT invalidate the new refresh_token on the server.
+    supabase.auth.signOut({ scope: "local" })
+      .catch(() => { /* nothing to sign out from — fine */ })
+      .finally(() => {
+        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+          .then(({ data, error: err }) => {
+            if (err || !data.session) {
+              console.error("[handoff] setSession failed:", err?.message);
+              setError("Sessione non valida. Riprova il login.");
+              return;
+            }
+            console.log("[handoff] Session set OK, redirecting to", safeNext || "/dashboard");
+            // Use window.location for a full page load (not client-side navigation)
+            window.location.href = safeNext || "/dashboard";
+          });
       });
   }, [params, router]);
 

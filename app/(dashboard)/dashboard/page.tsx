@@ -13,11 +13,11 @@ export default async function DashboardPage({
   searchParams: { projectId?: string; model?: string };
 }) {
   const auth = createServerClient();
-  // Use getSession() — reads the JWT from the cookie without an Auth API
-  // round-trip. Saves ~50-100ms on every dashboard render. We trust the
-  // signed cookie because middleware.ts already gates this route.
-  const { data: { session } } = await auth.auth.getSession();
-  const user = session?.user ?? null;
+  // getUser() validates the JWT with Supabase Auth. getSession() reads only
+  // the cookie and can return a stale identity if cookies are in a mixed
+  // state (cross-account contamination after Suite->AVI handoff with
+  // chunked cookie remnants). Validation is mandatory on the server.
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) return <DashboardClient aviScore={null} aviTrend={null} stats={[]} trendData={[]} recentRuns={[]} competitorBarData={[]} projects={[]} />;
 
   const supabase = createDataClient();

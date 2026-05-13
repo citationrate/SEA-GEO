@@ -12,7 +12,10 @@ export async function POST(request: Request) {
     const code = (body.code || "").trim().toUpperCase();
     if (!code) return NextResponse.json({ error: "Codice non valido" }, { status: 400 });
 
-    // Get auth token from CitationRate (shared auth)
+    // Validate identity (getUser hits the Auth API; getSession only reads cookies).
+    // After validation, getSession() is safe to call to obtain the access_token.
+    const { data: { user: validatedUser } } = await supabase.auth.getUser();
+    if (!validatedUser) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
 
