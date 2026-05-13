@@ -49,7 +49,7 @@ const DEFAULTS: UsageData = {
   plan: null,
   planId: "demo",
   browsingPromptsUsed: 0, browsingPromptsLimit: 0, browsingPromptsRemaining: 0, browsingUnlimited: false,
-  noBrowsingPromptsUsed: 0, noBrowsingPromptsLimit: 40, noBrowsingPromptsRemaining: 40, noBrowsingUnlimited: false,
+  noBrowsingPromptsUsed: 0, noBrowsingPromptsLimit: 10, noBrowsingPromptsRemaining: 10, noBrowsingUnlimited: false,
   comparisonsUsed: 0, comparisonsLimit: 0, comparisonsRemaining: 0, comparisonsUnlimited: false,
   extraBrowsingPrompts: 0, extraNoBrowsingPrompts: 0, extraComparisons: 0,
   urlAnalysesUsed: 0, urlAnalysesLimit: 0, urlAnalysesRemaining: 0, urlAnalysesUnlimited: false,
@@ -58,7 +58,7 @@ const DEFAULTS: UsageData = {
   maxModelsPerProject: 2,
   wallet: { browsingQueries: 0, noBrowsingQueries: 0, confronti: 0 },
   isDemo: true, isPro: false, isEnterprise: false, hasProFeatures: false, loading: true,
-  promptsUsed: 0, promptsLimit: 40, promptsRemaining: 40,
+  promptsUsed: 0, promptsLimit: 10, promptsRemaining: 10,
   refetch: async () => {},
 };
 

@@ -30,7 +30,7 @@ interface PianoClientProps {
 // so UsageBar doesn't produce Infinity/NaN. 100 is the explicit cap we set
 // for Enterprise context analyses (the one non-unlimited Enterprise limit).
 const LIMITS: Record<string, { totalPrompts: number; browsing: number; comparisons: number; urlAnalyses: number; contextAnalyses: number }> = {
-  demo:       { totalPrompts: 40,     browsing: 0,      comparisons: 0,      urlAnalyses: 0,      contextAnalyses: 0   },
+  demo:       { totalPrompts: 10,     browsing: 0,      comparisons: 0,      urlAnalyses: 0,      contextAnalyses: 0   },
   base:       { totalPrompts: 100,    browsing: 30,     comparisons: 0,      urlAnalyses: 0,      contextAnalyses: 0   },
   pro:        { totalPrompts: 300,    browsing: 90,     comparisons: 10,     urlAnalyses: 50,     contextAnalyses: 5   },
   enterprise: { totalPrompts: 999999, browsing: 999999, comparisons: 999999, urlAnalyses: 999999, contextAnalyses: 999999 },
@@ -54,7 +54,7 @@ interface PlanFeature {
 
 function getAviFeatures(t: (k: string) => string): PlanFeature[] {
   return [
-    { label: t("piano.promptsMonth"),           demo: "40",                          base: "100",                       pro: "300",                        enterprise: t("piano.unlimited") },
+    { label: t("piano.promptsMonth"),           demo: "10",                          base: "100",                       pro: "300",                        enterprise: t("piano.unlimited") },
     { label: t("piano.realtimeBrowsing"),       demo: false,                         base: `30 ${t("piano.prompt")}`,   pro: `90 ${t("piano.prompt")}`,    enterprise: t("piano.unlimitedM") },
     { label: t("piano.aiModels"),               demo: `2 ${t("piano.fixed")}`,       base: `6 ${t("piano.selectable")}`, pro: t("piano.allPlusPro"),       enterprise: t("piano.allPlusPro") },
     { label: t("piano.maxModelsProject"),       demo: "2",                           base: "3",                         pro: "5",                          enterprise: "10" },
@@ -408,7 +408,7 @@ export function PianoClient({
                     {/* Header row */}
                     <div className="grid" style={{ gridTemplateColumns: ROW_GRID }}>
                       <div className="p-4" />
-                      {headerCell("demo", "Demo", <span>{t("piano.free")}</span>, "40 prompt", isDemo ? <p className="text-xs font-medium" style={{ color: PLAN_COLORS.demo }}>{t("piano.activePlan")}</p> : <div className="h-[38px]" />, isDemo)}
+                      {headerCell("demo", "Demo", <span>{t("piano.free")}</span>, "10 prompt", isDemo ? <p className="text-xs font-medium" style={{ color: PLAN_COLORS.demo }}>{t("piano.activePlan")}</p> : <div className="h-[38px]" />, isDemo)}
                       {headerCell("base", "Base", <><span>€{annual ? "649" : "59"}</span><span className="text-xs font-normal text-muted-foreground">{annual ? t("piano.perYear") : t("piano.perMonth")}</span></>, annual ? `€54,08${t("piano.perMonth")} · ${t("piano.save")} €59` : t("piano.plusVat"), isBase ? <p className="text-xs font-medium" style={{ color: PLAN_COLORS.base }}>{t("piano.activePlan")}</p> : isDemo ? (
                         <button onClick={() => handleSubscribe(annual ? "STRIPE_PRICE_BASE_YEARLY" : "STRIPE_PRICE_BASE_MONTHLY")} disabled={!!subscribing} className="w-full py-2 text-xs font-semibold rounded-[2px] transition-all disabled:opacity-50" style={{ background: PLAN_COLORS.base, color: "#fff" }}>{subscribing?.includes("BASE") ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : t("piano.subscribe")}</button>
                       ) : <div className="h-[34px]" />, isBase)}

@@ -30,7 +30,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
     }
 
-    const { project_id, count, tofu_pct, categoria, mercato, luogo, punti_di_forza, competitor, obiezioni, personas, lang } = parsed.data;
+    const { project_id, count: requestedCount, tofu_pct, categoria, mercato, luogo, punti_di_forza, competitor, obiezioni, personas, lang } = parsed.data;
+
+    // Demo plan: cap AI generation at 5 query (matches the 10-prompt budget).
+    // Read plan from the data project (seageo1).
+    const { data: profileRow } = await (supabase.from("profiles") as any)
+      .select("plan")
+      .eq("id", user.id)
+      .single();
+    const userPlan = (profileRow as any)?.plan ?? "demo";
+    const count = userPlan === "demo" ? Math.min(requestedCount, 5) : requestedCount;
 
     // Load project with all context
     const { data: project } = await supabase

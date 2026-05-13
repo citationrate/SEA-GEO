@@ -64,6 +64,7 @@ export default function GenerateQueriesPage() {
   const [queryCount, setQueryCount] = useState(10);
   const [customCount, setCustomCount] = useState(30);
   const [tofuPercent, setTofuPercent] = useState(60);
+  const isDemoPlan = planId === "demo";
 
   // Step 3: Preview
   const [generatedQueries, setGeneratedQueries] = useState<GeneratedQuery[]>([]);
@@ -75,6 +76,9 @@ export default function GenerateQueriesPage() {
       const plan = p?.plan ?? "demo";
       setPlanId(plan === "demo" ? "demo" : plan === "base" ? "base" : plan === "pro" ? "pro" : plan === "enterprise" ? "enterprise" : "demo");
       setIsPro(plan === "pro" || plan === "enterprise");
+      // Demo plan is locked to 5 AI-generated queries (matches the 10-prompt
+      // budget = 2 modelli x 5 query).
+      if (plan === "demo") setQueryCount(5);
     }).catch(() => {}).finally(() => setProfileLoaded(true));
 
     fetch(`/api/queries?project_id=${projectId}`).then((r) => r.json()).then((qs) => {
@@ -106,7 +110,8 @@ export default function GenerateQueriesPage() {
 
   // Enterprise: effectively unlimited per Piano table ("Generazione query AI" = ✓).
   // Cap at 9999 just to keep the math finite (backend has no monthly limit).
-  const monthlyLimit = planId === "enterprise" ? 9999 : planId === "pro" ? 500 : planId === "base" ? 100 : 40;
+  // Demo: bloccato a 5 query (matches 10-prompt budget = 2 modelli x 5 query).
+  const monthlyLimit = planId === "enterprise" ? 9999 : planId === "pro" ? 500 : planId === "base" ? 100 : 5;
   const usedThisMonth = existingQueryCount;
 
   function buildInputs(): GenerationInputs {
@@ -427,7 +432,7 @@ export default function GenerateQueriesPage() {
           <h2 className="font-display font-semibold text-foreground">{t("generateQueries.howManyQueries")}</h2>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {QUERY_COUNT_OPTIONS.map((opt) => {
+            {(isDemoPlan ? QUERY_COUNT_OPTIONS.filter((o) => o.value === 5) : QUERY_COUNT_OPTIONS).map((opt) => {
               const isSelected = queryCount === opt.value;
               return (
                 <button
@@ -449,7 +454,8 @@ export default function GenerateQueriesPage() {
             })}
           </div>
 
-          {/* Custom count */}
+          {/* Custom count — non disponibile per il piano demo (cap fisso a 5) */}
+          {!isDemoPlan && (
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -473,6 +479,7 @@ export default function GenerateQueriesPage() {
               />
             )}
           </div>
+          )}
 
           {/* Split TOFU/MOFU mantenuto internamente a 60/40 (default sensato per
               coprire awareness + comparison). Nascosto dalla UI: l'utente non

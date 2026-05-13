@@ -68,11 +68,11 @@ export function tplW0(input: BaseInput) {
     ),
     paragraph(
       `&bull; <strong>Citability Score</strong> — audit del tuo sito su 7 motori AI<br>` +
-      `&bull; <strong>AVI</strong> — analisi multi-LLM su 40 prompt branded`,
+      `&bull; <strong>AVI</strong> — analisi multi-LLM su 10 prompt branded`,
     ),
     emailButton(withUtm(URL_AUDIT, "W0"), "Avvia il tuo primo audit"),
     paragraph(
-      `In alternativa puoi partire da AVI (40 prompt gratuiti): <a href="${escapeHtml(withUtm(URL_AVI, "W0"))}">avi.citationrate.com</a>.`,
+      `In alternativa puoi partire da AVI (10 prompt gratuiti): <a href="${escapeHtml(withUtm(URL_AVI, "W0"))}">avi.citationrate.com</a>.`,
     ),
     paragraph(`Se ti serve qualsiasi cosa, rispondi a questa mail.`),
   ].join("");
@@ -89,7 +89,7 @@ export function tplW0(input: BaseInput) {
     ),
     emailButton(withUtm(URL_AUDIT, "W0"), "Start your free audit"),
     paragraph(
-      `Or start with AVI (40 free prompts): <a href="${escapeHtml(withUtm(URL_AVI, "W0"))}">avi.citationrate.com</a>.`,
+      `Or start with AVI (10 free prompts): <a href="${escapeHtml(withUtm(URL_AVI, "W0"))}">avi.citationrate.com</a>.`,
     ),
     paragraph(`If you need anything, just reply to this email.`),
   ].join("");
@@ -98,7 +98,7 @@ export function tplW0(input: BaseInput) {
     subject: `Welcome to CitationRate | Benvenuto in CitationRate`,
     html: emailLayout({
       lang: "it",
-      preview: `Tutto pronto: 1 audit + 40 prompt AVI in 30 secondi.`,
+      preview: `Tutto pronto: 1 audit + 10 prompt AVI in 30 secondi.`,
       bodyInner: itBody + bilingualDivider() + enBody,
     }),
   };
@@ -125,7 +125,7 @@ export function tpl1A(input: BaseInput & { daysSinceSignup: number }) {
     ),
     emailButton(withUtm(URL_AUDIT, "1A"), "Avvia il tuo audit gratuito"),
     paragraph(
-      `Se preferisci AVI (analisi multi-LLM su prompt branded), hai 40 prompt gratuiti pronti: <a href="${escapeHtml(withUtm(URL_AVI, "1A"))}">Apri AVI</a>.`,
+      `Se preferisci AVI (analisi multi-LLM su prompt branded), hai 10 prompt gratuiti pronti: <a href="${escapeHtml(withUtm(URL_AVI, "1A"))}">Apri AVI</a>.`,
     ),
   ].join("");
 
@@ -142,12 +142,12 @@ export function tpl1A(input: BaseInput & { daysSinceSignup: number }) {
     ),
     emailButton(withUtm(URL_AUDIT, "1A"), "Start your free audit"),
     paragraph(
-      `If you'd rather try AVI (multi-LLM analysis on branded prompts), you have 40 free prompts ready: <a href="${escapeHtml(withUtm(URL_AVI, "1A"))}">Open AVI</a>.`,
+      `If you'd rather try AVI (multi-LLM analysis on branded prompts), you have 10 free prompts ready: <a href="${escapeHtml(withUtm(URL_AVI, "1A"))}">Open AVI</a>.`,
     ),
   ].join("");
 
   return {
-    subject: `Your free audit is waiting | Hai 1 audit + 40 prompt AVI in attesa`,
+    subject: `Your free audit is waiting | Hai 1 audit + 10 prompt AVI in attesa`,
     html: emailLayout({
       lang: "it",
       preview: `Il tuo audit gratuito è pronto, dura 30 secondi e non richiede alcun pagamento.`,
@@ -244,7 +244,7 @@ export function tpl1C(input: BaseInput & { brand: string; country?: string | nul
     paragraph(
       `Quando un cliente chiede consigli ai motori AI sul tuo settore, ${escapeHtml(brand)} appare solo nel ${presenceRound}% dei casi. Tradotto: nelle restanti ${100 - presenceRound} richieste su 100, è un competitor a prendersi la conversazione (e il lead).`,
     ),
-    paragraph(`La demo gratuita usa 40 prompt no-browsing fissi. Con il piano Base hai a disposizione:`),
+    paragraph(`La demo gratuita usa 10 prompt no-browsing fissi. Con il piano Base hai a disposizione:`),
     paragraph(
       `&bull; 30 prompt con web browsing live (vedere come ChatGPT ti cerca davvero)<br>&bull; 100 prompt no-browsing (più del triplo della demo)<br>&bull; 3 modelli AI selezionabili<br>&bull; Run multipli per misurare il delta nel tempo`,
     ),
@@ -290,7 +290,7 @@ export function tplD1(input: BaseInput) {
   const itBody = [
     paragraph(`Ciao ${escapeHtml(nIt)},`),
     paragraph(
-      `ieri ti sei iscritto a CitationRate. Ti scriviamo solo per ricordarti che hai 1 audit + 40 prompt AVI gratuiti, pronti per essere usati.`,
+      `ieri ti sei iscritto a CitationRate. Ti scriviamo solo per ricordarti che hai 1 audit + 10 prompt AVI gratuiti, pronti per essere usati.`,
     ),
     paragraph(`In 30 secondi capisci se la tua azienda esiste per:`),
     paragraph(`&bull; ChatGPT<br>&bull; Claude<br>&bull; Gemini<br>&bull; Perplexity<br>&bull; Copilot<br>&bull; AIMode<br>&bull; Grok`),
@@ -313,7 +313,7 @@ export function tplD1(input: BaseInput) {
     subject: `Ready for your first audit? | Pronto per il tuo primo audit?`,
     html: emailLayout({
       lang: "it",
-      preview: `1 audit + 40 prompt AVI gratuiti, in 30 secondi.`,
+      preview: `1 audit + 10 prompt AVI gratuiti, in 30 secondi.`,
       bodyInner: itBody + bilingualDivider() + enBody,
     }),
   };
@@ -342,7 +342,7 @@ export function tplD2(input: BaseInput & { sector?: string; city?: string }) {
     paragraph(
       `CitationRate misura esattamente questo, sui 7 motori AI principali (ChatGPT, Claude, Gemini, Perplexity, Copilot, AIMode, Grok).`,
     ),
-    paragraph(`Hai 1 audit + 40 prompt gratuiti in attesa:`),
+    paragraph(`Hai 1 audit + 10 prompt gratuiti in attesa:`),
     emailButton(withUtm(URL_AUDIT, "D2"), "Inizia in 30 secondi"),
   ].join("");
 
@@ -358,7 +358,7 @@ export function tplD2(input: BaseInput & { sector?: string; city?: string }) {
     paragraph(
       `CitationRate measures exactly this, across the 7 main AI engines (ChatGPT, Claude, Gemini, Perplexity, Copilot, AIMode, Grok).`,
     ),
-    paragraph(`You have 1 audit + 40 free prompts ready:`),
+    paragraph(`You have 1 audit + 10 free prompts ready:`),
     emailButton(withUtm(URL_AUDIT, "D2"), "Start in 30 seconds"),
   ].join("");
 
@@ -384,7 +384,7 @@ export function tplD3(input: BaseInput) {
     paragraph(
       `ti sei registrato a CitationRate una settimana fa e non hai ancora avviato un audit. Capita: tante cose da fare, poco tempo per provare strumenti nuovi.`,
     ),
-    paragraph(`Il tuo audit gratuito (1 CS + 40 prompt AVI) resta in attesa senza scadenza:`),
+    paragraph(`Il tuo audit gratuito (1 CS + 10 prompt AVI) resta in attesa senza scadenza:`),
     emailButton(withUtm(URL_AUDIT, "D3"), "Apri CitationRate"),
   ].join("");
 
@@ -485,7 +485,7 @@ export function tplD4_AVI(input: BaseInput & { brand: string; projectId: string;
     paragraph(`il tuo primo run AVI per <strong>${escapeHtml(brand)}</strong> è completo:`),
     statTable([
       ["AVI", `<strong>${Math.round(result.aviScore)}/100</strong>`],
-      ["Presenza", `${presenceRound}% sui 40 prompt branded`],
+      ["Presenza", `${presenceRound}% sui 10 prompt branded`],
       ["Sentiment", `${Math.round(result.sentiment)}/100`],
       ...(result.avgRank ? ([["Posizione media", result.avgRank.toFixed(1)]] as Array<[string, string]>) : []),
     ]),
@@ -580,7 +580,7 @@ export function tplD5_AVI(input: BaseInput & { brand: string; aviScore: number }
       `3 giorni fa hai fatto il tuo primo run AVI per ${escapeHtml(brand)}: AVI ${Math.round(aviScore)}/100.`,
     ),
     paragraph(
-      `I 40 prompt della demo sono no-browsing fissi, ti fornisce una situazione generale. Per vedere come i motori AI ti cercano DAVVERO (con web search live), per confrontarti con i competitor e per usare modelli in parallelo scopri Base.`,
+      `I 10 prompt della demo sono no-browsing fissi, ti fornisce una situazione generale. Per vedere come i motori AI ti cercano DAVVERO (con web search live), per confrontarti con i competitor e per usare modelli in parallelo scopri Base.`,
     ),
     paragraph(
       `Soprattutto: con run multipli misuri il delta del tuo AVI nel tempo. Se non monitori, non sai se le modifiche che fai stanno funzionando.`,
@@ -603,7 +603,7 @@ export function tplD5_AVI(input: BaseInput & { brand: string; aviScore: number }
   ].join("");
 
   return {
-    subject: `What's beyond the 40 prompts | Cosa c'è oltre i 40 prompt`,
+    subject: `What's beyond the 10 prompts | Cosa c'è oltre i 10 prompt`,
     html: emailLayout({
       lang: "it",
       preview: `La demo dà una situazione generale — Base mostra il quadro reale.`,
