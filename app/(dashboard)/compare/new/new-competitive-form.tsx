@@ -2,13 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Play, Sparkles, RefreshCw, Wallet, Lock } from "lucide-react";
+import { Loader2, Play, Sparkles, RefreshCw, Wallet } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { COMPARISON_MODEL_IDS, PROVIDER_GROUPS } from "@citationrate/llm-client";
 import { useUsage } from "@/lib/hooks/useUsage";
 import { BrandLogo } from "@/components/brand-logos";
-
-const RUNS_PER_QUERY = 3;
 
 /** Build comparison provider cards from the canonical PROVIDER_GROUPS, filtered to comparison models only */
 const COMPARISON_PROVIDERS = PROVIDER_GROUPS
@@ -57,7 +55,7 @@ export function NewCompetitiveForm({
   const [error, setError] = useState("");
   const [generatedQueries, setGeneratedQueries] = useState<{ pattern: string; text: string }[] | null>(null);
   const [generatingQueries, setGeneratingQueries] = useState(false);
-  const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set(COMPARISON_MODEL_IDS));
+  const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [querySource, setQuerySource] = useState<"plan" | "wallet">("plan");
 
   const selectedProject = projects.find((p) => p.id === projectId);
@@ -76,12 +74,8 @@ export function NewCompetitiveForm({
   function toggleModel(modelId: string) {
     setSelectedModels((prev) => {
       const next = new Set(prev);
-      if (next.has(modelId)) {
-        if (next.size <= 1) return prev; // minimum 1
-        next.delete(modelId);
-      } else {
-        next.add(modelId);
-      }
+      if (next.has(modelId)) next.delete(modelId);
+      else next.add(modelId);
       return next;
     });
   }
@@ -118,7 +112,7 @@ export function NewCompetitiveForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!projectId || !brandB.trim() || !effectiveDriver.trim()) return;
+    if (!projectId || !brandB.trim() || !effectiveDriver.trim() || selectedModels.size === 0) return;
     setLoading(true);
     setError("");
 
@@ -318,20 +312,10 @@ export function NewCompetitiveForm({
                 <BrandLogo id={p.providerId} size={20} />
                 <div className="flex-1 min-w-0">
                   <div className={`text-sm font-semibold ${isSelected ? "text-primary" : "text-foreground"}`}>{p.badge}</div>
-                  <div className="font-mono text-[0.62rem] tracking-wide text-muted-foreground">{p.modelLabel}</div>
                 </div>
               </button>
             );
           })}
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-start gap-2">
-            <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
-            <p className="text-xs text-muted-foreground">{t("projects.modelsFixed")}</p>
-          </div>
-          <p className="text-xs text-muted-foreground shrink-0 ml-4">
-            <span className="text-foreground font-bold">{selectedModels.size}</span> {t("competitiveForm.modelWord")} {t("competitiveForm.selectedSummary")} · {RUNS_PER_QUERY} {t("competitiveForm.runsPerQuery")}
-          </p>
         </div>
       </div>
 
@@ -382,7 +366,7 @@ export function NewCompetitiveForm({
       ) : (
         <button
           type="submit"
-          disabled={loading || !brandB.trim() || !effectiveDriver.trim()}
+          disabled={loading || !brandB.trim() || !effectiveDriver.trim() || selectedModels.size === 0}
           className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
