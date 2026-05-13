@@ -8,30 +8,42 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   console.log("[BRAND-QUESTIONS] Request received:", JSON.stringify(body).slice(0, 300));
-  const { categoria, mercato, punti_di_forza, competitor, obiezioni, lang } = body;
+  const { categoria, mercato, punti_di_forza, competitor, obiezioni, lang, mode, theme } = body;
 
-  if (!categoria) {
+  const isSpecific = mode === "specifiche" && typeof theme === "string" && theme.trim().length > 0;
+
+  if (!isSpecific && !categoria) {
     console.log("[BRAND-QUESTIONS] Missing categoria");
     return NextResponse.json({ error: "Category required" }, { status: 400 });
   }
 
-  const context = [
-    `Category: ${categoria}`,
-    mercato ? `Market: ${mercato}` : null,
-    punti_di_forza?.length ? `Strengths: ${punti_di_forza.join(", ")}` : null,
-    competitor?.length ? `Competitors: ${competitor.join(", ")}` : null,
-    obiezioni?.length ? `Common objections: ${obiezioni.join(", ")}` : null,
-  ].filter(Boolean).join("\n");
+  const context = isSpecific
+    ? [
+        `Topic to investigate: ${String(theme).trim()}`,
+        categoria ? `Category: ${categoria}` : null,
+        mercato ? `Market: ${mercato}` : null,
+      ].filter(Boolean).join("\n")
+    : [
+        `Category: ${categoria}`,
+        mercato ? `Market: ${mercato}` : null,
+        punti_di_forza?.length ? `Strengths: ${punti_di_forza.join(", ")}` : null,
+        competitor?.length ? `Competitors: ${competitor.join(", ")}` : null,
+        obiezioni?.length ? `Common objections: ${obiezioni.join(", ")}` : null,
+      ].filter(Boolean).join("\n");
 
   const langName: Record<string, string> = { it: "Italian", en: "English", fr: "French", de: "German", es: "Spanish" };
   const outputLang = langName[lang] ?? "English";
+
+  const systemPrompt = isSpecific
+    ? `You are an expert in brand marketing and AI visibility. The user wants AI search queries focused on ONE specific topic of their brand. Given the topic and context below, generate exactly 3 short, specific questions that help clarify WHY the user cares about this topic, WHO the target buyer is for it, and WHAT differentiates the brand on this topic. The questions must be in ${outputLang}, practical, and useful to refine query generation about this single topic. Respond ONLY with a JSON array: ["question1", "question2", "question3"]`
+    : `You are an expert in brand marketing and AI visibility. Analyze the following brand context and generate exactly 3 short, specific questions that would help you better understand the brand to generate AI queries more representative of its real market. The questions must be in ${outputLang}, practical, and refer to real user purchasing behaviors. Respond ONLY with a JSON array: ["question1", "question2", "question3"]`;
 
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 300,
-      system: `You are an expert in brand marketing and AI visibility. Analyze the following brand context and generate exactly 3 short, specific questions that would help you better understand the brand to generate AI queries more representative of its real market. The questions must be in ${outputLang}, practical, and refer to real user purchasing behaviors. Respond ONLY with a JSON array: ["question1", "question2", "question3"]`,
+      system: systemPrompt,
       messages: [{ role: "user", content: context }],
     });
 

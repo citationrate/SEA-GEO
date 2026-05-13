@@ -46,6 +46,8 @@ export default function GenerateQueriesPage() {
   const [existingQueryCount, setExistingQueryCount] = useState(0);
 
   // Step 1: Inputs
+  const [genMode, setGenMode] = useState<"generali" | "specifiche">("generali");
+  const [theme, setTheme] = useState("");
   const [categoria, setCategoria] = useState("");
   const [mercato, setMercato] = useState("");
   const [luogo, setLuogo] = useState("");
@@ -97,16 +99,25 @@ export default function GenerateQueriesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, luogoParam]);
 
-  // Auto-AI-intake: appena la categoria e' stabile (>=3 char, debounce 1500ms),
-  // chiama generateAiQuestions in modo che le 3 domande appaiano da sole.
-  // L'utente non deve cliccare un bottone "Aiutami a definire": piu' snello.
+  // Auto-AI-intake: appena il trigger (categoria in "generali", tema in
+  // "specifiche") e' stabile (>=3 char, debounce 1500ms), chiama
+  // generateAiQuestions in modo che le 3 domande appaiano da sole.
   useEffect(() => {
-    const trimmed = categoria.trim();
-    if (trimmed.length < 3 || showAiIntake || aiQuestionsLoading || aiQuestions.length > 0) return;
+    const trigger = genMode === "specifiche" ? theme.trim() : categoria.trim();
+    if (trigger.length < 3 || showAiIntake || aiQuestionsLoading || aiQuestions.length > 0) return;
     const t = setTimeout(() => { generateAiQuestions(); }, 1500);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoria]);
+  }, [categoria, theme, genMode]);
+
+  // Cambio di modalita': reset delle 3 domande AI per rigenerarle sul nuovo
+  // contesto (brand-360 vs theme-focused).
+  useEffect(() => {
+    setShowAiIntake(false);
+    setAiQuestions([]);
+    setAiAnswers(["", "", ""]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [genMode]);
 
   // Enterprise: effectively unlimited per Piano table ("Generazione query AI" = ✓).
   // Cap at 9999 just to keep the math finite (backend has no monthly limit).
@@ -139,7 +150,9 @@ export default function GenerateQueriesPage() {
   }
 
   function goToStep2() {
-    if (!categoria.trim()) { toast.error(t("generateQueries.insertCategory")); return; }
+    if (genMode === "specifiche") {
+      if (!theme.trim()) { toast.error(t("generateQueries.insertCategory")); return; }
+    } else if (!categoria.trim()) { toast.error(t("generateQueries.insertCategory")); return; }
     setStep(2);
   }
 
@@ -156,6 +169,8 @@ export default function GenerateQueriesPage() {
           project_id: projectId,
           count: targetCount,
           tofu_pct: tofuPercent,
+          mode: genMode,
+          theme: genMode === "specifiche" ? (theme.trim() || undefined) : undefined,
           categoria: categoria.trim() || undefined,
           mercato: mercato.trim() || undefined,
           luogo: luogo.trim() || undefined,
@@ -243,6 +258,8 @@ export default function GenerateQueriesPage() {
           punti_di_forza: puntiDiForza,
           obiezioni,
           lang: locale,
+          mode: genMode,
+          theme: genMode === "specifiche" ? theme : undefined,
         }),
       });
       if (!res.ok) throw new Error(t("common.error"));
@@ -318,9 +335,46 @@ export default function GenerateQueriesPage() {
         <div data-tour="query-wizard-step1" className="card p-6 space-y-5">
           <h2 className="font-display font-semibold text-foreground">{t("generateQueries.stepBrandContext")}</h2>
 
-          {/* Luogo della rilevazione — PRIMO campo: circoscrive l'ambito
-              geografico/territoriale delle query AI. E' il riferimento per
-              tutto cio' che viene generato. */}
+          {/* Mode selector: Generali (360°) vs Specifiche (single theme) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {([
+              { key: "generali" as const, labelKey: "generateQueries.modeGeneraliLabel", descKey: "generateQueries.modeGeneraliDesc" },
+              { key: "specifiche" as const, labelKey: "generateQueries.modeSpecificheLabel", descKey: "generateQueries.modeSpecificheDesc" },
+            ]).map((m) => {
+              const isSelected = genMode === m.key;
+              return (
+                <button
+                  key={m.key}
+                  type="button"
+                  onClick={() => setGenMode(m.key)}
+                  className={`text-left px-4 py-3 rounded-sm border transition-all ${
+                    isSelected ? "border-primary bg-primary/5" : "border-border hover:bg-muted/30"
+                  }`}
+                >
+                  <p className={`text-sm font-semibold ${isSelected ? "text-primary" : "text-foreground"}`}>{t(m.labelKey)}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t(m.descKey)}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          {genMode === "specifiche" ? (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                {t("generateQueries.themeLabel")} *
+                <InfoTooltip text={t("generateQueries.themeInfo")} />
+              </label>
+              <input
+                type="text"
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                placeholder={t("generateQueries.themePlaceholder")}
+                className="input-base w-full"
+              />
+            </div>
+          ) : (
+          <>
+          {/* Luogo della rilevazione */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
               Luogo della rilevazione
@@ -350,12 +404,7 @@ export default function GenerateQueriesPage() {
             />
           </div>
 
-          {/* Mercato e Luogo rimossi dalla UI snella: vengono ereditati dal
-              progetto (market_context + country). L'engine continua a usare
-              gli slot se valorizzati altrove; lasciati vuoti, prevale il
-              market_context globale del progetto. */}
-
-          {/* Punti di forza */}
+          {/* Caratteristiche distintive (ex Punti di forza) */}
           <TagInput
             label={t("generateQueries.strengths")}
             tooltip={t("generateQueries.strengthsTooltip")}
@@ -367,7 +416,7 @@ export default function GenerateQueriesPage() {
             placeholder={t("generateQueries.strengthsPlaceholder")}
           />
 
-          {/* Obiezioni comuni */}
+          {/* Considerazioni dei clienti (ex Obiezioni comuni) */}
           <TagInput
             label={t("generateQueries.objections")}
             tooltip={t("generateQueries.objectionsTooltip")}
@@ -378,6 +427,8 @@ export default function GenerateQueriesPage() {
             onRemove={(i) => removeTag(obiezioni, setObiezioni, i)}
             placeholder={t("generateQueries.objectionsPlaceholder")}
           />
+          </>
+          )}
 
           {/* AI Conversational Intake */}
           <div className="border-t border-border pt-5 space-y-3">
