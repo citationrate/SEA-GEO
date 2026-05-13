@@ -642,8 +642,15 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                             </span>
                           ) : "-"}
                         </td>
-                        <td className="py-2 pr-3 text-muted-foreground text-xs max-w-[200px] truncate">
-                          {analysis?.competitors_found?.length ? analysis.competitors_found.join(", ") : "-"}
+                        <td className="py-2 pr-3 text-muted-foreground text-xs max-w-[200px]">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="truncate flex-1">
+                              {analysis?.competitors_found?.length ? analysis.competitors_found.join(", ") : "-"}
+                            </span>
+                            {!analysis?.competitors_found?.length && !isError && p.raw_response && (
+                              <InfoTooltip text={t("runMetrics.noBrandCitedInfo")} />
+                            )}
+                          </div>
                         </td>
                         <td className="py-2 pr-3">
                           {isError
@@ -676,7 +683,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                                 <Eye className="w-4 h-4" />
                               </button>
                             ) : (
-                              <span title="Pro"><Lock className="w-4 h-4 text-muted-foreground/40" /></span>
+                              <span title={t("runMetrics.upgradeProResponses")} className="cursor-help"><Lock className="w-4 h-4 text-muted-foreground/40" /></span>
                             )
                           )}
                         </td>

@@ -392,6 +392,12 @@ export default function GenerateQueriesPage() {
                   <MessageCircleQuestion className="w-4 h-4 text-primary" />
                   <p className="text-sm font-medium text-foreground">{t("generateQueries.aiIntakeTitle")}</p>
                 </div>
+                <div className="rounded-[3px] border border-primary/20 bg-primary/5 px-3 py-2.5 flex items-start gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {t("generateQueries.aiIntakeBanner")}
+                  </p>
+                </div>
                 {aiQuestions.map((q, i) => (
                   <div key={i} className="space-y-1.5 animate-fade-in" style={{ animationDelay: `${i * 150}ms` }}>
                     <p className="text-sm text-foreground italic">&ldquo;{q}&rdquo;</p>
