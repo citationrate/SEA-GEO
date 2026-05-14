@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     const contextLines: string[] = [];
     if (isSpecific) {
       contextLines.push(`- Tema fissato: ${themeSanitized}`);
-      if (theme_context) contextLines.push(`- Contesto del tema: ${sanitizeInput(theme_context, 4000)}`);
+      if (theme_context) contextLines.push(`- Obiettivo dell'indagine (PUNTO DI VISTA da adottare): ${sanitizeInput(theme_context, 4000)}`);
     }
     if (categoria) contextLines.push(`- Categoria: ${sanitizeInput(categoria)}`);
     if (mercato) contextLines.push(`- Mercato: ${sanitizeInput(mercato)}`);
@@ -83,7 +83,7 @@ REGOLE:
 - La query deve far emergere AZIENDE/FORNITORI commerciali (non enti pubblici, sindacati, autorità).
 - NON menzionare "${p.target_brand}" né competitor noti.
 - ${funnel_stage === "TOFU" ? "TOFU: domanda di scoperta generica del settore che chiede CHI fornisce il servizio." : "MOFU: domanda su un bisogno specifico che chiede CHI può aiutare."}
-${isSpecific ? `- VINCOLO ASSOLUTO: la query DEVE menzionare il tema "${themeSanitized}" o un sinonimo stretto. Niente drift verso prodotti/servizi adiacenti del brand.\n` : ""}
+${isSpecific ? `- VINCOLO ASSOLUTO: la query DEVE menzionare il tema "${themeSanitized}" o un sinonimo stretto. Niente drift verso prodotti/servizi adiacenti del brand.\n- Se sopra è indicato un "Obiettivo dell'indagine", la query DEVE adottare ESATTAMENTE quel punto di vista (persona implicita, momento, criteri di scelta).\n` : ""}
 Rispondi SOLO con un JSON: {"text": "...", "funnel_stage": "${funnel_stage}"}`;
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
