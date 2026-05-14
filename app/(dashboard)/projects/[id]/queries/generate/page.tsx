@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft, ArrowRight, Sparkles, Loader2, Plus, X,
   ChevronLeft, MessageCircleQuestion, Check,
-  AlertTriangle,
+  AlertTriangle, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { type GenerationInputs, type GeneratedQuery } from "@/lib/query-generator";
@@ -72,6 +72,7 @@ export default function GenerateQueriesPage() {
   // Step 3: Preview
   const [generatedQueries, setGeneratedQueries] = useState<GeneratedQuery[]>([]);
   const [selectedIndexes, setSelectedIndexes] = useState<Set<number>>(new Set());
+  const [regeneratingIdx, setRegeneratingIdx] = useState<number | null>(null);
 
   // Fetch pro status & existing queries on mount
   useEffect(() => {
@@ -128,9 +129,15 @@ export default function GenerateQueriesPage() {
   const monthlyLimit = planId === "enterprise" ? 9999 : planId === "pro" ? 500 : planId === "base" ? 100 : 5;
   const usedThisMonth = existingQueryCount;
 
-  function buildInputs(): GenerationInputs {
+  function buildInputs(): GenerationInputs & { mode?: "generali" | "specifiche"; theme?: string; theme_context?: string } {
+    // In "specifiche" la categoria non è in UI: lasciamo che sia il server a
+    // fare fallback su project.sector / site_analysis (vedi
+    // app/api/queries/generate/route.ts). Qui mandiamo quel che abbiamo.
     return {
-      categoria,
+      categoria: categoria || (genMode === "specifiche" ? theme.trim() : ""),
+      mode: genMode,
+      theme: genMode === "specifiche" ? (theme.trim() || undefined) : undefined,
+      theme_context: genMode === "specifiche" ? (themeContext.trim() || undefined) : undefined,
       mercato: mercato || undefined,
       luogo: luogo || undefined,
       punti_di_forza: puntiDiForza,
@@ -209,6 +216,50 @@ export default function GenerateQueriesPage() {
     if (next.has(idx)) next.delete(idx);
     else next.add(idx);
     setSelectedIndexes(next);
+  }
+
+  async function regenerateOne(idx: number) {
+    if (regeneratingIdx !== null) return;
+    const current = generatedQueries[idx];
+    if (!current) return;
+    setRegeneratingIdx(idx);
+    try {
+      const excludeTexts = generatedQueries.map((q) => q.text);
+      const res = await fetch("/api/queries/ai-regenerate-one", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: projectId,
+          funnel_stage: current.funnel_stage,
+          exclude_texts: excludeTexts,
+          mode: genMode,
+          theme: genMode === "specifiche" ? (theme.trim() || undefined) : undefined,
+          theme_context: genMode === "specifiche" ? (themeContext.trim() || undefined) : undefined,
+          categoria: categoria.trim() || undefined,
+          mercato: mercato.trim() || undefined,
+          luogo: luogo.trim() || undefined,
+          punti_di_forza: puntiDiForza.length > 0 ? puntiDiForza : undefined,
+          obiezioni: obiezioni.length > 0 ? obiezioni : undefined,
+          lang: locale,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || t("common.error"));
+      }
+      const data = await res.json();
+      if (data?.query?.text) {
+        setGeneratedQueries((prev) => prev.map((p, i) => i === idx ? {
+          ...p,
+          text: data.query.text,
+          funnel_stage: data.query.funnel_stage === "MOFU" ? "MOFU" : "TOFU",
+        } : p));
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("common.error"));
+    } finally {
+      setRegeneratingIdx(null);
+    }
   }
 
   function toggleAll() {
@@ -387,9 +438,8 @@ export default function GenerateQueriesPage() {
                   value={themeContext}
                   onChange={(e) => setThemeContext(e.target.value)}
                   placeholder={t("generateQueries.themeContextPlaceholder")}
-                  rows={2}
-                  maxLength={300}
-                  className="input-base w-full resize-none"
+                  rows={3}
+                  className="input-base w-full resize-y"
                 />
               </div>
             </div>
@@ -632,9 +682,19 @@ export default function GenerateQueriesPage() {
                   return a.funnel_stage === "TOFU" ? -1 : 1;
                 })
                 .map((q) => (
-                  <QueryPreviewRow key={q.idx} query={q} idx={q.idx} selected={selectedIndexes.has(q.idx)} onToggle={toggleQuery} onEdit={(idx, text) => {
-                    setGeneratedQueries((prev) => prev.map((p, i) => i === idx ? { ...p, text } : p));
-                  }} />
+                  <QueryPreviewRow
+                    key={q.idx}
+                    query={q}
+                    idx={q.idx}
+                    selected={selectedIndexes.has(q.idx)}
+                    regenerating={regeneratingIdx === q.idx}
+                    regenDisabled={regeneratingIdx !== null && regeneratingIdx !== q.idx}
+                    onToggle={toggleQuery}
+                    onEdit={(idx, text) => {
+                      setGeneratedQueries((prev) => prev.map((p, i) => i === idx ? { ...p, text } : p));
+                    }}
+                    onRegenerate={regenerateOne}
+                  />
                 ))}
             </div>
           )}
@@ -665,22 +725,31 @@ export default function GenerateQueriesPage() {
   );
 }
 
-/* ─── Query preview row with inline edit ─── */
+/* ─── Query preview row with inline edit + single-query regen ─── */
 function QueryPreviewRow({
   query,
   idx,
   selected,
+  regenerating,
+  regenDisabled,
   onToggle,
   onEdit,
+  onRegenerate,
 }: {
   query: { text: string; funnel_stage: string };
   idx: number;
   selected: boolean;
+  regenerating: boolean;
+  regenDisabled: boolean;
   onToggle: (idx: number) => void;
   onEdit: (idx: number, text: string) => void;
+  onRegenerate: (idx: number) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(query.text);
+
+  // Keep the local edit buffer in sync if the query gets rigenerated upstream.
+  useEffect(() => { setEditText(query.text); }, [query.text]);
 
   return (
     <div className={`flex items-start gap-3 px-3 py-2.5 rounded-[2px] border transition-all ${
@@ -710,13 +779,24 @@ function QueryPreviewRow({
           <button type="button" onClick={() => { setEditText(query.text); setEditing(false); }} className="text-muted-foreground text-xs shrink-0">Annulla</button>
         </div>
       ) : (
-        <p
-          className={`text-sm flex-1 cursor-pointer hover:text-primary transition-colors ${selected ? "text-foreground" : "text-muted-foreground line-through"}`}
-          onClick={() => setEditing(true)}
-          title="Clicca per modificare"
-        >
-          {query.text}
-        </p>
+        <>
+          <p
+            className={`text-sm flex-1 cursor-pointer hover:text-primary transition-colors ${selected ? "text-foreground" : "text-muted-foreground line-through"} ${regenerating ? "opacity-50" : ""}`}
+            onClick={() => !regenerating && setEditing(true)}
+            title="Clicca per modificare"
+          >
+            {query.text}
+          </p>
+          <button
+            type="button"
+            onClick={() => onRegenerate(idx)}
+            disabled={regenerating || regenDisabled}
+            title="Genera una nuova al posto di questa"
+            className="shrink-0 mt-0.5 p-1 text-muted-foreground hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {regenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+          </button>
+        </>
       )}
     </div>
   );

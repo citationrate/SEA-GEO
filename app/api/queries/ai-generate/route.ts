@@ -275,25 +275,31 @@ async function fetchWebsiteContext(url: string): Promise<string> {
   return sections.join("\n\n");
 }
 
-function buildSiteAnalysisBlock(siteAnalysis: any): string {
+function buildSiteAnalysisBlock(siteAnalysis: any, isSpecific = false): string {
   if (!siteAnalysis) return "";
-  const parts: string[] = ["\nContesto aggiuntivo dall'analisi automatica del sito:"];
+  const header = isSpecific
+    ? "\nAnalisi automatica del sito (solo riferimento — NON espandere il dominio della query):"
+    : "\nContesto aggiuntivo dall'analisi automatica del sito:";
+  const parts: string[] = [header];
   if (siteAnalysis.main_service) parts.push(`- Servizio principale: ${siteAnalysis.main_service}`);
   if (siteAnalysis.target_audience) parts.push(`- Pubblico target: ${siteAnalysis.target_audience}`);
   if (siteAnalysis.value_proposition) parts.push(`- Value proposition: ${siteAnalysis.value_proposition}`);
   if (siteAnalysis.sector_keywords?.length) parts.push(`- Parole chiave settore: ${siteAnalysis.sector_keywords.join(", ")}`);
   if (siteAnalysis.tone) parts.push(`- Tono comunicazione: ${siteAnalysis.tone}`);
   if (siteAnalysis.geography) parts.push(`- Copertura geografica: ${siteAnalysis.geography}`);
-  return parts.length > 1 ? parts.join("\n") + "\n\nUsa queste informazioni per generare query più precise e contestualizzate al settore del brand.\n" : "";
+  const footer = isSpecific
+    ? "\n\nUsa queste informazioni SOLO per capire target, tono e vocabolario. Le query devono rispettare il tema fissato dall'utente.\n"
+    : "\n\nUsa queste informazioni per generare query più precise e contestualizzate al settore del brand.\n";
+  return parts.length > 1 ? parts.join("\n") + footer : "";
 }
 
 /** Sanitize user-provided input to prevent prompt injection */
-function sanitizeInput(value: string): string {
+function sanitizeInput(value: string, maxLength = 500): string {
   return value
     .replace(/[\x00-\x1f\x7f]/g, " ")  // strip control characters
     .replace(/\n/g, " ")                 // replace newlines with spaces
     .trim()
-    .slice(0, 500);                      // cap length
+    .slice(0, maxLength);
 }
 
 /** Sanitize an array of user-provided strings */
@@ -331,12 +337,18 @@ function buildSystemPrompt(
       : `\nQuery già presenti nel progetto (NON duplicarle):\n${existingTexts.map((t: string) => `- ${t}`).join("\n")}\n`
     : "";
 
-  const websiteBlock = websiteContext && !isSpecific
-    ? `\n--- CONTENUTO SITO WEB (${project.website_url}) ---\n${websiteContext}\n--- FINE CONTENUTO SITO ---\n\nUsa le informazioni estratte dal sito per capire cosa offre il brand, i suoi prodotti/servizi, il tono di comunicazione, e i punti di forza. Genera query che riflettano i temi reali del brand.\n`
+  // In modalità "specifiche" il sito serve solo come riferimento di vocabolario
+  // e target: NON per scegliere DI COSA parlare. Il tema è fissato dall'utente
+  // e va rispettato alla lettera. Etichettiamo il blocco esplicitamente come
+  // "BACKGROUND" per evitare che il modello lo usi come fonte di temi.
+  const websiteBlock = websiteContext
+    ? isSpecific
+      ? `\n--- BACKGROUND BRAND (solo riferimento vocabolario/tono/target) ---\n${websiteContext}\n--- FINE BACKGROUND ---\n\n⚠️ Il background sopra serve SOLO per capire il vocabolario, il livello di expertise del target e il tono di comunicazione del brand. NON usarlo per scegliere COSA chiedere. Il tema delle query è FISSATO dall'utente più sotto e va rispettato alla lettera. Se il sito parla di prodotti/servizi diversi dal tema, IGNORALI.\n`
+      : `\n--- CONTENUTO SITO WEB (${project.website_url}) ---\n${websiteContext}\n--- FINE CONTENUTO SITO ---\n\nUsa le informazioni estratte dal sito per capire cosa offre il brand, i suoi prodotti/servizi, il tono di comunicazione, e i punti di forza. Genera query che riflettano i temi reali del brand.\n`
     : "";
   const userContextParts: string[] = [];
   if (isSpecific) userContextParts.push(`- Tema specifico da approfondire: ${themeSanitized}`);
-  if (isSpecific && userInputs?.theme_context) userContextParts.push(`- Contesto/dettagli del tema: ${sanitizeInput(userInputs.theme_context)}`);
+  if (isSpecific && userInputs?.theme_context) userContextParts.push(`- Contesto/dettagli del tema: ${sanitizeInput(userInputs.theme_context, 4000)}`);
   if (userInputs?.categoria) userContextParts.push(`- Categoria prodotto/servizio: ${sanitizeInput(userInputs.categoria)}`);
   if (userInputs?.mercato) userContextParts.push(`- Mercato di riferimento: ${sanitizeInput(userInputs.mercato)}`);
   if (userInputs?.luogo) userContextParts.push(`- Localizzazione: ${sanitizeInput(userInputs.luogo)}`);
@@ -351,7 +363,7 @@ function buildSystemPrompt(
   }
   const userContextBlock = userContextParts.length > 0
     ? isSpecific
-      ? `\nContesto dall'utente:\n${userContextParts.join("\n")}\n\nVINCOLO ASSOLUTO — modalità "Specifiche":\n1. OGNI singola query generata DEVE menzionare letteralmente la keyword del tema ("${themeSanitized}") oppure un sinonimo stretto/iperonimo immediato. Niente query che parlano del brand a 360° o di prodotti adiacenti fuori dal tema.\n2. Le query devono restare confinate al sotto-tema/caso d'uso/target indicati nel contesto. Se l'utente ha specificato "trail e strada, runner amatoriali", non generare query su scarpe da basket o calzature in generale.\n3. Le query MOFU devono essere comparative o decisionali RESTANDO sul tema (es. "miglior X per [tema] sotto N €"). Le query TOFU devono essere esplorative RESTANDO sul tema.\n4. NESSUNA query che, letta da sola fuori contesto, potrebbe essere scambiata per una query brand-360°. Se hai dubbi, scarta e rifai.\n`
+      ? `\nContesto dall'utente:\n${userContextParts.join("\n")}\n\nVINCOLO ASSOLUTO — modalità "Specifiche":\n1. OGNI singola query generata DEVE menzionare letteralmente la keyword del tema ("${themeSanitized}") oppure un sinonimo stretto/iperonimo immediato. Niente query che parlano del brand a 360° o di prodotti adiacenti fuori dal tema.\n2. Le query devono restare confinate al sotto-tema/caso d'uso/target indicati nel contesto. Se l'utente ha specificato "trail e strada, runner amatoriali", non generare query su scarpe da basket o calzature in generale.\n3. Le query MOFU devono essere comparative o decisionali RESTANDO sul tema (es. "miglior X per [tema] sotto N €"). Le query TOFU devono essere esplorative RESTANDO sul tema.\n4. NESSUNA query che, letta da sola fuori contesto, potrebbe essere scambiata per una query brand-360°. Se hai dubbi, scarta e rifai.\n5. Il BACKGROUND BRAND/SITE serve SOLO per scegliere vocabolario, tono e livello di expertise del target: NON per espandere il dominio della query a tutto il portafoglio del brand.\n\nEsempi del filtro on-topic vs off-topic (tema = "${themeSanitized}"):\n✅ ON-TOPIC: "Quali aziende offrono soluzioni di ${themeSanitized} per [target derivato dal contesto]?"\n✅ ON-TOPIC: "Chi sono i migliori fornitori specializzati in ${themeSanitized} che [caratteristica dal contesto]?"\n❌ OFF-TOPIC: query che parla di altri prodotti/servizi del brand non legati a ${themeSanitized} → SCARTA E RIFAI\n❌ OFF-TOPIC: query generica sul settore senza menzionare ${themeSanitized} → SCARTA E RIFAI\n`
       : `\nContesto specifico dall'utente:\n${userContextParts.join("\n")}\n\nUSA ATTIVAMENTE questi dettagli per generare query più mirate. Le query MOFU devono riflettere i bisogni reali dei clienti, le caratteristiche distintive e le considerazioni d'acquisto.\n`
     : "";
 
@@ -362,13 +374,17 @@ function buildSystemPrompt(
 Sei un esperto di AI Search Optimization. Il tuo compito è generare query realistiche che utenti reali farebbero a ChatGPT, Gemini o Perplexity quando cercano informazioni nel settore di ${project.target_brand}.
 
 ${isSpecific
-  ? `Contesto brand (minimo, solo per orientamento):
+  ? `BACKGROUND BRAND (solo riferimento — NON usare come fonte di temi):
 - Brand: ${project.target_brand}
+- Nome progetto: ${project.name}
 - Settore: ${project.sector ?? "non specificato"}
+- Tipo brand: ${project.brand_type ?? "non specificato"}
 - Mercato: ${project.country ?? "Italia"} / lingua ${lang}
+- Sito: ${project.website_url ?? "non specificato"}
 - Competitor noti: ${competitors}
+- Contesto aggiuntivo: ${project.market_context ?? "nessuno"}
 
-NOTA: in modalità "Specifiche" il contesto brand-360 (sito, market_context, site_analysis) è volutamente OMESSO per evitare drift verso temi adiacenti. Concentrati ESCLUSIVAMENTE sul tema fornito dall'utente più in basso.`
+⚠️ Il background sopra serve SOLO per capire vocabolario, tono e target del brand. NON usarlo per scegliere COSA chiedere: il tema è fissato più sotto e va rispettato alla lettera.`
   : `Contesto brand:
 - Brand: ${project.target_brand}
 - Nome progetto: ${project.name}
@@ -378,7 +394,7 @@ NOTA: in modalità "Specifiche" il contesto brand-360 (sito, market_context, sit
 - Sito: ${project.website_url ?? "non specificato"}
 - Competitor noti: ${competitors}
 - Contesto aggiuntivo: ${project.market_context ?? "nessuno"}`}
-${userContextBlock}${websiteBlock}${isSpecific ? "" : buildSiteAnalysisBlock(project.site_analysis)}${existingBlock}
+${userContextBlock}${websiteBlock}${buildSiteAnalysisBlock(project.site_analysis, isSpecific)}${existingBlock}
 Genera esattamente ${count} query uniche e realistiche in ${lang}.
 
 OBIETTIVO CHIAVE: Le query devono far emergere COMPETITOR COMMERCIALI — aziende, studi, agenzie o servizi che un cliente potrebbe scegliere IN ALTERNATIVA a "${project.target_brand}".

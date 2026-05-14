@@ -29,7 +29,10 @@ const bodySchema = z.object({
     persona_id: z.string().optional(),
   })),
   inputs: z.object({
-    categoria: z.string().min(1),
+    categoria: z.string().default(""),
+    mode: z.enum(["generali", "specifiche"]).optional(),
+    theme: z.string().optional(),
+    theme_context: z.string().optional(),
     mercato: z.string().optional(),
     luogo: z.string().optional(),
     punti_di_forza: z.array(z.string()).default([]),
@@ -62,15 +65,32 @@ export async function POST(request: Request) {
 
     const { project_id, queries, inputs } = parsed.data;
 
-    // Verify project ownership
+    // Verify project ownership + load fields needed to fill missing categoria.
     const { data: project } = await supabase
       .from("projects")
-      .select("id")
+      .select("id, sector, site_analysis")
       .eq("id", project_id)
       .eq("user_id", user.id)
       .is("deleted_at", null)
       .single();
     if (!project) return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
+
+    // In modalità "specifiche" l'utente NON compila categoria (compila solo
+    // theme). Per non bloccare il salvataggio, prendiamo la categoria dal
+    // progetto: prima il sector dichiarato, poi quello dedotto da
+    // site_analysis. Se neanche quello esiste, ripieghiamo sul theme.
+    const projAny = project as any;
+    if (!inputs.categoria || inputs.categoria.trim().length === 0) {
+      const fallback =
+        projAny.sector ??
+        projAny.site_analysis?.main_service ??
+        (Array.isArray(projAny.site_analysis?.sector_keywords)
+          ? projAny.site_analysis.sector_keywords[0]
+          : null) ??
+        inputs.theme ??
+        "";
+      inputs.categoria = String(fallback).trim();
+    }
 
     // Save generation inputs
     await (supabase.from("query_generation_inputs") as any).insert({
