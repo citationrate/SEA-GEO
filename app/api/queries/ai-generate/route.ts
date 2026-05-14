@@ -317,17 +317,23 @@ function buildSystemPrompt(
     ? userInputs.competitor.join(", ")
     : (project.known_competitors ?? []).join(", ") || "non specificati";
 
-  const existingBlock = existingTexts.length > 0
-    ? `\nQuery già presenti nel progetto (NON duplicarle):\n${existingTexts.map((t: string) => `- ${t}`).join("\n")}\n`
-    : "";
-
-  const websiteBlock = websiteContext
-    ? `\n--- CONTENUTO SITO WEB (${project.website_url}) ---\n${websiteContext}\n--- FINE CONTENUTO SITO ---\n\nUsa le informazioni estratte dal sito per capire cosa offre il brand, i suoi prodotti/servizi, il tono di comunicazione, e i punti di forza. Genera query che riflettano i temi reali del brand.\n`
-    : "";
-
   // Build user-provided context block (sanitize all user inputs to prevent prompt injection)
   const isSpecific = userInputs?.mode === "specifiche" && typeof userInputs?.theme === "string" && userInputs.theme.trim().length > 0;
   const themeSanitized = isSpecific ? sanitizeInput(userInputs!.theme!) : "";
+
+  // In Specifiche mode the brand-360 context (website content, full market
+  // context, existing brand queries) is the #1 source of off-theme drift:
+  // the model picks up adjacent concepts as "inspiration" and rephrases them.
+  // We strip these blocks down to a thematic minimum.
+  const existingBlock = existingTexts.length > 0
+    ? isSpecific
+      ? `\nQuery già presenti nel progetto (NON usarle nemmeno come ispirazione, NON riprendere i loro concetti se non sono direttamente sul tema):\n${existingTexts.map((t: string) => `- ${t}`).join("\n")}\n`
+      : `\nQuery già presenti nel progetto (NON duplicarle):\n${existingTexts.map((t: string) => `- ${t}`).join("\n")}\n`
+    : "";
+
+  const websiteBlock = websiteContext && !isSpecific
+    ? `\n--- CONTENUTO SITO WEB (${project.website_url}) ---\n${websiteContext}\n--- FINE CONTENUTO SITO ---\n\nUsa le informazioni estratte dal sito per capire cosa offre il brand, i suoi prodotti/servizi, il tono di comunicazione, e i punti di forza. Genera query che riflettano i temi reali del brand.\n`
+    : "";
   const userContextParts: string[] = [];
   if (isSpecific) userContextParts.push(`- Tema specifico da approfondire: ${themeSanitized}`);
   if (isSpecific && userInputs?.theme_context) userContextParts.push(`- Contesto/dettagli del tema: ${sanitizeInput(userInputs.theme_context)}`);
@@ -355,7 +361,15 @@ function buildSystemPrompt(
 
 Sei un esperto di AI Search Optimization. Il tuo compito è generare query realistiche che utenti reali farebbero a ChatGPT, Gemini o Perplexity quando cercano informazioni nel settore di ${project.target_brand}.
 
-Contesto brand:
+${isSpecific
+  ? `Contesto brand (minimo, solo per orientamento):
+- Brand: ${project.target_brand}
+- Settore: ${project.sector ?? "non specificato"}
+- Mercato: ${project.country ?? "Italia"} / lingua ${lang}
+- Competitor noti: ${competitors}
+
+NOTA: in modalità "Specifiche" il contesto brand-360 (sito, market_context, site_analysis) è volutamente OMESSO per evitare drift verso temi adiacenti. Concentrati ESCLUSIVAMENTE sul tema fornito dall'utente più in basso.`
+  : `Contesto brand:
 - Brand: ${project.target_brand}
 - Nome progetto: ${project.name}
 - Settore: ${project.sector ?? "non specificato"}
@@ -363,8 +377,8 @@ Contesto brand:
 - Mercato: ${project.country ?? "Italia"} / lingua ${lang}
 - Sito: ${project.website_url ?? "non specificato"}
 - Competitor noti: ${competitors}
-- Contesto aggiuntivo: ${project.market_context ?? "nessuno"}
-${userContextBlock}${websiteBlock}${buildSiteAnalysisBlock(project.site_analysis)}${existingBlock}
+- Contesto aggiuntivo: ${project.market_context ?? "nessuno"}`}
+${userContextBlock}${websiteBlock}${isSpecific ? "" : buildSiteAnalysisBlock(project.site_analysis)}${existingBlock}
 Genera esattamente ${count} query uniche e realistiche in ${lang}.
 
 OBIETTIVO CHIAVE: Le query devono far emergere COMPETITOR COMMERCIALI — aziende, studi, agenzie o servizi che un cliente potrebbe scegliere IN ALTERNATIVA a "${project.target_brand}".
