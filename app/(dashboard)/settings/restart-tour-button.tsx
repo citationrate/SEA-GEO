@@ -27,7 +27,7 @@ export function RestartTourButton() {
       }
       keysToClear.forEach((k) => localStorage.removeItem(k));
     } catch {}
-    toast.success("Tutorial riattivato — naviga tra le pagine per rivederlo");
+    toast.success(t("settings.tourRestarted"));
     router.push("/dashboard");
   }
 

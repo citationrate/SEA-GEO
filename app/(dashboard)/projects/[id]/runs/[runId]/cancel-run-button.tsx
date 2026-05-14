@@ -4,9 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, AlertTriangle, X } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "@/lib/i18n/context";
 
 export function CancelRunButton({ runId }: { runId: string }) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -15,11 +17,11 @@ export function CancelRunButton({ runId }: { runId: string }) {
     try {
       const res = await fetch(`/api/runs/${runId}/cancel`, { method: "POST" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Errore durante l'annullamento");
-      toast.success("Run annullata. L'analisi si fermera' al prossimo checkpoint.");
+      if (!res.ok) throw new Error(data.error || t("runMetrics.cancelError"));
+      toast.success(t("runMetrics.runCancelled"));
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore");
+      toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setLoading(false);
       setConfirming(false);

@@ -157,7 +157,7 @@ export default function EditProjectPage() {
         throw new Error(data.error || t("projects.saveError"));
       }
 
-      toast.success("Progetto aggiornato");
+      toast.success(t("editProject.projectUpdated"));
       router.push(`/projects/${projectId}`);
       router.refresh();
     } catch (err) {
@@ -200,7 +200,7 @@ export default function EditProjectPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Es. Analisi Brand 2026"
+            placeholder={t("editProject.namePlaceholder")}
             className="input-base"
           />
         </div>
@@ -216,7 +216,7 @@ export default function EditProjectPage() {
             required
             value={targetBrand}
             onChange={(e) => setTargetBrand(e.target.value)}
-            placeholder="Es. Lumora"
+            placeholder={t("editProject.brandPlaceholder")}
             className="input-base"
           />
         </div>
@@ -248,7 +248,7 @@ export default function EditProjectPage() {
             required
             value={websiteUrl}
             onChange={(e) => setWebsiteUrl(e.target.value)}
-            placeholder="Es. lumora.it"
+            placeholder={t("editProject.websitePlaceholder")}
             className="input-base"
           />
         </div>
@@ -257,12 +257,12 @@ export default function EditProjectPage() {
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
             {t("projects.marketContext")}
-            <span className="text-xs font-normal text-muted-foreground">(opzionale — rende l&apos;analisi più precisa)</span>
+            <span className="text-xs font-normal text-muted-foreground">{t("editProject.marketOptional")}</span>
           </label>
           <textarea
             value={marketContext}
             onChange={(e) => setMarketContext(e.target.value)}
-            placeholder="Descrivi il settore, il posizionamento e il pubblico target..."
+            placeholder={t("editProject.marketPlaceholder")}
             rows={4}
             className="input-base resize-none"
           />
@@ -294,7 +294,7 @@ export default function EditProjectPage() {
           ) : (
             <>
               <p className="text-xs text-muted-foreground">
-                Seleziona i provider per le analisi (max {providerCap}). Le analisi storiche restano consultabili per ogni modello, anche quando non è più attivo.
+                {t("editProject.selectProvidersHint").replace("{cap}", String(providerCap))}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {AVI_PROVIDER_CARDS.map((p) => {
@@ -335,11 +335,11 @@ export default function EditProjectPage() {
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <Info className="w-3 h-3 shrink-0" />
-                  <span>I dati delle analisi precedenti restano consultabili anche dopo le modifiche.</span>
+                  <span>{t("editProject.historyAvailable")}</span>
                 </div>
                 <span>
                   <span className="text-foreground font-bold">{selectedProviders.length}</span>
-                  {" / "}{providerCap} provider
+                  {" / "}{providerCap} {t("editProject.providerCount")}
                 </span>
               </div>
             </>
@@ -350,8 +350,8 @@ export default function EditProjectPage() {
         <details className="group rounded-sm border border-border">
           <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer list-none text-sm font-medium text-foreground hover:bg-muted/30 transition-colors">
             <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-90" />
-            Opzioni avanzate
-            <span className="text-xs font-normal text-muted-foreground ml-auto">settore, tipo brand, paese</span>
+            {t("editProject.advancedOptions")}
+            <span className="text-xs font-normal text-muted-foreground ml-auto">{t("editProject.advancedHint")}</span>
           </summary>
           <div className="px-4 pb-4 pt-2 space-y-4 border-t border-border">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -393,7 +393,7 @@ export default function EditProjectPage() {
                 type="text"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                placeholder="Es. Italia"
+                placeholder={t("editProject.countryPlaceholder")}
                 className="input-base"
               />
             </div>

@@ -83,15 +83,15 @@ export function SettingsClient({
       const res = await fetch("/api/account/delete", { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error || "Errore durante l'eliminazione");
+        toast.error(data.error || t("settings.deleteAccountError"));
         setDeletingAccount(false);
         return;
       }
       try { await createAuthClient().auth.signOut(); } catch {}
-      toast.success("Account eliminato");
+      toast.success(t("settings.accountDeleted"));
       router.push("/");
     } catch {
-      toast.error("Errore durante l'eliminazione");
+      toast.error(t("settings.deleteAccountError"));
       setDeletingAccount(false);
     }
   }
@@ -154,13 +154,13 @@ export function SettingsClient({
       if (res.ok) {
         setSupportSubject("");
         setSupportMessage("");
-        alert(t("settings.supportSent") || "Messaggio inviato! Ti risponderemo al più presto.");
+        alert(t("settings.supportSent"));
       } else {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || t("settings.supportError") || "Errore nell'invio");
+        alert(data.error || t("settings.supportError"));
       }
     } catch {
-      alert(t("settings.supportError") || "Errore di rete");
+      alert(t("common.networkError"));
     } finally {
       setSendingSupport(false);
     }
@@ -170,11 +170,11 @@ export function SettingsClient({
     const file = e.target.files?.[0];
     if (!file) return;
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      toast.error("Only JPEG, PNG, and WebP images are allowed");
+      toast.error(t("settings.avatarMimeError"));
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      toast.error("File too large (max 2 MB)");
+      toast.error(t("settings.avatarSizeError"));
       return;
     }
     setUploadingAvatar(true);
@@ -186,14 +186,14 @@ export function SettingsClient({
         body: formData,
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: "Upload failed" }));
-        throw new Error(data.error || "Upload failed");
+        const data = await res.json().catch(() => ({ error: t("settings.uploadFailed") }));
+        throw new Error(data.error || t("settings.uploadFailed"));
       }
       const data = await res.json();
       setAvatarUrl(data.avatar_url);
-      toast.success(t("settings.avatarUploaded") || "Photo updated");
+      toast.success(t("settings.avatarUploaded"));
     } catch (err: any) {
-      toast.error(err?.message || "Upload failed");
+      toast.error(err?.message || t("settings.uploadFailed"));
     } finally {
       setUploadingAvatar(false);
       e.target.value = "";
@@ -204,11 +204,11 @@ export function SettingsClient({
     setUploadingAvatar(true);
     try {
       const res = await fetch("/api/profile/avatar", { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to remove avatar");
+      if (!res.ok) throw new Error(t("settings.avatarRemoveError"));
       setAvatarUrl(null);
-      toast.success(t("settings.avatarRemoved") || "Photo removed");
+      toast.success(t("settings.avatarRemoved"));
     } catch {
-      toast.error("Failed to remove photo");
+      toast.error(t("settings.avatarRemoveError"));
     } finally {
       setUploadingAvatar(false);
     }
@@ -222,8 +222,8 @@ export function SettingsClient({
         {([
           { key: "account" as SettingsTab, label: "Account" },
           { key: "voucher" as SettingsTab, label: "Voucher" },
-          { key: "supporto" as SettingsTab, label: t("settings.supportTab") || "Supporto" },
-          ...(isShowcase(plan, email) ? [] : [{ key: "privacy" as SettingsTab, label: t("settings.privacyTab") || "Privacy" }]),
+          { key: "supporto" as SettingsTab, label: t("settings.supportTab") },
+          ...(isShowcase(plan, email) ? [] : [{ key: "privacy" as SettingsTab, label: t("settings.privacyTab") }]),
         ]).map((tab) => (
           <button
             key={tab.key}
@@ -261,7 +261,7 @@ export function SettingsClient({
             <label
               htmlFor="avatar-upload"
               className="block cursor-pointer"
-              title={t("settings.changeAvatar") || "Change photo"}
+              title={t("settings.changeAvatar")}
             >
               {avatarUrl ? (
                 <img
@@ -288,7 +288,7 @@ export function SettingsClient({
               <button
                 onClick={handleAvatarRemove}
                 className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center bg-destructive text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                title={t("settings.removeAvatar") || "Remove photo"}
+                title={t("settings.removeAvatar")}
               >
                 <X className="w-3 h-3" />
               </button>
@@ -321,24 +321,24 @@ export function SettingsClient({
       <div className="card p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <Key className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-semibold text-foreground">{t("settings.changePassword") || "Modifica password"}</h2>
+          <h2 className="font-display font-semibold text-foreground">{t("settings.changePassword")}</h2>
         </div>
         <div className="flex items-center justify-between bg-muted/20 rounded-[2px] px-4 py-3">
-          <p className="text-sm text-muted-foreground">{t("settings.changePasswordDesc") || "Riceverai un'email con il link per reimpostare la password."}</p>
+          <p className="text-sm text-muted-foreground">{t("settings.changePasswordDesc")}</p>
           <button
             onClick={async () => {
               try {
                 const res = await fetch("/api/auth/reset-password", { method: "POST" });
                 const data = await res.json();
-                if (res.ok) alert(t("settings.resetSent") || "Email inviata! Controlla la tua casella.");
-                else alert(data.error || t("settings.resetError") || "Errore nell'invio. Riprova.");
+                if (res.ok) alert(t("settings.resetSent"));
+                else alert(data.error || t("settings.resetError"));
               } catch {
-                alert(t("settings.resetError") || "Errore di rete. Riprova.");
+                alert(t("settings.resetError"));
               }
             }}
             className="px-4 py-2 border border-primary/40 text-primary rounded-[2px] text-sm font-medium hover:bg-primary/10 transition-colors shrink-0"
           >
-            {t("settings.resetPassword") || "Reimposta password"}
+            {t("settings.resetPassword")}
           </button>
         </div>
       </div>
@@ -401,7 +401,7 @@ export function SettingsClient({
           {showDeleteAccount && (
             <div className="mt-3 space-y-2">
               <p className="text-xs text-muted-foreground">
-                Per confermare digita <code className="font-mono text-foreground">DELETE</code>. Verranno cancellati definitivamente tutti i tuoi progetti AVI, le analisi storiche, gli audit della suite CS e il profilo.
+                {t("settings.deleteConfirmHelp")}
               </p>
               <div className="flex items-center gap-2">
                 <input
@@ -475,40 +475,40 @@ export function SettingsClient({
           <div className="card p-6 space-y-4">
             <div className="flex items-center gap-2 mb-2">
               <Send className="w-5 h-5 text-primary" />
-              <h2 className="font-display font-semibold text-foreground">{t("settings.contactSupport") || "Contatta il supporto"}</h2>
+              <h2 className="font-display font-semibold text-foreground">{t("settings.contactSupport")}</h2>
             </div>
-            <p className="text-sm text-muted-foreground">{t("settings.contactSupportDesc") || "Hai bisogno di aiuto? Compila il form e ti risponderemo al più presto."}</p>
+            <p className="text-sm text-muted-foreground">{t("settings.contactSupportDesc")}</p>
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1 block">{t("settings.supportSubject") || "Oggetto"}</label>
+                <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1 block">{t("settings.supportSubject")}</label>
                 <input
                   type="text"
                   value={supportSubject}
                   onChange={(e) => setSupportSubject(e.target.value)}
-                  placeholder={t("settings.supportSubjectPlaceholder") || "Es: Bug, Domanda, Feedback..."}
+                  placeholder={t("settings.supportSubjectPlaceholder")}
                   className="input-base w-full"
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1 block">{t("settings.supportMessage") || "Messaggio"}</label>
+                <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1 block">{t("settings.supportMessage")}</label>
                 <textarea
                   value={supportMessage}
                   onChange={(e) => setSupportMessage(e.target.value)}
-                  placeholder={t("settings.supportMessagePlaceholder") || "Descrivi il tuo problema o la tua richiesta..."}
+                  placeholder={t("settings.supportMessagePlaceholder")}
                   rows={5}
                   className="input-base w-full resize-none"
                 />
               </div>
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <p className="text-xs text-muted-foreground break-all min-w-0">{t("settings.supportFrom") || "Da:"} {email}</p>
+                <p className="text-xs text-muted-foreground break-all min-w-0">{t("settings.supportFrom")} {email}</p>
                 <button
                   onClick={sendSupportMessage}
                   disabled={sendingSupport || !supportSubject.trim() || supportMessage.trim().length < 3}
                   className="px-4 py-2 bg-primary text-primary-foreground rounded-[2px] text-sm font-semibold hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0 self-stretch md:self-auto whitespace-nowrap"
                 >
                   {sendingSupport ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                  {sendingSupport ? (t("common.sending") || "Invio...") : (t("settings.sendMessage") || "Invia messaggio")}
+                  {sendingSupport ? t("common.sending") : t("settings.sendMessage")}
                 </button>
               </div>
             </div>

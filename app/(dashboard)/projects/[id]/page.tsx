@@ -10,6 +10,7 @@ import { ArchivedRunsSection } from "./archived-runs-section";
 import { AutoLaunch } from "./auto-launch";
 import { ProjectTutorialClient } from "./project-tutorial-client";
 import { T } from "@/components/translated-label";
+import { getServerTranslator } from "@/lib/i18n/server";
 import { BotMount } from "@/components/BotMount";
 import { buildProjectContext, normalizeLang } from "@/lib/bot-context";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
@@ -158,6 +159,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // (.eq user_id). Plan + locale gate the actual mount inside <BotMount />.
   const cookieStore = cookies();
   const lang = normalizeLang(cookieStore.get("avi-locale")?.value);
+  const t = getServerTranslator(lang as any);
+  const LOCALE_MAP: Record<string, string> = { it: "it-IT", en: "en-US", fr: "fr-FR", de: "de-DE", es: "es-ES" };
+  const dateLocale = LOCALE_MAP[lang] ?? "it-IT";
   const botContext = buildProjectContext({
     plan: userPlan,
     lang,
@@ -192,7 +196,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             <a
               href={`/projects/${params.id}/edit`}
               className="flex items-center gap-1.5 bg-surface border border-border text-muted-foreground text-sm font-medium px-3 py-2 rounded-[2px] hover:border-primary/30 hover:text-foreground transition-colors"
-              title="Modifica Progetto"
+              title={t("projectDetail.editProjectTooltip")}
             >
               <Settings className="w-4 h-4" />
               <T k="projectDetail.editProject" />
@@ -230,8 +234,8 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           // Tooltip mostra sempre la versione tecnica esatta (debugging + power user).
           // Eventuale messaggio di lock-plan prevale.
           const lockTitle = isLockedEnterprise
-            ? "Enterprise-only — escluso dalle prossime analisi finché non passi a Enterprise"
-            : isLockedPro ? "Pro-only — escluso dalle prossime analisi finché non passi a Pro" : exactLabel;
+            ? t("projectDetail.enterpriseOnlyLocked")
+            : isLockedPro ? t("projectDetail.proOnlyLocked") : exactLabel;
           return (
             <span
               key={m}
@@ -249,7 +253,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             className="inline-flex items-center gap-1 text-[12px] font-mono text-primary hover:text-primary/80 border border-primary/30 hover:border-primary/60 bg-primary/5 hover:bg-primary/10 px-2 py-0.5 rounded-[2px] transition-colors"
           >
             <Plus className="w-3 h-3" />
-            Aggiungi modello
+            {t("projectDetail.addModel")}
           </a>
         )}
       </div>
@@ -261,19 +265,19 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
           <div className="flex-1 text-sm">
             <p className="text-foreground">
-              <span className="font-semibold">Alcuni modelli richiedono il piano Pro</span>
+              <span className="font-semibold">{t("projectDetail.proModelsRequired")}</span>
               {" — "}
               <span className="text-muted-foreground">{lockedProModels.map((id) => MODEL_MAP.get(id)?.label ?? id).join(", ")}</span>
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Le prossime analisi useranno solo i modelli compatibili con il tuo piano. Lo storico precedente resta consultabile nei grafici.
+              {t("projectDetail.lockedModelsHint")}
             </p>
           </div>
           <a
             href="/piano"
             className="text-xs font-medium text-amber-500 hover:text-amber-400 whitespace-nowrap shrink-0"
           >
-            Passa a Pro →
+            {t("projectDetail.upgradeToPro")}
           </a>
         </div>
       )}
@@ -284,19 +288,19 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
           <div className="flex-1 text-sm">
             <p className="text-foreground">
-              <span className="font-semibold">Alcuni modelli richiedono il piano Enterprise</span>
+              <span className="font-semibold">{t("projectDetail.enterpriseModelsRequired")}</span>
               {" — "}
               <span className="text-muted-foreground">{lockedEnterpriseModels.map((id) => MODEL_MAP.get(id)?.label ?? id).join(", ")}</span>
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Le prossime analisi useranno solo i modelli compatibili con il tuo piano. Lo storico precedente resta consultabile nei grafici.
+              {t("projectDetail.lockedModelsHint")}
             </p>
           </div>
           <a
             href="/piano"
             className="text-xs font-medium text-amber-500 hover:text-amber-400 whitespace-nowrap shrink-0"
           >
-            Contattaci →
+            {t("projectDetail.contactUs")}
           </a>
         </div>
       )}
@@ -325,7 +329,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           </div>
           {lastRun && (
             <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
-              Ultima analisi: {new Date((lastRun as any).completed_at ?? (lastRun as any).created_at).toLocaleString("it-IT")}
+              {t("projectDetail.lastAnalysis")}: {new Date((lastRun as any).completed_at ?? (lastRun as any).created_at).toLocaleString(dateLocale)}
               {" "}&middot; v{(lastRun as any).version}
               {" "}&middot; <span className="badge badge-success text-[12px]">{(lastRun as any).status}</span>
             </p>
@@ -365,20 +369,20 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-primary" />
-            <h2 className="font-display font-semibold text-foreground">Query</h2>
+            <h2 className="font-display font-semibold text-foreground">{t("projectDetail.queriesTitle")}</h2>
             <span className="badge badge-muted text-[12px]">{aiQueries.length + manualQueries.length}</span>
           </div>
-          <span className="text-xs text-primary hover:text-primary/70 transition-colors">Gestisci →</span>
+          <span className="text-xs text-primary hover:text-primary/70 transition-colors">{t("projectDetail.manageArrow")}</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-[2px] border border-border bg-muted/30 px-3 py-2 flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
-            <span className="text-sm text-foreground">Query AI</span>
+            <span className="text-sm text-foreground">{t("queries.aiSection")}</span>
             <span className="badge badge-muted text-[12px] ml-auto">{aiQueries.length}</span>
           </div>
           <div className="rounded-[2px] border border-border bg-muted/30 px-3 py-2 flex items-center gap-2">
             <MessageSquare className="w-3.5 h-3.5 text-accent shrink-0" />
-            <span className="text-sm text-foreground">Query Manuali</span>
+            <span className="text-sm text-foreground">{t("queries.manualSection")}</span>
             <span className="badge badge-muted text-[12px] ml-auto">{manualQueries.length}</span>
           </div>
         </div>
@@ -443,7 +447,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                       <span className="text-xs text-muted-foreground">{run.completed_prompts}/{run.total_prompts} prompt</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground">{new Date(run.completed_at ?? run.created_at).toLocaleDateString("it-IT")}</span>
+                      <span className="text-xs text-muted-foreground">{new Date(run.completed_at ?? run.created_at).toLocaleDateString(dateLocale)}</span>
                       <span className={`inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-0.5 rounded-[2px] border ${badgeClass}`}>
                         <Icon className={`w-3 h-3 ${run.status === "running" ? "animate-spin" : ""}`} />
                         {statusKey ? <T k={statusKey} /> : run.status}
@@ -479,7 +483,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             models_used: run.models_used,
             completed_prompts: run.completed_prompts,
             total_prompts: run.total_prompts,
-            date: new Date(run.completed_at ?? run.created_at).toLocaleDateString("it-IT"),
+            date: new Date(run.completed_at ?? run.created_at).toLocaleDateString(dateLocale),
           }))}
           projectId={params.id}
         />

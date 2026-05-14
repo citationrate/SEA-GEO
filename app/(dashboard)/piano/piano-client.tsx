@@ -160,8 +160,8 @@ export function PianoClient({
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-      else alert(data.error || "Errore");
-    } catch { alert("Errore di rete"); }
+      else alert(data.error || t("common.error"));
+    } catch { alert(t("common.networkError")); }
     finally { setSubscribing(null); }
   }
 
@@ -175,8 +175,8 @@ export function PianoClient({
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-      else alert(data.error || "Errore");
-    } catch { alert("Errore di rete"); }
+      else alert(data.error || t("common.error"));
+    } catch { alert(t("common.networkError")); }
     finally { setPurchasingId(null); }
   }
 
@@ -186,8 +186,8 @@ export function PianoClient({
       const res = await fetch("/api/stripe/cancel-subscription", { method: "POST" });
       const data = await res.json();
       if (data.ok) { alert(t("analysisLauncher.subscriptionCancelled")); window.location.reload(); }
-      else alert(data.error || "Errore");
-    } catch { alert("Errore di rete"); }
+      else alert(data.error || t("common.error"));
+    } catch { alert(t("common.networkError")); }
     finally { setCanceling(false); setShowCancelModal(false); }
   }
 
@@ -532,12 +532,12 @@ export function PianoClient({
               {purchaseResult === "success" ? "✓" : "✕"}
             </div>
             <h3 className="text-xl font-semibold mb-3" style={{ color: purchaseResult === "success" ? "#22c55e" : "#ef4444" }}>
-              {purchaseResult === "success" ? "Acquisto completato!" : "Acquisto annullato"}
+              {purchaseResult === "success" ? t("piano.purchaseSuccessTitle") : t("piano.purchaseCancelTitle")}
             </h3>
             <p className="text-sm text-muted-foreground mb-6">
               {purchaseResult === "success"
-                ? "Il tuo piano è stato aggiornato con successo."
-                : "Nessun addebito è stato effettuato."}
+                ? t("piano.purchaseSuccessDesc")
+                : t("piano.purchaseCancelDesc")}
             </p>
             <button
               onClick={() => { const wasSuccess = purchaseResult === "success"; setPurchaseResult(null); if (wasSuccess) window.location.reload(); }}
@@ -547,7 +547,7 @@ export function PianoClient({
                 color: purchaseResult === "success" ? "#000" : "var(--foreground)",
                 border: purchaseResult === "success" ? "none" : "1px solid var(--border)",
               }}
-            >OK</button>
+            >{t("common.ok")}</button>
           </div>
         </div>
       )}
@@ -620,8 +620,8 @@ function PortalButton() {
       const res = await fetch("/api/stripe/portal", { method: "POST" });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-      else alert(data.error || "Errore");
-    } catch { alert("Errore di rete"); }
+      else alert(data.error || t("common.error"));
+    } catch { alert(t("common.networkError")); }
     finally { setLoading(false); }
   }
 

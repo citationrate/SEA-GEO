@@ -637,8 +637,8 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                         <td className="py-2 pr-3">
                           {analysis ? (
                             analysis.brand_mentioned
-                              ? <span className="text-success font-medium">Si</span>
-                              : <span className="text-muted-foreground">No</span>
+                              ? <span className="text-success font-medium">{t("common.yes")}</span>
+                              : <span className="text-muted-foreground">{t("common.no")}</span>
                           ) : <span className="text-muted-foreground">-</span>}
                         </td>
                         <td className="py-2 pr-3 text-foreground">{analysis?.brand_rank ?? "-"}</td>
@@ -677,7 +677,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                                     </span>
                                   )}
                                 </span>
-                              : <span className="badge badge-muted text-[12px]">Pending</span>}
+                              : <span className="badge badge-muted text-[12px]">{t("runMetrics.pendingBadge")}</span>}
                         </td>
                         <td className="py-2">
                           {p.raw_response && (
@@ -685,7 +685,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                               <button
                                 onClick={() => setModalPrompt({ prompt: p, analysis, query })}
                                 className="text-muted-foreground hover:text-primary transition-colors"
-                                title="Espandi risposta"
+                                title={t("runMetrics.expandResponse")}
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
@@ -743,7 +743,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
               )}
               {modalPrompt.analysis?.brand_mentioned != null && (
                 <span className={`badge ${modalPrompt.analysis.brand_mentioned ? "badge-success" : "badge-muted"}`}>
-                  Brand: {modalPrompt.analysis.brand_mentioned ? "Si" : "No"}
+                  {t("runMetrics.brandLabel")}: {modalPrompt.analysis.brand_mentioned ? t("common.yes") : t("common.no")}
                 </span>
               )}
               {modalPrompt.analysis?.brand_rank != null && (

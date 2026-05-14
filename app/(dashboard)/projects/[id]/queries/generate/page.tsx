@@ -448,14 +448,14 @@ export default function GenerateQueriesPage() {
           {/* Luogo della rilevazione */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              Luogo della rilevazione
-              <InfoTooltip text="Area geografica o territoriale a cui circoscrivere l'ambito delle query (es. Italia, Milano, EMEA). Serve come riferimento per la generazione AI." />
+              {t("generateQueries.placeOfDetectionLabel")}
+              <InfoTooltip text={t("generateQueries.placeOfDetectionTooltip")} />
             </label>
             <input
               type="text"
               value={luogo}
               onChange={(e) => setLuogo(e.target.value)}
-              placeholder="Es. Italia, Milano, EMEA…"
+              placeholder={t("generateQueries.placeOfDetectionPlaceholder")}
               className="input-base w-full"
             />
           </div>
@@ -622,7 +622,7 @@ export default function GenerateQueriesPage() {
                 <p>{t("generateQueries.reduceOrUpgrade")}</p>
                 {planId !== "pro" && planId !== "enterprise" && (
                   <a href="/piano#piani" className="inline-flex items-center gap-1 text-[#c4a882] hover:underline font-medium">
-                    {planId === "demo" ? "Passa a Base o Pro →" : "Passa a Pro →"}
+                    {planId === "demo" ? t("generateQueries.upgradeBaseOrPro") : t("generateQueries.upgradeProArrow")}
                   </a>
                 )}
               </div>
@@ -643,7 +643,7 @@ export default function GenerateQueriesPage() {
               className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-[2px] hover:bg-primary/85 transition-colors disabled:opacity-50"
             >
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {generating ? "Generazione AI in corso..." : t("generateQueries.generatePreview")}
+              {generating ? t("generateQueries.generationInProgress") : t("generateQueries.generatePreview")}
             </button>
           </div>
         </div>
@@ -745,6 +745,7 @@ function QueryPreviewRow({
   onEdit: (idx: number, text: string) => void;
   onRegenerate: (idx: number) => void;
 }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(query.text);
 
@@ -775,15 +776,15 @@ function QueryPreviewRow({
             className="input-base flex-1 text-sm"
             autoFocus
           />
-          <button type="button" onClick={() => { onEdit(idx, editText); setEditing(false); }} className="text-primary text-xs font-semibold shrink-0">OK</button>
-          <button type="button" onClick={() => { setEditText(query.text); setEditing(false); }} className="text-muted-foreground text-xs shrink-0">Annulla</button>
+          <button type="button" onClick={() => { onEdit(idx, editText); setEditing(false); }} className="text-primary text-xs font-semibold shrink-0">{t("common.ok")}</button>
+          <button type="button" onClick={() => { setEditText(query.text); setEditing(false); }} className="text-muted-foreground text-xs shrink-0">{t("common.cancel")}</button>
         </div>
       ) : (
         <>
           <p
             className={`text-sm flex-1 cursor-pointer hover:text-primary transition-colors ${selected ? "text-foreground" : "text-muted-foreground line-through"} ${regenerating ? "opacity-50" : ""}`}
             onClick={() => !regenerating && setEditing(true)}
-            title="Clicca per modificare"
+            title={t("queries.editTooltip")}
           >
             {query.text}
           </p>
@@ -791,7 +792,7 @@ function QueryPreviewRow({
             type="button"
             onClick={() => onRegenerate(idx)}
             disabled={regenerating || regenDisabled}
-            title="Genera una nuova al posto di questa"
+            title={t("generateQueries.regenerateTooltip")}
             className="shrink-0 mt-0.5 p-1 text-muted-foreground hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {regenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}

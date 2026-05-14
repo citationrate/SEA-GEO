@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { Loader2, Check, Eye, EyeOff } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 export default function UpdatePasswordPage() {
+  const { t } = useTranslation();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -22,7 +24,7 @@ export default function UpdatePasswordPage() {
       if (session) {
         setReady(true);
       } else {
-        setError("Sessione non valida. Richiedi un nuovo link di reset.");
+        setError(t("auth.invalidSession"));
       }
     });
   }, []);
@@ -50,8 +52,8 @@ export default function UpdatePasswordPage() {
     <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--background, #0a0a0a)" }}>
       <div className="w-full max-w-sm p-8 rounded-[4px]" style={{ background: "var(--surface, #141416)", border: "1px solid var(--border, #2a2a2a)" }}>
         <div className="text-center mb-8">
-          <h1 className="font-display text-xl font-bold text-foreground">Nuova password</h1>
-          <p className="text-sm text-muted-foreground mt-1">Scegli una nuova password per il tuo account</p>
+          <h1 className="font-display text-xl font-bold text-foreground">{t("auth.updatePwdTitle")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("auth.updatePwdSubtitle")}</p>
         </div>
 
         {done ? (
@@ -59,29 +61,29 @@ export default function UpdatePasswordPage() {
             <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center mx-auto">
               <Check className="w-6 h-6 text-primary" />
             </div>
-            <p className="text-sm text-foreground font-medium">Password aggiornata!</p>
-            <p className="text-xs text-muted-foreground">Verrai reindirizzato alla dashboard...</p>
+            <p className="text-sm text-foreground font-medium">{t("auth.pwdUpdated")}</p>
+            <p className="text-xs text-muted-foreground">{t("auth.redirectingDashboard")}</p>
           </div>
         ) : error && !ready ? (
           <div className="text-center space-y-3">
             <p className="text-sm" style={{ color: "#ef4444" }}>{error}</p>
-            <a href="/settings#account" className="text-sm text-primary hover:text-primary/80 transition-colors">Torna alle impostazioni</a>
+            <a href="/settings#account" className="text-sm text-primary hover:text-primary/80 transition-colors">{t("auth.backToSettings")}</a>
           </div>
         ) : !ready ? (
           <div className="text-center space-y-3 py-4">
             <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
-            <p className="text-sm text-muted-foreground">Verifica in corso...</p>
+            <p className="text-sm text-muted-foreground">{t("auth.verifying")}</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5 block">Nuova password</label>
+              <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5 block">{t("auth.newPasswordLabel")}</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Minimo 8 caratteri"
+                  placeholder={t("auth.minChars")}
                   className="w-full rounded-[3px] px-3 py-2.5 text-sm text-foreground pr-10"
                   style={{ background: "var(--background, #0a0a0a)", border: "1px solid var(--border, #2a2a2a)", outline: "none" }}
                   autoFocus
@@ -92,17 +94,17 @@ export default function UpdatePasswordPage() {
               </div>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5 block">Conferma password</label>
+              <label className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5 block">{t("auth.confirmPasswordLabel")}</label>
               <input
                 type={showPassword ? "text" : "password"}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                placeholder="Ripeti la password"
+                placeholder={t("auth.repeatPlaceholder")}
                 className="w-full rounded-[3px] px-3 py-2.5 text-sm text-foreground"
                 style={{ background: "var(--background, #0a0a0a)", border: `1px solid ${confirm && confirm !== password ? "#ef4444" : "var(--border, #2a2a2a)"}`, outline: "none" }}
               />
               {confirm && confirm !== password && (
-                <p className="text-xs mt-1" style={{ color: "#ef4444" }}>Le password non corrispondono</p>
+                <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{t("auth.pwdMismatch")}</p>
               )}
             </div>
             {error && <p className="text-xs" style={{ color: "#ef4444" }}>{error}</p>}
@@ -113,7 +115,7 @@ export default function UpdatePasswordPage() {
               style={{ background: "var(--primary, #7ab89a)", color: "white" }}
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {loading ? "Aggiornamento..." : "Aggiorna password"}
+              {loading ? t("auth.updatingPwd") : t("auth.updatePwd")}
             </button>
           </form>
         )}

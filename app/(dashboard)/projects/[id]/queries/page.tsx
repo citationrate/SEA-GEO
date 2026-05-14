@@ -142,7 +142,7 @@ export default function QueriesPage() {
       );
       const failed = results.filter((r) => !r.ok);
       if (failed.length > 0) {
-        throw new Error(`${failed.length} query non eliminate`);
+        throw new Error(`${failed.length} ${t("queries.deleteFailedCount")}`);
       }
       const idSet = new Set(idsToDelete);
       setQueries((prev) => prev.filter((q) => !idSet.has(q.id)));
@@ -284,21 +284,21 @@ export default function QueriesPage() {
       {/* Bulk actions bar */}
       {selected.size > 0 && (
         <div className="flex items-center gap-3 px-4 py-2.5 rounded-[2px] border border-primary/30 bg-primary/5 animate-fade-in">
-          <span className="text-sm font-medium text-foreground">{selected.size} {selected.size === 1 ? "query selezionata" : "query selezionate"}</span>
+          <span className="text-sm font-medium text-foreground">{selected.size} {selected.size === 1 ? t("queries.selectedSingular") : t("queries.selectedPlural")}</span>
           <div className="flex items-center gap-2 ml-auto">
             <button
               onClick={() => bulkToggle(true)}
               disabled={bulkLoading}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-[2px] border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
             >
-              <Power className="w-3 h-3" /> Attiva
+              <Power className="w-3 h-3" /> {t("common.activate")}
             </button>
             <button
               onClick={() => bulkToggle(false)}
               disabled={bulkLoading}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-[2px] border border-border text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             >
-              <PowerOff className="w-3 h-3" /> Disattiva
+              <PowerOff className="w-3 h-3" /> {t("common.deactivate")}
             </button>
             {confirmBulkDelete ? (
               <div className="flex items-center gap-1">
@@ -307,20 +307,20 @@ export default function QueriesPage() {
                   disabled={bulkLoading}
                   className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-[2px] bg-destructive text-white hover:bg-destructive/80 transition-colors disabled:opacity-50"
                 >
-                  {bulkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />} Conferma
+                  {bulkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />} {t("common.confirm")}
                 </button>
-                <button onClick={() => setConfirmBulkDelete(false)} className="text-xs text-muted-foreground px-2 py-1.5 hover:text-foreground transition-colors">Annulla</button>
+                <button onClick={() => setConfirmBulkDelete(false)} className="text-xs text-muted-foreground px-2 py-1.5 hover:text-foreground transition-colors">{t("common.cancel")}</button>
               </div>
             ) : (
               <button
                 onClick={() => setConfirmBulkDelete(true)}
                 className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-[2px] border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors"
               >
-                <Trash2 className="w-3 h-3" /> Elimina
+                <Trash2 className="w-3 h-3" /> {t("common.delete")}
               </button>
             )}
             <button onClick={() => { setSelected(new Set()); setConfirmBulkDelete(false); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-1">
-              Deseleziona
+              {t("common.deselect")}
             </button>
           </div>
         </div>
@@ -338,14 +338,14 @@ export default function QueriesPage() {
             aria-expanded={openSection === "ai"}
           >
             <Sparkles className="w-4 h-4 text-primary" />
-            <h2 className="font-display font-semibold text-foreground">Query AI</h2>
+            <h2 className="font-display font-semibold text-foreground">{t("queries.aiSection")}</h2>
             <span className="badge badge-muted text-[12px]">{aiQueries.length}</span>
             <ChevronDown className={`w-4 h-4 text-muted-foreground ml-auto transition-transform ${openSection === "ai" ? "rotate-180" : ""}`} />
             <a
               href={generateHref}
               onClick={(e) => e.stopPropagation()}
               className="bg-primary text-primary-foreground p-2 rounded-[2px] hover:bg-primary/85 transition-colors"
-              title="Genera nuove query con AI"
+              title={t("queries.aiGenerateTooltip")}
             >
               <Plus className="w-4 h-4" />
             </a>
@@ -361,8 +361,8 @@ export default function QueriesPage() {
                   className="block rounded-[2px] border border-dashed border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-colors p-6 text-center"
                 >
                   <Sparkles className="w-5 h-5 text-primary mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground">Genera le tue prime query con AI</p>
-                  <p className="text-xs text-muted-foreground mt-1">Clicca per aprire il wizard</p>
+                  <p className="text-sm font-medium text-foreground">{t("queries.emptyAiTitle")}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("queries.emptyAiSubtitle")}</p>
                 </a>
               ) : (
                 <ul className="space-y-2">
@@ -385,21 +385,21 @@ export default function QueriesPage() {
             aria-expanded={openSection === "manual"}
           >
             <Pencil className="w-4 h-4 text-accent" />
-            <h2 className="font-display font-semibold text-foreground">Query Manuali</h2>
+            <h2 className="font-display font-semibold text-foreground">{t("queries.manualSection")}</h2>
             <span className="badge badge-muted text-[12px]">{manualQueries.length}</span>
             <ChevronDown className={`w-4 h-4 text-muted-foreground ml-auto transition-transform ${openSection === "manual" ? "rotate-180" : ""}`} />
           </button>
 
           {openSection === "manual" && (
             <div className="px-5 pb-5 pt-1 space-y-4 border-t border-border">
-              <p className="text-xs text-muted-foreground">Inserisci query specifiche da monitorare. Premi Invio o + per aggiungere.</p>
+              <p className="text-xs text-muted-foreground">{t("queries.manualHelp")}</p>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={manualText}
                   onChange={(e) => setManualText(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addManualQuery(manualText))}
-                  placeholder="Scrivi una query da monitorare…"
+                  placeholder={t("queries.manualPlaceholder")}
                   className="input-base flex-1"
                 />
                 <button
@@ -414,7 +414,7 @@ export default function QueriesPage() {
               {loading ? (
                 <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
               ) : manualQueries.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Nessuna query manuale. Aggiungine una sopra.</p>
+                <p className="text-sm text-muted-foreground text-center py-4">{t("queries.emptyManual")}</p>
               ) : (
                 <ul className="space-y-2">
                   {manualQueries.map((q) => (
@@ -443,6 +443,7 @@ function BrandWarning({ brand }: { brand: string }) {
 }
 
 function QueryItem({ query, onDelete, onToggle, onUpdateText, selected, onSelect }: { query: Query; onDelete: (id: string) => void; onToggle: (id: string, active: boolean) => void; onUpdateText: (id: string, text: string) => void; selected: boolean; onSelect: (id: string) => void }) {
+  const { t } = useTranslation();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(query.text);
@@ -462,7 +463,7 @@ function QueryItem({ query, onDelete, onToggle, onUpdateText, selected, onSelect
       selected ? "bg-primary/5 border-primary/30" : isActive ? "bg-muted border-border" : "bg-muted/30 border-border/50"
     }`}>
       <div className="flex items-center gap-2 flex-1 min-w-0">
-        <button onClick={() => onSelect(query.id)} className="shrink-0 transition-colors" title="Seleziona">
+        <button onClick={() => onSelect(query.id)} className="shrink-0 transition-colors" title={t("queries.selectTooltip")}>
           {selected
             ? <CheckSquare className="w-4 h-4 text-primary" />
             : <Square className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
@@ -471,7 +472,7 @@ function QueryItem({ query, onDelete, onToggle, onUpdateText, selected, onSelect
         <button
           onClick={() => onToggle(query.id, isActive)}
           className="shrink-0 transition-colors"
-          title={isActive ? "Disattiva" : "Attiva"}
+          title={isActive ? t("common.deactivate") : t("common.activate")}
         >
           {isActive
             ? <ToggleRight className="w-5 h-5 text-primary" />
@@ -495,7 +496,7 @@ function QueryItem({ query, onDelete, onToggle, onUpdateText, selected, onSelect
           <span
             className={`text-sm cursor-text flex-1 ${isActive ? "text-foreground hover:text-primary" : "text-muted-foreground line-through"} transition-colors`}
             onClick={() => { setEditText(query.text); setEditing(true); }}
-            title="Clicca per modificare"
+            title={t("queries.editTooltip")}
           >
             {query.text}
           </span>
@@ -513,20 +514,20 @@ function QueryItem({ query, onDelete, onToggle, onUpdateText, selected, onSelect
               onClick={() => { onDelete(query.id); setConfirmDelete(false); }}
               className="text-xs font-medium text-destructive hover:text-destructive/80 transition-colors px-1.5 py-0.5 rounded-[2px] border border-destructive/30 bg-destructive/10"
             >
-              Elimina
+              {t("common.delete")}
             </button>
             <button
               onClick={() => setConfirmDelete(false)}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5"
             >
-              Annulla
+              {t("common.cancel")}
             </button>
           </div>
         ) : (
           <button
             onClick={() => setConfirmDelete(true)}
             className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-            title="Elimina query"
+            title={t("queries.deleteTooltip")}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
