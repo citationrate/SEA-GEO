@@ -143,7 +143,7 @@ function generateQueries(
   brandB: string,
   driver: string,
   language: string,
-): { pattern: string; text: string }[] {
+): { pattern: string; text: string; fromFallback: boolean }[] {
   const a = titleCase(brandA);
   const b = titleCase(brandB);
   const driverKey = driver.toLowerCase().trim();
@@ -151,9 +151,12 @@ function generateQueries(
   // Use English templates for all non-Italian languages (EN/FR/DE/ES)
   // so the AI receives English query patterns, then the lang instruction
   // (added later) forces the response language.
+  const knownIt = DRIVER_TEMPLATES_IT[driverKey];
+  const knownEn = DRIVER_TEMPLATES_EN[driverKey];
+  const usingFallback = language === "it" ? !knownIt : !knownEn;
   const templates = language === "it"
-    ? (DRIVER_TEMPLATES_IT[driverKey] ?? FALLBACK_TEMPLATES_IT)
-    : (DRIVER_TEMPLATES_EN[driverKey] ?? FALLBACK_TEMPLATES_EN);
+    ? (knownIt ?? FALLBACK_TEMPLATES_IT)
+    : (knownEn ?? FALLBACK_TEMPLATES_EN);
 
   return templates.map((tpl, i) => ({
     pattern: String.fromCharCode(65 + i),
@@ -161,7 +164,63 @@ function generateQueries(
       .replace(/\{A\}/g, a)
       .replace(/\{B\}/g, b)
       .replace(/\{driver\}/g, driver),
+    fromFallback: usingFallback,
   }));
+}
+
+/**
+ * Server-side syntax polish for fallback queries.
+ *
+ * When the driver is free-text (not in DRIVER_TEMPLATES_*), the template
+ * substitution can produce grammatically awkward sentences in the project
+ * language (e.g. IT: "...migliore per Rapporto con i dipendenti..." → si
+ * dovrebbe leggere "...in termini di rapporto con i dipendenti..."). This
+ * passes the 3 generated queries to Claude Haiku with a "polish syntax,
+ * keep meaning" instruction, in the project's own language. Invisible to
+ * the user. Best-effort: on any failure, returns input untouched.
+ *
+ * No-op when queries came from a known driver template (already polished).
+ */
+async function polishQuerySyntax(
+  queries: { pattern: string; text: string; fromFallback: boolean }[],
+  language: string,
+): Promise<{ pattern: string; text: string }[]> {
+  // Only polish fallback queries; known-driver templates are already curated.
+  if (!queries.some((q) => q.fromFallback)) {
+    return queries.map(({ pattern, text }) => ({ pattern, text }));
+  }
+  const langName: Record<string, string> = {
+    it: "Italian", en: "English", fr: "French", de: "German", es: "Spanish",
+  };
+  const target = langName[language] ?? "English";
+
+  try {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const numbered = queries.map((q, i) => `${i + 1}. ${q.text}`).join("\n");
+    const msg = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 600,
+      system: `You polish the syntax of search queries written in ${target}. Fix grammar, agreement, prepositions and word order so each sentence reads natural to a native speaker. NEVER change meaning, brand names, or the topic. Keep the comparative intent. Output ONLY a JSON array of the rewritten sentences in the SAME order: ["q1", "q2", "q3"].`,
+      messages: [{ role: "user", content: numbered }],
+    });
+
+    const text = msg.content[0].type === "text" ? msg.content[0].text : "";
+    const match = text.match(/\[[\s\S]*\]/);
+    if (!match) return queries.map(({ pattern, text }) => ({ pattern, text }));
+
+    const parsed = JSON.parse(match[0]);
+    if (!Array.isArray(parsed) || parsed.length !== queries.length) {
+      return queries.map(({ pattern, text }) => ({ pattern, text }));
+    }
+
+    return queries.map((q, i) => ({
+      pattern: q.pattern,
+      text: typeof parsed[i] === "string" && parsed[i].trim() ? parsed[i].trim() : q.text,
+    }));
+  } catch (err) {
+    console.warn("[polishQuerySyntax] failed, using raw templates:", err instanceof Error ? err.message : err);
+    return queries.map(({ pattern, text }) => ({ pattern, text }));
+  }
 }
 
 const VALID_RECOMMENDATIONS = new Set([1, 2, 0.5]);
@@ -320,8 +379,14 @@ export const runCompetitiveAnalysis = inngest.createFunction(
     const models = eventModels && eventModels.length > 0 ? eventModels : DEFAULT_MODELS;
     const language = eventLanguage ?? "it";
 
-    // Step 1: Generate queries and create prompt rows
-    const queries = generateQueries(brandA, brandB, driver, language);
+    // Step 1: Generate queries and create prompt rows.
+    // Template substitution first; then a Claude Haiku polish step for
+    // fallback queries (free-text driver) corrects awkward grammar in the
+    // project language. Step.run() makes the polish idempotent on retries.
+    const rawQueries = generateQueries(brandA, brandB, driver, language);
+    const queries = await step.run("polish-query-syntax", async () =>
+      polishQuerySyntax(rawQueries, language),
+    );
 
     const promptIds = await step.run("create-prompts", async () => {
       const supabase = createServiceClient();
