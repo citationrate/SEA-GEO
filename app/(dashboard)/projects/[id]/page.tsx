@@ -443,7 +443,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                       {aviScore != null && (
                         <span className="font-display font-bold text-primary text-sm">AVI {aviScore}</span>
                       )}
-                      <span className="text-xs text-muted-foreground">{run.models_used?.join(", ")}</span>
+                      <span className="text-xs text-muted-foreground">{(run.models_used?.length ?? 0)} {t("projectDetail.aiModelsShort")}</span>
                       <span className="text-xs text-muted-foreground">{run.completed_prompts}/{run.total_prompts} prompt</span>
                     </div>
                     <div className="flex items-center gap-3">

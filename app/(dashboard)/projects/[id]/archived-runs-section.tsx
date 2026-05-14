@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Archive, ChevronDown, ChevronRight } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface ArchivedRun {
   id: string;
@@ -20,6 +21,7 @@ export function ArchivedRunsSection({
   runs: ArchivedRun[];
   projectId: string;
 }) {
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(true);
 
   return (
@@ -30,7 +32,7 @@ export function ArchivedRunsSection({
       >
         <div className="flex items-center gap-2">
           <Archive className="w-4 h-4 text-muted-foreground" />
-          <h2 className="font-display font-semibold text-foreground text-sm">Archivio Run</h2>
+          <h2 className="font-display font-semibold text-foreground text-sm">{t("projectDetail.archiveTitle")}</h2>
           <span className="badge badge-muted text-[12px]">{runs.length}</span>
         </div>
         {collapsed ? (
@@ -50,8 +52,8 @@ export function ArchivedRunsSection({
             >
               <div className="flex items-center gap-3">
                 <span className="font-display font-semibold text-foreground text-sm">v{run.version}</span>
-                <span className="badge badge-muted text-[12px]">ARCHIVIATA</span>
-                <span className="text-xs text-muted-foreground">{run.models_used?.join(", ")}</span>
+                <span className="badge badge-muted text-[12px]">{t("projectDetail.archivedBadge")}</span>
+                <span className="text-xs text-muted-foreground">{(run.models_used?.length ?? 0)} {t("projectDetail.aiModelsShort")}</span>
                 <span className="text-xs text-muted-foreground">
                   {run.completed_prompts}/{run.total_prompts} prompt
                 </span>

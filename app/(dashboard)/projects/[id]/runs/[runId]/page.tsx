@@ -298,7 +298,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
 
       {/* Run metadata */}
       <div className="card p-4 flex flex-wrap gap-x-6 gap-y-2 text-sm break-words">
-        <div className="flex flex-wrap items-center gap-1"><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.modelsLabel" />:</span>{" "}<span className="text-foreground font-medium break-words">{r.models_used?.join(", ")}</span></div>
+        <div className="flex flex-wrap items-center gap-1"><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.modelsLabel" />:</span>{" "}<span className="text-foreground font-medium">{r.models_used?.length ?? 0}</span></div>
         <div><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.promptLabel" />:</span>{" "}<span className="text-foreground font-medium">{r.completed_prompts}/{r.total_prompts}</span></div>
         <div><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.runsPerPrompt" />:</span>{" "}<span className="text-foreground font-medium">{r.run_count}</span></div>
         {r.started_at && <div><span className="text-muted-foreground"><TranslatedLabel tkey="runDetail.startLabel" />:</span>{" "}<span className="text-foreground" suppressHydrationWarning>{new Date(r.started_at).toLocaleString("it-IT")}</span></div>}

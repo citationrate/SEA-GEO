@@ -111,7 +111,7 @@ export default function SharedReportPage() {
             {project.brand} &middot; Analisi v{run.version} &middot; {run.completedAt ? new Date(run.completedAt).toLocaleDateString("it-IT") : ""}
           </p>
           <p className="text-xs text-gray-500">
-            Modelli: {run.modelsUsed.join(", ")} &middot; {run.completedPrompts}/{run.totalPrompts} prompt
+            Modelli: {run.modelsUsed.length} &middot; {run.completedPrompts}/{run.totalPrompts} prompt
           </p>
         </div>
 
