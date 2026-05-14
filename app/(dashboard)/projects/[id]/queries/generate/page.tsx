@@ -48,6 +48,7 @@ export default function GenerateQueriesPage() {
   // Step 1: Inputs
   const [genMode, setGenMode] = useState<"generali" | "specifiche">("generali");
   const [theme, setTheme] = useState("");
+  const [themeContext, setThemeContext] = useState("");
   const [categoria, setCategoria] = useState("");
   const [mercato, setMercato] = useState("");
   const [luogo, setLuogo] = useState("");
@@ -102,13 +103,15 @@ export default function GenerateQueriesPage() {
   // Auto-AI-intake: appena il trigger (categoria in "generali", tema in
   // "specifiche") e' stabile (>=3 char, debounce 1500ms), chiama
   // generateAiQuestions in modo che le 3 domande appaiano da sole.
+  // In "specifiche" anche themeContext influenza la generazione, ma solo
+  // se le 3 domande non sono ancora apparse — non re-triggera dopo.
   useEffect(() => {
     const trigger = genMode === "specifiche" ? theme.trim() : categoria.trim();
     if (trigger.length < 3 || showAiIntake || aiQuestionsLoading || aiQuestions.length > 0) return;
     const t = setTimeout(() => { generateAiQuestions(); }, 1500);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoria, theme, genMode]);
+  }, [categoria, theme, themeContext, genMode]);
 
   // Cambio di modalita': reset delle 3 domande AI per rigenerarle sul nuovo
   // contesto (brand-360 vs theme-focused).
@@ -171,6 +174,7 @@ export default function GenerateQueriesPage() {
           tofu_pct: tofuPercent,
           mode: genMode,
           theme: genMode === "specifiche" ? (theme.trim() || undefined) : undefined,
+          theme_context: genMode === "specifiche" ? (themeContext.trim() || undefined) : undefined,
           categoria: categoria.trim() || undefined,
           mercato: mercato.trim() || undefined,
           luogo: luogo.trim() || undefined,
@@ -260,6 +264,7 @@ export default function GenerateQueriesPage() {
           lang: locale,
           mode: genMode,
           theme: genMode === "specifiche" ? theme : undefined,
+          theme_context: genMode === "specifiche" ? themeContext : undefined,
         }),
       });
       if (!res.ok) throw new Error(t("common.error"));
@@ -359,18 +364,34 @@ export default function GenerateQueriesPage() {
           </div>
 
           {genMode === "specifiche" ? (
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                {t("generateQueries.themeLabel")} *
-                <InfoTooltip text={t("generateQueries.themeInfo")} />
-              </label>
-              <input
-                type="text"
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-                placeholder={t("generateQueries.themePlaceholder")}
-                className="input-base w-full"
-              />
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                  {t("generateQueries.themeLabel")} *
+                  <InfoTooltip text={t("generateQueries.themeInfo")} />
+                </label>
+                <input
+                  type="text"
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value)}
+                  placeholder={t("generateQueries.themePlaceholder")}
+                  className="input-base w-full"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                  {t("generateQueries.themeContextLabel")}
+                  <InfoTooltip text={t("generateQueries.themeContextInfo")} />
+                </label>
+                <textarea
+                  value={themeContext}
+                  onChange={(e) => setThemeContext(e.target.value)}
+                  placeholder={t("generateQueries.themeContextPlaceholder")}
+                  rows={2}
+                  maxLength={300}
+                  className="input-base w-full resize-none"
+                />
+              </div>
             </div>
           ) : (
           <>

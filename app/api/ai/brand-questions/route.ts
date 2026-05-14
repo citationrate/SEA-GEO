@@ -8,7 +8,7 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   console.log("[BRAND-QUESTIONS] Request received:", JSON.stringify(body).slice(0, 300));
-  const { categoria, mercato, punti_di_forza, competitor, obiezioni, lang, mode, theme } = body;
+  const { categoria, mercato, punti_di_forza, competitor, obiezioni, lang, mode, theme, theme_context } = body;
 
   const isSpecific = mode === "specifiche" && typeof theme === "string" && theme.trim().length > 0;
 
@@ -20,7 +20,8 @@ export async function POST(request: Request) {
   const context = isSpecific
     ? [
         `Topic to investigate: ${String(theme).trim()}`,
-        categoria ? `Category: ${categoria}` : null,
+        theme_context ? `Topic context: ${String(theme_context).trim()}` : null,
+        categoria ? `Brand category (background): ${categoria}` : null,
         mercato ? `Market: ${mercato}` : null,
       ].filter(Boolean).join("\n")
     : [
@@ -35,7 +36,14 @@ export async function POST(request: Request) {
   const outputLang = langName[lang] ?? "English";
 
   const systemPrompt = isSpecific
-    ? `You are an expert in brand marketing and AI visibility. The user wants AI search queries focused on ONE specific topic of their brand. Given the topic and context below, generate exactly 3 short, specific questions that help clarify WHY the user cares about this topic, WHO the target buyer is for it, and WHAT differentiates the brand on this topic. The questions must be in ${outputLang}, practical, and useful to refine query generation about this single topic. Respond ONLY with a JSON array: ["question1", "question2", "question3"]`
+    ? `You are an expert in brand marketing and AI visibility. The user wants AI search queries focused on ONE specific topic of their brand — NOT general brand-360° queries. Your job is to surface 3 short questions that NARROW the topic further so query generation stays on-track and never drifts to brand-level queries.
+
+Generate exactly 3 short questions, ONE for each axis of specificity:
+1. SUB-TOPIC: what is the most relevant narrower slice of the topic? (e.g. running shoes → road running / trail / racing flats)
+2. USE CASE: what is the concrete scenario / activity / context where the topic matters? (e.g. amateur runner training for a marathon)
+3. TARGET BUYER: who is the actual buyer / persona for this topic? (e.g. age, expertise, budget tier, decision drivers)
+
+Phrase the questions naturally; the user's answers are optional. Questions must be in ${outputLang}. Respond ONLY with a JSON array: ["sub-topic question", "use-case question", "target-buyer question"]`
     : `You are an expert in brand marketing and AI visibility. Analyze the following brand context and generate exactly 3 short, specific questions that would help you better understand the brand to generate AI queries more representative of its real market. The questions must be in ${outputLang}, practical, and refer to real user purchasing behaviors. Respond ONLY with a JSON array: ["question1", "question2", "question3"]`;
 
   try {

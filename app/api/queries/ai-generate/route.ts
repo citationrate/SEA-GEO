@@ -9,6 +9,7 @@ const schema = z.object({
   tofu_pct: z.number().min(0).max(100).default(60),
   mode: z.enum(["generali", "specifiche"]).optional(),
   theme: z.string().optional(),
+  theme_context: z.string().optional(),
   categoria: z.string().optional(),
   mercato: z.string().optional(),
   luogo: z.string().optional(),
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
     }
 
-    const { project_id, count: requestedCount, tofu_pct, mode, theme, categoria, mercato, luogo, punti_di_forza, competitor, obiezioni, personas, lang } = parsed.data;
+    const { project_id, count: requestedCount, tofu_pct, mode, theme, theme_context, categoria, mercato, luogo, punti_di_forza, competitor, obiezioni, personas, lang } = parsed.data;
 
     // Demo plan: cap AI generation at 5 query (matches the 10-prompt budget).
     // Read plan from the data project (seageo1).
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
     const nTofu = Math.round(count * (tofu_pct / 100));
     const nMofu = count - nTofu;
 
-    const userInputs = { categoria, mercato, luogo, punti_di_forza, competitor, obiezioni, personas, mode, theme };
+    const userInputs = { categoria, mercato, luogo, punti_di_forza, competitor, obiezioni, personas, mode, theme, theme_context };
     const systemPrompt = buildSystemPrompt(p, existingTexts, count, nTofu, nMofu, websiteContext, userInputs, lang);
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -307,7 +308,7 @@ function buildSystemPrompt(
   nTofu: number,
   nMofu: number,
   websiteContext?: string,
-  userInputs?: { categoria?: string; mercato?: string; luogo?: string; punti_di_forza?: string[]; competitor?: string[]; obiezioni?: string[]; personas?: any[]; mode?: string; theme?: string },
+  userInputs?: { categoria?: string; mercato?: string; luogo?: string; punti_di_forza?: string[]; competitor?: string[]; obiezioni?: string[]; personas?: any[]; mode?: string; theme?: string; theme_context?: string },
   interfaceLang?: string,
 ): string {
   const langMap: Record<string, string> = { it: "italiano", en: "English", fr: "français", de: "Deutsch", es: "español" };
@@ -326,8 +327,10 @@ function buildSystemPrompt(
 
   // Build user-provided context block (sanitize all user inputs to prevent prompt injection)
   const isSpecific = userInputs?.mode === "specifiche" && typeof userInputs?.theme === "string" && userInputs.theme.trim().length > 0;
+  const themeSanitized = isSpecific ? sanitizeInput(userInputs!.theme!) : "";
   const userContextParts: string[] = [];
-  if (isSpecific) userContextParts.push(`- Tema specifico da approfondire: ${sanitizeInput(userInputs!.theme!)}`);
+  if (isSpecific) userContextParts.push(`- Tema specifico da approfondire: ${themeSanitized}`);
+  if (isSpecific && userInputs?.theme_context) userContextParts.push(`- Contesto/dettagli del tema: ${sanitizeInput(userInputs.theme_context)}`);
   if (userInputs?.categoria) userContextParts.push(`- Categoria prodotto/servizio: ${sanitizeInput(userInputs.categoria)}`);
   if (userInputs?.mercato) userContextParts.push(`- Mercato di riferimento: ${sanitizeInput(userInputs.mercato)}`);
   if (userInputs?.luogo) userContextParts.push(`- Localizzazione: ${sanitizeInput(userInputs.luogo)}`);
@@ -342,7 +345,7 @@ function buildSystemPrompt(
   }
   const userContextBlock = userContextParts.length > 0
     ? isSpecific
-      ? `\nContesto dall'utente:\n${userContextParts.join("\n")}\n\nIMPORTANTE: TUTTE le query generate (sia TOFU che MOFU) devono ruotare attorno al tema specifico indicato sopra. Non generare query generaliste sul brand: ogni query deve trattare un sotto-aspetto, un caso d'uso, un confronto, una preoccupazione o un criterio di scelta legato a quel singolo tema. Le query MOFU devono essere comparative o decisionali sul tema. Le query TOFU devono essere esplorative sul tema.\n`
+      ? `\nContesto dall'utente:\n${userContextParts.join("\n")}\n\nVINCOLO ASSOLUTO — modalità "Specifiche":\n1. OGNI singola query generata DEVE menzionare letteralmente la keyword del tema ("${themeSanitized}") oppure un sinonimo stretto/iperonimo immediato. Niente query che parlano del brand a 360° o di prodotti adiacenti fuori dal tema.\n2. Le query devono restare confinate al sotto-tema/caso d'uso/target indicati nel contesto. Se l'utente ha specificato "trail e strada, runner amatoriali", non generare query su scarpe da basket o calzature in generale.\n3. Le query MOFU devono essere comparative o decisionali RESTANDO sul tema (es. "miglior X per [tema] sotto N €"). Le query TOFU devono essere esplorative RESTANDO sul tema.\n4. NESSUNA query che, letta da sola fuori contesto, potrebbe essere scambiata per una query brand-360°. Se hai dubbi, scarta e rifai.\n`
       : `\nContesto specifico dall'utente:\n${userContextParts.join("\n")}\n\nUSA ATTIVAMENTE questi dettagli per generare query più mirate. Le query MOFU devono riflettere i bisogni reali dei clienti, le caratteristiche distintive e le considerazioni d'acquisto.\n`
     : "";
 
