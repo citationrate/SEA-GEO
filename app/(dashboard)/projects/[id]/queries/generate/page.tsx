@@ -308,6 +308,7 @@ export default function GenerateQueriesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          project_id: projectId,
           categoria,
           mercato,
           punti_di_forza: puntiDiForza,
