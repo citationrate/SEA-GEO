@@ -6,6 +6,8 @@ import { Play, X, Loader2, Cpu, Globe, AlertTriangle, Lock, Settings2, Wallet, C
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
+import { BrandLogo } from "@/components/brand-logos";
+import { modelIdToBrand } from "@citationrate/llm-client";
 
 const RUN_OPTIONS = [
   { value: 1, labelKey: "analysisLauncher.runOptFast", descKey: "analysisLauncher.runOptFastDesc", recommended: false },
@@ -216,15 +218,18 @@ export function AnalysisLauncher({
             <div className="space-y-2">
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("analysisLauncher.projectAIModels")}</p>
               <div className="flex flex-wrap gap-2">
-                {modelsConfig.map((modelId) => (
-                  <span
-                    key={modelId}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-primary/30 bg-primary/5 text-foreground"
-                  >
-                    <Cpu className="w-3 h-3 text-primary" />
-                    {modelId}
-                  </span>
-                ))}
+                {modelsConfig.map((modelId) => {
+                  const brand = modelIdToBrand(modelId)?.brand ?? modelId;
+                  return (
+                    <span
+                      key={modelId}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-primary/30 bg-primary/5 text-foreground"
+                    >
+                      <BrandLogo id={modelId} size={14} />
+                      {brand}
+                    </span>
+                  );
+                })}
               </div>
               <p className="text-[13px] text-cream-dim">{t("analysisLauncher.modelsFixedAtCreation")}</p>
             </div>

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
+import { BrandLogo } from "@/components/brand-logos";
+import { modelIdToBrand } from "@citationrate/llm-client";
 
 const STATUS_ICON: Record<string, any> = {
   pending: Clock,
@@ -111,7 +113,10 @@ export function ResultsTable({ rows }: { rows: RunRow[] }) {
                   <td className="py-3 px-4">
                     <div className="flex flex-wrap gap-1">
                       {r.models_used?.map((m: string) => (
-                        <span key={m} className="badge badge-muted text-[12px]">{m}</span>
+                        <span key={m} className="badge badge-muted text-[12px] inline-flex items-center gap-1" title={m}>
+                          <BrandLogo id={m} size={11} />
+                          {modelIdToBrand(m)?.brand ?? m}
+                        </span>
                       ))}
                     </div>
                   </td>

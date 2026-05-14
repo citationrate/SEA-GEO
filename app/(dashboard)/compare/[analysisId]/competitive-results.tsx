@@ -9,6 +9,8 @@ import { useTranslation } from "@/lib/i18n/context";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from "recharts";
+import { BrandLogo } from "@/components/brand-logos";
+import { modelIdToBrand } from "@citationrate/llm-client";
 
 const MODEL_LABELS: Record<string, string> = {
   "gpt-5.4-mini": "GPT-5.4 Mini",
@@ -40,7 +42,7 @@ const MODEL_LABELS: Record<string, string> = {
 };
 
 function getModelDisplayName(model: string): string {
-  return MODEL_LABELS[model] ?? model;
+  return modelIdToBrand(model)?.brand ?? MODEL_LABELS[model] ?? model;
 }
 
 /** Which models have web browsing active in comparison mode */

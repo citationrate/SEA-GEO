@@ -6,6 +6,8 @@ import { MarkdownResponse } from "@/components/ui/markdown-response";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
+import { BrandLogo } from "@/components/brand-logos";
+import { modelIdToBrand } from "@citationrate/llm-client";
 
 interface RunMetricsProps {
   prompts: any[];
@@ -625,7 +627,12 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                             )}
                           </td>
                         )}
-                        <td className="py-2 pr-3"><span className="badge badge-muted text-[12px]">{p.model}</span></td>
+                        <td className="py-2 pr-3">
+                          <span className="badge badge-muted text-[12px] inline-flex items-center gap-1.5" title={p.model}>
+                            <BrandLogo id={p.model} size={12} />
+                            {modelIdToBrand(p.model)?.brand ?? p.model}
+                          </span>
+                        </td>
                         <td className="py-2 pr-3 text-muted-foreground">{p.run_number}</td>
                         <td className="py-2 pr-3">
                           {analysis ? (
