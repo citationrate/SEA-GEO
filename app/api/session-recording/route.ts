@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createAuthServiceClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 
 function getCrmClient() {
@@ -6,6 +7,18 @@ function getCrmClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.CR_SERVICE_ROLE_KEY!
   );
+}
+
+/** Resolve user_id: use body value if present, otherwise read from Supabase auth cookie */
+async function resolveUserId(bodyUserId?: string): Promise<string | null> {
+  if (bodyUserId) return bodyUserId;
+  try {
+    const auth = createAuthServiceClient();
+    const { data: { user } } = await auth.auth.getUser();
+    return user?.id ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // Create new session (or handle sendBeacon PUT via _method)
@@ -32,7 +45,8 @@ export async function POST(req: NextRequest) {
       return Response.json({ ok: true });
     }
 
-    const { user_id, events, page_url } = body;
+    const { user_id: bodyUserId, events, page_url } = body;
+    const user_id = await resolveUserId(bodyUserId);
     if (!user_id || !events) return Response.json({ error: "Missing data" }, { status: 400 });
 
     const supabase = getCrmClient();
