@@ -80,6 +80,12 @@ export async function GET(
     : { data: [] };
   const queryTextMap = new Map((queries ?? []).map((q: any) => [q.id, q.text]));
 
+  // Fetch sources e competitor_avi per il "Confronto" (entrambi scoped by run_id).
+  const { data: sources } = await supabase.from("sources").select("*").in("run_id", runIds);
+  const { data: competitorAvi } = await (supabase.from("competitor_avi") as any)
+    .select("run_id, competitor_name, avi_score, prominence_score, rank_score, sentiment_score, mention_count")
+    .in("run_id", runIds);
+
   // Build workbook
   const wb = XLSX.utils.book_new();
 
@@ -196,6 +202,61 @@ export async function GET(
     .map(([name, stats]) => [name, stats.count]);
   const wsTopics = XLSX.utils.aoa_to_sheet([topicHeaders, ...topicRows]);
   XLSX.utils.book_append_sheet(wb, wsTopics, "Topic");
+
+  // ── Sheet 5: Confronto AVI (brand vs competitor, per run) ──
+  const runVersionMap = new Map(allRuns.map((r) => [r.id, `v${r.version}`]));
+  const confrontoHeaders = [
+    "Version",
+    t("sidebar.competitors"),
+    "AVI",
+    t("dashboard.presence"),
+    t("dashboard.position"),
+    t("dashboard.sentiment"),
+    "Mention Count",
+  ];
+  const confrontoRows: any[][] = [];
+  // Brand rows: 1 per run con i suoi score AVI
+  allRuns.forEach((r) => {
+    const a = aviMap.get(r.id);
+    confrontoRows.push([
+      `v${r.version}`,
+      `${proj.target_brand ?? "—"} (brand)`,
+      a?.avi_score ?? "—",
+      a?.presence_score ?? "—",
+      a?.rank_score ?? "—",
+      a?.sentiment_score ?? "—",
+      "—",
+    ]);
+  });
+  // Competitor rows
+  ((competitorAvi ?? []) as any[])
+    .sort((a, b) => (b.avi_score ?? 0) - (a.avi_score ?? 0))
+    .forEach((c) => {
+      confrontoRows.push([
+        runVersionMap.get(c.run_id) ?? "—",
+        c.competitor_name,
+        c.avi_score ?? "—",
+        c.prominence_score ?? "—",
+        c.rank_score ?? "—",
+        c.sentiment_score ?? "—",
+        c.mention_count ?? 0,
+      ]);
+    });
+  const wsConfronto = XLSX.utils.aoa_to_sheet([confrontoHeaders, ...confrontoRows]);
+  XLSX.utils.book_append_sheet(wb, wsConfronto, "Confronto");
+
+  // ── Sheet 6: Sources ──
+  const sourceHeaders = ["Version", "Domain", "URL", t("datasets.model"), "Type", t("sources.citationsLabel")];
+  const sourceRows = ((sources ?? []) as any[]).map((s) => [
+    runVersionMap.get(s.run_id) ?? "—",
+    s.domain ?? "—",
+    s.url ?? "—",
+    s.model ?? "—",
+    s.source_type ?? "—",
+    s.citation_count ?? 1,
+  ]);
+  const wsSources = XLSX.utils.aoa_to_sheet([sourceHeaders, ...sourceRows]);
+  XLSX.utils.book_append_sheet(wb, wsSources, t("sources.title"));
 
   // Generate buffer
   const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });

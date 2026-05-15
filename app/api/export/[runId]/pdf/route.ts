@@ -77,9 +77,19 @@ export async function GET(
     ? await supabase.from("response_analysis").select("*").in("prompt_executed_id", promptIds)
     : { data: [] };
 
-  const { data: sources } = promptIds.length > 0
-    ? await supabase.from("sources").select("*").in("prompt_executed_id", promptIds)
-    : { data: [] };
+  // Sources: la tabella usa run_id come scope, non prompt_executed_id
+  // (vedi inngest-functions.ts:631 — l'upsert non popola prompt_executed_id).
+  const { data: sources } = await supabase
+    .from("sources")
+    .select("*")
+    .eq("run_id", params.runId);
+
+  // Competitor AVI per il "Confronto"
+  const { data: competitorAvi } = await (supabase.from("competitor_avi") as any)
+    .select("competitor_name, avi_score, prominence_score, rank_score, sentiment_score, mention_count")
+    .eq("run_id", params.runId);
+  const competitorAviList = ((competitorAvi ?? []) as any[])
+    .sort((a, b) => (b.avi_score ?? 0) - (a.avi_score ?? 0));
 
   const analysisMap = new Map((analyses ?? []).map((x: any) => [x.prompt_executed_id, x]));
   const analysesList = (analyses ?? []) as any[];
@@ -191,6 +201,37 @@ export async function GET(
       : renderEmpty(t("dashboard.noCompetitorFound"))}
   `;
 
+  // Confronto: AVI del brand vs AVI dei competitor in questo run.
+  const confrontoBlock = `
+    <h2 class="section">Confronto AVI (${competitorAviList.length + 1})</h2>
+    ${renderTable(
+      [
+        { label: t("sidebar.competitors") },
+        { label: "AVI", align: "right" },
+        { label: t("dashboard.presence"), align: "right" },
+        { label: t("dashboard.position"), align: "right" },
+        { label: t("dashboard.sentiment"), align: "right" },
+      ],
+      [
+        [
+          `${proj?.target_brand ?? "—"} (brand)`,
+          a?.avi_score != null ? Math.round(Number(a.avi_score)) : "—",
+          a?.presence_score != null ? Math.round(Number(a.presence_score)) : "—",
+          a?.rank_score != null ? Math.round(Number(a.rank_score)) : "—",
+          a?.sentiment_score != null ? Math.round(Number(a.sentiment_score)) : "—",
+        ],
+        ...competitorAviList.slice(0, 30).map((c: any) => [
+          c.competitor_name,
+          c.avi_score != null ? Math.round(Number(c.avi_score)) : "—",
+          c.prominence_score != null ? Math.round(Number(c.prominence_score)) : "—",
+          c.rank_score != null ? Math.round(Number(c.rank_score)) : "—",
+          c.sentiment_score != null ? Math.round(Number(c.sentiment_score)) : "—",
+        ]),
+      ],
+      { alternating: true }
+    )}
+  `;
+
   const topicBlock = topicList.length > 0 ? `
     <h2 class="section">Topic (${topicList.length})</h2>
     ${renderChips(topicList.slice(0, 60).map(([name, count]) => ({ name, count })))}
@@ -261,6 +302,7 @@ export async function GET(
     ${kpiBlock}
     ${componentsBlock}
     ${competitorBlock}
+    ${confrontoBlock}
     ${topicBlock}
     ${sourcesBlock}
     ${promptSummaryBlock}

@@ -95,9 +95,9 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
     ? await supabase.from("response_analysis").select("*").in("prompt_executed_id", promptIds)
     : { data: [] };
 
-  const { data: sources } = promptIds.length > 0
-    ? await supabase.from("sources").select("*").in("prompt_executed_id", promptIds)
-    : { data: [] };
+  // Sources sono scope-by-run, non per prompt: la tabella sources NON ha
+  // prompt_executed_id (filtravamo un campo inesistente -> sempre 0 fonti).
+  const { data: sources } = await supabase.from("sources").select("*").eq("run_id", params.runId);
 
   const { data: competitors } = await supabase
     .from("competitors")

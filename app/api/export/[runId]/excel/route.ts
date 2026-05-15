@@ -74,13 +74,19 @@ export async function GET(
 
   const analysisMap = new Map((analyses ?? []).map((a: any) => [a.prompt_executed_id, a]));
 
-  // Fetch sources
-  const { data: sources } = promptIds.length > 0
-    ? await supabase
-        .from("sources")
-        .select("*")
-        .in("prompt_executed_id", promptIds)
-    : { data: [] };
+  // Fetch sources (la tabella `sources` non ha la colonna prompt_executed_id:
+  // gli upsert in inngest-functions.ts:631 usano project_id + run_id + model.
+  // Filtrare per run_id ritorna il set corretto per questo run.)
+  const { data: sources } = await supabase
+    .from("sources")
+    .select("*")
+    .eq("run_id", runId);
+
+  // Fetch competitor AVI per run (dati del "Confronto" — competitor scores
+  // calcolati per quello specifico run, popolati da computeCompetitorAVI).
+  const { data: competitorAvi } = await (supabase.from("competitor_avi") as any)
+    .select("competitor_name, avi_score, prominence_score, rank_score, sentiment_score, consistency_score, mention_count")
+    .eq("run_id", runId);
 
   // Fetch queries for human-readable text
   const queryIds = Array.from(new Set((prompts ?? []).map((p: any) => p.query_id).filter(Boolean)));
@@ -200,12 +206,49 @@ export async function GET(
   const wsTopics = XLSX.utils.aoa_to_sheet([topicHeaders, ...topicRows]);
   XLSX.utils.book_append_sheet(wb, wsTopics, "Topic");
 
-  // Sheet 5: Sources
-  const sourceHeaders = ["Domain", "URL", "Label", "Type", t("sources.citationsLabel"), t("sources.brandOwned")];
+  // Sheet 5: Confronto (AVI del brand vs AVI dei competitor in questo run)
+  const confrontoHeaders = [
+    t("sidebar.competitors"),
+    "AVI Score",
+    t("dashboard.presence"),
+    t("dashboard.position"),
+    t("dashboard.sentiment"),
+    t("dashboard.reliability"),
+    "Mention Count",
+  ];
+  const brandRow = [
+    `${proj?.target_brand ?? "—"} (brand)`,
+    aviData?.avi_score ?? "—",
+    aviData?.presence_score ?? "—",
+    aviData?.rank_score ?? "—",
+    aviData?.sentiment_score ?? "—",
+    aviData?.stability_score ?? "—",
+    "—",
+  ];
+  const competitorAviList = (competitorAvi ?? []) as any[];
+  const confrontoRows = [
+    brandRow,
+    ...competitorAviList
+      .sort((a, b) => (b.avi_score ?? 0) - (a.avi_score ?? 0))
+      .map((c) => [
+        c.competitor_name,
+        c.avi_score ?? "—",
+        c.prominence_score ?? "—",
+        c.rank_score ?? "—",
+        c.sentiment_score ?? "—",
+        c.consistency_score ?? "—",
+        c.mention_count ?? 0,
+      ]),
+  ];
+  const wsConfronto = XLSX.utils.aoa_to_sheet([confrontoHeaders, ...confrontoRows]);
+  XLSX.utils.book_append_sheet(wb, wsConfronto, "Confronto");
+
+  // Sheet 6: Sources
+  const sourceHeaders = ["Domain", "URL", t("datasets.model"), "Type", t("sources.citationsLabel"), t("sources.brandOwned")];
   const sourceRows = (sources ?? []).map((s: any) => [
     s.domain ?? "—",
     s.url ?? "—",
-    s.label ?? "—",
+    s.model ?? "—",
     s.source_type ?? "—",
     s.citation_count ?? 1,
     s.is_brand_owned ? t("common.yes") : t("common.no"),

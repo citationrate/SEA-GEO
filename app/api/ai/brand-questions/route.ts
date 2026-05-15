@@ -117,11 +117,11 @@ The user provides a TOPIC and an INVESTIGATION GOAL (point of view they want to 
 Output a JSON object with this exact shape:
 {
   "frame": {
-    "audience": string,           // e.g. "consumer (perfume buyer)", "B2B procurement manager", "amateur runner"
+    "audience": string,
     "audience_register": "B2C" | "B2B" | "prosumer" | "mixed",
-    "search_moment_kind": string, // e.g. "consumer discovery", "post-purchase comparison", "supplier sourcing"
-    "criteria_dimensions": string[], // 2-4 dimensions, e.g. ["quality cues", "price tier", "sustainability"]
-    "rationale": string           // one-sentence reasoning: WHY this frame fits the user's goal
+    "search_moment_kind": string,
+    "criteria_dimensions": string[],
+    "rationale": string
   },
   "questions": [string, string, string]
 }
@@ -139,18 +139,20 @@ Output a JSON object with this exact shape:
    - Question 1 (axis: AUDIENCE) — which sub-type of the frame's audience? All options must be subtypes of the same register.
    - Question 2 (axis: MOMENT) — when in the audience's journey is this person searching? Moments must fit the register (consumer journey vs. procurement journey, not mixed).
    - Question 3 (axis: CRITERIA) — what criteria drive the decision? Criteria must align with the register too.
-5. Each question should be ~15-25 words, in natural conversational ${outputLang}, ending with a "?".
+5. Each question should be ~15-25 words, ending with a "?".
 6. NEVER mix B2C and B2B options inside the same question.
 
-❌ EXAMPLE OF WRONG (consumer perfume brand, topic="raw materials", goal="how consumers search info about quality raw materials in perfumes"):
-   Frame audience_register = "B2B" → WRONG, the goal explicitly says consumers.
-   Question 2 = "In which phase: startup sourcing, alternative suppliers, or routine restock?" → WRONG, all options are B2B procurement.
+Frame-bias illustration (the example is shown in English only for clarity; your output MUST follow the language rule below):
+- Bad: for a consumer perfume brand with goal "how consumers search info about quality raw materials in perfumes", returning a frame with audience_register=B2B and a question about "startup sourcing / alternative suppliers / routine restock" — that's procurement, not consumer behavior.
+- Good: frame audience_register=B2C, audience="premium fragrance consumer curious about ingredients"; question mentions "choosing a gift / looking for natural-organic options / comparing premium fragrances".
 
-✅ EXAMPLE OF RIGHT for the same case:
-   Frame audience_register = "B2C", audience = "premium fragrance consumer curious about ingredients".
-   Question 2 = "When do these consumers care about raw-material quality: when choosing a gift, when looking for natural/organic options, or when comparing premium fragrances?"
+🌐 LANGUAGE RULE — CRITICAL, OVERRIDES THE EXAMPLE ABOVE:
+- The 3 questions in the "questions" array MUST be written in ${outputLang}.
+- The "audience", "search_moment_kind", "criteria_dimensions", "rationale" fields inside "frame" SHOULD ALSO be in ${outputLang} (only "audience_register" stays English since it's an enum: B2C / B2B / prosumer / mixed).
+- Do NOT copy the language of the illustration above. The illustration is in English only to explain the bias pattern; your actual questions must be in ${outputLang}, regardless of the topic or any English keywords in the brand context.
+- If the user wrote the investigation goal in ${outputLang}, mirror that vocabulary and natural tone.
 
-Output ONLY the JSON object. No prose, no markdown.`;
+Output ONLY the JSON object. No prose, no markdown fences.`;
 }
 
 function buildGeneraliFramePrompt(outputLang: string): string {

@@ -48,9 +48,13 @@ export async function GET(
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
 
+  // BUG STORICO: questo select stava chiedendo la colonna "urls" che NON esiste
+  // (la colonna è "website_url", singolare). Risultato: la query falliva, proj
+  // veniva null, l'endpoint ritornava 404 e il bottone "PDF progetto" sembrava
+  // non fare nulla (catch silenzioso in export-buttons.tsx).
   const { data: project } = await supabase
     .from("projects")
-    .select("name, target_brand, sector, urls, user_id")
+    .select("name, target_brand, sector, website_url, user_id")
     .eq("id", projectId)
     .single();
   const proj = project as any;
@@ -124,7 +128,28 @@ export async function GET(
     ? `${from ?? "..."} → ${to ?? "..."}`
     : `${allRuns[0].completed_at ? new Date(allRuns[0].completed_at).toLocaleDateString(locale) : ""} → ${allRuns[allRuns.length - 1].completed_at ? new Date(allRuns[allRuns.length - 1].completed_at).toLocaleDateString(locale) : ""}`;
 
-  const projectUrl = Array.isArray(proj?.urls) && proj.urls.length > 0 ? proj.urls[0] : null;
+  const projectUrl = proj?.website_url ?? null;
+
+  // Fetch sources e competitor_avi (entrambi scope per run_id).
+  const { data: sourcesRows } = await supabase
+    .from("sources")
+    .select("domain, url, model, source_type, citation_count, run_id")
+    .in("run_id", runIds);
+  const sourcesList = (sourcesRows ?? []) as any[];
+  const domainMap = new Map<string, { citations: number; type: string }>();
+  sourcesList.forEach((s) => {
+    const d = s.domain ?? "—";
+    const ex = domainMap.get(d);
+    if (ex) ex.citations += s.citation_count ?? 1;
+    else domainMap.set(d, { citations: s.citation_count ?? 1, type: s.source_type ?? "other" });
+  });
+  const domainList = Array.from(domainMap.entries()).sort((a, b) => b[1].citations - a[1].citations);
+
+  const { data: competitorAviRaw } = await (supabase.from("competitor_avi") as any)
+    .select("run_id, competitor_name, avi_score, prominence_score, rank_score, sentiment_score, mention_count")
+    .in("run_id", runIds);
+  const competitorAviList = ((competitorAviRaw ?? []) as any[])
+    .sort((a, b) => (b.avi_score ?? 0) - (a.avi_score ?? 0));
 
   const headerBlock = `
     <div class="header">
@@ -213,6 +238,53 @@ export async function GET(
     ${renderChips(topicList.slice(0, 80).map(([name, count]) => ({ name, count })))}
   ` : "";
 
+  // Confronto AVI: brand (ultimo run) vs competitor di tutti i run.
+  const confrontoBlock = `
+    <h2 class="section">Confronto AVI (${competitorAviList.length + 1})</h2>
+    ${renderTable(
+      [
+        { label: t("sidebar.competitors") },
+        { label: "AVI", align: "right" },
+        { label: t("dashboard.presence"), align: "right" },
+        { label: t("dashboard.position"), align: "right" },
+        { label: t("dashboard.sentiment"), align: "right" },
+      ],
+      [
+        [
+          `${proj?.target_brand ?? "—"} (brand, ${ls.latest})`,
+          latestAvi?.avi_score != null ? Math.round(Number(latestAvi.avi_score)) : "—",
+          latestAvi?.presence_score != null ? Math.round(Number(latestAvi.presence_score)) : "—",
+          latestAvi?.rank_score != null ? Math.round(Number(latestAvi.rank_score)) : "—",
+          latestAvi?.sentiment_score != null ? Math.round(Number(latestAvi.sentiment_score)) : "—",
+        ],
+        ...competitorAviList.slice(0, 40).map((c: any) => [
+          c.competitor_name,
+          c.avi_score != null ? Math.round(Number(c.avi_score)) : "—",
+          c.prominence_score != null ? Math.round(Number(c.prominence_score)) : "—",
+          c.rank_score != null ? Math.round(Number(c.rank_score)) : "—",
+          c.sentiment_score != null ? Math.round(Number(c.sentiment_score)) : "—",
+        ]),
+      ],
+      { alternating: true }
+    )}
+  `;
+
+  // Sources aggregati per dominio.
+  const sourcesBlock = `
+    <h2 class="section">${escapeHtml(t("sources.title"))} (${domainList.length})</h2>
+    ${domainList.length > 0
+      ? renderTable(
+          [
+            { label: "Domain" },
+            { label: "Type" },
+            { label: t("sources.citationsLabel"), align: "right" },
+          ],
+          domainList.slice(0, 60).map(([domain, info]) => [domain, info.type, info.citations]),
+          { alternating: true }
+        )
+      : renderEmpty(t("sources.noSourceFound"))}
+  `;
+
   let transcriptBlock = "";
   if (isPro && promptsList.length > 0) {
     const tStrings = getTranscriptStrings(locale);
@@ -261,7 +333,9 @@ export async function GET(
     ${trendBlock}
     ${componentsBlock}
     ${competitorBlock}
+    ${confrontoBlock}
     ${topicBlock}
+    ${sourcesBlock}
     ${transcriptBlock}
   `;
 

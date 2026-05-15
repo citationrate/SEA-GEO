@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Download, Loader2, ChevronDown, FileText, FileSpreadsheet, FolderDown } from "lucide-react";
+import { toast } from "sonner";
 import { useTranslation } from "@/lib/i18n/context";
 
 interface ExportButtonsProps {
@@ -63,8 +64,11 @@ export function ExportButtons({ runId, projectId }: ExportButtonsProps) {
           await downloadBlob(`/api/export/project/${projectId}/excel`, `AVI-Project-Export.xlsx`);
           break;
       }
-    } catch {
-      // silently fail
+    } catch (err) {
+      // Mostriamo l'errore: prima era catch silenzioso → l'utente vedeva il
+      // bottone girare e poi nulla, senza capire perché il PDF non scendeva.
+      console.error("[export]", err);
+      toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setTimeout(() => setLoading(null), 500);
     }
