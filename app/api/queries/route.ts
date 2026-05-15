@@ -17,10 +17,15 @@ export async function GET(request: NextRequest) {
     const projectId = request.nextUrl.searchParams.get("project_id");
     if (!projectId) return NextResponse.json({ error: "project_id richiesto" }, { status: 400 });
 
+    // Le query soft-deleted (deleted_at IS NOT NULL) sono nascoste dalla
+    // dashboard di gestione. Lo storico delle run e gli export le pescano
+    // direttamente dalle proprie API senza usare questo handler, quindi
+    // filtrare qui non rompe i grafici/report storici.
     const { data, error: dbError } = await supabase
       .from("queries")
       .select("*")
       .eq("project_id", projectId)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
 
     if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
@@ -39,14 +44,29 @@ export async function POST(request: Request) {
     const parsed = querySchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    // Check for duplicate query text in this project
+    // Duplicate check considera ANCHE le soft-deleted: se l'utente aveva
+    // cancellato una query e ora la rigita identica, riusciamo la stessa
+    // riga (revive) invece di rifiutare con 409 — UX più gentile e mantiene
+    // l'integrità con lo storico (mantiene lo stesso id, niente duplicati).
     const { data: existing } = await supabase
       .from("queries")
-      .select("id")
+      .select("id, deleted_at")
       .eq("project_id", parsed.data.project_id)
       .ilike("text", parsed.data.text.trim());
-    if (existing && existing.length > 0) {
+    const liveDup = (existing ?? []).find((q: any) => !q.deleted_at);
+    if (liveDup) {
       return NextResponse.json({ error: "Questa query esiste già nel progetto" }, { status: 409 });
+    }
+    const deadDup = (existing ?? []).find((q: any) => q.deleted_at) as any;
+    if (deadDup) {
+      const svc = createServiceClient();
+      const { data: revived, error: reviveErr } = await (svc.from("queries") as any)
+        .update({ deleted_at: null, is_active: true, funnel_stage: parsed.data.funnel_stage })
+        .eq("id", deadDup.id)
+        .select("*")
+        .single();
+      if (reviveErr) return NextResponse.json({ error: reviveErr.message }, { status: 500 });
+      return NextResponse.json(revived, { status: 201 });
     }
 
     const { data, error: dbError } = await supabase
@@ -105,9 +125,16 @@ export async function DELETE(request: NextRequest) {
     const id = request.nextUrl.searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id richiesto" }, { status: 400 });
 
-    // Use service client to bypass RLS restrictions on delete
+    // Soft delete: prompts_executed.query_id ha FK NO ACTION verso queries(id),
+    // quindi un DELETE fisico fallisce sempre con foreign_key_violation per ogni
+    // query già usata in almeno una run. Marcare deleted_at preserva lo storico
+    // (run detail / export continuano a vedere il testo) e rimuove la query
+    // dalle viste attive (GET, dashboard, pipeline di analisi).
     const svc = createServiceClient();
-    const { error: dbError } = await (svc.from("queries") as any).delete().eq("id", id);
+    const { error: dbError } = await (svc.from("queries") as any)
+      .update({ deleted_at: new Date().toISOString(), is_active: false })
+      .eq("id", id)
+      .is("deleted_at", null); // idempotente: no-op se già soft-deleted
     if (dbError) {
       console.error("[queries DELETE] error:", dbError.message, dbError.code);
       return NextResponse.json({ error: dbError.message }, { status: 500 });

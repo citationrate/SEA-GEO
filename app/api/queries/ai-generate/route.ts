@@ -68,7 +68,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // Load existing queries to avoid duplicates
+    // Load existing queries to avoid duplicates. Le soft-deleted vanno
+    // INCLUSE per evitare di rigenerare lo stesso testo: se l'utente l'ha
+    // cancellata una volta probabilmente non la rivuole; e se la rivuole, il
+    // POST manuale fa revive automatico.
     const { data: existingQueries } = await supabase
       .from("queries")
       .select("text")

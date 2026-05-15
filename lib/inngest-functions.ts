@@ -798,7 +798,8 @@ export const runAnalysis = inngest.createFunction(
         .from("queries")
         .select("*")
         .eq("project_id", projectId)
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .is("deleted_at", null);
 
       const { data: segments } = await supabase
         .from("audience_segments")

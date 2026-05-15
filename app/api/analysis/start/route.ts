@@ -52,12 +52,13 @@ export async function POST(request: Request) {
     let validModels = models_used.filter((id: string) => ALL_MODEL_IDS.includes(id));
     if (!validModels.length) return NextResponse.json({ error: "Nessun modello valido configurato" }, { status: 400 });
 
-    // Fetch only active queries and active segments
+    // Fetch only active, non-soft-deleted queries.
     const { data: queries } = await supabase
       .from("queries")
       .select("*")
       .eq("project_id", project_id)
-      .neq("is_active", false);
+      .neq("is_active", false)
+      .is("deleted_at", null);
 
     const { data: segments } = await supabase
       .from("audience_segments")

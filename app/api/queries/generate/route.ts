@@ -98,20 +98,48 @@ export async function POST(request: Request) {
       ...inputs,
     });
 
-    // Deduplicate against existing queries in this project
+    // Dedup contro le query esistenti nel progetto. Distinguiamo:
+    //   - LIVE duplicates (deleted_at NULL) → skip totalmente
+    //   - DEAD duplicates (deleted_at NOT NULL) → revive senza re-inserire,
+    //     così non perdiamo lo storico né creiamo righe orfane.
     const { data: existing } = await supabase
       .from("queries")
-      .select("text")
+      .select("id, text, deleted_at")
       .eq("project_id", project_id);
-    const existingTexts = new Set((existing ?? []).map((r: any) => r.text.trim().toLowerCase()));
+    const liveTexts = new Set(
+      (existing ?? []).filter((r: any) => !r.deleted_at).map((r: any) => r.text.trim().toLowerCase()),
+    );
+    const deadMap = new Map(
+      (existing ?? [])
+        .filter((r: any) => r.deleted_at)
+        .map((r: any) => [r.text.trim().toLowerCase(), r.id]),
+    );
 
-    const uniqueQueries = queries.filter((q) => !existingTexts.has(q.text.trim().toLowerCase()));
-    if (uniqueQueries.length === 0) {
+    const toRevive: string[] = [];
+    const toInsert: typeof queries = [];
+    for (const q of queries) {
+      const key = q.text.trim().toLowerCase();
+      if (liveTexts.has(key)) continue; // skip: già attiva
+      const deadId = deadMap.get(key);
+      if (deadId) toRevive.push(deadId as string);
+      else toInsert.push(q);
+    }
+
+    if (toRevive.length === 0 && toInsert.length === 0) {
       return NextResponse.json({ error: "Tutte le query esistono già nel progetto" }, { status: 409 });
     }
 
+    if (toRevive.length > 0) {
+      // Cast as any: supabase typed client non conosce ancora deleted_at
+      // (verrà aggiornato dopo aver applicato la migration 042).
+      const { error: reviveErr } = await (supabase.from("queries") as any)
+        .update({ deleted_at: null, is_active: true })
+        .in("id", toRevive);
+      if (reviveErr) return NextResponse.json({ error: reviveErr.message }, { status: 500 });
+    }
+
     // Insert queries with full metadata (set_type, persona_id, persona_mode)
-    const rows = uniqueQueries.map((q) => ({
+    const rows = toInsert.map((q) => ({
       project_id,
       text: q.text,
       funnel_stage: q.funnel_stage.toLowerCase() as "tofu" | "mofu",
@@ -120,12 +148,15 @@ export async function POST(request: Request) {
       ...(q.persona_mode ? { persona_mode: q.persona_mode } : {}),
     }));
 
-    const { error: dbError } = await supabase.from("queries").insert(rows as any);
+    const { error: dbError } = rows.length > 0
+      ? await supabase.from("queries").insert(rows as any)
+      : { error: null };
 
     if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
-    const skipped = queries.length - uniqueQueries.length;
-    return NextResponse.json({ ok: true, count: uniqueQueries.length, skipped }, { status: 201 });
+    const processed = toInsert.length + toRevive.length;
+    const skipped = queries.length - processed;
+    return NextResponse.json({ ok: true, count: processed, skipped }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Errore interno" }, { status: 500 });
   }

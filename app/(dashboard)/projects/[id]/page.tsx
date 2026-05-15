@@ -48,6 +48,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       .select("*")
       .eq("project_id", params.id)
       .eq("is_active", true)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false }),
     supabase
       .from("audience_segments")
