@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { Database, ChevronDown, X, Loader2, ExternalLink } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
+import { modelIdToBrand } from "@citationrate/llm-client";
 
 interface Project {
   id: string;
@@ -68,10 +69,8 @@ const SET_TYPE_BADGES: Record<string, { label: string; cls: string }> = {
   manual: { label: "Manual", cls: "border-border text-muted-foreground" },
 };
 
-const FUNNEL_BADGES: Record<string, string> = {
-  tofu: "border-primary/30 text-primary",
-  mofu: "border-[#7eb89a]/30 text-[#7eb89a]",
-};
+// FUNNEL_BADGES rimosso: la colonna "Tipo" (TOFU/MOFU) era terminologia
+// marketing interna che non aggiungeva valore per l'utente finale.
 
 export function DatasetClient({ projects }: { projects: Project[] }) {
   const { t, locale } = useTranslation();
@@ -200,7 +199,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
                       : "border-border text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {MODEL_LABELS[m] ?? m}
+                  {modelIdToBrand(m)?.brand ?? MODEL_LABELS[m] ?? m}
                 </button>
               ))}
             </div>
@@ -240,7 +239,6 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
               <thead>
                 <tr className="border-b border-border text-left">
                   <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground min-w-[200px]">{t("datasets.query")}</th>
-                  <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.type")}</th>
                   <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.family")}</th>
                   <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.model")}</th>
                   <th className="px-3 py-2.5 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{t("datasets.run")}</th>
@@ -253,7 +251,6 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
               <tbody>
                 {filteredRows.map((row) => {
                   const stBadge = SET_TYPE_BADGES[row.set_type] || SET_TYPE_BADGES.manual;
-                  const funnelCls = FUNNEL_BADGES[row.funnel_stage] || "border-border text-muted-foreground";
                   const response = row.raw_response || "";
                   const plain = response.replace(/#{1,6}\s/g, "").replace(/\*{1,2}([^*]+)\*{1,2}/g, "$1").replace(/^[-*]\s/gm, "").replace(/\n+/g, " ").trim();
                   const truncated = plain.length > 120 ? plain.slice(0, 120) + "..." : plain;
@@ -268,17 +265,12 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
                         <span className="text-foreground line-clamp-2 text-xs">{row.query_text}</span>
                       </td>
                       <td className="px-3 py-2">
-                        <span className={`font-mono text-[0.625rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${funnelCls}`}>
-                          {row.funnel_stage}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2">
                         <span className={`font-mono text-[0.625rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${stBadge.cls}`}>
                           {stBadge.label}
                         </span>
                       </td>
                       <td className="px-3 py-2">
-                        <span className="font-mono text-[12px] text-muted-foreground">{MODEL_LABELS[row.model] ?? row.model}</span>
+                        <span className="font-mono text-[12px] text-muted-foreground">{modelIdToBrand(row.model)?.brand ?? MODEL_LABELS[row.model] ?? row.model}</span>
                       </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground text-center">
                         #{row.run_number}
@@ -348,7 +340,7 @@ export function DatasetClient({ projects }: { projects: Project[] }) {
 function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) {
   const { t, locale } = useTranslation();
   const stBadge = SET_TYPE_BADGES[row.set_type] || SET_TYPE_BADGES.manual;
-  const funnelCls = FUNNEL_BADGES[row.funnel_stage] || "border-border text-muted-foreground";
+  // funnelCls rimosso (era TOFU/MOFU badge nel modal di dettaglio dataset).
 
   // Close on Escape
   useEffect(() => {
@@ -371,9 +363,6 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground">{row.query_text}</p>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              <span className={`font-mono text-[0.625rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${funnelCls}`}>
-                {row.funnel_stage}
-              </span>
               <span className={`font-mono text-[0.625rem] uppercase tracking-wide px-1.5 py-0.5 rounded-[2px] border ${stBadge.cls}`}>
                 {stBadge.label}
               </span>
@@ -393,7 +382,7 @@ function ExpandModal({ row, onClose }: { row: PromptRow; onClose: () => void }) 
         <div className="p-5 space-y-5">
           {/* Metadata row */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs">
-            <div><span className="text-muted-foreground">{t("datasets.modelLabel")}</span> <span className="text-foreground font-medium">{MODEL_LABELS[row.model] ?? row.model}</span></div>
+            <div><span className="text-muted-foreground">{t("datasets.modelLabel")}</span> <span className="text-foreground font-medium">{modelIdToBrand(row.model)?.brand ?? MODEL_LABELS[row.model] ?? row.model}</span></div>
             <div><span className="text-muted-foreground">{t("datasets.runLabel")}</span> <span className="text-foreground">#{row.run_number}</span></div>
             {row.executed_at && (
               <div><span className="text-muted-foreground">{t("datasets.executedAt")}</span> <span className="text-foreground">{new Date(row.executed_at).toLocaleString(locale)}</span></div>

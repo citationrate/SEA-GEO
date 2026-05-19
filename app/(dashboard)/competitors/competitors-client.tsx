@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
+import { modelIdToBrand } from "@citationrate/llm-client";
 
 const MODEL_LABELS: Record<string, string> = {
   "gpt-5.4-mini": "GPT-5.4 Mini",
@@ -36,7 +37,9 @@ const MODEL_LABELS: Record<string, string> = {
 };
 
 function getModelDisplayName(model: string): string {
-  return MODEL_LABELS[model] ?? model;
+  // Brand AI (ChatGPT, Gemini, Claude, Perplexity) per UI user-facing.
+  // MODEL_LABELS resta come fallback per legacy model IDs non mappati.
+  return modelIdToBrand(model)?.brand ?? MODEL_LABELS[model] ?? model;
 }
 
 /* ─── Types ─── */
@@ -85,12 +88,6 @@ const COMP_TYPE_KEYS: Record<string, string> = {
 };
 
 /* ─── Helpers ─── */
-const FUNNEL_LABELS: Record<string, { text: string; cls: string }> = {
-  tofu: { text: "TOFU", cls: "badge-primary" },
-  mofu: { text: "MOFU", cls: "badge-success" },
-  bofu: { text: "BOFU", cls: "badge badge-muted" },
-};
-
 const FREQ_COLORS = [
   "bg-primary/20", "bg-primary/30", "bg-primary/40", "bg-primary/50",
   "bg-primary/60", "bg-primary/70", "bg-primary/75", "bg-primary/80",
@@ -519,17 +516,10 @@ function CompetitorCard({
         </div>
       )}
 
-      {/* Query type + sentiment + analysis count */}
+      {/* Query type badges (TOFU/MOFU) rimossi — terminologia marketing
+          interna che confondeva l'utente. Lasciamo solo il conteggio
+          analisi come metadata visibile. */}
       <div className="flex items-center gap-3 flex-wrap">
-        {row.queryTypes.map((qt) => {
-          const f = FUNNEL_LABELS[qt];
-          return f ? (
-            <span key={qt} className={`badge ${f.cls}`}>{f.text}</span>
-          ) : (
-            <span key={qt} className="badge badge-muted">{qt.toUpperCase()}</span>
-          );
-        })}
-
         <span className="text-xs text-muted-foreground">
           {row.analysisCount} {t("competitors.analyses")}
         </span>

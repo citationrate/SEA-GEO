@@ -5,7 +5,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from "recharts";
 import { useTranslation } from "@/lib/i18n/context";
-import { MODEL_MAP } from "@citationrate/llm-client";
+import { MODEL_MAP, modelIdToBrand } from "@citationrate/llm-client";
 
 interface TrendDataPoint {
   run: string;
@@ -71,7 +71,8 @@ function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload || payload.length === 0) return null;
   const point = payload[0]?.payload as TrendDataPoint | undefined;
   const models = point?.models_used ?? [];
-  const modelLabels = models.map((m) => MODEL_MAP.get(m)?.label ?? m);
+  // Brand AI (ChatGPT, Claude, Gemini) per coerenza con il resto della UI.
+  const modelLabels = models.map((m) => modelIdToBrand(m)?.brand ?? MODEL_MAP.get(m)?.label ?? m);
   return (
     <div style={TOOLTIP_STYLE} className="px-3 py-2 space-y-1">
       <div className="font-mono text-[12px] font-semibold">{label}</div>

@@ -150,23 +150,9 @@ function TopicCard({ topic, maxCount, maxRelevance }: { topic: TopicItem; maxCou
         />
       </div>
 
-      {/* Funnel breakdown */}
-      {total > 0 && (
-        <div className="flex items-center gap-2 text-[12px]">
-          {mofu > 0 && (
-            <span className="flex items-center gap-0.5">
-              <TrendingUp className="w-2.5 h-2.5 text-success" />
-              <span className="text-success font-medium">MOFU {mofu}</span>
-            </span>
-          )}
-          {tofu > 0 && (
-            <span className="text-muted-foreground">TOFU {tofu}</span>
-          )}
-          {bofu > 0 && (
-            <span className="text-muted-foreground">BOFU {bofu}</span>
-          )}
-        </div>
-      )}
+      {/* Funnel breakdown TOFU/MOFU/BOFU rimosso — terminologia marketing
+          interna che confondeva l'utente. Il count totale del topic è già
+          visibile nel badge sopra. */}
 
       {/* Relevance indicator */}
       <div className="flex items-center gap-1">

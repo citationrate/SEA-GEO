@@ -247,7 +247,9 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
   } = filtered;
 
   // Check if we have funnel stages available
-  const hasFunnelData = queryMap.size > 0;
+  // hasFunnelData forzato a false: la colonna funnel TOFU/MOFU non viene
+  // più renderizzata nella UI (terminologia marketing interna rimossa).
+  const hasFunnelData = false as boolean;
   const funnelStages = useMemo(() => {
     if (!hasFunnelData) return [];
     const stages = new Set<string>();
@@ -580,7 +582,6 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                   const errorLabel = classifyError(p.error);
                   const query = queryMap.get(p.query_id);
                   const queryText = query?.text || p.prompt_text || "";
-                  const funnelStage = query?.funnel_stage?.toUpperCase() || "";
                   return (
                     <Fragment key={p.id}>
                       <tr className={`border-b border-border/50 ${isError ? "bg-destructive/5 border-l-2 border-l-destructive" : "hover:bg-muted/30"}`}>
@@ -588,13 +589,7 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                         <td className="py-2 pr-3 text-foreground text-xs max-w-[200px] truncate" title={queryText}>
                           {queryText.slice(0, 60)}{queryText.length > 60 ? "..." : ""}
                         </td>
-                        {hasFunnelData && (
-                          <td className="py-2 pr-3">
-                            {funnelStage && (
-                              <span className="badge badge-muted text-[12px]">{funnelStage}</span>
-                            )}
-                          </td>
-                        )}
+                        {/* Colonna funnel_stage TOFU/MOFU rimossa */}
                         <td className="py-2 pr-3">
                           <span className="badge badge-muted text-[12px] inline-flex items-center gap-1.5" title={p.model}>
                             <BrandLogo id={p.model} size={12} />
@@ -705,10 +700,8 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
 
             {/* Metadata */}
             <div className="flex flex-wrap gap-3 text-xs">
-              <span className="badge badge-muted">{modalPrompt.prompt.model}</span>
-              {modalPrompt.query?.funnel_stage && (
-                <span className="badge badge-primary">{modalPrompt.query.funnel_stage.toUpperCase()}</span>
-              )}
+              <span className="badge badge-muted">{modelIdToBrand(modalPrompt.prompt.model)?.brand ?? modalPrompt.prompt.model}</span>
+              {/* Badge funnel_stage TOFU/MOFU rimosso */}
               {modalPrompt.analysis?.brand_mentioned != null && (
                 <span className={`badge ${modalPrompt.analysis.brand_mentioned ? "badge-success" : "badge-muted"}`}>
                   {t("runMetrics.brandLabel")}: {modalPrompt.analysis.brand_mentioned ? t("common.yes") : t("common.no")}
