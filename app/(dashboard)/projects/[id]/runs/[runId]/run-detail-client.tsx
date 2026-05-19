@@ -9,6 +9,7 @@ import { AVIBars } from "./avi-bars";
 import { RunMetrics } from "./run-metrics";
 import { SegmentSection } from "./segment-section";
 import { StabilitySection } from "./stability-section";
+import { modelIdToBrand } from "@citationrate/llm-client";
 
 const MODEL_LABELS: Record<string, string> = {
   "gpt-5.4-mini": "GPT-5.4 Mini",
@@ -184,7 +185,7 @@ export function RunDetailClient({
                   : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
               }
             >
-              {MODEL_LABELS[model] ?? model}
+              {modelIdToBrand(model)?.brand ?? MODEL_LABELS[model] ?? model}
             </button>
           ))}
         </div>

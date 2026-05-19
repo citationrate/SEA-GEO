@@ -271,7 +271,7 @@ export function modelIdToBrand(modelId: string): { brand: string; logo: string }
   if (id.startsWith("claude-")) return { brand: "Claude", logo: "/brand-logos/claude.svg" };
   if (id.startsWith("gemini-")) return { brand: "Gemini", logo: "/brand-logos/gemini.svg" };
   if (id.startsWith("grok-")) return { brand: "Grok", logo: "/brand-logos/grok.png" };
-  if (id.startsWith("perplexity-") || id.startsWith("sonar")) return { brand: "Sonar", logo: "/brand-logos/perplexity.svg" };
+  if (id.startsWith("perplexity-") || id.startsWith("sonar")) return { brand: "Perplexity", logo: "/brand-logos/perplexity.svg" };
   return null;
 }
 
