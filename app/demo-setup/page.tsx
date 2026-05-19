@@ -124,26 +124,54 @@ function DemoSetupInner() {
         if (!projectId) throw new Error("ID progetto mancante");
         trackDemoStep("avi_demo_project_created", { project_id: projectId, brand });
 
-        // 2) Aggiungi 2 query brand-centric
+        // 2) Genera 8 query AI sull'AMBITO del sito (non sul brand).
+        // L'endpoint ai-generate ha prompt esplicito anti-brand: ritorna
+        // query "Quali aziende offrono...", "Chi sono i migliori...", ecc.
+        // — domande che un cliente potenziale userebbe su ChatGPT, senza
+        // mai nominare il brand. Bypassa l'attrito di pensarle a mano.
         setPhase("adding_queries");
-        const queries = [
-          { text: `Cosa pensano gli utenti di ${brand}?`, funnel_stage: "tofu" as const },
-          { text: `Quali sono i pro e contro di ${brand}?`, funnel_stage: "mofu" as const },
-        ];
-        for (const q of queries) {
+        const genRes = await fetch("/api/queries/ai-generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            project_id: projectId,
+            count: 8,
+            mode: "generali",
+            tofu_pct: 60,
+          }),
+        });
+        if (!genRes.ok) {
+          const err = await genRes.json().catch(() => ({}));
+          throw new Error(err.error || `Errore generazione query (${genRes.status})`);
+        }
+        const genData = await genRes.json();
+        const generatedQueries: Array<{ text: string; funnel_stage: "TOFU" | "MOFU" }> =
+          Array.isArray(genData?.queries) ? genData.queries : [];
+        if (generatedQueries.length === 0) {
+          throw new Error("Nessuna query generata dall'AI");
+        }
+        let savedCount = 0;
+        for (const q of generatedQueries) {
+          // POST /api/queries vuole funnel_stage lowercase ("tofu"|"mofu"|"bofu").
+          const stage = q.funnel_stage === "TOFU" ? "tofu" : "mofu";
           const qRes = await fetch("/api/queries", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "same-origin",
-            body: JSON.stringify({ project_id: projectId, text: q.text, funnel_stage: q.funnel_stage }),
+            body: JSON.stringify({ project_id: projectId, text: q.text, funnel_stage: stage }),
           });
           // 409 (query già presente) è un no-op accettabile in caso di retry.
-          if (!qRes.ok && qRes.status !== 409) {
-            const err = await qRes.json().catch(() => ({}));
-            throw new Error(err.error || `Errore aggiunta query (${qRes.status})`);
-          }
+          if (qRes.ok || qRes.status === 409) savedCount++;
         }
-        trackDemoStep("avi_demo_queries_added", { project_id: projectId, count: queries.length });
+        if (savedCount === 0) {
+          throw new Error("Nessuna query salvata sul progetto");
+        }
+        trackDemoStep("avi_demo_queries_added", {
+          project_id: projectId,
+          generated: generatedQueries.length,
+          saved: savedCount,
+        });
 
         // 3) Lancia analisi (no browsing per demo plan)
         setPhase("launching");

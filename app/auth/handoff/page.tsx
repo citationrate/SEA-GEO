@@ -30,8 +30,22 @@ function HandoffInner() {
       }
     }
 
+    // Optional deep-link target. Must be a same-origin path ("/..." with no
+    // protocol-relative slashes) — everything else falls back to /dashboard.
+    const fallbackNext = (() => {
+      const raw = params.get("next");
+      return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
+    })();
+
     if (!accessToken || !refreshToken) {
-      setError("Token mancanti. Torna su suite.citationrate.com e riprova.");
+      // Nessun token nell'URL: l'utente sta probabilmente ricaricando una
+      // pagina di handoff vecchia o atterrando qui via link diretto. Non
+      // serve un messaggio di errore — se ha già una sessione valida il
+      // middleware lo lascerà passare, altrimenti lo redirigerà al login.
+      // Meglio dell'attuale "Torna su suite e riprova" che lascia l'utente
+      // bloccato senza CTA chiaro.
+      console.warn("[handoff] no tokens in URL — falling through to", fallbackNext);
+      window.location.replace(fallbackNext);
       return;
     }
 
@@ -46,13 +60,8 @@ function HandoffInner() {
       history.replaceState(null, "", window.location.pathname + (qs ? `?${qs}` : ""));
     }
 
-    // Optional deep-link target. Must be a same-origin path ("/..." with no
-    // protocol-relative slashes) — everything else falls back to /dashboard.
-    const rawNext = params.get("next");
-    const safeNext =
-      rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
-        ? rawNext
-        : null;
+    // fallbackNext computed above already validates same-origin.
+    const safeNext: string | null = fallbackNext === "/dashboard" ? null : fallbackNext;
 
     // Use the same singleton client the whole app uses
     const supabase = createClient();
