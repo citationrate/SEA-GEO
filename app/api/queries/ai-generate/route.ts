@@ -35,14 +35,14 @@ export async function POST(request: Request) {
 
     const { project_id, count: requestedCount, tofu_pct, mode, theme, theme_context, categoria, mercato, luogo, punti_di_forza, competitor, obiezioni, personas, lang } = parsed.data;
 
-    // Demo plan: cap AI generation a 8 query (matches il nuovo budget
-    // 32 prompts = 8 query × 4 motori). Allineato a DEMO_MODEL_IDS (T3).
+    // Demo plan: cap a 2 query (fisse, generate da /demo-setup auto-flow).
+    // 2 query × 4 motori = 8 prompts (costo ~$0.024 per demo).
     const { data: profileRow } = await (supabase.from("profiles") as any)
       .select("plan")
       .eq("id", user.id)
       .single();
     const userPlan = (profileRow as any)?.plan ?? "demo";
-    const count = userPlan === "demo" ? Math.min(requestedCount, 8) : requestedCount;
+    const count = userPlan === "demo" ? Math.min(requestedCount, 2) : requestedCount;
 
     // Load project with all context
     const { data: project } = await supabase

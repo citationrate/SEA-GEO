@@ -20,9 +20,7 @@ const FUNNEL_COLORS: Record<string, string> = {
 };
 
 const QUERY_COUNT_OPTIONS = [
-  { value: 2, label: "2 query", descKey: "generateQueries.quick" },
   { value: 5, label: "5 query", descKey: "generateQueries.quick" },
-  { value: 8, label: "8 query", descKey: "generateQueries.quick" },
   { value: 10, label: "10 query", descKey: "generateQueries.recommended" },
   { value: 20, label: "20 query", descKey: "generateQueries.detailed" },
   { value: 50, label: "50 query", descKey: "generateQueries.complete" },
@@ -82,10 +80,12 @@ export default function GenerateQueriesPage() {
       const plan = p?.plan ?? "demo";
       setPlanId(plan === "demo" ? "demo" : plan === "base" ? "base" : plan === "pro" ? "pro" : plan === "enterprise" ? "enterprise" : "demo");
       setIsPro(plan === "pro" || plan === "enterprise");
-      // Demo plan: 8 AI-generated queries × 4 motori = 32 prompts, budget
-      // 32. Costo ~$0.096 per demo full. Mostriamo 8 di default così
-      // l'utente vede subito la quantità giusta nel counter.
-      if (plan === "demo") setQueryCount(8);
+      // Demo plan: le query sono FISSE a 2 (set da /demo-setup auto-flow).
+      // Le opzioni 5/10/20/50/custom della UI valgono per Base/Pro/Enterprise;
+      // se un demo user atterra qui, vede comunque le 4 opzioni ma tutte
+      // mostrano "Limite raggiunto" perché monthlyLimit demo = 2 → segnale
+      // chiaro che la rigenerazione manuale è gated dietro l'upgrade.
+      if (plan === "demo") setQueryCount(2);
     }).catch(() => {}).finally(() => setProfileLoaded(true));
 
     fetch(`/api/queries?project_id=${projectId}`).then((r) => r.json()).then((qs) => {
@@ -128,8 +128,8 @@ export default function GenerateQueriesPage() {
 
   // Enterprise: effectively unlimited per Piano table ("Generazione query AI" = ✓).
   // Cap at 9999 just to keep the math finite (backend has no monthly limit).
-  // Demo: bloccato a 8 query × 4 motori (budget 32 prompts, costo ~$0.096).
-  const monthlyLimit = planId === "enterprise" ? 9999 : planId === "pro" ? 500 : planId === "base" ? 100 : 8;
+  // Demo: query fisse a 2 (auto-flow /demo-setup), no rigenerazione manuale.
+  const monthlyLimit = planId === "enterprise" ? 9999 : planId === "pro" ? 500 : planId === "base" ? 100 : 2;
   const usedThisMonth = existingQueryCount;
 
   function buildInputs(): GenerationInputs & { mode?: "generali" | "specifiche"; theme?: string; theme_context?: string } {
@@ -564,7 +564,7 @@ export default function GenerateQueriesPage() {
           <h2 className="font-display font-semibold text-foreground">{t("generateQueries.howManyQueries")}</h2>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {(isDemoPlan ? QUERY_COUNT_OPTIONS.filter((o) => o.value === 8) : QUERY_COUNT_OPTIONS).map((opt) => {
+            {QUERY_COUNT_OPTIONS.map((opt) => {
               const isSelected = queryCount === opt.value;
               return (
                 <button
@@ -586,8 +586,9 @@ export default function GenerateQueriesPage() {
             })}
           </div>
 
-          {/* Custom count — non disponibile per il piano demo (cap fisso a 8) */}
+          {/* Custom count — non disponibile per il piano demo (query fisse a 2) */}
           {!isDemoPlan && (
+
           <div className="flex items-center gap-3">
             <button
               type="button"
