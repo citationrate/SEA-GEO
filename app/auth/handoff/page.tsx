@@ -10,12 +10,40 @@ function HandoffInner() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const accessToken = params.get("access_token");
-    const refreshToken = params.get("refresh_token");
+    // Read tokens from the URL hash fragment (#access_token=…&refresh_token=…).
+    // Hash fragments are NOT sent in the HTTP Referer header, server access
+    // logs, or analytics URL captures — unlike query strings, which leaked
+    // the JWT into GA4 via the dr= referrer. Legacy query-string callers
+    // still work during the rollout window; remove the fallback once the
+    // suite deploy that emits hash fragments is fully live.
+    const hashRaw = typeof window !== "undefined" ? window.location.hash.slice(1) : "";
+    const hashParams = new URLSearchParams(hashRaw);
+
+    let accessToken = hashParams.get("access_token");
+    let refreshToken = hashParams.get("refresh_token");
+
+    if (!accessToken || !refreshToken) {
+      accessToken = params.get("access_token");
+      refreshToken = params.get("refresh_token");
+      if (accessToken && refreshToken) {
+        console.warn("[handoff] tokens received via query string — sender should be updated to use hash fragment (security)");
+      }
+    }
 
     if (!accessToken || !refreshToken) {
       setError("Token mancanti. Torna su suite.citationrate.com e riprova.");
       return;
+    }
+
+    // Scrub the tokens from the visible URL before doing anything else, so
+    // they don't sit in window.location while setSession runs and so the
+    // handoff URL in browser history doesn't expose them.
+    if (typeof window !== "undefined" && (window.location.hash || params.get("access_token"))) {
+      const cleanQuery = new URLSearchParams(window.location.search);
+      cleanQuery.delete("access_token");
+      cleanQuery.delete("refresh_token");
+      const qs = cleanQuery.toString();
+      history.replaceState(null, "", window.location.pathname + (qs ? `?${qs}` : ""));
     }
 
     // Optional deep-link target. Must be a same-origin path ("/..." with no
@@ -37,7 +65,7 @@ function HandoffInner() {
     supabase.auth.signOut({ scope: "local" })
       .catch(() => { /* nothing to sign out from — fine */ })
       .finally(() => {
-        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+        supabase.auth.setSession({ access_token: accessToken!, refresh_token: refreshToken! })
           .then(({ data, error: err }) => {
             if (err || !data.session) {
               console.error("[handoff] setSession failed:", err?.message);
@@ -45,8 +73,10 @@ function HandoffInner() {
               return;
             }
             console.log("[handoff] Session set OK, redirecting to", safeNext || "/dashboard");
-            // Use window.location for a full page load (not client-side navigation)
-            window.location.href = safeNext || "/dashboard";
+            // replace() instead of href= so the handoff URL doesn't sit in
+            // browser history (defense in depth even though tokens are
+            // already scrubbed via replaceState above).
+            window.location.replace(safeNext || "/dashboard");
           });
       });
   }, [params, router]);
