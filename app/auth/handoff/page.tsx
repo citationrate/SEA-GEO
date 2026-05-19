@@ -66,13 +66,39 @@ function HandoffInner() {
       .catch(() => { /* nothing to sign out from — fine */ })
       .finally(() => {
         supabase.auth.setSession({ access_token: accessToken!, refresh_token: refreshToken! })
-          .then(({ data, error: err }) => {
+          .then(async ({ data, error: err }) => {
             if (err || !data.session) {
               console.error("[handoff] setSession failed:", err?.message);
               setError("Sessione non valida. Riprova il login.");
               return;
             }
-            console.log("[handoff] Session set OK, redirecting to", safeNext || "/dashboard");
+            // Race-condition hardening: setSession() returns *before* the
+            // browser has committed the new `sb-auth-auth-token` cookie.
+            // If we redirect immediately the AVI middleware sees "no
+            // session" on the next-page request and bounces the user back
+            // to suite.citationrate.com (i.e. the login page). Poll
+            // document.cookie until the auth cookie is visible, then
+            // navigate. Capped at ~1s — if the cookie never lands we
+            // proceed anyway and let the destination handle the 401.
+            const cookieReady = await new Promise<boolean>((resolve) => {
+              let attempts = 0;
+              const tick = () => {
+                if (typeof document !== "undefined" &&
+                    /(?:^|; )sb-auth-auth-token(?:\.\d+)?=/.test(document.cookie)) {
+                  resolve(true);
+                  return;
+                }
+                if (attempts++ >= 20) { resolve(false); return; }
+                setTimeout(tick, 50);
+              };
+              tick();
+            });
+            console.log(
+              "[handoff] Session set OK (cookie ready =",
+              cookieReady,
+              "), redirecting to",
+              safeNext || "/dashboard"
+            );
             // replace() instead of href= so the handoff URL doesn't sit in
             // browser history (defense in depth even though tokens are
             // already scrubbed via replaceState above).
