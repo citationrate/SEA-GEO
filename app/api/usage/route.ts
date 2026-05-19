@@ -99,7 +99,7 @@ export async function GET() {
       canAccessDataset: plan.can_access_dataset ?? false,
       canAccessComparisons: plan.can_access_comparisons ?? false,
       maxModelsPerProject: Number(
-        plan.max_models_per_project || (isDemo ? 2 : isEnterprise ? 10 : isPro ? 5 : 3),
+        plan.max_models_per_project || (isDemo ? 4 : isEnterprise ? 10 : isPro ? 5 : 3),
       ),
       wallet: {
         browsingQueries: wallet.browsingQueries,

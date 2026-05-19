@@ -55,7 +55,7 @@ const DEFAULTS: UsageData = {
   urlAnalysesUsed: 0, urlAnalysesLimit: 0, urlAnalysesRemaining: 0, urlAnalysesUnlimited: false,
   contextAnalysesUsed: 0, contextAnalysesLimit: 0, contextAnalysesRemaining: 0, contextAnalysesUnlimited: false,
   canGenerateQueries: false, canAccessDataset: false, canAccessComparisons: false,
-  maxModelsPerProject: 2,
+  maxModelsPerProject: 4,
   wallet: { browsingQueries: 0, noBrowsingQueries: 0, confronti: 0 },
   isDemo: true, isPro: false, isEnterprise: false, hasProFeatures: false, loading: true,
   promptsUsed: 0, promptsLimit: 10, promptsRemaining: 10,
@@ -107,7 +107,7 @@ export function useUsage(): UsageData {
         canGenerateQueries: json.canGenerateQueries ?? false,
         canAccessDataset: json.canAccessDataset ?? false,
         canAccessComparisons: json.canAccessComparisons ?? false,
-        maxModelsPerProject: json.maxModelsPerProject ?? 2,
+        maxModelsPerProject: json.maxModelsPerProject ?? 4,
         isDemo: json.isDemo ?? true,
         wallet: {
           browsingQueries: json.wallet?.browsingQueries ?? 0,

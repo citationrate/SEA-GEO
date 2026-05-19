@@ -159,18 +159,26 @@ export async function getUserPlanLimits(userId: string) {
     annual_discount: 0,
     browsing_prompts: 0,
     no_browsing_prompts: 10,
-    max_models_per_project: 2,
+    // 4 motori demo (ChatGPT, Gemini, Claude, Perplexity) per il
+    // confronto cross-AI nel popup post-CS. Vedi DEMO_MODEL_IDS.
+    max_models_per_project: 4,
     max_comparisons: 0,
     can_generate_queries: true,
     can_access_dataset: false,
     can_access_comparisons: false,
   };
 
-  // Demo override: budget is locked to 10 prompts (2 modelli x 5 query AI-gen).
-  // Forziamo qui anche se il DB ha ancora il vecchio valore (40) per assicurare
-  // che il limite sia coerente in tutto il prodotto durante la transizione.
+  // Demo override: budget locked a 10 prompts (2 query × 4 motori = 8).
+  // max_models_per_project=4 forzato anche se DB ha vecchi valori (2 o 5),
+  // per coerenza con DEMO_MODEL_IDS e con il flow /demo-setup.
   if (effectivePlanId === "demo") {
-    return { ...(plan ?? defaultPlan), no_browsing_prompts: 10, browsing_prompts: 0, can_generate_queries: true };
+    return {
+      ...(plan ?? defaultPlan),
+      no_browsing_prompts: 10,
+      browsing_prompts: 0,
+      max_models_per_project: 4,
+      can_generate_queries: true,
+    };
   }
 
   if (!plan) return defaultPlan;
