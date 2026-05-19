@@ -54,7 +54,7 @@ interface PlanFeature {
 
 function getAviFeatures(t: (k: string) => string): PlanFeature[] {
   return [
-    { label: t("piano.promptsMonth"),           demo: "10",                          base: "100",                       pro: "300",                        enterprise: t("piano.unlimited") },
+    { label: t("piano.promptsMonth"),           demo: "8",                           base: "100",                       pro: "300",                        enterprise: t("piano.unlimited") },
     { label: t("piano.realtimeBrowsing"),       demo: false,                         base: `30 ${t("piano.prompt")}`,   pro: `90 ${t("piano.prompt")}`,    enterprise: t("piano.unlimitedM") },
     { label: t("piano.aiModels"),               demo: `4 ${t("piano.fixed")}`,       base: `6 ${t("piano.selectable")}`, pro: t("piano.allPlusPro"),       enterprise: t("piano.allPlusPro") },
     { label: t("piano.maxModelsProject"),       demo: "4",                           base: "3",                         pro: "5",                          enterprise: "10" },

@@ -33,11 +33,17 @@ const LOCKED_QUERIES_HINT: string[] = [
   "Recensioni e opinioni su {brand}",
 ];
 
-const LOCKED_FEATURES = [
-  { label: "Comparazioni con competitor", plan: "Base", icon: "⚔️" },
-  { label: "Tracking dei cambiamenti nel tempo", plan: "Base", icon: "📈" },
-  { label: "Motori Pro (Claude Opus, GPT-5.5, Gemini 3.1 Pro)", plan: "Pro", icon: "🚀" },
-  { label: "Query con web browsing live", plan: "Base", icon: "🌐" },
+// Grid 2 colonne: sinistra = sblocchi Base, destra = sblocchi Pro.
+// Ordine pensato per render-flow visivo: prima riga = i must-have,
+// seconda = gli upgrade strategici.
+const LOCKED_FEATURES_BASE = [
+  { label: "Tracking dei cambiamenti nel tempo", icon: "📈" },
+  { label: "Query con web browsing live", icon: "🌐" },
+];
+
+const LOCKED_FEATURES_PRO = [
+  { label: "Comparazioni con competitor", icon: "⚔️" },
+  { label: "Consultazione delle risposte AI", icon: "💬" },
 ];
 
 export function LockedPreviewCta({ plan, runId, brand, aviScore }: Props) {
@@ -115,42 +121,64 @@ export function LockedPreviewCta({ plan, runId, brand, aviScore }: Props) {
         </ul>
       </div>
 
-      {/* Locked features grid */}
+      {/* Locked features grid: 2 colonne — Base sinistra, Pro destra.
+          Su mobile collassa a 1 colonna mantenendo l'ordine Base→Pro. */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-3">
-        {LOCKED_FEATURES.map((f) => (
-          <div
-            key={f.label}
-            className="flex items-center gap-3 p-3 rounded-md border border-border bg-card/40"
-          >
-            <span className="text-lg">{f.icon}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{f.label}</p>
-              <p className="text-[11px] font-mono uppercase tracking-wider text-emerald-500">
-                Sblocca con {f.plan}
-              </p>
+        <div className="space-y-3">
+          {LOCKED_FEATURES_BASE.map((f) => (
+            <div
+              key={f.label}
+              className="flex items-center gap-3 p-3 rounded-md border border-border bg-card/40"
+            >
+              <span className="text-lg">{f.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{f.label}</p>
+                <p className="text-[11px] font-mono uppercase tracking-wider text-emerald-500">
+                  Sblocca con Base
+                </p>
+              </div>
+              <Lock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             </div>
-            <Lock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          </div>
-        ))}
+          ))}
+        </div>
+        <div className="space-y-3">
+          {LOCKED_FEATURES_PRO.map((f) => (
+            <div
+              key={f.label}
+              className="flex items-center gap-3 p-3 rounded-md border border-border bg-card/40"
+            >
+              <span className="text-lg">{f.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{f.label}</p>
+                <p className="text-[11px] font-mono uppercase tracking-wider text-emerald-500">
+                  Sblocca con Pro
+                </p>
+              </div>
+              <Lock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* CTAs */}
+      {/* CTAs — "Sblocca tutto" porta direttamente al checkout Stripe del
+          piano Base (via autocheckout=base_monthly), così l'utente atterra
+          sulla pagina di pagamento Stripe invece di vedere prima /piano. */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-        <Link
-          href="/piano?source=avi_locked_preview"
+        <a
+          href="https://suite.citationrate.com/piano?autocheckout=base_monthly&source=avi_locked_preview"
           onClick={() => handleClick("primary")}
           className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-md bg-emerald-500 text-emerald-950 font-semibold text-sm uppercase tracking-wider hover:bg-emerald-400 transition-colors"
         >
           Sblocca tutto a €59/mese
           <ArrowRight className="w-4 h-4" />
-        </Link>
-        <Link
-          href="/piano?source=avi_locked_preview_secondary"
+        </a>
+        <a
+          href="https://suite.citationrate.com/piano?source=avi_locked_preview_secondary"
           onClick={() => handleClick("secondary")}
           className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-md border border-border text-sm hover:bg-card/40 transition-colors"
         >
           Confronta i piani
-        </Link>
+        </a>
       </div>
 
       <p className="mt-4 text-[11px] text-muted-foreground font-mono">
