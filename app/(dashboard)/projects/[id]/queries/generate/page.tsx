@@ -20,6 +20,7 @@ const FUNNEL_COLORS: Record<string, string> = {
 };
 
 const QUERY_COUNT_OPTIONS = [
+  { value: 2, label: "2 query", descKey: "generateQueries.quick" },
   { value: 5, label: "5 query", descKey: "generateQueries.quick" },
   { value: 10, label: "10 query", descKey: "generateQueries.recommended" },
   { value: 20, label: "20 query", descKey: "generateQueries.detailed" },
@@ -564,7 +565,7 @@ export default function GenerateQueriesPage() {
           <h2 className="font-display font-semibold text-foreground">{t("generateQueries.howManyQueries")}</h2>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {(isDemoPlan ? QUERY_COUNT_OPTIONS.filter((o) => o.value === 5) : QUERY_COUNT_OPTIONS).map((opt) => {
+            {(isDemoPlan ? QUERY_COUNT_OPTIONS.filter((o) => o.value === 2) : QUERY_COUNT_OPTIONS).map((opt) => {
               const isSelected = queryCount === opt.value;
               return (
                 <button
@@ -586,7 +587,7 @@ export default function GenerateQueriesPage() {
             })}
           </div>
 
-          {/* Custom count — non disponibile per il piano demo (cap fisso a 5) */}
+          {/* Custom count — non disponibile per il piano demo (cap fisso a 2) */}
           {!isDemoPlan && (
           <div className="flex items-center gap-3">
             <button
