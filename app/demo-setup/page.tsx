@@ -124,11 +124,11 @@ function DemoSetupInner() {
         if (!projectId) throw new Error("ID progetto mancante");
         trackDemoStep("avi_demo_project_created", { project_id: projectId, brand });
 
-        // 2) Genera 8 query AI sull'AMBITO del sito (non sul brand).
+        // 2) Genera 2 query AI sull'AMBITO del sito (non sul brand).
         // L'endpoint ai-generate ha prompt esplicito anti-brand: ritorna
         // query "Quali aziende offrono...", "Chi sono i migliori...", ecc.
-        // — domande che un cliente potenziale userebbe su ChatGPT, senza
-        // mai nominare il brand. Bypassa l'attrito di pensarle a mano.
+        // 2 query × 4 motori = 8 prompts totali (costo ~$0.024 per demo)
+        // — la leva è il confronto cross-AI, non il volume di query.
         setPhase("adding_queries");
         const genRes = await fetch("/api/queries/ai-generate", {
           method: "POST",
@@ -136,9 +136,9 @@ function DemoSetupInner() {
           credentials: "same-origin",
           body: JSON.stringify({
             project_id: projectId,
-            count: 8,
+            count: 2,
             mode: "generali",
-            tofu_pct: 60,
+            tofu_pct: 50,
           }),
         });
         if (!genRes.ok) {
