@@ -12,6 +12,7 @@ import { TranslatedStatus, TranslatedLabel } from "./run-i18n";
 import { RunDetailClient } from "./run-detail-client";
 import { BrandNarrative } from "./brand-narrative";
 import { LowScoreBridge } from "./low-score-bridge";
+import { LockedPreviewCta } from "./locked-preview-cta";
 import { GalacticSiegeGame } from "@/components/galactic-siege-game";
 import { CancelRunButton } from "./cancel-run-button";
 import { BotMount } from "@/components/BotMount";
@@ -389,6 +390,17 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         segments={(segments ?? []) as any[]}
         runCount={runCount}
       />
+
+      {/* T4: Locked preview + CTA pricing per utenti demo. Trasforma la
+          pagina risultati da cul-de-sac a trampolino verso /piano. */}
+      {botPlan === "demo" && r.status === "completed" && (
+        <LockedPreviewCta
+          plan={botPlan}
+          runId={params.runId}
+          brand={proj?.target_brand ?? undefined}
+          aviScore={typeof aviData?.avi_score === "number" ? aviData.avi_score : null}
+        />
+      )}
 
       {botContext && <BotMount plan={botPlan} context={botContext} />}
     </div>

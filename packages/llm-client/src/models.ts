@@ -183,8 +183,18 @@ export const VISIBLE_MODEL_IDS = new Set(
   PROVIDER_GROUPS.filter((g) => !g.comingSoon).flatMap((g) => g.models.map((m) => m.id))
 );
 
-/** Demo plan: fixed models, not selectable */
-export const DEMO_MODEL_IDS = ["gpt-5.4-mini", "gemini-2.5-flash"] as const;
+/**
+ * Demo plan: fixed models, not selectable.
+ * 4 motori = impatto emotivo del confronto cross-AI ("ChatGPT non ti cita,
+ * Perplexity sì, Gemini ti mette 4°"). Costo API: ~$0.024 per analisi
+ * (2 query × 4 modelli × $0.003), sostenibile a budget demo (10 prompts).
+ */
+export const DEMO_MODEL_IDS = [
+  "gpt-5.4-mini",
+  "gemini-2.5-flash",
+  "claude-haiku",
+  "perplexity-sonar",
+] as const;
 
 /**
  * Provider-level selection for the snello project creation form.
@@ -242,7 +252,12 @@ export function providersToModelIds(providers: string[], plan: AviPlan): string[
 }
 
 /** Providers preselected for Demo plan (fixed, mirrors DEMO_MODEL_IDS). */
-export const AVI_DEMO_PROVIDERS: readonly AviProviderCard["id"][] = ["openai", "google"];
+export const AVI_DEMO_PROVIDERS: readonly AviProviderCard["id"][] = [
+  "openai",
+  "google",
+  "anthropic",
+  "perplexity",
+];
 
 /**
  * Brand-level label for a model id. Used in UI pills to hide the specific

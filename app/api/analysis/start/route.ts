@@ -76,12 +76,15 @@ export async function POST(request: Request) {
     const isProPlan = userPlanId === "pro" || userPlanId === "enterprise";
     const isDemoPlan = userPlanId === "demo";
 
-    // Demo plan enforcement: only fixed models, no browsing
+    // Demo plan enforcement: only fixed models, no browsing.
+    // Demo set ora include 4 motori (ChatGPT, Gemini, Claude, Perplexity)
+    // per massimizzare l'impatto emotivo del confronto cross-AI. Vedi
+    // DEMO_MODEL_IDS in packages/llm-client/src/models.ts.
     if (isDemoPlan) {
       const demoIds = new Set(DEMO_MODEL_IDS as readonly string[]);
       const invalidModels = validModels.filter((id: string) => !demoIds.has(id));
       if (invalidModels.length > 0) {
-        return NextResponse.json({ error: "Il piano Demo consente solo GPT-5.4 Mini e Gemini 2.5 Flash." }, { status: 403 });
+        return NextResponse.json({ error: "Il piano Demo consente solo i 4 motori predefiniti (ChatGPT, Gemini, Claude, Perplexity)." }, { status: 403 });
       }
     }
 

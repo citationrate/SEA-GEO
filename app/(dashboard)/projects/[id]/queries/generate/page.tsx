@@ -80,9 +80,12 @@ export default function GenerateQueriesPage() {
       const plan = p?.plan ?? "demo";
       setPlanId(plan === "demo" ? "demo" : plan === "base" ? "base" : plan === "pro" ? "pro" : plan === "enterprise" ? "enterprise" : "demo");
       setIsPro(plan === "pro" || plan === "enterprise");
-      // Demo plan is locked to 5 AI-generated queries (matches the 10-prompt
-      // budget = 2 modelli x 5 query).
-      if (plan === "demo") setQueryCount(5);
+      // Demo plan: 2 AI-generated queries × 4 motori (ChatGPT, Gemini,
+      // Claude, Perplexity) = 8 prompts, budget 10 prompts. Costo ~$0.024
+      // per demo. L'impatto emotivo lo dà il confronto cross-AI, non il
+      // numero di query — 2 query bastano per mostrare "ti citano qui ma
+      // non lì".
+      if (plan === "demo") setQueryCount(2);
     }).catch(() => {}).finally(() => setProfileLoaded(true));
 
     fetch(`/api/queries?project_id=${projectId}`).then((r) => r.json()).then((qs) => {
@@ -125,8 +128,8 @@ export default function GenerateQueriesPage() {
 
   // Enterprise: effectively unlimited per Piano table ("Generazione query AI" = ✓).
   // Cap at 9999 just to keep the math finite (backend has no monthly limit).
-  // Demo: bloccato a 5 query (matches 10-prompt budget = 2 modelli x 5 query).
-  const monthlyLimit = planId === "enterprise" ? 9999 : planId === "pro" ? 500 : planId === "base" ? 100 : 5;
+  // Demo: bloccato a 2 query × 4 motori (budget 10 prompts, costo ~$0.024).
+  const monthlyLimit = planId === "enterprise" ? 9999 : planId === "pro" ? 500 : planId === "base" ? 100 : 2;
   const usedThisMonth = existingQueryCount;
 
   function buildInputs(): GenerationInputs & { mode?: "generali" | "specifiche"; theme?: string; theme_context?: string } {
