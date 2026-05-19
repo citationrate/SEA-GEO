@@ -287,47 +287,15 @@ export function RunMetrics({ prompts, analyses, sources, models, competitorMenti
                       : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
                   }
                 >
-                  {MODEL_LABELS[model] ?? model}
+                  {modelIdToBrand(model)?.brand ?? MODEL_LABELS[model] ?? model}
                 </button>
               ))}
           </>
         )}
 
-        {/* Separator */}
-        {!hasExternalModel && models.length > 1 && funnelStages.length > 0 && (
-          <div className="w-px h-5 bg-border mx-1" />
-        )}
-
-        {/* Funnel stage filter */}
-        {funnelStages.length > 0 && (
-          <>
-            <button
-              onClick={() => setFunnelFilter(null)}
-              className="font-mono text-[0.75rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
-              style={
-                funnelFilter === null
-                  ? { borderColor: "#e8956d", backgroundColor: "rgba(232,149,109,0.1)", color: "#e8956d" }
-                  : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
-              }
-            >
-              {t("common.all")}
-            </button>
-            {funnelStages.map((stage) => (
-              <button
-                key={stage}
-                onClick={() => setFunnelFilter(stage)}
-                className="font-mono text-[0.75rem] tracking-wide px-3 py-1.5 rounded-full border transition-colors"
-                style={
-                  funnelFilter === stage
-                    ? { borderColor: "#e8956d", backgroundColor: "rgba(232,149,109,0.1)", color: "#e8956d" }
-                    : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
-                }
-              >
-                {stage}
-              </button>
-            ))}
-          </>
-        )}
+        {/* Funnel stage filter (TOFU/MOFU) rimosso — il distinguo era utile
+            in fase di debug ma confonde gli utenti (terminologia marketing
+            interna). Le query restano filtrabili per modello AI. */}
 
       </div>
 

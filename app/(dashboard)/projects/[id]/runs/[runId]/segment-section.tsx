@@ -130,36 +130,9 @@ export function SegmentSection({ prompts, analyses, segments, queries }: Segment
           <span className="badge badge-muted text-[12px]">{data.length} segmenti</span>
         </div>
 
-        {/* TOFU/MOFU toggle */}
-        {funnelStages.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setFunnelFilter(null)}
-              className="font-mono text-[0.75rem] tracking-wide px-2.5 py-1 rounded-full border transition-colors"
-              style={
-                funnelFilter === null
-                  ? { borderColor: "#e8956d", backgroundColor: "rgba(232,149,109,0.1)", color: "#e8956d" }
-                  : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
-              }
-            >
-              Tutti
-            </button>
-            {funnelStages.map((stage) => (
-              <button
-                key={stage}
-                onClick={() => setFunnelFilter(stage)}
-                className="font-mono text-[0.75rem] tracking-wide px-2.5 py-1 rounded-full border transition-colors"
-                style={
-                  funnelFilter === stage
-                    ? { borderColor: "#e8956d", backgroundColor: "rgba(232,149,109,0.1)", color: "#e8956d" }
-                    : { borderColor: "rgba(255,255,255,0.07)", color: "#9d9890" }
-                }
-              >
-                {stage}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* TOFU/MOFU toggle rimosso — la terminologia marketing interna
+            (top/middle of funnel) confondeva gli utenti. Filtri per
+            modello AI restano come unica leva di filtering visibile. */}
       </div>
 
       <div className="overflow-x-auto">

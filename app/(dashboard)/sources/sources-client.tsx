@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
-import { MODEL_MAP, PROVIDER_CONFIG } from "@citationrate/llm-client";
+import { MODEL_MAP, PROVIDER_CONFIG, modelIdToBrand } from "@citationrate/llm-client";
 
 /* ─── Types ─── */
 interface SourceDomain {
@@ -218,7 +218,10 @@ export function SourcesClient({
           </button>
           {availableModels.map((id) => {
             const m = MODEL_MAP.get(id);
-            const label = m?.label ?? id;
+            // Mostriamo il brand AI (ChatGPT, Gemini, Claude, Perplexity)
+            // invece del nome tecnico del modello (GPT-5.4 Mini, ecc.).
+            // Più chiaro per l'utente non tecnico.
+            const label = modelIdToBrand(id)?.brand ?? m?.label ?? id;
             const provColor = m ? PROVIDER_CONFIG[m.provider]?.color ?? "" : "";
             const active = selectedModel === id;
             return (
