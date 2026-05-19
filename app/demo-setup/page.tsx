@@ -71,6 +71,27 @@ function DemoSetupInner() {
       trackDemoStep("avi_demo_setup_started", { brand, source, audit_id: auditId });
 
       try {
+        // 0) Plan gate: la route auto-flow è pensata SOLO per piano demo.
+        // Utenti Base/Pro ci atterrerebbero con un progetto pre-configurato a
+        // 4 modelli demo (fixed) invece dei loro modelli — strano per loro.
+        // Reindirizziamo al flow manuale /projects/new col pre-fill, così
+        // mantengono pieno controllo sulla configurazione.
+        const profileRes = await fetch("/api/usage", { credentials: "same-origin", cache: "no-store" });
+        if (profileRes.ok) {
+          const profile = await profileRes.json();
+          const planId: string = profile?.planId ?? "demo";
+          if (planId !== "demo") {
+            trackDemoStep("avi_demo_setup_redirected_non_demo", { plan_id: planId, brand });
+            const fallbackQs = new URLSearchParams();
+            if (brand) fallbackQs.set("brand", brand);
+            if (websiteUrl) fallbackQs.set("url", websiteUrl);
+            if (source) fallbackQs.set("source", source);
+            if (auditId) fallbackQs.set("audit_id", auditId);
+            router.replace(`/projects/new?${fallbackQs.toString()}`);
+            return;
+          }
+        }
+
         // 1) Crea progetto AVI
         setPhase("creating_project");
         const projectName = brand;
