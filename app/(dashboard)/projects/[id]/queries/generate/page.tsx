@@ -563,28 +563,49 @@ export default function GenerateQueriesPage() {
         <div className="card p-6 space-y-5">
           <h2 className="font-display font-semibold text-foreground">{t("generateQueries.howManyQueries")}</h2>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {QUERY_COUNT_OPTIONS.map((opt) => {
-              const isSelected = queryCount === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setQueryCount(opt.value)}
-                  className={`relative p-3 rounded-[2px] border text-center transition-all ${
-                    isSelected
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary/30"
-                  }`}
-                >
-                  <p className={`text-lg font-display font-bold ${isSelected ? "text-primary" : "text-foreground"}`}>
-                    {opt.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{t(opt.descKey)}</p>
-                </button>
-              );
-            })}
-          </div>
+          {/* Demo plan: locked at 2 queries — la demo è pensata come assaggio,
+              il volume cresce con Base/Pro. Mostriamo un'unica tile bloccata
+              così l'utente non viene illuso di poter scegliere 5/10/20/50. */}
+          {isDemoPlan ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="relative p-3 rounded-[2px] border border-primary bg-primary/10 text-center">
+                <p className="text-lg font-display font-bold text-primary">2 query</p>
+                <p className="text-xs text-muted-foreground">{t("generateQueries.quick")}</p>
+              </div>
+              <a
+                href="/piano#piani"
+                className="relative p-3 rounded-[2px] border border-dashed border-[#c4a882]/40 text-center hover:border-[#c4a882] transition-colors flex flex-col items-center justify-center"
+              >
+                <p className="text-sm font-display font-semibold text-[#c4a882]">
+                  {t("generateQueries.upgradeBaseOrPro")}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">5 / 10 / 20 / 50 query</p>
+              </a>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {QUERY_COUNT_OPTIONS.map((opt) => {
+                const isSelected = queryCount === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setQueryCount(opt.value)}
+                    className={`relative p-3 rounded-[2px] border text-center transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary/30"
+                    }`}
+                  >
+                    <p className={`text-lg font-display font-bold ${isSelected ? "text-primary" : "text-foreground"}`}>
+                      {opt.label}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{t(opt.descKey)}</p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Custom count — non disponibile per il piano demo (query fisse a 2) */}
           {!isDemoPlan && (

@@ -118,17 +118,26 @@ export function ContextualCoachmark({
 
   useEffect(() => {
     if (!visible) return;
-    const measure = () => {
+    // Continuous tracking via rAF: scroll/resize listeners miss layout shifts
+    // from async content (sidebar tooltips, font load, hydration), which
+    // detaches the highlight outline from its anchor. rAF is cheap and keeps
+    // the rect pinned through any reflow until the coachmark is dismissed.
+    let raf = 0;
+    let lastKey = "";
+    const tick = () => {
       const el = document.querySelector(anchorSelector);
-      if (el) setRect((el as HTMLElement).getBoundingClientRect());
+      if (el) {
+        const r = (el as HTMLElement).getBoundingClientRect();
+        const key = `${r.left}|${r.top}|${r.width}|${r.height}`;
+        if (key !== lastKey) {
+          lastKey = key;
+          setRect(r);
+        }
+      }
+      raf = requestAnimationFrame(tick);
     };
-    measure();
-    window.addEventListener("scroll", measure, { passive: true });
-    window.addEventListener("resize", measure);
-    return () => {
-      window.removeEventListener("scroll", measure);
-      window.removeEventListener("resize", measure);
-    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [visible, anchorSelector]);
 
   if (!visible || !rect) return null;

@@ -190,12 +190,19 @@ function DemoSetupInner() {
           const err = await startRes.json().catch(() => ({}));
           throw new Error(err.error || `Errore avvio analisi (${startRes.status})`);
         }
-        trackDemoStep("avi_demo_analysis_launched", { project_id: projectId });
+        const startData = await startRes.json().catch(() => ({} as any));
+        const runId: string | undefined = startData?.run_id;
+        trackDemoStep("avi_demo_analysis_launched", { project_id: projectId, run_id: runId });
 
-        // 4) Redirect al progetto. La pagina mostra il run in corso e
-        //    quando completa appare il LockedPreviewCta (T4).
+        // 4) Redirect alla run page: l'utente vede subito il progress
+        //    dell'analisi in corso (non la project page statica). Se il
+        //    runId mancasse per qualche motivo, fallback al progetto.
         setPhase("redirecting");
-        router.replace(`/projects/${projectId}`);
+        if (runId) {
+          router.replace(`/projects/${projectId}/runs/${runId}`);
+        } else {
+          router.replace(`/projects/${projectId}`);
+        }
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Errore sconosciuto";
         console.error("[demo-setup] failed:", msg);

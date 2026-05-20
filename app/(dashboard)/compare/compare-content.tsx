@@ -1,6 +1,7 @@
 "use client";
 
 import { GitCompare, Plus, Clock, CheckCircle, XCircle, Loader2, Swords, Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { ProjectSelector } from "@/components/project-selector";
 import { useTranslation } from "@/lib/i18n/context";
 import { useUsage } from "@/lib/hooks/useUsage";
@@ -37,6 +38,7 @@ interface CompareListProps {
 export function CompareList({ list, projectsList }: CompareListProps) {
   const { t, locale } = useTranslation();
   const usage = useUsage();
+  const router = useRouter();
 
   const projectMap = new Map(projectsList.map((p) => [p.id, p.name]));
 
@@ -117,12 +119,20 @@ export function CompareList({ list, projectsList }: CompareListProps) {
                     : a.status === "running" ? "text-yellow-500 animate-spin"
                     : "text-muted-foreground";
 
+                  const href = `/compare/${a.id}`;
                   return (
-                    <tr key={a.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={a.id}
+                      onClick={() => router.push(href)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(href); } }}
+                      tabIndex={0}
+                      role="link"
+                      className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer focus:outline-none focus:bg-muted/30"
+                    >
                       <td className="px-4 py-3">
-                        <a href={`/compare/${a.id}`} className="text-foreground font-medium hover:text-primary transition-colors">
+                        <span className="text-foreground font-medium hover:text-primary transition-colors">
                           {a.brand_a} vs {a.brand_b}
-                        </a>
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">{a.driver}</td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">

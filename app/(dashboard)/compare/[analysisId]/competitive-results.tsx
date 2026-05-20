@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Swords, Trophy, Eye, BarChart3, Loader2, MessageSquare, TrendingUp, X, Globe, WifiOff } from "lucide-react";
+import { ArrowLeft, Swords, Trophy, Eye, BarChart3, Loader2, MessageSquare, TrendingUp, X, Globe, WifiOff, FileSpreadsheet, FileText } from "lucide-react";
 import { MarkdownResponse } from "@/components/ui/markdown-response";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { useTranslation } from "@/lib/i18n/context";
@@ -267,16 +267,36 @@ export function CompetitiveResults({
           <ArrowLeft className="w-4 h-4" />
           {t("nav.backToComparison")}
         </a>
-        <div className="flex items-center gap-3">
-          <Swords className="w-6 h-6 text-primary" />
-          <div>
-            <h1 className="font-display font-bold text-2xl text-foreground">
-              {a.brand_a} vs {a.brand_b}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Driver: {a.driver} &middot; {new Date(a.created_at).toLocaleDateString("it-IT")}
-            </p>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <Swords className="w-6 h-6 text-primary" />
+            <div>
+              <h1 className="font-display font-bold text-2xl text-foreground">
+                {a.brand_a} vs {a.brand_b}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Driver: {a.driver} &middot; {new Date(a.created_at).toLocaleDateString("it-IT")}
+              </p>
+            </div>
           </div>
+          {a.status === "completed" && (
+            <div className="flex items-center gap-2">
+              <a
+                href={`/api/export/compare/${a.id}/excel`}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide px-3 py-2 rounded-[2px] border border-border hover:border-primary/40 hover:text-primary transition-colors"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                Excel
+              </a>
+              <a
+                href={`/api/export/compare/${a.id}/pdf`}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide px-3 py-2 rounded-[2px] border border-border hover:border-primary/40 hover:text-primary transition-colors"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                PDF
+              </a>
+            </div>
+          )}
         </div>
       </div>
 

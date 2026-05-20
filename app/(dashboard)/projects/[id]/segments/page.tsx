@@ -173,7 +173,7 @@ export default function SegmentsPage() {
   useEffect(() => { fetchSegments(); }, [fetchSegments]);
 
   async function addFromTemplate(tpl: { label: string; attrs: PersonaAttributes }) {
-    setSaving("template");
+    setSaving(`tpl:${tpl.label}`);
     setError("");
     try {
       const prompt = generatePrompt(tpl.label, tpl.attrs);
@@ -244,20 +244,24 @@ export default function SegmentsPage() {
           <Sparkles className="w-4 h-4 text-primary" /> {t("segments.templates")}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {templates.map((tpl) => (
-            <div key={tpl.label} className="card p-4 flex flex-col gap-2 hover:border-primary/40 transition-colors">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{tpl.emoji}</span>
-                <h3 className="font-display font-semibold text-sm text-foreground leading-tight">{tpl.label}</h3>
+          {templates.map((tpl) => {
+            const tplKey = `tpl:${tpl.label}`;
+            const isThisLoading = saving === tplKey;
+            return (
+              <div key={tpl.label} className="card p-4 flex flex-col gap-2 hover:border-primary/40 transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">{tpl.emoji}</span>
+                  <h3 className="font-display font-semibold text-sm text-foreground leading-tight">{tpl.label}</h3>
+                </div>
+                <p className="text-xs text-muted-foreground flex-1">{tpl.description}</p>
+                <button onClick={() => addFromTemplate(tpl)} disabled={saving !== null}
+                  className="mt-1 text-xs font-semibold text-primary hover:text-primary/70 transition-colors self-start flex items-center gap-1 disabled:opacity-60">
+                  {isThisLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                  {t("segments.useThis")}
+                </button>
               </div>
-              <p className="text-xs text-muted-foreground flex-1">{tpl.description}</p>
-              <button onClick={() => addFromTemplate(tpl)} disabled={saving === "template"}
-                className="mt-1 text-xs font-semibold text-primary hover:text-primary/70 transition-colors self-start flex items-center gap-1">
-                {saving === "template" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-                {t("segments.useThis")}
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
