@@ -150,9 +150,21 @@ export function ContextualCoachmark({
     leftPos = Math.max(PAD, Math.min(leftPos, window.innerWidth - BUBBLE_WIDTH - PAD));
   }
   const topPos = position === "bottom" ? rect.bottom + PAD : rect.top - PAD - 160;
+  // Arrow points at the anchor center. When the bubble is clamped to the
+  // viewport edge (anchor near right/left of the screen), the arrow shifts
+  // off-center so users still see which element the tooltip refers to.
+  // Clamp to inside the bubble with a small inset so the diamond stays
+  // attached even at the extreme.
+  const arrowInset = 14;
+  const arrowLeft = Math.max(arrowInset, Math.min(anchorCenterX - leftPos, BUBBLE_WIDTH - arrowInset));
 
   const handleCta = () => {
+    // Hide immediately so the bubble disappears even when there's no ctaHref
+    // (e.g. plain "Capito" / "Sono pronto" CTAs). Previously this only
+    // markDismissed-ed in localStorage, leaving the bubble visible and giving
+    // users the impression the click hadn't registered.
     markDismissed(id);
+    setVisible(false);
     if (onCta) onCta();
     if (ctaHref && typeof window !== "undefined") {
       window.location.href = ctaHref;
@@ -182,6 +194,20 @@ export function ContextualCoachmark({
           width: BUBBLE_WIDTH,
         }}
       >
+        {/* Arrow pointing at the anchor. Rotated square sitting on top/bottom
+            border so the bubble→element relationship is clear even when the
+            bubble is clamped to the viewport. */}
+        <div
+          aria-hidden
+          className="absolute w-2.5 h-2.5 bg-background border-primary/40"
+          style={{
+            left: arrowLeft - 5,
+            ...(position === "bottom"
+              ? { top: -6, borderTop: "1px solid", borderLeft: "1px solid" }
+              : { bottom: -6, borderBottom: "1px solid", borderRight: "1px solid" }),
+            transform: "rotate(45deg)",
+          }}
+        />
         <button
           type="button"
           onClick={dismiss}

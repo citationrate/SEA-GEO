@@ -103,6 +103,17 @@ function stripAccents(s: string): string {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
+/**
+ * Normalize curly/typographic apostrophes and grave accents to the ASCII
+ * apostrophe. AI responses (and copy-pasted brand names) often use these
+ * variants interchangeably \u2014 without this, "L'Or\u00e9al" (DB, U+2019) and
+ * "L'Or\u00e9al" (response, U+0027) would not match.
+ */
+function normalizeApostrophes(s: string): string {
+  // U+2018 ' / U+2019 ' / U+201B \u201b / U+2032 \u2032 / U+0060 `
+  return s.replace(/[\u2018\u2019\u201b\u2032`]/g, "'");
+}
+
 /** Escape a string for use inside a RegExp */
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -118,12 +129,30 @@ function escapeRegex(s: string): string {
 function buildBrandVariants(brand: string): string[] {
   const variants = new Set<string>();
 
-  const clean = brand.trim();
+  // Normalize curly apostrophes here so every variant we emit uses ASCII '.
+  // detectBrandMention applies the same normalization to the response, so a
+  // brand "McDonald's" (U+2019) matches a response written with U+0027.
+  const clean = normalizeApostrophes(brand.trim());
   if (!clean) return [];
 
   // Full name
   variants.add(clean.toLowerCase());
   variants.add(stripAccents(clean).toLowerCase());
+
+  // Apostrophe-tolerant variants. AI models drop the apostrophe ("Mcdonalds"),
+  // replace it with a space ("L Oreal"), or keep it ("L'Oréal"). We emit all
+  // three so the regex word-boundary match succeeds in every case.
+  if (clean.includes("'")) {
+    const noApostrophe = clean.replace(/'/g, "");
+    variants.add(noApostrophe.toLowerCase());
+    variants.add(stripAccents(noApostrophe).toLowerCase());
+
+    const apostropheToSpace = clean.replace(/'/g, " ").replace(/\s+/g, " ").trim();
+    if (apostropheToSpace) {
+      variants.add(apostropheToSpace.toLowerCase());
+      variants.add(stripAccents(apostropheToSpace).toLowerCase());
+    }
+  }
 
   // International name swaps (Italian ↔ English)
   const swaps: [RegExp, string][] = [
@@ -240,7 +269,14 @@ function detectBrandMention(response: string, targetBrand: string): BrandDetecti
       ? "full"
       : "partial";
   };
-  const cleaned = stripMarkdown(response);
+  // Normalize curly apostrophes (U+2019 etc.) to ASCII, then replace every
+  // apostrophe with a space. Reason: AI models render the same brand as
+  // "McDonald's", "Mcdonalds", or "McDonald s" in different runs. Stripping
+  // the apostrophe to a space, combined with the no-apostrophe + space
+  // variants emitted by buildBrandVariants, covers all three cases.
+  // Possessives like "Wovo's" → "Wovo s" then match \bwovo\b correctly.
+  const normalizedResponse = normalizeApostrophes(response).replace(/'/g, " ");
+  const cleaned = stripMarkdown(normalizedResponse);
   const responseLower = cleaned.toLowerCase();
   const responseNorm = stripAccents(responseLower);
   const variants = buildBrandVariants(targetBrand);
@@ -266,7 +302,7 @@ function detectBrandMention(response: string, targetBrand: string): BrandDetecti
 
   // Strategy 2: Try on raw response (before markdown stripping) — catches brands
   // inside markdown formatting that stripMarkdown might mangle
-  const rawLower = stripAccents(response.toLowerCase());
+  const rawLower = stripAccents(normalizedResponse.toLowerCase());
   for (const variant of sorted) {
     const variantNorm = stripAccents(variant);
     // More permissive: allow brand surrounded by any non-alphanumeric char
@@ -283,7 +319,11 @@ function detectBrandMention(response: string, targetBrand: string): BrandDetecti
 /** Check if a brand name is composed of generic/common words that could cause false positives */
 function isGenericBrandName(brand: string): boolean {
   const GENERIC = BRAND_GENERIC_WORDS;
-  const words = brand.toLowerCase().trim().split(/\s+/);
+  // Strip accents before lookup so accented variants of generic words
+  // (e.g. "Caffè" → "caffe") match the generic set, which is stored
+  // accent-free. Without this, "Caffè" would pass through as a distinctive
+  // brand and trigger false positives on everyday Italian text.
+  const words = stripAccents(brand.toLowerCase().trim()).split(/\s+/);
   // If ALL words in the brand name are generic, it's a generic name
   return words.length >= 1 && words.every((w) => GENERIC.has(w) || w.length <= 2);
 }
