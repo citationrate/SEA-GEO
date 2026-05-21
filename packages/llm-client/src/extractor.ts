@@ -808,11 +808,31 @@ Field rules:
   - null if brand_mentioned=false
 - brand_occurrences: count of brand appearances
 - competitors_count: total competitors cited (exclude target brand)
-- tone_score: language sentiment toward brand on [-1.0, +1.0] scale with 0.1 granularity. Identify 2-3 key adjectives first, then score.
-  Examples: 'iconic, excellent quality' → +0.8 | 'good, reliable' → +0.5 | 'criticized, problematic' → -0.6
-  Do NOT default to 0.5 — reason from text. No adjectives → 0.2 (neutral-positive) or 0.0 (neutral). If brand_mentioned=false → 0.0.
+- tone_score: language sentiment toward the brand on the CONTINUOUS scale [-1.0, +1.0] with 0.1 granularity. Identify 2-3 key adjectives from the actual text first, then score.
+  Calibration anchors (use ALL of the scale, including negative values):
+    +0.9..+1.0  unanimously celebrated, iconic, market leader ('iconic, outstanding, top choice')
+    +0.6..+0.8  clearly positive ('excellent, reliable, well-regarded')
+    +0.3..+0.5  moderately positive ('decent, solid, a good option')
+    +0.1..+0.2  faintly positive ('mentioned among alternatives, neutral-positive')
+     0.0        purely neutral / descriptive only, no qualitative judgement
+    -0.1..-0.2  faintly negative ('mentioned but with reservations, dated, niche')
+    -0.3..-0.5  moderately negative ('underwhelming, overpriced, behind competitors')
+    -0.6..-0.8  clearly negative ('problematic, criticized, declining, troubled')
+    -0.9..-1.0  strongly negative ('scandal, lawsuit, dangerous, avoid')
+  DO NOT cluster around +0.5 or +0.6 as a safe default. If the text is purely factual/descriptive, return 0.0. If criticisms are present, USE NEGATIVE VALUES. If brand_mentioned=false → 0.0.
 - brand_adjectives: 2-3 key adjectives describing brand (in ${lang}). Empty if not mentioned.
-- recommendation_score: +1.0=explicitly recommended first, +0.5=positive mention, 0.0=none, -0.5=discouraged, -1.0=explicitly discouraged. If brand_mentioned=false → 0.0.
+- recommendation_score: how strongly the response RECOMMENDS the brand on the CONTINUOUS scale [-1.0, +1.0] with 0.1 granularity. This measures explicit endorsement, NOT sentiment (use tone_score for that).
+  Calibration anchors (use the FULL range, not just 0 / 0.5 / 1):
+    +0.9..+1.0  explicitly named as the #1 choice or 'best option' ('we strongly recommend X', 'X is the clear winner')
+    +0.6..+0.8  recommended with enthusiasm but among other good options ('X is one of the top picks')
+    +0.3..+0.5  positively mentioned without explicit recommendation ('X is a solid choice', 'X works well')
+    +0.1..+0.2  mentioned in a list of options with mildly favorable framing
+     0.0        cited as factual information only, no recommendation either way
+    -0.1..-0.2  cited with mild caveats ('X exists but consider alternatives')
+    -0.3..-0.5  cited unfavorably or as a weaker option ('X is outdated', 'X is not ideal')
+    -0.6..-0.8  explicitly advised against ('avoid X for this use case', 'X has serious limitations')
+    -0.9..-1.0  strongly discouraged ('never use X', 'X is dangerous/illegal/scam')
+  DO NOT default to 0.5 when uncertain — return 0.0 if there is no recommendation signal. If brand_mentioned=false → 0.0.
 - topics: main topics discussed (in ${lang})
 - competitors_found: name, type (direct|indirect|channel|aggregator), rank (1=first cited), sentiment (-1.0/+1.0), tone (0.0 to 1.0: language positivity), recommendation (1.0=strongly recommended, 0.5=neutral, 0.0=not recommended)
 
