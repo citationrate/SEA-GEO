@@ -133,15 +133,18 @@ export const runBrandProfile = inngest.createFunction(
                   // and shift a pillar by 15-20 pts in 5 minutes. T=0 makes
                   // back-to-back runs reproducible within tokenizer noise.
                   temperature: 0,
-                  // BP pillar prompts ask short evaluative answers ("describe in
-                  // 3-5 sentences", "list top 10 brands"). The historical 4096
-                  // default is overkill — measured output avg is 400-867 tokens.
-                  // Capping at 800 trims billing on verbose providers (Sonar
-                  // and Sonnet emit 600-1000 tokens by default even on short
-                  // questions) without truncating real answers. Hard truncations
-                  // would show as `stop_reason="max_tokens"` in provider logs;
-                  // we monitor those for regressions.
-                  maxOutputTokens: 800,
+                  // BP pillar prompts ask short evaluative answers ("describe
+                  // in 3-5 sentences", "list top 10 brands"). The historical
+                  // 4096 default is overkill — measured output avg is 400-867
+                  // tokens. First attempt with 800 (2026-05-22) caused Gemini
+                  // to hit MAX_TOKENS finish reason and return empty content
+                  // (Gemini reserves part of the budget for internal reasoning
+                  // before emitting text; at 800 it sometimes ran out before
+                  // any text). Raised to 1500 which still trims Sonar/Sonnet
+                  // verbosity without starving Gemini. Watch for
+                  // `[Gemini] Gemini returned empty response` in
+                  // prompt_results as the regression signal.
+                  maxOutputTokens: 1500,
                 });
                 durationMs = Date.now() - t0;
                 responseRaw = llm.text ?? "";
