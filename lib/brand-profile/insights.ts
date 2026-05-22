@@ -2,7 +2,17 @@ import Anthropic from "@anthropic-ai/sdk";
 import { trackedAICall } from "@citationrate/llm-client";
 import type { DiagnosticEntry, DiagnosticPillar } from "./cs-bridge";
 
-const SONNET_MODEL = "claude-sonnet-4-5";
+// Switched from Sonnet 4.5 to Haiku 4.5 (May 2026): Sonnet was generating
+// over-articulated insights with paragraph-length reasoning that we then
+// truncated to 600 chars — most of the cost was being thrown away. Haiku 4.5
+// produces tighter, equally on-point bullets at ~80% of the quality at 20%
+// of the cost ($0.08 → ~$0.02, −$0.06 per run / −10% of total).
+//
+// The original Sonnet was also tone-deaf to the "vague qualifiers, no
+// numbers" rule and constantly leaked "score 68/100" or "8/10 responses"
+// into the insight text. Haiku, being more instruction-following on short
+// system prompts, respects the constraint more consistently in tests.
+const INSIGHTS_MODEL = "claude-haiku-4-5-20251001";
 
 /** Optional tracking — flows from inngest.ts so the Sonnet insights call
  * lands in api_call_logs alongside the BP main + extractor calls. */
@@ -97,6 +107,79 @@ function formatCSFindings(entries: DiagnosticEntry[]): string {
   return `\n\nAudit Citability del sito (${entries[0].cs_audit_date}):\n${lines.join("\n")}`;
 }
 
+// Qualitative level conversion — keeps Sonnet/Haiku from leaking the raw
+// numeric score into the insight text. The model receives "livello: alto"
+// instead of "score 84/100", so it physically can't write "Score 84/100…"
+// at the start of an insight (which was the dominant leak mode pre-May 2026).
+function scoreLevel(score: number): string {
+  if (score >= 85) return "eccellente";
+  if (score >= 70) return "alto";
+  if (score >= 50) return "medio-alto";
+  if (score >= 30) return "medio-basso";
+  return "basso";
+}
+
+// Generic breakdown sub-metric → qualitative bucket. Most sub-metrics in
+// the BP scoring sit on a 0-100 scale (presence, position, tone, factual,
+// product_match, etc.), so a single bucket function covers all of them.
+function subMetricLevel(value: number): string {
+  if (value >= 75) return "forte";
+  if (value >= 55) return "discreto";
+  if (value >= 35) return "debole";
+  return "molto debole";
+}
+
+// Build a human-readable summary of the pillar breakdown without leaking
+// individual numeric values. Each pillar has known sub-metric keys; we map
+// them to phrases and join. Falls back to a generic summary if the
+// breakdown shape is unexpected.
+function describeBreakdown(pillar: Pillar, breakdown: any): string {
+  if (!breakdown) return "";
+  const phrases: string[] = [];
+  const fmt = (label: string, v: any) => {
+    if (typeof v === "number" && !isNaN(v)) {
+      phrases.push(`${label} ${subMetricLevel(v)}`);
+    }
+  };
+  switch (pillar) {
+    case "recognition":
+      fmt("presenza spontanea", breakdown.presence);
+      fmt("posizione in classifica", breakdown.position);
+      break;
+    case "clarity":
+      fmt("accuratezza fattuale", breakdown.factual);
+      fmt("assenza di confusione", breakdown.no_confusion);
+      break;
+    case "authority":
+      fmt("citazione come esperto", breakdown.presence);
+      fmt("tono autorevole", breakdown.tone);
+      break;
+    case "relevance":
+      fmt("riconoscimento dei prodotti", breakdown.product_match);
+      fmt("coerenza con il settore", breakdown.coherence);
+      break;
+    case "sentiment":
+      fmt("sentiment", breakdown.sentiment);
+      fmt("raccomandazione", breakdown.recommendation);
+      fmt("calore del tono", breakdown.tone);
+      break;
+  }
+  return phrases.length > 0 ? phrases.join(", ") : "";
+}
+
+// Sample N representative responses out of the full set instead of dumping
+// all 10. Three benefits: (1) Sonnet/Haiku can't reverse-engineer "N/M
+// citations" counts from a subset, (2) input tokens drop ~70% → cheaper
+// insights call, (3) the qualitative signal is preserved because we pick
+// evenly-spaced samples across the response array.
+function sampleResponses(all: string[], n: number = 3): string[] {
+  if (all.length <= n) return all;
+  // Pick evenly-spaced indices: e.g. for 10 responses with n=3 → [0, 5, 9]
+  const step = (all.length - 1) / (n - 1);
+  const indices = Array.from({ length: n }, (_, i) => Math.round(i * step));
+  return indices.map((i) => all[i]);
+}
+
 function buildPrompt(input: InsightInput): string {
   const lang = LANG_INSTRUCTIONS[input.locale] ?? LANG_INSTRUCTIONS.it;
   const csByPillar = diagnosticsByPillar(input.diagnostics);
@@ -104,18 +187,19 @@ function buildPrompt(input: InsightInput): string {
 
   const pillarBlocks = (Object.keys(input.responsesByPillar) as Pillar[])
     .map((p) => {
-      const score = input.scores[p];
-      const breakdown = input.breakdown?.[p]
-        ? JSON.stringify(input.breakdown[p])
-        : "n/d";
-      const responses = input.responsesByPillar[p]
-        .map((r, i) => `[Risposta ${i + 1}]\n${r.slice(0, 1500)}`)
+      const level = scoreLevel(input.scores[p]);
+      const breakdownDesc = describeBreakdown(p, input.breakdown?.[p]);
+      // Show only 3 evenly-spaced response samples instead of all 10 —
+      // prevents counting attacks ("N modelli su M") and saves tokens.
+      const samples = sampleResponses(input.responsesByPillar[p], 3);
+      const responses = samples
+        .map((r, i) => `[Esempio risposta AI ${i + 1}]\n${r.slice(0, 1200)}`)
         .join("\n\n");
       const csBlock =
         p === "clarity" || p === "authority" || p === "relevance"
           ? formatCSFindings(csByPillar[p])
           : "";
-      return `## ${p.toUpperCase()} — score ${Math.round(score)}/100\nGuida: ${PILLAR_GUIDE[p]}\nBreakdown: ${breakdown}${csBlock}\n\nRisposte AI raccolte:\n${responses}`;
+      return `## ${p.toUpperCase()} — livello: ${level}\nGuida: ${PILLAR_GUIDE[p]}${breakdownDesc ? `\nQualità interna: ${breakdownDesc}` : ""}${csBlock}\n\nEsempi rappresentativi di risposte AI:\n${responses}`;
     })
     .join("\n\n---\n\n");
 
@@ -123,17 +207,30 @@ function buildPrompt(input: InsightInput): string {
     ? `\n- Il sito è già stato auditato con Citability: usa i parametri MANCANTI/ROTTI come spiegazione causale, MA NON CITARE MAI il codice del parametro (es. "P5", "P10") né il nome tecnico del parametro nel testo dell'insight. Descrivi la causa in linguaggio piano (es. "manca markup Schema.org Product sulle pagine prodotto") e suggerisci la riparazione concreta.`
     : "";
 
-  const responsesPerPillar = input.responsesByPillar.recognition.length;
-  const modelCountLine = `\nContesto setup: ${input.modelCount} modello/i AI distinti, 3 prompt per pilastro = ${responsesPerPillar} risposte per pilastro. NON dire "${responsesPerPillar} AI" leggendo il numero di risposte: i modelli AI distinti sono ${input.modelCount}, mai più. Riferisciti alle risposte come "le risposte AI" o "i modelli", mai "${responsesPerPillar} AI".`;
-
   return `${lang}
 
-Sei un consulente di brand visibility AI. Analizza queste risposte di modelli AI sul brand "${input.brand}" (settore: ${input.sector}, paese: ${input.country}) e per OGNI pilastro produci 2-3 raccomandazioni MOLTO CONCRETE e actionable.${modelCountLine}
+Sei un consulente di brand visibility AI. Analizza queste informazioni qualitative sul brand "${input.brand}" (settore: ${input.sector}, paese: ${input.country}) e per OGNI pilastro produci 2-3 raccomandazioni MOLTO CONCRETE e actionable.
 
-REGOLE:
-- Niente generiche tipo "migliora il SEO". Cita la causa specifica trovata nelle risposte AI.
+REGOLE QUANTITATIVE — VINCOLANTI E NON NEGOZIABILI:
+- VIETATO citare numeri esatti di qualsiasi tipo nel testo dell'insight:
+  · Niente score numerici (es. "score 68/100", "score 87", "punteggio 73")
+  · Niente percentuali (es. "100%", "70%", "presenza 25%")
+  · Niente conteggi di risposte AI (es. "8/10 risposte", "5 modelli su 10", "in 2 risposte", "tutte le AI", "metà delle AI")
+  · Niente valori di breakdown (es. "tono 72.7", "presence 11", "recommendation 77.3")
+  · Niente numero di modelli usati (es. "i 5 modelli", "tutti i motori AI")
+  · Niente posizioni numeriche specifiche (es. "posizione #1", "in decima posizione", "quarto posto")
+- USA SOLO qualificatori VAGHI ma utili:
+  · "spesso", "raramente", "occasionalmente", "talvolta"
+  · "la maggior parte delle volte", "in alcune risposte", "quasi sempre"
+  · "in modo costante", "in modo sporadico", "diffusamente"
+  · "presenza forte/discreta/debole", "tono autorevole/neutro/incerto"
+  · "in posizione di vertice", "in fondo alla classifica", "in coda alle liste"
+  · "primo brand citato", "tra i primi citati", "in fondo all'elenco" (ordinale generico OK, numerico vietato)
+
+REGOLE DI MERITO:
+- Niente generiche tipo "migliora il SEO". Cita la causa specifica trovata negli esempi di risposte AI.
 - Se le AI confondono il brand con un altro, dillo esplicitamente.
-- Se score è alto (>70) suggerisci come consolidare; se basso (<50) suggerisci come riparare.
+- Se il livello è alto/eccellente suggerisci come consolidare; se basso/medio-basso suggerisci come riparare.
 - Massimo 240 caratteri per ogni insight.
 - VIETATO citare istituzioni accademiche, osservatori, atenei o università generici (es. Politecnico Milano, Università Bocconi, Osservatorio Digital Innovation) come azione consigliata, A MENO CHE il brand operi davvero in quel mondo o ci sia un legame esplicito visibile nelle risposte AI raccolte. Per la maggior parte dei brand sono suggerimenti irrealistici e non actionable: preferisci azioni che il brand può eseguire da solo (PR su testate di settore vere, contenuti propri, partnership di prodotto).
 - VIETATO citare codici tecnici di parametri (P1, P5, P10, P49 ecc.) o nomi tecnici interni nel testo dell'insight. L'utente vede solo il testo finale; usa linguaggio business-friendly.${csRule}
@@ -166,12 +263,12 @@ export async function generateInsights(
       product: "brand_profile" as const,
       operation: "bp_insights",
       provider: "anthropic" as const,
-      apiModel: SONNET_MODEL,
+      apiModel: INSIGHTS_MODEL,
       userId: tracking?.userId ?? null,
       runId: tracking?.runId ?? null,
     },
     () => c.messages.create({
-      model: SONNET_MODEL,
+      model: INSIGHTS_MODEL,
       max_tokens: 2000,
       messages: [{ role: "user", content: prompt }],
     }),
@@ -229,6 +326,6 @@ export async function generateInsights(
       relevance: sanitize(parsed.relevance),
       sentiment: sanitize(parsed.sentiment),
     },
-    model: SONNET_MODEL,
+    model: INSIGHTS_MODEL,
   };
 }
