@@ -17,6 +17,12 @@ import {
   escapeHtml,
   type TranscriptItem,
 } from "@/lib/pdf/templates";
+import { modelIdToBrand } from "@citationrate/llm-client";
+
+function brandOf(modelId: string | null | undefined): string {
+  if (!modelId) return "—";
+  return modelIdToBrand(modelId)?.brand ?? modelId;
+}
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -267,7 +273,7 @@ export async function GET(
         const x = analysisMap.get(p.id) as any;
         return [
           i + 1,
-          p.model,
+          brandOf(p.model),
           x?.brand_mentioned ? "✓" : "—",
           x?.brand_rank ?? "—",
           x?.sentiment_score != null
@@ -286,7 +292,7 @@ export async function GET(
       const x = analysisMap.get(p.id) as any;
       return {
         index: i + 1,
-        model: p.model,
+        model: brandOf(p.model),
         brand: x?.brand_mentioned ? "yes" : "",
         rank: x?.brand_rank ?? null,
         fullPrompt: p.full_prompt_text ?? "",

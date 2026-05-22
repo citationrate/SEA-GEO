@@ -3,6 +3,18 @@ import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { getServerTranslator, getLocaleFromRequest } from "@/lib/i18n/server";
 import { isProUser } from "@/lib/utils/is-pro";
+import { modelIdToBrand } from "@citationrate/llm-client";
+
+function brandOf(modelId: string | null | undefined): string {
+  if (!modelId) return "—";
+  return modelIdToBrand(modelId)?.brand ?? modelId;
+}
+
+function uniqueBrands(modelIds: string[] | null | undefined): string {
+  if (!modelIds || modelIds.length === 0) return "—";
+  const brands = new Set(modelIds.map((m) => brandOf(m)));
+  return Array.from(brands).join(", ");
+}
 
 export async function GET(
   request: Request,
@@ -114,7 +126,7 @@ export async function GET(
     [t("results.version"), `v${r.version}`],
     [t("results.status"), r.status],
     [t("results.date"), r.completed_at ? new Date(r.completed_at).toLocaleString(locale) : "—"],
-    [t("results.models"), (r.models_used ?? []).join(", ")],
+    [t("results.models"), uniqueBrands(r.models_used)],
     ["Prompt Total", r.total_prompts],
     ["Prompt Completed", r.completed_prompts],
     [],
@@ -146,7 +158,7 @@ export async function GET(
     const baseRow = [
       queryTextMap.get(p.query_id) ?? p.query_id ?? "—",
       segmentLabelMap.get(p.segment_id) ?? p.segment_id ?? "—",
-      p.model,
+      brandOf(p.model),
       p.run_number,
       a?.brand_mentioned ? t("common.yes") : t("common.no"),
       a?.brand_rank ?? "—",
@@ -248,7 +260,7 @@ export async function GET(
   const sourceRows = (sources ?? []).map((s: any) => [
     s.domain ?? "—",
     s.url ?? "—",
-    s.model ?? "—",
+    brandOf(s.model),
     s.source_type ?? "—",
     s.citation_count ?? 1,
     s.is_brand_owned ? t("common.yes") : t("common.no"),

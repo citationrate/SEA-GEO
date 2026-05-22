@@ -2,6 +2,18 @@ import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { getServerTranslator, getLocaleFromRequest } from "@/lib/i18n/server";
+import { modelIdToBrand } from "@citationrate/llm-client";
+
+function brandOf(modelId: string | null | undefined): string {
+  if (!modelId) return "—";
+  return modelIdToBrand(modelId)?.brand ?? modelId;
+}
+
+function uniqueBrands(modelIds: string[] | null | undefined): string {
+  if (!modelIds || modelIds.length === 0) return "—";
+  const brands = new Set(modelIds.map((m) => brandOf(m)));
+  return Array.from(brands).join(", ");
+}
 
 export async function GET(
   request: Request,
@@ -108,7 +120,7 @@ export async function GET(
       `v${r.version}`,
       r.completed_at ? new Date(r.completed_at).toLocaleDateString(locale) : "—",
       r.status,
-      (r.models_used ?? []).join(", "),
+      uniqueBrands(r.models_used),
       a?.avi_score ?? "—",
       a?.presence_score ?? "—",
       a?.rank_score ?? "—",
@@ -167,7 +179,7 @@ export async function GET(
     return [
       run ? `v${run.version}` : "—",
       queryTextMap.get(p.query_id) ?? p.query_id ?? "—",
-      p.model,
+      brandOf(p.model),
       p.run_number,
       a?.brand_mentioned ? t("common.yes") : t("common.no"),
       a?.brand_rank ?? "—",
@@ -251,7 +263,7 @@ export async function GET(
     runVersionMap.get(s.run_id) ?? "—",
     s.domain ?? "—",
     s.url ?? "—",
-    s.model ?? "—",
+    brandOf(s.model),
     s.source_type ?? "—",
     s.citation_count ?? 1,
   ]);
