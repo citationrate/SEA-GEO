@@ -86,6 +86,16 @@ export interface CallAIOptions {
    * too. We pass the value through as-is per provider.
    */
   temperature?: number;
+  /**
+   * Cap on the number of output tokens. Defaults to the per-provider
+   * historical ceiling (4096 for OpenAI/Perplexity/Grok/Gemini, 2048 for
+   * Opus, 4096 for the other Anthropic models). Brand Profile passes
+   * 600 because pillar prompts ask short evaluative answers (3-5 sentences,
+   * not essays); cutting the cap saves ~30% on output-token billing for
+   * verbose providers (Sonar in particular emits 600+ tokens by default
+   * even on short questions).
+   */
+  maxOutputTokens?: number;
 }
 
 export async function callAIModel(
@@ -118,7 +128,8 @@ export async function callAIModel(
       // Limit search uses to control costs: Opus=1, Sonnet=2, Haiku=3
       const isOpus = model === "claude-opus";
       const isSonnet = model === "claude-sonnet";
-      const maxTokens = isOpus ? 2048 : 4096;
+      const defaultMaxTokens = isOpus ? 2048 : 4096;
+      const maxTokens = callOptions?.maxOutputTokens ?? defaultMaxTokens;
       const searchMaxUses = isOpus ? 1 : isSonnet ? 2 : 3;
 
       return await retryCall(2, async () => {
@@ -238,7 +249,7 @@ export async function callAIModel(
             const geminiModel = genai.getGenerativeModel({
               model: apiModel,
               tools: [{ googleSearch: {} } as any],
-              generationConfig: { maxOutputTokens: 4096 },
+              generationConfig: { maxOutputTokens: callOptions?.maxOutputTokens ?? 4096 },
             });
             // Prompt augmentation: googleSearch grounding is opportunistic —
             // the model decides whether to invoke it. An explicit instruction
@@ -262,7 +273,7 @@ export async function callAIModel(
         }
         const geminiModel = genai.getGenerativeModel({
           model: apiModel,
-          generationConfig: { maxOutputTokens: 4096 },
+          generationConfig: { maxOutputTokens: callOptions?.maxOutputTokens ?? 4096 },
         });
         const result = await maybeTrack(trackingContext, { provider: "google", apiModel }, () =>
           geminiModel.generateContent(prompt)
@@ -288,7 +299,7 @@ export async function callAIModel(
             body: JSON.stringify({
               model: apiModel,
               messages: [{ role: "user", content: prompt }],
-              max_tokens: 4096,
+              max_tokens: callOptions?.maxOutputTokens ?? 4096,
               temperature,
             }),
           });
@@ -347,7 +358,7 @@ export async function callAIModel(
             },
             body: JSON.stringify({
               messages: [{ role: "user", content: prompt }],
-              max_tokens: 4096,
+              max_tokens: callOptions?.maxOutputTokens ?? 4096,
               temperature,
             }),
           },
@@ -406,7 +417,7 @@ export async function callAIModel(
           client.chat.completions.create({
             model: apiModel,
             temperature,
-            max_tokens: 4096,
+            max_tokens: callOptions?.maxOutputTokens ?? 4096,
             messages: [{ role: "user", content: prompt }],
           })
         );
@@ -518,7 +529,7 @@ export async function callAIModel(
         openai.chat.completions.create({
           model: apiModel,
           temperature,
-          max_tokens: 4096,
+          max_tokens: callOptions?.maxOutputTokens ?? 4096,
           messages: [{ role: "user", content: prompt }],
         })
       );
