@@ -35,15 +35,38 @@ const avg = (xs: number[]) => (xs.length === 0 ? 0 : xs.reduce((a, b) => a + b, 
 
 function scoreRecognition(rows: RecognitionExtraction[]): { score: number; breakdown: PillarBreakdown["recognition"] } {
   if (rows.length === 0) return { score: 0, breakdown: { presence: 0, position: 0 } };
-  const mentioned = rows.filter((r) => r.brand_mentioned);
-  const presence = (mentioned.length / rows.length) * 100;
 
-  const positionPoints = mentioned.map((r) => {
+  // Recognition "presence" = does the AI spontaneously list OUR brand in a
+  // sector top-N. Previously a raw `mentions / N` ratio with no smoothing →
+  // 0 mentions produced score=0 (the "broken-looking floor"), and 1 mention
+  // out of 10 jumped to ~5%. Same bimodal problem we fixed on Authority.
+  //
+  // Apply a milder Beta(α=1, β=4) prior than Authority: Recognition has a
+  // wider real-world range (Ferrari can legitimately hit 100, while small
+  // brands realistically sit at 0-10) and we don't want to compress both
+  // ends. The prior gives an absent brand a baseline of ~17 instead of 0
+  // — visible signal that "the test ran, the brand is just not yet
+  // recognized" without painting a misleading "broken" zero.
+  //
+  // Position also gets a neutral floor: unranked-but-mentioned was already
+  // 50. Now non-mentioned rows contribute position=20 (was excluded), so
+  // the breakdown can degrade smoothly instead of a cliff at the mention
+  // boundary.
+  const PRIOR_ALPHA = 1;
+  const PRIOR_BETA = 4;
+  const POSITION_FLOOR_UNMENTIONED = 20;
+
+  const mentioned = rows.filter((r) => r.brand_mentioned);
+  const n = rows.length;
+  const presence = ((mentioned.length + PRIOR_ALPHA) / (n + PRIOR_ALPHA + PRIOR_BETA)) * 100;
+
+  const positionPoints = rows.map((r) => {
+    if (!r.brand_mentioned) return POSITION_FLOOR_UNMENTIONED;
     if (!r.brand_position || r.total_brands_listed <= 0) return 50; // mentioned but unranked → neutral
     const norm = 1 - (r.brand_position - 1) / Math.max(1, r.total_brands_listed);
     return Math.max(0, Math.min(1, norm)) * 100;
   });
-  const position = mentioned.length === 0 ? 0 : avg(positionPoints);
+  const position = avg(positionPoints);
 
   return {
     score: clamp(0.5 * presence + 0.5 * position),
@@ -117,8 +140,15 @@ function scoreAuthority(rows: AuthorityExtraction[]): { score: number; breakdown
   //
   // Expected effect: Δ run-to-run for Authority drops from ~20pt to ~8pt
   // on samples of N=10 (Setup C-light).
+  // PRIOR_BETA reduced from 6 → 5 (May 2026): the 6 was over-compressing
+  // the low-end of the score, producing the conspicuous "34.44 floor" that
+  // ~5 different brands shared identically (Nutella, IULM, Baldan, Il
+  // Prisma, Citation Rate). Lowering β to 5 lifts the floor to ~38 and
+  // spreads the bottom tier slightly, making the score look less "broken"
+  // when many low-Authority brands stack up at the same number.
+  // Top scorers (10/10 mentions) shift from 65 → 67 (negligible).
   const PRIOR_ALPHA = 2;
-  const PRIOR_BETA = 6;
+  const PRIOR_BETA = 5;
   const TONE_NEUTRAL_UNMENTIONED = 50;
 
   const mentions = rows.filter((r) => r.brand_mentioned).length;
@@ -170,17 +200,38 @@ function scoreRelevance(rows: RelevanceExtraction[]): { score: number; breakdown
 function scoreSentiment(rows: SentimentExtraction[]): { score: number; breakdown: PillarBreakdown["sentiment"] } {
   if (rows.length === 0) return { score: 0, breakdown: { sentiment: 0, recommendation: 0, tone: 0 } };
 
+  // Same neutral-unmentioned smoothing pattern as Authority: when the brand
+  // isn't mentioned by a model, we don't have signal — using 0 was wrong
+  // (it claimed strong negative sentiment from missing data) and using the
+  // mean of mentioned rows was wrong too (over-positive optimism for brands
+  // that no AI knows). Use 50 / 30 / 30 as neutral floors:
+  //
+  //   sentiment_neutral = 50 (-1..1 mapped to 0..100, midpoint = 50)
+  //   recommendation_neutral = 30 (slightly below mid — absent ≠ recommended)
+  //   tone_neutral = 30 (slightly below mid — absent ≠ warm/positive tone)
+  //
+  // Effect: brands with Recognition≈0 used to land Sentiment=0 (false
+  // negative), now they land ~30 — visible "low signal" instead of "strong
+  // negative". For mentioned brands the math is unchanged.
+  const SENTIMENT_NEUTRAL = 50;
+  const RECOMMENDATION_NEUTRAL = 30;
+  const TONE_NEUTRAL = 30;
+
   const sentimentPoints = rows.map((r) => {
-    if (!r.brand_mentioned) return 0;
+    if (!r.brand_mentioned) return SENTIMENT_NEUTRAL;
     const s = Math.max(-1, Math.min(1, r.sentiment_score ?? 0));
     return ((s + 1) / 2) * 100;
   });
   const sentiment = avg(sentimentPoints);
 
-  const recPoints = rows.map((r) => (r.brand_mentioned ? Math.max(0, Math.min(1, r.recommendation_score ?? 0)) * 100 : 0));
+  const recPoints = rows.map((r) =>
+    r.brand_mentioned ? Math.max(0, Math.min(1, r.recommendation_score ?? 0)) * 100 : RECOMMENDATION_NEUTRAL,
+  );
   const recommendation = avg(recPoints);
 
-  const tonePoints = rows.map((r) => (r.brand_mentioned ? Math.max(0, Math.min(1, r.tone_score ?? 0)) * 100 : 0));
+  const tonePoints = rows.map((r) =>
+    r.brand_mentioned ? Math.max(0, Math.min(1, r.tone_score ?? 0)) * 100 : TONE_NEUTRAL,
+  );
   const tone = avg(tonePoints);
 
   return {
@@ -202,15 +253,29 @@ export function computeScores(inputs: ScoringInput[]): { scores: PillarScores; b
   const rel = scoreRelevance(relevanceRows);
   const s = scoreSentiment(sentimentRows);
 
-  const total = clamp((r.score + c.score + a.score + rel.score + s.score) / 5);
+  // Hallucination guard: when Recognition is below 30 (the brand is barely
+  // known by the AIs), Clarity and Sentiment have no real signal to score
+  // — the models are answering "Who is {brand}?" by making things up. Cap
+  // both at 60 so the result looks like "the AI knows superficial things
+  // about you but can't really place you", which is honest.
+  //
+  // Without this guard, Il Prisma (Recognition=0) landed Clarity=67 and
+  // Sentiment=75 — confidently wrong scores that suggested signal where
+  // none existed.
+  const LOW_RECOG_THRESHOLD = 30;
+  const HALLUCINATION_CAP = 60;
+  const clarityScore = r.score < LOW_RECOG_THRESHOLD ? Math.min(c.score, HALLUCINATION_CAP) : c.score;
+  const sentimentScore = r.score < LOW_RECOG_THRESHOLD ? Math.min(s.score, HALLUCINATION_CAP) : s.score;
+
+  const total = clamp((r.score + clarityScore + a.score + rel.score + sentimentScore) / 5);
 
   return {
     scores: {
       recognition: r.score,
-      clarity: c.score,
+      clarity: clarityScore,
       authority: a.score,
       relevance: rel.score,
-      sentiment: s.score,
+      sentiment: sentimentScore,
       total,
     },
     breakdown: {
