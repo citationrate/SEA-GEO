@@ -5,6 +5,11 @@ import { fetchCSDiagnostics, type DiagnosticEntry } from "./cs-bridge";
 import { extractByPillar, type PillarExtraction } from "./extractor";
 import { generateInsights, type Pillar as InsightPillar } from "./insights";
 import { buildPrompts, type Pillar } from "./prompts";
+import {
+  getCachedPromptResponse,
+  isCacheablePillarPrompt,
+  setCachedPromptResponse,
+} from "./prompt-cache";
 import { computeScores } from "./scoring";
 
 export const BRAND_PROFILE_START_EVENT = "brand-profile/start";
@@ -90,21 +95,72 @@ export const runBrandProfile = inngest.createFunction(
           batch.map(async (task) => {
             try {
               const t0 = Date.now();
-              const llm = await callAIModel(task.text, task.model, false, data.brandUrl ?? "", {
-                product: "brand_profile",
-                operation: "brand_profile",
-                userId: data.userId,
-                runId: data.runId,
-                meta: { pillar: task.pillar, prompt_index: task.index },
-              }, {
-                // Pillar scores are 1/N averages over a handful of prompts;
-                // at T=0.7 a single re-roll can flip a "brand mentioned" answer
-                // and shift a pillar by 15-20 pts in 5 minutes. T=0 makes
-                // back-to-back runs reproducible within tokenizer noise.
-                temperature: 0,
-              });
-              const durationMs = Date.now() - t0;
-              const responseRaw = llm.text ?? "";
+
+              // Cross-brand cache: Recognition + Authority prompts depend
+              // only on (sector, country), so the same response is reused
+              // across all brands sharing that pair. Hit = 0 API cost.
+              // Miss = normal API call + write-through.
+              const cacheable = isCacheablePillarPrompt(task.pillar, task.index);
+              let responseRaw = "";
+              let llmError: string | undefined;
+              let durationMs = 0;
+              let cacheHit = false;
+
+              if (cacheable) {
+                const cached = await getCachedPromptResponse({
+                  promptText: task.text,
+                  model: task.model,
+                  country: data.country,
+                  sector: data.sector,
+                });
+                if (cached) {
+                  responseRaw = cached.responseRaw;
+                  cacheHit = true;
+                  durationMs = Date.now() - t0;
+                }
+              }
+
+              if (!cacheHit) {
+                const llm = await callAIModel(task.text, task.model, false, data.brandUrl ?? "", {
+                  product: "brand_profile",
+                  operation: "brand_profile",
+                  userId: data.userId,
+                  runId: data.runId,
+                  meta: { pillar: task.pillar, prompt_index: task.index, cache_hit: false },
+                }, {
+                  // Pillar scores are 1/N averages over a handful of prompts;
+                  // at T=0.7 a single re-roll can flip a "brand mentioned" answer
+                  // and shift a pillar by 15-20 pts in 5 minutes. T=0 makes
+                  // back-to-back runs reproducible within tokenizer noise.
+                  temperature: 0,
+                  // BP pillar prompts ask short evaluative answers ("describe in
+                  // 3-5 sentences", "list top 10 brands"). The historical 4096
+                  // default is overkill — measured output avg is 400-867 tokens.
+                  // Capping at 800 trims billing on verbose providers (Sonar
+                  // and Sonnet emit 600-1000 tokens by default even on short
+                  // questions) without truncating real answers. Hard truncations
+                  // would show as `stop_reason="max_tokens"` in provider logs;
+                  // we monitor those for regressions.
+                  maxOutputTokens: 800,
+                });
+                durationMs = Date.now() - t0;
+                responseRaw = llm.text ?? "";
+                llmError = llm.error;
+
+                // Write-through on cacheable misses. Failure is silent (best
+                // effort — the audit continues regardless).
+                if (cacheable && responseRaw) {
+                  void setCachedPromptResponse({
+                    promptText: task.text,
+                    model: task.model,
+                    country: data.country,
+                    sector: data.sector,
+                    pillar: task.pillar,
+                    responseRaw,
+                  });
+                }
+              }
+
               if (!responseRaw) {
                 await (bp.from("prompt_results") as any).insert({
                   run_id: data.runId,
@@ -112,7 +168,7 @@ export const runBrandProfile = inngest.createFunction(
                   prompt_index: task.index,
                   prompt_text: task.text,
                   model: task.model,
-                  error_message: llm.error ?? "Empty response",
+                  error_message: llmError ?? "Empty response",
                 });
                 return null;
               }

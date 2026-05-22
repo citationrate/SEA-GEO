@@ -16,18 +16,25 @@ export function bpAccessAllowed(_opts: { email?: string | null; isAdmin?: boolea
 }
 
 /**
- * Curated model pool — Setup C-light. Picked to mirror what real users
- * actually see when they ask each major AI provider about a brand:
+ * Curated model pool — Setup C-light (May 2026 revision: Grok removed).
+ *
+ * Picked to mirror what real users actually see when they ask each major
+ * AI provider about a brand:
  *
  *   - gpt-5.4-mini             → default ChatGPT free tier
  *   - claude-sonnet (4.6)      → default claude.ai
  *   - gemini-2.5-flash         → default Gemini free app
- *   - grok-4.20-non-reasoning  → xAI economic tier
  *   - perplexity-sonar         → web-grounded baseline
  *
- * 5 models × 2 prompts/pillar × 5 pillars = 50 main calls per run.
- * + 50 Haiku extractor calls + 1 Sonnet insights call.
- * Measured cost ≈ $0.30-0.40/run (vs $0.28 with the previous 2-model pool).
+ * 4 models × 2 prompts/pillar × 5 pillars = 40 main calls per run.
+ * + 40 Haiku extractor calls + 1 Haiku insights call.
+ *
+ * Why Grok was removed (May 2026): Grok 4.20 cost ~$0.016/call vs
+ * ~$0.005 avg of the other 4 — 44% of the total main-call budget for
+ * a single provider whose Italian-audience signal overlaps strongly
+ * with OpenAI/Anthropic. The cost tracker also reported `output_tokens=0`
+ * for every Grok call (flat billing per `unit_count`), suggesting the
+ * cost was disproportionate to the actual signal delivered.
  *
  * Plans differentiate on RUN QUOTA + FEATURE GATING (compare, history,
  * time-series, PDF), not on model pool. To change the pool, edit this
@@ -37,7 +44,6 @@ const BP_MODEL_POOL: readonly string[] = [
   "gpt-5.4-mini",
   "claude-sonnet",
   "gemini-2.5-flash",
-  "grok-4.20-non-reasoning",
   "perplexity-sonar",
 ];
 
