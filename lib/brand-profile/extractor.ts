@@ -2,15 +2,15 @@ import Anthropic from "@anthropic-ai/sdk";
 import { trackedAICall } from "@citationrate/llm-client";
 import type { Pillar } from "./prompts";
 
-// Haiku 3.5 (Oct 2024) is sufficient for tool-use extraction over short JSON
-// schemas: brand-mentioned detection, ranking, factual claim listing, simple
-// sentiment scoring. We benchmarked Haiku 4.5 vs 3.5 on a sample of 50 BP
-// responses and the agreement rate is 96% on `brand_mentioned` and ±3pt on
-// `tone_authoritative`. Cost drop is ~60% per extractor call (Haiku 3.5 is
-// $0.80/MTok input vs Haiku 4.5 at $1.00, with faster latency).
-//
-// Saving per run: ~$0.13 → ~$0.05 (−$0.08, −15% of total BP cost).
-const HAIKU_MODEL = "claude-haiku-3-5-20241022";
+// Stuck with Haiku 4.5 for now. Attempt to downgrade to Haiku 3.5 with the
+// historical id `claude-3-5-haiku-20241022` (different naming convention
+// from the 4.5 family `claude-haiku-4-5-20251001`) needs careful pricing
+// verification — the 2026-05-22 hotfix had used `claude-haiku-3-5-20241022`
+// which doesn't exist as an Anthropic model id at all and 404'd every
+// extractor call. Reverted to 4.5 which is the model we know works.
+// Re-attempt the cost cut later, after confirming the exact 3.5 id and
+// running a smoke test.
+const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 
 /** Optional tracking context — flows from inngest.ts so each Haiku
  * extraction lands in api_call_logs alongside the BP main calls. */
