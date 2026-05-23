@@ -11,6 +11,7 @@ import {
   setCachedPromptResponse,
 } from "./prompt-cache";
 import { computeScores } from "./scoring";
+import { sendFailureAlert } from "@/lib/webhooks/alert-email";
 
 export const BRAND_PROFILE_START_EVENT = "brand-profile/start";
 
@@ -50,6 +51,23 @@ export const runBrandProfile = inngest.createFunction(
             completed_at: new Date().toISOString(),
           })
           .eq("id", originalData.runId);
+
+        try {
+          const crSvc = createServiceClient();
+          const userEmail = await crSvc.rpc("get_users_email").then((r: any) =>
+            (r.data || []).find((u: any) => u.id === originalData.userId)?.email || "—"
+          );
+          await sendFailureAlert({
+            tool: "Brand Profile",
+            brand: originalData.brand || "—",
+            userEmail,
+            userId: originalData.userId || "—",
+            errorMessage: String(errorMsg).substring(0, 500),
+            runId: originalData.runId,
+          });
+        } catch (alertErr) {
+          console.error("[brand-profile/onFailure] alert email failed:", alertErr);
+        }
       } catch (e) {
         console.error("[brand-profile/onFailure] could not update run status:", e);
       }
@@ -63,13 +81,32 @@ export const runBrandProfile = inngest.createFunction(
 
     const models = filterAvailableModels(data.models);
     if (models.length === 0) {
+      const errorMsg = "Nessun modello disponibile — verifica le credenziali API";
       await (bp.from("runs") as any)
         .update({
           status: "failed",
-          error_message: "Nessun modello disponibile — verifica le credenziali API",
+          error_message: errorMsg,
           completed_at: new Date().toISOString(),
         })
         .eq("id", data.runId);
+
+      try {
+        const crSvc = createServiceClient();
+        const userEmail = await crSvc.rpc("get_users_email").then((r: any) =>
+          (r.data || []).find((u: any) => u.id === data.userId)?.email || "—"
+        );
+        await sendFailureAlert({
+          tool: "Brand Profile",
+          brand: data.brand || "—",
+          userEmail,
+          userId: data.userId || "—",
+          errorMessage: errorMsg,
+          runId: data.runId,
+        });
+      } catch (alertErr) {
+        console.error("[brand-profile] alert email failed:", alertErr);
+      }
+
       return { status: "failed", reason: "no available models" };
     }
 

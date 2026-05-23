@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "crypto";
 
-const ALERT_RECIPIENTS = ["citationrate@gmail.com", "gianmariacipriano3@gmail.com"];
+const ALERT_RECIPIENTS = ["citationrate@gmail.com", "gianmariacipriano3@gmail.com", "tecla.casalone@studenti.iulm.it"];
 const FROM_EMAIL = process.env.BREVO_FROM_EMAIL || "info@citationrate.com";
 const FROM_NAME = "Alerts CitationRate";
 
@@ -42,6 +42,35 @@ export async function sendAlertEmail(subject: string, html: string): Promise<{ o
     return { ok: false, error: data.message };
   }
   return { ok: true, id: data.messageId };
+}
+
+export async function sendFailureAlert(opts: {
+  tool: "AVI" | "Brand Profile" | "Citability Score";
+  brand: string;
+  userEmail: string;
+  userId: string;
+  errorMessage: string;
+  runId: string;
+}): Promise<{ ok: boolean }> {
+  const { tool, brand, userEmail, userId, errorMessage, runId } = opts;
+  const subject = `❌ ${tool} fallita: ${brand} (${userEmail})`;
+  const html = `
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px">
+      <h2 style="color:#dc2626;margin:0 0 16px">❌ Analisi ${escapeHtml(tool)} fallita</h2>
+      <table style="border-collapse:collapse;width:100%;font-size:14px">
+        <tr><td style="padding:8px 12px;background:#fef2f2;font-weight:600;width:140px">Tool</td><td style="padding:8px 12px"><strong>${escapeHtml(tool)}</strong></td></tr>
+        <tr><td style="padding:8px 12px;background:#fef2f2;font-weight:600">Brand</td><td style="padding:8px 12px">${escapeHtml(brand)}</td></tr>
+        <tr><td style="padding:8px 12px;background:#fef2f2;font-weight:600">Utente</td><td style="padding:8px 12px">${escapeHtml(userEmail)}</td></tr>
+        <tr><td style="padding:8px 12px;background:#fef2f2;font-weight:600">Errore</td><td style="padding:8px 12px;color:#dc2626">${escapeHtml(errorMessage)}</td></tr>
+        <tr><td style="padding:8px 12px;background:#fef2f2;font-weight:600">Run ID</td><td style="padding:8px 12px;font-family:monospace;font-size:12px">${escapeHtml(runId)}</td></tr>
+        <tr><td style="padding:8px 12px;background:#fef2f2;font-weight:600">User ID</td><td style="padding:8px 12px;font-family:monospace;font-size:12px">${escapeHtml(userId)}</td></tr>
+      </table>
+      <p style="margin:16px 0 0;font-size:12px;color:#64748b">Notifica automatica · ${escapeHtml(nowItalian())}</p>
+    </div>
+  `;
+  const result = await sendAlertEmail(subject, html);
+  if (!result.ok) console.error(`[failure-alert] ${tool} email failed:`, result.error);
+  return { ok: result.ok };
 }
 
 export function deriveSource(rawUserMetaData: any, rawAppMetaData: any): string {

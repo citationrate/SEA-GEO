@@ -13,6 +13,7 @@ import {
 } from "@citationrate/llm-client";
 import { calculateAVI } from "./engine/avi";
 import { consumeWalletQueries, incrementBrowsingPromptsUsed, incrementNoBrowsingPromptsUsed } from "./usage";
+import { sendFailureAlert } from "./webhooks/alert-email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /* ─── Helpers ─── */
@@ -756,6 +757,30 @@ export const runAnalysis = inngest.createFunction(
           })
           .eq("id", originalData.runId);
         console.error(`[inngest/onFailure] run ${originalData.runId} marked failed:`, errorMsg);
+
+        // Send failure alert email
+        try {
+          const { data: project } = await supabase
+            .from("projects")
+            .select("target_brand, user_id")
+            .eq("id", originalData.projectId || "")
+            .maybeSingle();
+          const userEmail = project?.user_id
+            ? await supabase.rpc("get_users_email").then((r: any) =>
+                (r.data || []).find((u: any) => u.id === project.user_id)?.email || "—"
+              )
+            : "—";
+          await sendFailureAlert({
+            tool: "AVI",
+            brand: project?.target_brand || "—",
+            userEmail,
+            userId: project?.user_id || "—",
+            errorMessage: errorMsg,
+            runId: originalData.runId,
+          });
+        } catch (alertErr) {
+          console.error("[inngest/onFailure] alert email failed:", alertErr);
+        }
       } catch (e) {
         console.error("[inngest/onFailure] could not update run status:", e);
       }
@@ -776,11 +801,36 @@ export const runAnalysis = inngest.createFunction(
     const modelsUsed = filterAvailableModels(rawModels);
     if (modelsUsed.length === 0) {
       const supabase = createServiceClient();
+      const errorMsg = "Nessun modello disponibile — verifica le credenziali API";
       await supabase.from("analysis_runs").update({
         status: "failed",
-        error_message: "Nessun modello disponibile — verifica le credenziali API",
+        error_message: errorMsg,
         completed_at: new Date().toISOString(),
       }).eq("id", runId);
+
+      try {
+        const { data: project } = await supabase
+          .from("projects")
+          .select("target_brand, user_id")
+          .eq("id", projectId)
+          .maybeSingle();
+        const userEmail = billing?.userId
+          ? await supabase.rpc("get_users_email").then((r: any) =>
+              (r.data || []).find((u: any) => u.id === billing.userId)?.email || "—"
+            )
+          : "—";
+        await sendFailureAlert({
+          tool: "AVI",
+          brand: project?.target_brand || "—",
+          userEmail,
+          userId: billing?.userId || project?.user_id || "—",
+          errorMessage: errorMsg,
+          runId,
+        });
+      } catch (alertErr) {
+        console.error("[run-analysis] alert email failed:", alertErr);
+      }
+
       return { status: "failed", reason: "no available models" };
     }
 
