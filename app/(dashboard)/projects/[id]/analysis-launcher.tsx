@@ -189,7 +189,7 @@ export function AnalysisLauncher({
             <Lock className="w-12 h-12 text-[#c4a882] mx-auto" />
             <h2 className="font-display font-bold text-xl text-foreground">Demo esaurita</h2>
             <p className="text-muted-foreground text-sm">
-              Hai utilizzato tutti i 10 prompt della demo gratuita. Passa al piano Base o Pro per continuare le analisi.
+              Hai utilizzato tutti gli 8 prompt della demo gratuita. Passa al piano Base o Pro per continuare le analisi.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setOpen(false)} className="flex-1 text-sm font-semibold py-2.5 rounded-sm border border-border text-muted-foreground hover:text-foreground transition-colors">

@@ -69,7 +69,7 @@ const CS_BENEFITS: BenefitRow[] = [
 
 const AVI_BENEFITS: BenefitRow[] = [
   { label: "Prompt con web search", values: { demo: "0", base: "30", pro: "90", enterprise: "Illimitati" } },
-  { label: "Prompt senza web search", values: { demo: "10", base: "100", pro: "210", enterprise: "Illimitati" } },
+  { label: "Prompt senza web search", values: { demo: "8", base: "100", pro: "210", enterprise: "Illimitati" } },
   { label: "Modelli AI per progetto", values: { demo: "2 (fissi)", base: "3", pro: "5", enterprise: "7" } },
   { label: "Confronti competitor", values: { demo: false, base: false, pro: "10 / mese", enterprise: "Illimitati" } },
   { label: "Discovery competitor automatica", values: { demo: false, base: true, pro: true, enterprise: true } },
