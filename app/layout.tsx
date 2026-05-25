@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Syne, DM_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import dynamic from "next/dynamic";
+import { Suspense } from "react";
 
 import { LanguageProvider } from "@/lib/i18n/context";
 import { ConsultationProvider } from "@/lib/consultation-context";
@@ -17,6 +18,13 @@ const AttributionCapture = dynamic(
   () => import("@/components/attribution-capture"),
   { ssr: false },
 );
+
+const MetaPageView = dynamic(
+  () => import("@/components/meta-pageview"),
+  { ssr: false },
+);
+
+const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
@@ -93,6 +101,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
           })(window,document,'script','dataLayer','GTM-N5L5WHTZ');
         `}} />
+        {META_PIXEL_ID && (
+          <script dangerouslySetInnerHTML={{ __html: `
+            !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+            n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+            document,'script','https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '${META_PIXEL_ID}');
+          `}} />
+        )}
         <script dangerouslySetInnerHTML={{ __html: `
           try {
             var c = document.cookie.match(/(?:^|; )cr-theme=([^;]*)/);
@@ -117,6 +135,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ConsultationModal />
         <CursorFollower />
         <AttributionCapture />
+        <Suspense fallback={null}>
+          <MetaPageView />
+        </Suspense>
         </ConsultationProvider>
         <Toaster
           position="bottom-right"
