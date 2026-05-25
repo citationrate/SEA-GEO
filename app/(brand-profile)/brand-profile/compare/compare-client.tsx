@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Radar,
@@ -94,6 +94,17 @@ export function CompareClient({ runs }: { runs: RunRow[] }) {
   const [items, setItems] = useState<CompareItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
+
+  // The picker can list up to 50 completed runs, so the radar + table render
+  // far below the fold. Without this, clicking "Confronta" looks like nothing
+  // happened (the spinner flashes and the result paints off-screen). Bring the
+  // outcome — success or error — into view as soon as it lands.
+  useEffect(() => {
+    if (items || err) {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [items, err]);
 
   function toggle(id: string) {
     setSelected((cur) => {
@@ -239,10 +250,19 @@ export function CompareClient({ runs }: { runs: RunRow[] }) {
         </div>
       )}
 
+      <div ref={resultsRef} className="scroll-mt-4" />
+
       {err && (
         <div className="card p-4 border-red-500/40 bg-red-500/5 flex items-start gap-3">
           <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           <p className="text-sm text-foreground">{err}</p>
+        </div>
+      )}
+
+      {items && items.length < BP_COMPARE_MIN_RUNS && !err && (
+        <div className="card p-4 border-amber-500/40 bg-amber-500/5 flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-sm text-foreground">{t("brandProfile.compareError")}</p>
         </div>
       )}
 
