@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     const isProPlan = userPlanId === "pro" || userPlanId === "enterprise";
     const isDemoPlan = userPlanId === "demo";
 
-    // Demo plan enforcement: only fixed models, no browsing.
+    // Demo plan enforcement: only fixed models, no browsing, max 2 queries.
     // Demo set ora include 4 motori (ChatGPT, Gemini, Claude, Perplexity)
     // per massimizzare l'impatto emotivo del confronto cross-AI. Vedi
     // DEMO_MODEL_IDS in packages/llm-client/src/models.ts.
@@ -86,10 +86,21 @@ export async function POST(request: Request) {
       if (invalidModels.length > 0) {
         return NextResponse.json({ error: "Il piano Demo consente solo i 4 motori predefiniti (ChatGPT, Gemini, Claude, Perplexity)." }, { status: 403 });
       }
+      // Hard cap query: la UI di /queries/generate ne forza 2 per demo,
+      // questo è il guard server-side che intercetta anche chi inserisce
+      // query manualmente o riusa progetti pre-lockdown.
+      if (queries.length > 2) {
+        return NextResponse.json({ error: "Il piano Demo consente massimo 2 query per analisi. Passa a Base per usarne fino a 100." }, { status: 403 });
+      }
     }
 
     // Browsing enforcement: demo plan cannot use browsing
     const browsing = isDemoPlan ? false : requestedBrowsing;
+
+    // Demo plan: hard cap a 1 run per analisi. La demo è pensata come
+    // assaggio, non come strumento ricorrente — più run servono per
+    // misurare consistency, che è un feature dei piani paganti.
+    const effectiveRunCount = isDemoPlan ? 1 : run_count;
 
     // Pro-only models on non-Pro plans:
     //   - Demo: hard-blocked above already (only DEMO_MODEL_IDS allowed).
@@ -129,7 +140,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const promptCost = queries.length * validModels.length * segmentCount * run_count;
+    const promptCost = queries.length * validModels.length * segmentCount * effectiveRunCount;
     console.log("[analysis/start] plan:", userPlanId, "promptCost:", promptCost);
 
     if (validModels.length > plan.max_models_per_project) {
@@ -181,7 +192,7 @@ export async function POST(request: Request) {
       .select("*", { count: "exact", head: true })
       .eq("project_id", project_id);
 
-    const totalPrompts = queries.length * Math.max((segments ?? []).length, 1) * validModels.length * run_count;
+    const totalPrompts = queries.length * Math.max((segments ?? []).length, 1) * validModels.length * effectiveRunCount;
 
     // Create analysis run
     const { data: run, error: runError } = await (supabase.from("analysis_runs") as any)
@@ -190,7 +201,7 @@ export async function POST(request: Request) {
         version: (existingRuns ?? 0) + 1,
         status: "running",
         models_used: validModels,
-        run_count,
+        run_count: effectiveRunCount,
         total_prompts: totalPrompts,
         completed_prompts: 0,
         started_at: new Date().toISOString(),
@@ -211,7 +222,7 @@ export async function POST(request: Request) {
         runId: run.id,
         projectId: project_id,
         modelsUsed: validModels,
-        runCount: run_count,
+        runCount: effectiveRunCount,
         browsing,
         // Pass billing context so Inngest can deduct after confirming start
         billing: {

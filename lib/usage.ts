@@ -158,9 +158,10 @@ export async function getUserPlanLimits(userId: string) {
     annual_price: 0,
     annual_discount: 0,
     browsing_prompts: 0,
-    // 32 prompts = 8 query × 4 motori. Match con il cap demo di
-    // queries/ai-generate. Costo worst case ~$0.096 per utente demo.
-    no_browsing_prompts: 32,
+    // 8 prompts = 2 query × 4 motori × 1 run. Match esatto con il cap
+    // hard-coded in /api/analysis/start (queries.length<=2, run_count=1)
+    // e con la UI di /queries/generate. Costo worst case ~$0.024 per demo.
+    no_browsing_prompts: 8,
     // 4 motori demo (ChatGPT, Gemini, Claude, Perplexity) per il
     // confronto cross-AI nel popup post-CS. Vedi DEMO_MODEL_IDS.
     max_models_per_project: 4,
@@ -170,13 +171,13 @@ export async function getUserPlanLimits(userId: string) {
     can_access_comparisons: false,
   };
 
-  // Demo override: budget locked a 32 prompts (8 query × 4 motori).
+  // Demo override: 1 analisi sola (2 query × 4 motori × 1 run = 8 prompt).
   // max_models_per_project=4 forzato anche se DB ha vecchi valori (2 o 5),
   // per coerenza con DEMO_MODEL_IDS e con il flow /demo-setup.
   if (effectivePlanId === "demo") {
     return {
       ...(plan ?? defaultPlan),
-      no_browsing_prompts: 32,
+      no_browsing_prompts: 8,
       browsing_prompts: 0,
       max_models_per_project: 4,
       can_generate_queries: true,

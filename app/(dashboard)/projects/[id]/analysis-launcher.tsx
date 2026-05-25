@@ -50,6 +50,12 @@ export function AnalysisLauncher({
   const isDemo = usage.isDemo;
   const isBase = usage.planId === "base";
 
+  // Demo plan: 1 run fisso. Garantisce coerenza con il cap server-side
+  // se l'utente apre il modal con runCount > 1 (stato persistito).
+  useEffect(() => {
+    if (isDemo && runCount !== 1) setRunCount(1);
+  }, [isDemo, runCount]);
+
   // Demo plan: no browsing allowed
   const effectiveBrowsing = isDemo ? false : browsing;
 
@@ -232,42 +238,44 @@ export function AnalysisLauncher({
               <p className="text-[13px] text-cream-dim">{t("analysisLauncher.modelsFixedAtCreation")}</p>
             </div>
 
-            {/* Run count selector */}
-            <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                {t("analysisLauncher.runCount")}
-                <InfoTooltip text={t("analysisLauncher.preciseWithConsistency")} />
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {RUN_OPTIONS.map((opt) => {
-                  const optPrompts = modelsConfig.length * queryCount * Math.max(segmentCount, 1) * opt.value;
-                  const isSelected = runCount === opt.value;
-                  return (
-                    <button
-                      key={opt.value}
-                      onClick={() => setRunCount(opt.value)}
-                      disabled={loading}
-                      className={`relative px-3 py-2.5 rounded-sm transition-all text-center ${
-                        isSelected
-                          ? "border-2 border-sage bg-[rgba(126,184,154,0.12)]"
-                          : "border border-border hover:border-border/80"
-                      }`}
-                    >
-                      {opt.recommended && (
-                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-sage text-background whitespace-nowrap">
-                          {t("analysisLauncher.recommendedBadge")}
-                        </span>
-                      )}
-                      <p className="text-sm font-semibold text-foreground">{t(opt.labelKey)}</p>
-                      <p className="text-[12px] text-muted-foreground leading-tight mt-0.5">{t(opt.descKey)}</p>
-                      {queryCount > 0 && modelsConfig.length > 0 && (
-                        <p className="text-[11px] text-muted-foreground/70 mt-1 font-mono">~{optPrompts} {t("analysisLauncher.totalPrompts")}</p>
-                      )}
-                    </button>
-                  );
-                })}
+            {/* Run count selector — hidden for demo (locked at 1 run) */}
+            {!isDemo && (
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                  {t("analysisLauncher.runCount")}
+                  <InfoTooltip text={t("analysisLauncher.preciseWithConsistency")} />
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {RUN_OPTIONS.map((opt) => {
+                    const optPrompts = modelsConfig.length * queryCount * Math.max(segmentCount, 1) * opt.value;
+                    const isSelected = runCount === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => setRunCount(opt.value)}
+                        disabled={loading}
+                        className={`relative px-3 py-2.5 rounded-sm transition-all text-center ${
+                          isSelected
+                            ? "border-2 border-sage bg-[rgba(126,184,154,0.12)]"
+                            : "border border-border hover:border-border/80"
+                        }`}
+                      >
+                        {opt.recommended && (
+                          <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-sage text-background whitespace-nowrap">
+                            {t("analysisLauncher.recommendedBadge")}
+                          </span>
+                        )}
+                        <p className="text-sm font-semibold text-foreground">{t(opt.labelKey)}</p>
+                        <p className="text-[12px] text-muted-foreground leading-tight mt-0.5">{t(opt.descKey)}</p>
+                        {queryCount > 0 && modelsConfig.length > 0 && (
+                          <p className="text-[11px] text-muted-foreground/70 mt-1 font-mono">~{optPrompts} {t("analysisLauncher.totalPrompts")}</p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Browsing toggle — hidden for demo */}
             {!isDemo && (
