@@ -20,7 +20,7 @@ export function createServerClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
     {
-      auth: { storageKey: "auth" },
+      auth: { storageKey: "sb-auth-auth-token" },
       cookieEncoding: "base64url",
       cookies: {
         getAll: () => cookieStore.getAll(),
@@ -40,7 +40,7 @@ export function createAuthServiceClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
     {
-      auth: { storageKey: "auth" },
+      auth: { storageKey: "sb-auth-auth-token" },
       cookieEncoding: "base64url",
       cookies: {
         getAll: () => cookieStore.getAll(),

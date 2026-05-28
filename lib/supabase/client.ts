@@ -21,7 +21,11 @@ export function createClient() {
         ? { cookieOptions: { domain: COOKIE_DOMAIN, path: "/", sameSite: "lax" as const, secure: true } }
         : undefined),
       auth: {
-        storageKey: "auth",
+        // The storageKey IS the literal cookie name in @supabase/ssr. It must be
+        // "sb-auth-auth-token" (the name the middleware + handoff already read),
+        // NOT "auth" — which silently produced a cookie named "auth" that nothing
+        // else looked for, breaking auth on every navigation.
+        storageKey: "sb-auth-auth-token",
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true,
