@@ -126,6 +126,25 @@ export async function middleware(request: NextRequest) {
     const res = NextResponse.next();
     res.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
     res.headers.set("Pragma", "no-cache");
+    // Safari/iOS (ITP) purges cookies written by client-side JS after ~7 days.
+    // The session cookie on AVI was only ever written client-side (handoff /
+    // autoRefresh), so it got purged and the user was logged out on iPhone when
+    // switching from CS. Re-issue it server-side on each navigation so the
+    // browser keeps it for its full lifetime. Re-issues the current value as-is
+    // — never mints or refreshes tokens here.
+    if (COOKIE_DOMAIN) {
+      for (const c of request.cookies.getAll()) {
+        if (c.name.startsWith("sb-auth-auth-token")) {
+          res.cookies.set(c.name, c.value, {
+            domain: COOKIE_DOMAIN,
+            path: "/",
+            sameSite: "lax",
+            secure: true,
+            maxAge: 60 * 60 * 24 * 365,
+          });
+        }
+      }
+    }
     return res;
   }
 
