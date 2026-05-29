@@ -2,7 +2,10 @@ import { createBrowserClient } from "@supabase/ssr";
 import { createClient as _createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 
-const COOKIE_DOMAIN = process.env.NODE_ENV === "production" ? ".citationrate.com" : undefined;
+// Host-only auth cookies: scoped to avi.citationrate.com, never the apex .citationrate.com.
+// (Previously ".citationrate.com" in prod — removed so auth cookies stop reaching the PHP
+// apex and blowing past its header limit. SSO now runs via URL-hash token handoff, not cookies.)
+const COOKIE_DOMAIN: string | undefined = undefined;
 const SUITE_LOGIN_URL = "https://suite.citationrate.com";
 
 /** Singleton browser auth client — prevents multiple instances competing for token refresh locks */

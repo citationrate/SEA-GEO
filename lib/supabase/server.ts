@@ -3,8 +3,10 @@ import { createClient as _createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
 
-/* ─── Cookie domain for cross-subdomain auth ─── */
-const COOKIE_DOMAIN = process.env.NODE_ENV === "production" ? ".citationrate.com" : undefined;
+/* ─── Cookie domain: host-only (avi.citationrate.com), never the apex ─── */
+// Previously ".citationrate.com" in prod — removed so auth cookies stop reaching the PHP
+// apex and exceeding its header limit. SSO runs via URL-hash token handoff, not cookies.
+const COOKIE_DOMAIN: string | undefined = undefined;
 
 function cookieOptions(base?: Record<string, unknown>) {
   if (!COOKIE_DOMAIN) return base;
