@@ -24,6 +24,11 @@ const MetaPageView = dynamic(
   { ssr: false },
 );
 
+const WildcardCookieSweep = dynamic(
+  () => import("@/components/wildcard-cookie-sweep"),
+  { ssr: false },
+);
+
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "";
 
 const cormorant = Cormorant_Garamond({
@@ -135,6 +140,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ConsultationModal />
         <CursorFollower />
         <AttributionCapture />
+        <WildcardCookieSweep />
         <Suspense fallback={null}>
           <MetaPageView />
         </Suspense>

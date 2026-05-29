@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const COOKIE_DOMAIN = process.env.NODE_ENV === "production" ? ".citationrate.com" : undefined;
+// In production we (a) gate auth-route redirects to the suite and (b) re-issue the
+// session cookie server-side for Safari/iOS ITP. The cookie is now HOST-ONLY
+// (avi.citationrate.com) — we no longer set Domain=.citationrate.com, which used to
+// leak auth cookies onto the PHP apex and overflow its request-header limit.
+const IS_PROD = process.env.NODE_ENV === "production";
 const SUITE_LOGIN_URL = "https://suite.citationrate.com";
 
 /**
@@ -101,7 +105,7 @@ export async function middleware(request: NextRequest) {
   const isPublic = path === "/" || path.startsWith("/share/") || path.startsWith("/auth/");
 
   // In production: auth routes redirect to suite
-  if (COOKIE_DOMAIN && isAuthRoute) {
+  if (IS_PROD && isAuthRoute) {
     return NextResponse.redirect(SUITE_LOGIN_URL);
   }
 
@@ -132,11 +136,10 @@ export async function middleware(request: NextRequest) {
     // switching from CS. Re-issue it server-side on each navigation so the
     // browser keeps it for its full lifetime. Re-issues the current value as-is
     // — never mints or refreshes tokens here.
-    if (COOKIE_DOMAIN) {
+    if (IS_PROD) {
       for (const c of request.cookies.getAll()) {
         if (c.name.startsWith("sb-auth-auth-token")) {
           res.cookies.set(c.name, c.value, {
-            domain: COOKIE_DOMAIN,
             path: "/",
             sameSite: "lax",
             secure: true,
@@ -149,7 +152,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // No session cookie at all — redirect to login
-  if (COOKIE_DOMAIN) {
+  if (IS_PROD) {
     return NextResponse.redirect(SUITE_LOGIN_URL);
   }
   return NextResponse.redirect(new URL("/login", request.url));
