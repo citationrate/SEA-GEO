@@ -66,30 +66,32 @@ function HandoffInner() {
       // POSTing the tokens to a route handler lets the server (clean clock, no
       // ITP) write the host-only cookie as a real HTTP Set-Cookie, committed
       // before we navigate. Falls back to the legacy client path on any failure.
+      // Submit the tokens as a top-level form POST navigation (NOT fetch).
+      // Safari Private / iOS doesn't reliably apply Set-Cookie from a fetch()
+      // response to the next navigation; a Set-Cookie carried on a navigation
+      // (redirect) response is committed before the browser follows Location.
+      // The server route sets the host-only cookie and 303-redirects to `next`.
       let establishInfo = "";
       try {
-        const resp = await fetch("/api/auth/establish", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ access_token: accessToken, refresh_token: refreshToken }),
-          cache: "no-store",
-        });
-        const bodyText = await resp.text().catch(() => "");
-        if (resp.ok) {
-          // Confirm the cookie actually landed in the jar before navigating.
-          const ck = typeof document !== "undefined" &&
-            /(?:^|; )sb-auth-auth-token(?:\.\d+)?=/.test(document.cookie);
-          if (ck) {
-            window.location.replace(safeNext || "/dashboard");
-            return;
-          }
-          establishInfo = `establish ok=200 ma cookie assente nel jar — body:${bodyText.slice(0, 120)}`;
-        } else {
-          establishInfo = `establish HTTP ${resp.status} — ${bodyText.slice(0, 200)}`;
-        }
-        console.warn("[handoff] server establish failed, falling back:", establishInfo);
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = "/api/auth/establish";
+        form.style.display = "none";
+        const add = (name: string, value: string) => {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = name;
+          input.value = value;
+          form.appendChild(input);
+        };
+        add("access_token", accessToken);
+        add("refresh_token", refreshToken);
+        add("next", safeNext || "/dashboard");
+        document.body.appendChild(form);
+        form.submit();
+        return;
       } catch (e) {
-        establishInfo = `establish threw: ${e instanceof Error ? e.message : String(e)}`;
+        establishInfo = `establish form submit threw: ${e instanceof Error ? e.message : String(e)}`;
         console.warn("[handoff]", establishInfo);
       }
 

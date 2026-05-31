@@ -4,38 +4,36 @@ import { createServerClient } from "@supabase/ssr";
 /**
  * Server-side session establishment for the cross-tool SSO handoff.
  *
- * Why this exists: the client-side `supabase.auth.setSession()` in
- * /auth/handoff was unreliable on Safari Private / Chrome Incognito / iOS — its
- * internal getUser() network call and the JS-written (document.cookie) auth
- * cookie didn't survive to the next navigation, so AVI's middleware/layout
- * bounced the user back to suite.citationrate.com (login). It only looked fine
- * in normal browsers because a pre-existing same-user session masked it.
+ * Reached as a top-level **form POST navigation** from /auth/handoff (tokens in
+ * the request body, never in a URL → no leak into logs/Referer). We run
+ * setSession on the server (clean clock, no ITP) and write the host-only auth
+ * cookie via a **redirect response** (302 + Set-Cookie).
  *
- * The handoff page reads the tokens from the URL hash (never sent to the
- * server, no leak into logs/Referer) and POSTs them here. We run setSession on
- * the server (clean clock, no ITP) and write the host-only auth cookie as a
- * real HTTP `Set-Cookie` *directly on the response we return* — NOT via
- * next/headers cookies(), whose merge into a JSON fetch response is unreliable
- * in Next 14. The browser commits the cookie before the subsequent navigation.
+ * Why a navigation redirect and not a fetch + client redirect: Safari Private /
+ * iOS does NOT reliably apply `Set-Cookie` from a `fetch()` (XHR) response to
+ * the subsequent navigation — the cookie was written but the next GET /dashboard
+ * arrived without it, so AVI's middleware bounced the user to login. A Set-Cookie
+ * carried on a navigation (redirect) response is committed by the browser before
+ * it follows the Location, exactly like a classic server-rendered login. This is
+ * immune to ITP and works identically across Safari/Chrome/incognito.
  */
 export async function POST(request: NextRequest) {
-  let body: { access_token?: unknown; refresh_token?: unknown };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, error: "invalid_body" }, { status: 400 });
-  }
+  const origin = request.nextUrl.origin;
 
-  const access_token = typeof body.access_token === "string" ? body.access_token : null;
-  const refresh_token = typeof body.refresh_token === "string" ? body.refresh_token : null;
+  const form = await request.formData().catch(() => null);
+  const access_token = form ? String(form.get("access_token") ?? "") : "";
+  const refresh_token = form ? String(form.get("refresh_token") ?? "") : "";
+
+  const rawNext = form ? String(form.get("next") ?? "") : "";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
 
   if (!access_token || !refresh_token) {
-    return NextResponse.json({ ok: false, error: "missing_tokens" }, { status: 400 });
+    return NextResponse.redirect(new URL("/login?sso=missing_tokens", origin), 303);
   }
 
-  // The response we'll return on success — the cookie adapter writes Set-Cookie
-  // headers straight onto it, guaranteeing they reach the browser.
-  const res = NextResponse.json({ ok: true });
+  // Success response: the cookie adapter writes Set-Cookie straight onto this
+  // 303 redirect, so the cookie is committed as part of the navigation.
+  const res = NextResponse.redirect(new URL(next, origin), 303);
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -46,11 +44,10 @@ export async function POST(request: NextRequest) {
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (toSet: { name: string; value: string; options?: Record<string, unknown> }[]) => {
-          toSet.forEach(({ name, value, options }) => {
-            // Host-only on avi.citationrate.com (no Domain). Long max-age + Secure
+          toSet.forEach(({ name, value }) => {
+            // Host-only on avi.citationrate.com (no Domain). Secure + long max-age
             // so Safari/iOS ITP keeps it; SameSite=Lax for the cross-subdomain nav.
             res.cookies.set(name, value, {
-              ...options,
               path: "/",
               sameSite: "lax",
               secure: true,
@@ -70,13 +67,13 @@ export async function POST(request: NextRequest) {
       status: (error as { status?: number } | null)?.status,
       name: error?.name,
     });
-    return NextResponse.json(
-      { ok: false, error: error?.message ?? "set_session_failed", name: error?.name ?? null },
-      { status: 401 },
-    );
+    return NextResponse.redirect(new URL("/login?sso=set_session_failed", origin), 303);
   }
 
-  const setCookieNames = res.cookies.getAll().map((c) => c.name);
-  console.log("[establish] ok", { userId: data.session.user.id, setCookies: setCookieNames });
+  console.log("[establish] ok", {
+    userId: data.session.user.id,
+    next,
+    setCookies: res.cookies.getAll().map((c) => c.name),
+  });
   return res;
 }
