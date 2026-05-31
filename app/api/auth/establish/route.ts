@@ -31,9 +31,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(new URL("/login?sso=missing_tokens", origin), 303);
   }
 
-  // Success response: the cookie adapter writes Set-Cookie straight onto this
-  // 303 redirect, so the cookie is committed as part of the navigation.
-  const res = NextResponse.redirect(new URL(next, origin), 303);
+  // Success response: an HTML page that sets the cookie (Set-Cookie written by
+  // the adapter below) and then does a *fresh JS navigation* to `next`.
+  // We deliberately do NOT 303-redirect: the request chain reaching here
+  // crosses a cross-site hop (suite → avi), and Chrome won't send a SameSite=Lax
+  // cookie on a navigation whose redirect chain contains a cross-site member —
+  // so the redirected GET /dashboard arrived without the cookie and bounced to
+  // login (Safari is more lenient, which is why it worked there). A fresh
+  // top-level navigation initiated from this avi page has a clean same-site
+  // chain, so the just-set Lax cookie is sent. The cookie itself is first-party
+  // (top-level origin is avi at this point), so it is stored in all browsers.
+  const nextJson = JSON.stringify(next);
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Accesso…</title>` +
+    `<script>location.replace(${nextJson})</script>` +
+    `<noscript><meta http-equiv="refresh" content="0;url=${next}"></noscript></head>` +
+    `<body style="background:#0b0b0c"></body></html>`;
+  const res = new NextResponse(html, {
+    status: 200,
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
