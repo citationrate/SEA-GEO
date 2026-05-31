@@ -58,6 +58,30 @@ function HandoffInner() {
         history.replaceState(null, "", window.location.pathname + (qs ? `?${qs}` : ""));
       }
 
+      // PRIMARY PATH — establish the session SERVER-SIDE.
+      // Client-side setSession() + document.cookie are unreliable on Safari
+      // Private / Chrome Incognito / iOS: setSession()'s internal getUser()
+      // network call and the JS-written auth cookie don't survive to the next
+      // navigation, so the middleware/layout bounce the user back to login.
+      // POSTing the tokens to a route handler lets the server (clean clock, no
+      // ITP) write the host-only cookie as a real HTTP Set-Cookie, committed
+      // before we navigate. Falls back to the legacy client path on any failure.
+      try {
+        const resp = await fetch("/api/auth/establish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ access_token: accessToken, refresh_token: refreshToken }),
+          cache: "no-store",
+        });
+        if (resp.ok) {
+          window.location.replace(safeNext || "/dashboard");
+          return;
+        }
+        console.warn("[handoff] server establish failed, falling back to client setSession:", resp.status);
+      } catch (e) {
+        console.warn("[handoff] server establish threw, falling back to client setSession:", e);
+      }
+
       const supabase = createClient();
 
       // Decode the new token's user id so we can detect "same user" handoff
