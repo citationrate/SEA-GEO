@@ -1,28 +1,24 @@
-import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
 /**
  * Server-side session establishment for the cross-tool SSO handoff.
  *
  * Why this exists: the client-side `supabase.auth.setSession()` in
- * /auth/handoff was unreliable on Safari Private / Chrome Incognito (and iOS).
- * In those contexts setSession()'s internal `getUser()` network call + the
- * client-written (document.cookie) auth cookie don't survive to the next
- * navigation, so AVI's middleware/layout see "no session" and bounce the user
- * back to suite.citationrate.com (= login). It only *looked* fine in normal
- * browsers because a pre-existing same-user session masked the failure.
+ * /auth/handoff was unreliable on Safari Private / Chrome Incognito / iOS — its
+ * internal getUser() network call and the JS-written (document.cookie) auth
+ * cookie didn't survive to the next navigation, so AVI's middleware/layout
+ * bounced the user back to suite.citationrate.com (login). It only looked fine
+ * in normal browsers because a pre-existing same-user session masked it.
  *
- * The fix: the handoff page reads the tokens from the URL hash (never sent to
- * the server, so no leak into logs/Referer) and POSTs them here. This route
- * runs on Vercel — clean clock, no ITP, no private-mode quirks — calls
- * setSession server-side, and writes the host-only auth cookie as a real HTTP
- * `Set-Cookie` on the response. The browser commits it before the subsequent
- * navigation, so the session is reliably visible to the middleware + layouts.
- *
- * Cookies are written by the @supabase/ssr server client's cookie adapter
- * (see lib/supabase/server.ts → cookieOptions): host-only on avi.citationrate.com.
+ * The handoff page reads the tokens from the URL hash (never sent to the
+ * server, no leak into logs/Referer) and POSTs them here. We run setSession on
+ * the server (clean clock, no ITP) and write the host-only auth cookie as a
+ * real HTTP `Set-Cookie` *directly on the response we return* — NOT via
+ * next/headers cookies(), whose merge into a JSON fetch response is unreliable
+ * in Next 14. The browser commits the cookie before the subsequent navigation.
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   let body: { access_token?: unknown; refresh_token?: unknown };
   try {
     body = await request.json();
@@ -37,20 +33,50 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "missing_tokens" }, { status: 400 });
   }
 
-  const supabase = createServerClient();
+  // The response we'll return on success — the cookie adapter writes Set-Cookie
+  // headers straight onto it, guaranteeing they reach the browser.
+  const res = NextResponse.json({ ok: true });
 
-  // setSession validates the access token (getUser) and, on success, the SSR
-  // cookie adapter writes the chunked host-only auth cookie onto this response.
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
+    {
+      auth: { storageKey: "sb-auth-auth-token" },
+      cookieEncoding: "base64url",
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (toSet: { name: string; value: string; options?: Record<string, unknown> }[]) => {
+          toSet.forEach(({ name, value, options }) => {
+            // Host-only on avi.citationrate.com (no Domain). Long max-age + Secure
+            // so Safari/iOS ITP keeps it; SameSite=Lax for the cross-subdomain nav.
+            res.cookies.set(name, value, {
+              ...options,
+              path: "/",
+              sameSite: "lax",
+              secure: true,
+              maxAge: 60 * 60 * 24 * 365,
+            });
+          });
+        },
+      },
+    },
+  );
+
   const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
 
   if (error || !data?.session) {
+    console.error("[establish] setSession failed", {
+      msg: error?.message,
+      status: (error as { status?: number } | null)?.status,
+      name: error?.name,
+    });
     return NextResponse.json(
-      { ok: false, error: error?.message ?? "set_session_failed" },
+      { ok: false, error: error?.message ?? "set_session_failed", name: error?.name ?? null },
       { status: 401 },
     );
   }
 
-  // The Set-Cookie headers were attached by the cookie adapter during
-  // setSession. Returning a normal JSON response carries them to the browser.
-  return NextResponse.json({ ok: true, userId: data.session.user.id });
+  const setCookieNames = res.cookies.getAll().map((c) => c.name);
+  console.log("[establish] ok", { userId: data.session.user.id, setCookies: setCookieNames });
+  return res;
 }

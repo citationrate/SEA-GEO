@@ -66,6 +66,7 @@ function HandoffInner() {
       // POSTing the tokens to a route handler lets the server (clean clock, no
       // ITP) write the host-only cookie as a real HTTP Set-Cookie, committed
       // before we navigate. Falls back to the legacy client path on any failure.
+      let establishInfo = "";
       try {
         const resp = await fetch("/api/auth/establish", {
           method: "POST",
@@ -73,13 +74,23 @@ function HandoffInner() {
           body: JSON.stringify({ access_token: accessToken, refresh_token: refreshToken }),
           cache: "no-store",
         });
+        const bodyText = await resp.text().catch(() => "");
         if (resp.ok) {
-          window.location.replace(safeNext || "/dashboard");
-          return;
+          // Confirm the cookie actually landed in the jar before navigating.
+          const ck = typeof document !== "undefined" &&
+            /(?:^|; )sb-auth-auth-token(?:\.\d+)?=/.test(document.cookie);
+          if (ck) {
+            window.location.replace(safeNext || "/dashboard");
+            return;
+          }
+          establishInfo = `establish ok=200 ma cookie assente nel jar — body:${bodyText.slice(0, 120)}`;
+        } else {
+          establishInfo = `establish HTTP ${resp.status} — ${bodyText.slice(0, 200)}`;
         }
-        console.warn("[handoff] server establish failed, falling back to client setSession:", resp.status);
+        console.warn("[handoff] server establish failed, falling back:", establishInfo);
       } catch (e) {
-        console.warn("[handoff] server establish threw, falling back to client setSession:", e);
+        establishInfo = `establish threw: ${e instanceof Error ? e.message : String(e)}`;
+        console.warn("[handoff]", establishInfo);
       }
 
       const supabase = createClient();
@@ -121,7 +132,7 @@ function HandoffInner() {
           console.warn("[handoff] setSession failed, using existing same-user session:", setErr?.message);
         } else {
           console.error("[handoff] setSession failed:", setErr?.message);
-          setError("Sessione non valida. Riprova il login.");
+          setError(`Sessione non valida. Riprova il login. [diag: client setErr=${setErr?.message ?? "n/a"} | ${establishInfo || "establish non eseguito"}]`);
           return;
         }
       }
