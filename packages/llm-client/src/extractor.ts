@@ -578,6 +578,9 @@ ${cleanResponse}`;
     const haikuCall = () => anthropic.messages.create({
       model: HAIKU_API_MODEL,
       max_tokens: 2000,
+      // Deterministic extraction: temperature 0 so identical responses always
+      // yield identical structured data (stable AVI scores, reproducible debug).
+      temperature: 0,
       messages: [
         {
           role: "user",
@@ -858,6 +861,9 @@ source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
   const haikuCall = () => anthropic.messages.create({
     model: HAIKU_API_MODEL,
     max_tokens: 2000,
+    // Deterministic extraction: temperature 0 so identical responses always
+    // yield identical structured data (stable AVI scores, reproducible debug).
+    temperature: 0,
     messages: [
       {
         role: "user",
