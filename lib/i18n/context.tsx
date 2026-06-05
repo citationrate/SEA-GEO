@@ -37,11 +37,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Preference order: shared cross-subdomain cookie → legacy avi-locale → localStorage
-    const stored =
-      readSharedLocale() ??
-      readLegacyAviLocaleCookie() ??
-      ((localStorage.getItem(LS_KEY) as Locale | null) || null);
+    // Preference order: shared cross-subdomain cookie → legacy avi-locale → localStorage.
+    // localStorage può lanciare SecurityError in WebView (Instagram/FB iOS):
+    // va sempre dentro try/catch, altrimenti crasha l'idratazione → pagina bianca.
+    let legacy: Locale | null = null;
+    try {
+      legacy = (localStorage.getItem(LS_KEY) as Locale | null) || null;
+    } catch {
+      /* storage non accessibile (WebView/private mode) — si ignora */
+    }
+    const stored = readSharedLocale() ?? readLegacyAviLocaleCookie() ?? legacy;
     if (stored && stored in translations) {
       setLocaleState(stored);
       document.documentElement.lang = stored;
@@ -53,7 +58,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
-    localStorage.setItem(LS_KEY, l);
+    try { localStorage.setItem(LS_KEY, l); } catch {}
     writeSharedLocaleCookie(l);
     document.documentElement.lang = l;
   }, []);
