@@ -11,6 +11,7 @@ import { AutoLaunch } from "./auto-launch";
 import { ProjectTutorialClient } from "./project-tutorial-client";
 import { T } from "@/components/translated-label";
 import { getServerTranslator } from "@/lib/i18n/server";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { BotMount } from "@/components/BotMount";
 import { buildProjectContext, normalizeLang } from "@/lib/bot-context";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
@@ -394,6 +395,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-primary" />
             <h2 className="font-display font-semibold text-foreground"><T k="projectDetail.activeSegments" /></h2>
+            <InfoTooltip text={t("glossary.segments")} />
             <span className="badge badge-muted text-[12px]">{(segments ?? []).length}</span>
           </div>
           <a href={`/projects/${params.id}/segments`} className="text-xs text-primary hover:text-primary/70 transition-colors"><T k="common.manage" /></a>

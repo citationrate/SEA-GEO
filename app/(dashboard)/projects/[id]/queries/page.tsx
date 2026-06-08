@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, Loader2, Sparkles, AlertTriangle, ToggleLeft, ToggleRight, CheckSquare, Square, Power, PowerOff, Pencil, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslation } from "@/lib/i18n/context";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 interface Query {
   id: string;
@@ -262,7 +263,10 @@ export default function QueriesPage() {
         </a>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="font-display font-bold text-2xl text-foreground">{t("queries.manageTitle")}</h1>
+            <h1 className="font-display font-bold text-2xl text-foreground flex items-center gap-2">
+              {t("queries.manageTitle")}
+              <InfoTooltip text={t("glossary.query")} />
+            </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               {activeCount}/{queries.length} query {t("queries.active") || "active"} &middot; {t("queries.addOrGenerate")}
             </p>

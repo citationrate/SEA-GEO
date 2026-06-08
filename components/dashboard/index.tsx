@@ -59,8 +59,9 @@ export function AVIRing({ score, trend, components, noBrandMentions, hideCompone
 
   return (
     <div data-tour="avi-ring" className="card p-5 h-full flex flex-col items-center gap-3">
-      <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-cream-dim">
+      <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-cream-dim flex items-center gap-1.5">
         {t("dashboard.aviIndex")}
+        <InfoTooltip text={t("dashboard.aviScoreTooltip")} />
       </p>
 
       <div className="relative w-[140px] h-[140px]">

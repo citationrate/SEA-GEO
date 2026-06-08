@@ -2,6 +2,7 @@
 
 import { Tag } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 export function TopicsHeader({ count }: { count: number }) {
   const { t } = useTranslation();
@@ -9,7 +10,10 @@ export function TopicsHeader({ count }: { count: number }) {
     <div className="flex items-center gap-3">
       <Tag className="w-6 h-6 text-accent" />
       <div>
-        <h1 className="font-display font-bold text-2xl text-foreground">{t("topics.title")}</h1>
+        <h1 className="font-display font-bold text-2xl text-foreground flex items-center gap-2">
+          {t("topics.title")}
+          <InfoTooltip text={t("glossary.topic")} />
+        </h1>
         <p className="text-sm text-muted-foreground">
           {count} {t("topics.relevantTopics")}
         </p>

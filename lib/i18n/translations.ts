@@ -2,6 +2,11 @@ export type Locale = "it" | "en" | "fr" | "de" | "es";
 
 export const translations: Record<Locale, Record<string, any>> = {
   it: {
+    glossary: {
+      query: `Le query sono le domande che gli utenti fanno alle AI (es. "miglior CRM per piccole imprese"). AVI le invia ai modelli AI e misura se e come il tuo brand compare nelle risposte.`,
+      topic: `I topic sono i temi ricorrenti che le AI associano al tuo brand e ai competitor nelle risposte. Mostrano su quali argomenti sei (o non sei) rilevante per i modelli AI.`,
+      segments: `I segmenti audience sono i punti di vista da cui simuli le domande (es. "responsabile marketing", "piccola impresa"). Cambiano il modo in cui le AI interpretano le query, così misuri la tua visibilità per pubblici diversi.`,
+    },
     common: {
       save: "Salva", saved: "Salvato", cancel: "Annulla", confirm: "Conferma",
       delete: "Elimina", manage: "Gestisci", error: "Errore", loading: "Caricamento...",
@@ -238,6 +243,13 @@ export const translations: Record<Locale, Record<string, any>> = {
 
 La media tiene conto anche dei prompt in cui il brand non viene citato.`,
       sentimentTooltip: "Tono delle citazioni mediato su tutti i prompt",
+      aviScoreTooltip: `AI Visibility Index — il tuo punteggio da 0 a 100.
+Misura quanto le AI ti citano davvero nelle risposte reali: con che frequenza (Presenza), in che posizione (Posizione) e con che tono (Sentiment).
+
+Perché è diverso dagli altri due punteggi? Misurano cose diverse:
+• Citability Score → quanto il tuo sito è tecnicamente leggibile dalle AI
+• AVI → quanto le AI ti citano nelle risposte
+• Brand Profile → come le AI ti descrivono (i 5 pilastri del brand)`,
       positionWhenCited: "quando citato, sei mediamente al {n}° posto",
       qualityHigh: "alta", qualityMedium: "media", qualityLow: "bassa",
       noBrandDetected: "Il brand non è stato rilevato in nessuna risposta — AVI non calcolabile",
@@ -1436,6 +1448,11 @@ La media tiene conto anche dei prompt in cui il brand non viene citato.`,
 
   // ─── ENGLISH ───
   en: {
+    glossary: {
+      query: `Queries are the questions users ask AI (e.g. "best CRM for small business"). AVI sends them to the AI models and measures whether and how your brand appears in the answers.`,
+      topic: `Topics are the recurring themes AI associates with your brand and competitors in the answers. They show which subjects you are (or aren't) relevant for to the AI models.`,
+      segments: `Audience segments are the points of view you simulate the questions from (e.g. "marketing manager", "small business"). They change how AI interprets the queries, so you measure your visibility for different audiences.`,
+    },
     common: {
       save: "Save", saved: "Saved", cancel: "Cancel", confirm: "Confirm",
       delete: "Delete", manage: "Manage", error: "Error", loading: "Loading...",
@@ -1672,6 +1689,13 @@ La media tiene conto anche dei prompt in cui il brand non viene citato.`,
 
 The average also includes prompts where the brand is not cited.`,
       sentimentTooltip: "Citation tone averaged across all prompts",
+      aviScoreTooltip: `AI Visibility Index — your score from 0 to 100.
+It measures how much AI actually cites you in real answers: how often (Presence), in which position (Position) and with what tone (Sentiment).
+
+Why is it different from the other two scores? They measure different things:
+• Citability Score → how technically readable your site is to AI
+• AVI → how much AI cites you in answers
+• Brand Profile → how AI describes you (the 5 brand pillars)`,
       positionWhenCited: "when cited, you're on average in #{n}",
       qualityHigh: "high", qualityMedium: "medium", qualityLow: "low",
       noBrandDetected: "Brand was not detected in any response — AVI cannot be calculated",
@@ -2868,6 +2892,11 @@ The average also includes prompts where the brand is not cited.`,
 
   // ─── FRENCH ───
   fr: {
+    glossary: {
+      query: `Les requêtes sont les questions que les utilisateurs posent aux IA (ex. « meilleur CRM pour PME »). AVI les envoie aux modèles IA et mesure si et comment votre marque apparaît dans les réponses.`,
+      topic: `Les topics sont les thèmes récurrents que les IA associent à votre marque et à vos concurrents dans les réponses. Ils montrent sur quels sujets vous êtes (ou non) pertinent pour les modèles IA.`,
+      segments: `Les segments d'audience sont les points de vue depuis lesquels vous simulez les questions (ex. « responsable marketing », « PME »). Ils changent la façon dont les IA interprètent les requêtes, pour mesurer votre visibilité auprès de publics différents.`,
+    },
     common: {
       save: "Enregistrer", saved: "Enregistré", cancel: "Annuler", confirm: "Confirmer",
       delete: "Supprimer", manage: "Gérer", error: "Erreur", loading: "Chargement...",
@@ -3106,6 +3135,13 @@ La moyenne inclut aussi les prompts sans mention de la marque.`,
       positionWhenCited: "quand cité, vous êtes en moyenne en {n}e position",
       qualityHigh: "haute", qualityMedium: "moyenne", qualityLow: "basse",
       sentimentTooltip: "Ton des citations moyenné sur tous les prompts",
+      aviScoreTooltip: `AI Visibility Index — votre score de 0 à 100.
+Il mesure à quel point les IA vous citent réellement dans leurs réponses : à quelle fréquence (Présence), à quelle position (Position) et avec quel ton (Sentiment).
+
+Pourquoi est-il différent des deux autres scores ? Ils mesurent des choses différentes :
+• Citability Score → à quel point votre site est techniquement lisible par les IA
+• AVI → à quel point les IA vous citent dans leurs réponses
+• Brand Profile → comment les IA vous décrivent (les 5 piliers de la marque)`,
       noBrandDetected: "La marque n'a été détectée dans aucune réponse — AVI non calculable",
       noPreviousData: "Pas de données précédentes",
       vsLastRun: "vs dernière analyse",
@@ -4199,6 +4235,11 @@ La moyenne inclut aussi les prompts sans mention de la marque.`,
 
   // ─── GERMAN ───
   de: {
+    glossary: {
+      query: `Queries sind die Fragen, die Nutzer an KIs stellen (z. B. „bestes CRM für kleine Unternehmen"). AVI sendet sie an die KI-Modelle und misst, ob und wie Ihre Marke in den Antworten erscheint.`,
+      topic: `Topics sind die wiederkehrenden Themen, die KIs in den Antworten mit Ihrer Marke und Wettbewerbern verbinden. Sie zeigen, für welche Themen Sie bei den KI-Modellen relevant sind (oder nicht).`,
+      segments: `Zielgruppensegmente sind die Perspektiven, aus denen Sie die Fragen simulieren (z. B. „Marketingleiter", „kleines Unternehmen"). Sie verändern, wie KIs die Queries interpretieren, damit Sie Ihre Sichtbarkeit für verschiedene Zielgruppen messen.`,
+    },
     common: {
       save: "Speichern", saved: "Gespeichert", cancel: "Abbrechen", confirm: "Bestätigen",
       delete: "Löschen", manage: "Verwalten", error: "Fehler", loading: "Laden...",
@@ -4437,6 +4478,13 @@ Der Durchschnitt umfasst auch Prompts ohne Markennennung.`,
       positionWhenCited: "wenn zitiert, im Durchschnitt auf Platz {n}",
       qualityHigh: "hoch", qualityMedium: "mittel", qualityLow: "niedrig",
       sentimentTooltip: "Tonalität der Erwähnungen über alle Prompts",
+      aviScoreTooltip: `AI Visibility Index — Ihr Wert von 0 bis 100.
+Er misst, wie oft KIs Sie tatsächlich in echten Antworten zitieren: wie häufig (Präsenz), an welcher Position (Position) und mit welchem Ton (Sentiment).
+
+Warum unterscheidet er sich von den anderen beiden Werten? Sie messen Unterschiedliches:
+• Citability Score → wie technisch lesbar Ihre Website für KIs ist
+• AVI → wie oft KIs Sie in Antworten zitieren
+• Brand Profile → wie KIs Sie beschreiben (die 5 Marken-Säulen)`,
       noBrandDetected: "Die Marke wurde in keiner Antwort erkannt — AVI nicht berechenbar",
       noPreviousData: "Keine vorherigen Daten",
       vsLastRun: "vs letzte Analyse",
@@ -5525,6 +5573,11 @@ Der Durchschnitt umfasst auch Prompts ohne Markennennung.`,
 
   // ─── SPANISH ───
   es: {
+    glossary: {
+      query: `Las queries son las preguntas que los usuarios hacen a las IA (p. ej. «mejor CRM para pymes»). AVI las envía a los modelos de IA y mide si tu marca aparece en las respuestas y cómo.`,
+      topic: `Los topics son los temas recurrentes que las IA asocian con tu marca y tus competidores en las respuestas. Muestran en qué temas eres (o no) relevante para los modelos de IA.`,
+      segments: `Los segmentos de audiencia son los puntos de vista desde los que simulas las preguntas (p. ej. «responsable de marketing», «pyme»). Cambian cómo las IA interpretan las queries, para medir tu visibilidad ante públicos distintos.`,
+    },
     common: {
       save: "Guardar", saved: "Guardado", cancel: "Cancelar", confirm: "Confirmar",
       delete: "Eliminar", manage: "Gestionar", error: "Error", loading: "Cargando...",
@@ -5763,6 +5816,13 @@ La media incluye también los prompts donde la marca no es mencionada.`,
       positionWhenCited: "cuando citado, en promedio estás en la posición #{n}",
       qualityHigh: "alta", qualityMedium: "media", qualityLow: "baja",
       sentimentTooltip: "Tono de las citas promediado en todos los prompts",
+      aviScoreTooltip: `AI Visibility Index — tu puntuación de 0 a 100.
+Mide cuánto te citan realmente las IA en sus respuestas: con qué frecuencia (Presencia), en qué posición (Posición) y con qué tono (Sentiment).
+
+¿Por qué es diferente de las otras dos puntuaciones? Miden cosas distintas:
+• Citability Score → cuán técnicamente legible es tu sitio para las IA
+• AVI → cuánto te citan las IA en sus respuestas
+• Brand Profile → cómo te describen las IA (los 5 pilares de la marca)`,
       noBrandDetected: "La marca no fue detectada en ninguna respuesta — AVI no calculable",
       noPreviousData: "Sin datos previos",
       vsLastRun: "vs último análisis",
