@@ -45,7 +45,29 @@ export default async function DashboardPage({
   const userPlan = (userProfile as any)?.plan ?? "demo";
   const projectsList = (projects ?? []) as any[];
   const projectIds = projectsList.map((p: any) => p.id);
-  const selectedId = resolveProjectId(searchParams, projectIds);
+
+  // Default landing project = the one holding the user's most recently
+  // COMPLETED analysis. Without this, the dashboard (and the client
+  // ProjectSelector) fall back to projects[0] = newest-created project, which
+  // on a fresh login is often an empty just-created project → the user lands
+  // on a blank dashboard instead of their last finished analysis. Only needed
+  // when the URL doesn't already pin a project.
+  let lastCompletedProjectId: string | null = null;
+  if (!searchParams.projectId && projectIds.length > 0) {
+    const { data: lastDone } = await supabase
+      .from("analysis_runs")
+      .select("project_id")
+      .in("project_id", projectIds)
+      .eq("status", "completed")
+      .is("deleted_at", null)
+      .order("completed_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    lastCompletedProjectId = (lastDone as any)?.project_id ?? null;
+  }
+
+  const selectedId = resolveProjectId(searchParams, projectIds, lastCompletedProjectId);
 
   const targetIds = selectedId ? [selectedId] : projectIds;
   const projectMap = new Map(projectsList.map((p: any) => [p.id, p]));
@@ -299,6 +321,7 @@ export default async function DashboardPage({
       projects={projectsList.map((p: any) => ({ id: p.id, name: p.name }))}
       models={allModelsList}
       activeProjectId={activeProjectId}
+      defaultProjectId={activeProjectId}
       projectQueryCount={projectQueryCount}
       projectSegmentCount={projectSegmentCount}
       projectModelsConfig={projectModelsConfig}

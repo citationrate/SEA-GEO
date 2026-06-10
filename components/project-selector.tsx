@@ -12,7 +12,7 @@ interface Project {
   name: string;
 }
 
-function ProjectSelectorInner({ projects }: { projects: Project[] }) {
+function ProjectSelectorInner({ projects, defaultProjectId }: { projects: Project[]; defaultProjectId?: string | null }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -20,11 +20,16 @@ function ProjectSelectorInner({ projects }: { projects: Project[] }) {
 
   const [selected, setSelected] = useState<string>(paramId ?? "");
 
-  // On mount: resolve initial selection from URL > localStorage > first project
+  // On mount: resolve initial selection from URL > localStorage > caller default > first project.
+  // `defaultProjectId` (the project of the user's last completed analysis) is
+  // preferred over projects[0] so a fresh login lands on real data instead of
+  // the newest-created (often empty) project.
   useEffect(() => {
     const stored = typeof window !== "undefined" ? localStorage.getItem(LS_KEY) : null;
+    const validDefault = defaultProjectId && projects.some((p) => p.id === defaultProjectId) ? defaultProjectId : null;
     const initial = paramId
       ?? (stored && projects.some((p) => p.id === stored) ? stored : null)
+      ?? validDefault
       ?? projects[0]?.id
       ?? "";
     if (initial && initial !== paramId) {
@@ -67,10 +72,10 @@ function ProjectSelectorInner({ projects }: { projects: Project[] }) {
   );
 }
 
-export function ProjectSelector({ projects }: { projects: Project[] }) {
+export function ProjectSelector({ projects, defaultProjectId }: { projects: Project[]; defaultProjectId?: string | null }) {
   return (
     <Suspense fallback={null}>
-      <ProjectSelectorInner projects={projects} />
+      <ProjectSelectorInner projects={projects} defaultProjectId={defaultProjectId} />
     </Suspense>
   );
 }

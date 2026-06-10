@@ -30,6 +30,7 @@ interface DashboardClientProps {
   projects?: { id: string; name: string }[];
   models?: string[];
   activeProjectId?: string | null;
+  defaultProjectId?: string | null;
   projectQueryCount?: number;
   projectSegmentCount?: number;
   projectModelsConfig?: string[];
@@ -47,6 +48,7 @@ export function DashboardClient({
   projects,
   models,
   activeProjectId,
+  defaultProjectId,
   projectQueryCount,
   projectSegmentCount,
   projectModelsConfig,
@@ -64,7 +66,7 @@ export function DashboardClient({
           <p className="text-sm text-muted-foreground mt-0.5">{t("dashboard.subtitle")}</p>
         </div>
         <div className="flex items-center gap-3">
-          {projects && <ProjectSelector projects={projects} />}
+          {projects && <ProjectSelector projects={projects} defaultProjectId={defaultProjectId} />}
           {activeProjectId && (
             <AnalysisLauncher
               projectId={activeProjectId}
