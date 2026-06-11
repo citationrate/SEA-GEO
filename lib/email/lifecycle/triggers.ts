@@ -54,14 +54,16 @@ const PLAN_AUDIT_LIMITS: Record<string, number> = {
 };
 
 /**
- * D1 — signup +24h±1h, zero azioni (no audit, no AVI run)
+ * D1 — signup between 1 and 2 days ago, zero azioni (no audit, no AVI run)
+ * Wide window (24h) so the daily cron at 9am catches everyone regardless of signup hour.
+ * Dedup in send.ts prevents double-sending.
  */
 export async function findCandidatesD1(): Promise<CandidateBase[]> {
   const cr = createCitationRateServiceClient();
   const { data: users } = await (cr.from("profiles") as any)
     .select("id, full_name, plan, lang")
-    .gt("created_at", new Date(Date.now() - 26 * 3600_000).toISOString())
-    .lt("created_at", new Date(Date.now() - 23 * 3600_000).toISOString())
+    .gt("created_at", new Date(Date.now() - 2 * 24 * 3600_000).toISOString())
+    .lt("created_at", new Date(Date.now() - 1 * 24 * 3600_000).toISOString())
     .neq("is_admin", true);
   if (!users) return [];
   const usersWithNoAudit = await filterUsersWithNoAudit(cr, users);
@@ -69,14 +71,14 @@ export async function findCandidatesD1(): Promise<CandidateBase[]> {
 }
 
 /**
- * D2 — signup +72h±1h, zero azioni
+ * D2 — signup between 3 and 4 days ago, zero azioni
  */
 export async function findCandidatesD2(): Promise<CandidateBase[]> {
   const cr = createCitationRateServiceClient();
   const { data: users } = await (cr.from("profiles") as any)
     .select("id, full_name, plan, lang")
-    .gt("created_at", new Date(Date.now() - 73 * 3600_000).toISOString())
-    .lt("created_at", new Date(Date.now() - 71 * 3600_000).toISOString())
+    .gt("created_at", new Date(Date.now() - 4 * 24 * 3600_000).toISOString())
+    .lt("created_at", new Date(Date.now() - 3 * 24 * 3600_000).toISOString())
     .neq("is_admin", true);
   if (!users) return [];
   const usersWithNoAudit = await filterUsersWithNoAudit(cr, users);
@@ -84,14 +86,14 @@ export async function findCandidatesD2(): Promise<CandidateBase[]> {
 }
 
 /**
- * D3 — signup +7gg±2h, zero azioni
+ * D3 — signup between 7 and 8 days ago, zero azioni
  */
 export async function findCandidatesD3(): Promise<CandidateBase[]> {
   const cr = createCitationRateServiceClient();
   const { data: users } = await (cr.from("profiles") as any)
     .select("id, full_name, plan, lang")
-    .gt("created_at", new Date(Date.now() - (7 * 24 + 1) * 3600_000).toISOString())
-    .lt("created_at", new Date(Date.now() - (7 * 24 - 1) * 3600_000).toISOString())
+    .gt("created_at", new Date(Date.now() - 8 * 24 * 3600_000).toISOString())
+    .lt("created_at", new Date(Date.now() - 7 * 24 * 3600_000).toISOString())
     .neq("is_admin", true);
   if (!users) return [];
   const usersWithNoAudit = await filterUsersWithNoAudit(cr, users);
@@ -201,15 +203,15 @@ export async function findCandidatesD4_AVI(): Promise<CandidateForAVI[]> {
 }
 
 /**
- * D5 CS — audit completato 3gg±2h fa
+ * D5 CS — audit completato between 3 and 4 days ago
  */
 export async function findCandidatesD5_CS(): Promise<CandidateForCS[]> {
   const cr = createCitationRateServiceClient();
   const { data: audits } = await (cr.from("audits") as any)
     .select("id, user_id, brand, scores, status, created_at")
     .eq("status", "completed")
-    .gt("created_at", new Date(Date.now() - (72 + 2) * 3600_000).toISOString())
-    .lt("created_at", new Date(Date.now() - (72 - 2) * 3600_000).toISOString());
+    .gt("created_at", new Date(Date.now() - 4 * 24 * 3600_000).toISOString())
+    .lt("created_at", new Date(Date.now() - 3 * 24 * 3600_000).toISOString());
   if (!audits || audits.length === 0) return [];
 
   const userIds = Array.from(new Set(audits.map((a: any) => a.user_id))) as string[];
@@ -241,15 +243,15 @@ export async function findCandidatesD5_CS(): Promise<CandidateForCS[]> {
 }
 
 /**
- * D5 AVI — run completato 3gg±2h fa, user ancora demo
+ * D5 AVI — run completato between 3 and 4 days ago, user ancora demo
  */
 export async function findCandidatesD5_AVI(): Promise<CandidateForAVI[]> {
   const seageo = createServiceClient();
   const { data: runs } = await (seageo.from("analysis_runs") as any)
     .select("id, project_id, status, completed_at, created_by")
     .eq("status", "completed")
-    .gt("completed_at", new Date(Date.now() - (72 + 2) * 3600_000).toISOString())
-    .lt("completed_at", new Date(Date.now() - (72 - 2) * 3600_000).toISOString());
+    .gt("completed_at", new Date(Date.now() - 4 * 24 * 3600_000).toISOString())
+    .lt("completed_at", new Date(Date.now() - 3 * 24 * 3600_000).toISOString());
   if (!runs || runs.length === 0) return [];
 
   const projectIds = Array.from(new Set(runs.map((r: any) => r.project_id))) as string[];
