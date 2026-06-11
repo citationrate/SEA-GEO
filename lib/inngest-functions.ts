@@ -14,6 +14,7 @@ import {
 import { calculateAVI } from "./engine/avi";
 import { consumeWalletQueries, incrementBrowsingPromptsUsed, incrementNoBrowsingPromptsUsed } from "./usage";
 import { sendFailureAlert } from "./webhooks/alert-email";
+import { sendD4AVI } from "./email/lifecycle/send-d4";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /* ─── Helpers ─── */
@@ -1036,6 +1037,32 @@ export const runAnalysis = inngest.createFunction(
             queries_reset_at: isNewMonth ? now.toISOString() : undefined,
           })
           .eq("id", project.user_id);
+      }
+    });
+
+    // Step 4: send D4_AVI email immediately
+    await step.run("send-d4-avi-email", async () => {
+      const supabase = createServiceClient();
+      const { data: aviH } = await (supabase.from("avi_history") as any)
+        .select("avi_score, presence_score, sentiment_score, avg_brand_rank")
+        .eq("run_id", runId)
+        .order("computed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const userId = billing?.userId || project.user_id;
+      if (userId && aviH) {
+        await sendD4AVI({
+          userId,
+          runId,
+          projectId,
+          brand: project.target_brand || "",
+          country: project.country || null,
+          aviScore: Number(aviH.avi_score) || 0,
+          presenceScore: Number(aviH.presence_score) || 0,
+          sentimentScore: Number(aviH.sentiment_score) || 0,
+          avgBrandRank: aviH.avg_brand_rank ? Number(aviH.avg_brand_rank) : null,
+        });
       }
     });
 

@@ -12,6 +12,7 @@ import {
 } from "./prompt-cache";
 import { computeScores } from "./scoring";
 import { sendFailureAlert } from "@/lib/webhooks/alert-email";
+import { sendD4BP } from "@/lib/email/lifecycle/send-d4";
 
 export const BRAND_PROFILE_START_EVENT = "brand-profile/start";
 
@@ -426,6 +427,16 @@ export const runBrandProfile = inngest.createFunction(
           completed_at: new Date().toISOString(),
         })
         .eq("id", data.runId);
+    });
+
+    // Send D4_BP email immediately
+    await step.run("send-d4-bp-email", async () => {
+      await sendD4BP({
+        userId: data.userId,
+        runId: data.runId,
+        projectId: "",
+        brand: data.brand,
+      });
     });
 
     return { status: "completed", runId: data.runId, prompts: tasks.length };

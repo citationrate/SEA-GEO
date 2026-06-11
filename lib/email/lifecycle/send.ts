@@ -39,19 +39,23 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
   const cr = createCitationRateServiceClient();
 
   // 1. Dedup: controlla se è già stata mandata a questo utente
-  const { data: existing } = await (cr.from("lifecycle_emails") as any)
-    .select("id, sent_at")
-    .eq("user_id", input.userId)
-    .eq("email_type", input.emailType)
-    .maybeSingle();
+  // D4 emails (post-analysis) skip dedup — they send every time the user runs an analysis
+  const REPEATABLE_TYPES: ReadonlySet<string> = new Set(["D4_CS", "D4_AVI", "D4_BP"]);
+  if (!REPEATABLE_TYPES.has(input.emailType)) {
+    const { data: existing } = await (cr.from("lifecycle_emails") as any)
+      .select("id, sent_at")
+      .eq("user_id", input.userId)
+      .eq("email_type", input.emailType)
+      .maybeSingle();
 
-  if (existing) {
-    return {
-      ok: false,
-      skipped: "already_sent",
-      finalRecipient: input.recipientEmail,
-      isTest: false,
-    };
+    if (existing) {
+      return {
+        ok: false,
+        skipped: "already_sent",
+        finalRecipient: input.recipientEmail,
+        isTest: false,
+      };
+    }
   }
 
   // 1b. Check unsubscribe / marketing consent.
@@ -59,7 +63,7 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
   // - marketing_consent = false → no marketing consent → block only campaigns,
   //   service/lifecycle emails (D1-D6, 1A-1C) still go through (GDPR art. 6.1.f)
   const SERVICE_EMAIL_TYPES: ReadonlySet<string> = new Set([
-    "W0", "D1", "D2", "D3", "D4_CS", "D4_AVI", "D5_CS", "D5_AVI", "D6",
+    "W0", "D1", "D2", "D3", "D4_CS", "D4_AVI", "D4_BP", "D5_CS", "D5_AVI", "D6",
     "1A", "1B", "1C",
   ]);
 
@@ -123,6 +127,12 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
       `[lifecycle][DRY_RUN] would send ${input.emailType} to ${finalRecipient} (real: ${input.recipientEmail})`,
     );
     const fakeId = `dry_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    if (REPEATABLE_TYPES.has(input.emailType)) {
+      await (cr.from("lifecycle_emails") as any)
+        .delete()
+        .eq("user_id", input.userId)
+        .eq("email_type", input.emailType);
+    }
     await (cr.from("lifecycle_emails") as any).insert({
       user_id: input.userId,
       email_type: input.emailType,
@@ -195,6 +205,14 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
   }
 
   // 5. Log in lifecycle_emails (dedup primary)
+  // For repeatable D4 types, delete the old row first to avoid UNIQUE constraint violation
+  if (REPEATABLE_TYPES.has(input.emailType)) {
+    await (cr.from("lifecycle_emails") as any)
+      .delete()
+      .eq("user_id", input.userId)
+      .eq("email_type", input.emailType);
+  }
+
   const { error: insertError } = await (cr.from("lifecycle_emails") as any).insert({
     user_id: input.userId,
     email_type: input.emailType,

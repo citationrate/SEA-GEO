@@ -18,6 +18,7 @@ export type EmailType =
   | "D3"
   | "D4_CS"
   | "D4_AVI"
+  | "D4_BP"
   | "D5_CS"
   | "D5_AVI"
   | "D6";

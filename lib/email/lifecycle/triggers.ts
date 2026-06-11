@@ -99,15 +99,14 @@ export async function findCandidatesD3(): Promise<CandidateBase[]> {
 }
 
 /**
- * D4 CS — audit completato 1h±30min fa
+ * D4 CS — audit completato negli ultimi 15 minuti
  */
 export async function findCandidatesD4_CS(): Promise<CandidateForCS[]> {
   const cr = createCitationRateServiceClient();
   const { data: audits } = await (cr.from("audits") as any)
     .select("id, user_id, brand, scores, status, created_at")
     .eq("status", "completed")
-    .gt("created_at", new Date(Date.now() - 90 * 60_000).toISOString())
-    .lt("created_at", new Date(Date.now() - 30 * 60_000).toISOString());
+    .gt("created_at", new Date(Date.now() - 15 * 60_000).toISOString());
   if (!audits || audits.length === 0) return [];
 
   const userIds = Array.from(new Set(audits.map((a: any) => a.user_id))) as string[];
@@ -137,15 +136,14 @@ export async function findCandidatesD4_CS(): Promise<CandidateForCS[]> {
 }
 
 /**
- * D4 AVI — run completato 1h±30min fa
+ * D4 AVI — run completato negli ultimi 15 minuti
  */
 export async function findCandidatesD4_AVI(): Promise<CandidateForAVI[]> {
   const seageo = createServiceClient();
   const { data: runs } = await (seageo.from("analysis_runs") as any)
     .select("id, project_id, status, completed_at, created_by")
     .eq("status", "completed")
-    .gt("completed_at", new Date(Date.now() - 90 * 60_000).toISOString())
-    .lt("completed_at", new Date(Date.now() - 30 * 60_000).toISOString());
+    .gt("completed_at", new Date(Date.now() - 15 * 60_000).toISOString());
   if (!runs || runs.length === 0) return [];
 
   const projectIds = Array.from(new Set(runs.map((r: any) => r.project_id))) as string[];
@@ -418,6 +416,7 @@ export const TRIGGERS: Record<EmailType, () => Promise<any[]>> = {
   D3: findCandidatesD3,
   D4_CS: findCandidatesD4_CS,
   D4_AVI: findCandidatesD4_AVI,
+  D4_BP: async () => [],  // triggered directly from Inngest, not cron
   D5_CS: findCandidatesD5_CS,
   D5_AVI: findCandidatesD5_AVI,
   D6: findCandidatesD6,

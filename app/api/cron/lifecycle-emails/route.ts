@@ -1,7 +1,7 @@
 /**
  * Cron worker per lifecycle emails.
  *
- * Trigger via Vercel Cron (vedi vercel.json) ogni ora.
+ * Trigger via Vercel Cron (vedi vercel.json). D4_CS/D4_AVI ogni 5 min, resto giornaliero alle 9.
  * Auth: header `Authorization: Bearer {CRON_SECRET}` oppure `?secret={CRON_SECRET}`.
  *
  * Modalità di safety:
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
 
   const types: EmailType[] = onlyType
     ? [onlyType]
-    : ["D1", "D2", "D3", "D4_CS", "D4_AVI", "D5_CS", "D5_AVI", "D6"];
+    : ["D1", "D2", "D3", "D5_CS", "D5_AVI", "D6"];
 
   const report: RunSummary[] = [];
 

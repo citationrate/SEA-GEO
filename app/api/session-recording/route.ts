@@ -9,6 +9,13 @@ function getCrmClient() {
   );
 }
 
+function detectSource(pageUrl: string): string {
+  const path = pageUrl.replace(/^https?:\/\/[^/]+/, "");
+  if (path.startsWith("/brand-profile")) return "brand_profile";
+  if (path.startsWith("/audit") || path.startsWith("/piano") || path.startsWith("/settings")) return "suite";
+  return "avi";
+}
+
 /** Resolve user_id: use body value if present, otherwise read from Supabase auth cookie */
 async function resolveUserId(bodyUserId?: string): Promise<string | null> {
   if (bodyUserId) return bodyUserId;
@@ -45,9 +52,12 @@ export async function POST(req: NextRequest) {
       return Response.json({ ok: true });
     }
 
-    const { user_id: bodyUserId, events, page_url } = body;
+    const { user_id: bodyUserId, events, page_url, source: bodySource } = body;
     const user_id = await resolveUserId(bodyUserId);
     if (!user_id || !events) return Response.json({ error: "Missing data" }, { status: 400 });
+
+    // Detect source from page URL if not provided
+    const detectedSource = bodySource || detectSource(page_url || "");
 
     const supabase = getCrmClient();
     const { data, error } = await supabase
@@ -55,7 +65,7 @@ export async function POST(req: NextRequest) {
       .insert({
         user_id,
         page_url: page_url || null,
-        source: "avi",
+        source: detectedSource,
         started_at: new Date().toISOString(),
         ended_at: new Date().toISOString(),
         duration_seconds: 0,
