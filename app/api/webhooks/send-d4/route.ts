@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { verifyWebhookSecret } from "@/lib/webhooks/alert-email";
-import { sendD4CS } from "@/lib/email/lifecycle/send-d4";
+import { sendD4CS, sendF1CS } from "@/lib/email/lifecycle/send-d4";
 
 /**
  * POST /api/webhooks/send-d4
  *
- * Called by the Python backend when a CS audit completes.
+ * Called by the Python backend when a CS audit completes or fails.
  * Auth: x-webhook-secret header (same as other Supabase webhooks).
  *
- * Body: { type: "D4_CS", userId, auditId, brand, scores }
+ * Body: { type: "D4_CS" | "F1_CS", userId, auditId?, brand, scores? }
  */
 export async function POST(request: Request) {
   if (!verifyWebhookSecret(request)) {
@@ -24,6 +24,14 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Missing userId, auditId, or brand" }, { status: 400 });
       }
       const result = await sendD4CS({ userId, auditId, brand, scores: scores || {} });
+      return NextResponse.json({ ok: result.ok, skipped: result.skipped, error: result.error });
+    }
+
+    if (type === "F1_CS") {
+      if (!userId || !brand) {
+        return NextResponse.json({ error: "Missing userId or brand" }, { status: 400 });
+      }
+      const result = await sendF1CS({ userId, brand });
       return NextResponse.json({ ok: result.ok, skipped: result.skipped, error: result.error });
     }
 

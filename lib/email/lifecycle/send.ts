@@ -40,7 +40,7 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
 
   // 1. Dedup: controlla se è già stata mandata a questo utente
   // D4 emails (post-analysis) skip dedup — they send every time the user runs an analysis
-  const REPEATABLE_TYPES: ReadonlySet<string> = new Set(["D4_CS", "D4_AVI", "D4_BP"]);
+  const REPEATABLE_TYPES: ReadonlySet<string> = new Set(["D4_CS", "D4_AVI", "D4_BP", "F1_CS", "F1_AVI", "F1_BP"]);
   if (!REPEATABLE_TYPES.has(input.emailType)) {
     const { data: existing } = await (cr.from("lifecycle_emails") as any)
       .select("id, sent_at")
@@ -65,6 +65,7 @@ export async function sendLifecycleEmail(input: SendInput): Promise<SendResult> 
   const SERVICE_EMAIL_TYPES: ReadonlySet<string> = new Set([
     "W0", "D1", "D2", "D3", "D4_CS", "D4_AVI", "D4_BP", "D5_CS", "D5_AVI", "D6",
     "1A", "1B", "1C",
+    "F1_CS", "F1_AVI", "F1_BP",
   ]);
 
   {

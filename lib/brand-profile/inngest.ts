@@ -12,7 +12,7 @@ import {
 } from "./prompt-cache";
 import { computeScores } from "./scoring";
 import { sendFailureAlert } from "@/lib/webhooks/alert-email";
-import { sendD4BP } from "@/lib/email/lifecycle/send-d4";
+import { sendD4BP, sendF1BP } from "@/lib/email/lifecycle/send-d4";
 
 export const BRAND_PROFILE_START_EVENT = "brand-profile/start";
 
@@ -66,6 +66,10 @@ export const runBrandProfile = inngest.createFunction(
             errorMessage: String(errorMsg).substring(0, 500),
             runId: originalData.runId,
           });
+          // Notify the user about the failure
+          if (originalData.userId) {
+            await sendF1BP({ userId: originalData.userId, brand: originalData.brand || "—" });
+          }
         } catch (alertErr) {
           console.error("[brand-profile/onFailure] alert email failed:", alertErr);
         }
@@ -104,6 +108,10 @@ export const runBrandProfile = inngest.createFunction(
           errorMessage: errorMsg,
           runId: data.runId,
         });
+        // Notify the user about the failure
+        if (data.userId) {
+          await sendF1BP({ userId: data.userId, brand: data.brand || "—" });
+        }
       } catch (alertErr) {
         console.error("[brand-profile] alert email failed:", alertErr);
       }

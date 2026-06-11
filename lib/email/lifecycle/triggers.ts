@@ -420,4 +420,7 @@ export const TRIGGERS: Record<EmailType, () => Promise<any[]>> = {
   D5_CS: findCandidatesD5_CS,
   D5_AVI: findCandidatesD5_AVI,
   D6: findCandidatesD6,
+  F1_CS: async () => [],  // triggered on failure, not cron
+  F1_AVI: async () => [],
+  F1_BP: async () => [],
 };

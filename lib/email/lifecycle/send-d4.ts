@@ -279,3 +279,98 @@ export async function sendD4BP(params: {
     return { ok: false, error: e?.message };
   }
 }
+
+/* ─── Failure emails (F1) ─── */
+
+/**
+ * Send F1_CS email when a Citability Score audit fails.
+ */
+export async function sendF1CS(params: {
+  userId: string;
+  brand: string;
+}): Promise<SendD4Result> {
+  try {
+    const userData = await fetchUserData(params.userId);
+    if (!userData) return { ok: false, skipped: "user_not_found_or_admin" };
+
+    const lang = detectLang({ email: userData.email, profileLang: userData.lang_hint });
+    const vars = buildVars("F1_CS", { ...userData, brand: params.brand });
+    const { subject, html } = await renderD4("F1_CS", vars);
+    const r = await sendLifecycleEmail({
+      userId: params.userId,
+      emailType: "F1_CS",
+      recipientEmail: userData.email,
+      lang,
+      subject,
+      html,
+      payload: { brand: params.brand, plan: userData.plan },
+    });
+
+    return { ok: r.ok, skipped: r.skipped, error: r.error };
+  } catch (e: any) {
+    console.error("[send-f1] F1_CS error:", e?.message);
+    return { ok: false, error: e?.message };
+  }
+}
+
+/**
+ * Send F1_AVI email when an AVI run fails.
+ */
+export async function sendF1AVI(params: {
+  userId: string;
+  brand: string;
+}): Promise<SendD4Result> {
+  try {
+    const userData = await fetchUserData(params.userId);
+    if (!userData) return { ok: false, skipped: "user_not_found_or_admin" };
+
+    const lang = detectLang({ email: userData.email, profileLang: userData.lang_hint });
+    const vars = buildVars("F1_AVI", { ...userData, brand: params.brand });
+    const { subject, html } = await renderD4("F1_AVI", vars);
+    const r = await sendLifecycleEmail({
+      userId: params.userId,
+      emailType: "F1_AVI",
+      recipientEmail: userData.email,
+      lang,
+      subject,
+      html,
+      payload: { brand: params.brand, plan: userData.plan },
+    });
+
+    return { ok: r.ok, skipped: r.skipped, error: r.error };
+  } catch (e: any) {
+    console.error("[send-f1] F1_AVI error:", e?.message);
+    return { ok: false, error: e?.message };
+  }
+}
+
+/**
+ * Send F1_BP email when a Brand Profile run fails.
+ */
+export async function sendF1BP(params: {
+  userId: string;
+  brand: string;
+}): Promise<SendD4Result> {
+  try {
+    const userData = await fetchUserData(params.userId);
+    if (!userData) return { ok: false, skipped: "user_not_found_or_admin" };
+
+    const lang = detectLang({ email: userData.email, profileLang: userData.lang_hint });
+    const vars = buildVars("F1_BP", { ...userData, brand: params.brand });
+    const { subject, html } = await renderD4("F1_BP", vars);
+    const r = await sendLifecycleEmail({
+      userId: params.userId,
+      emailType: "F1_BP",
+      recipientEmail: userData.email,
+      lang,
+      subject,
+      html,
+      payload: { brand: params.brand, plan: userData.plan },
+    });
+
+    return { ok: r.ok, skipped: r.skipped, error: r.error };
+  } catch (e: any) {
+    console.error("[send-f1] F1_BP error:", e?.message);
+    return { ok: false, error: e?.message };
+  }
+}

@@ -14,7 +14,7 @@ import {
 import { calculateAVI } from "./engine/avi";
 import { consumeWalletQueries, incrementBrowsingPromptsUsed, incrementNoBrowsingPromptsUsed } from "./usage";
 import { sendFailureAlert } from "./webhooks/alert-email";
-import { sendD4AVI } from "./email/lifecycle/send-d4";
+import { sendD4AVI, sendF1AVI } from "./email/lifecycle/send-d4";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /* ─── Helpers ─── */
@@ -779,6 +779,10 @@ export const runAnalysis = inngest.createFunction(
             errorMessage: errorMsg,
             runId: originalData.runId,
           });
+          // Notify the user about the failure
+          if (project?.user_id) {
+            await sendF1AVI({ userId: project.user_id, brand: project.target_brand || "—" });
+          }
         } catch (alertErr) {
           console.error("[inngest/onFailure] alert email failed:", alertErr);
         }
@@ -828,6 +832,11 @@ export const runAnalysis = inngest.createFunction(
           errorMessage: errorMsg,
           runId,
         });
+        // Notify the user about the failure
+        const failUserId = billing?.userId || project?.user_id;
+        if (failUserId) {
+          await sendF1AVI({ userId: failUserId, brand: project?.target_brand || "—" });
+        }
       } catch (alertErr) {
         console.error("[run-analysis] alert email failed:", alertErr);
       }
