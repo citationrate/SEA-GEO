@@ -6,7 +6,37 @@ import type { Database } from "@/types/database";
 // (Previously ".citationrate.com" in prod — removed so auth cookies stop reaching the PHP
 // apex and blowing past its header limit. SSO now runs via URL-hash token handoff, not cookies.)
 const COOKIE_DOMAIN: string | undefined = undefined;
-const SUITE_LOGIN_URL = "https://suite.citationrate.com";
+const SUITE_BASE = "https://suite.citationrate.com";
+const SUITE_LOGIN_URL = SUITE_BASE;
+
+// One-shot guard so a transparent re-handoff can't loop into the suite login.
+const SSO_RETRY_KEY = "avi_sso_retry";
+
+/**
+ * AVI lost its session. Instead of dumping the user at the suite login, ask the
+ * suite to re-establish it server-side: its auth cookie is almost always still
+ * valid (e.g. the user just logged in and AVI lost the cross-tool refresh-token
+ * rotation race, or the cookie wasn't readable yet right after the handoff).
+ * /api/sso/launch reads the suite session server-side and hands fresh tokens to
+ * AVI's establish, then bounces back to `next` — invisible to the user.
+ *
+ * Guarded by a one-shot sessionStorage flag: if we already retried once and
+ * still have no session, the suite is genuinely signed out, so fall through to
+ * the real login instead of bouncing forever.
+ */
+function bounceToSuite() {
+  if (typeof window === "undefined") return;
+  const next = window.location.pathname + window.location.search;
+  let alreadyRetried = false;
+  try { alreadyRetried = sessionStorage.getItem(SSO_RETRY_KEY) === "1"; } catch { /* private mode */ }
+  if (alreadyRetried) {
+    try { sessionStorage.removeItem(SSO_RETRY_KEY); } catch { /* noop */ }
+    window.location.href = SUITE_LOGIN_URL;
+    return;
+  }
+  try { sessionStorage.setItem(SSO_RETRY_KEY, "1"); } catch { /* noop */ }
+  window.location.href = `${SUITE_BASE}/api/sso/launch?next=${encodeURIComponent(next)}`;
+}
 
 /** Singleton browser auth client — prevents multiple instances competing for token refresh locks */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,17 +66,23 @@ export function createClient() {
     }
   );
 
-  // Redirect to suite login on sign-out or missing session — prevents infinite refresh loops
-  // Skip on /auth/ pages (handoff in progress) and public pages.
-  // INITIAL_SESSION fires synchronously during init, so guard against SSR
-  // where `window` is undefined (would crash Vercel prerender).
+  // On sign-out or missing session, transparently re-handoff via the suite
+  // (see bounceToSuite) instead of forcing a re-login. Skip on /auth/ pages
+  // (handoff in progress) and public pages. INITIAL_SESSION fires synchronously
+  // during init, so guard against SSR where `window` is undefined.
   _authClient.auth.onAuthStateChange((event, session) => {
-    if (event === "TOKEN_REFRESHED") return;
     if (typeof window === "undefined") return;
+    // A real session is present (initial read, refresh, or sign-in): clear the
+    // one-shot guard so a future loss can retry the transparent re-handoff.
+    if (session) {
+      try { sessionStorage.removeItem(SSO_RETRY_KEY); } catch { /* noop */ }
+      return;
+    }
+    if (event === "TOKEN_REFRESHED") return;
     const path = window.location.pathname;
     if (path.startsWith("/auth/") || path.startsWith("/share/") || path === "/") return;
-    if (event === "SIGNED_OUT" || (!session && event === "INITIAL_SESSION")) {
-      window.location.href = SUITE_LOGIN_URL;
+    if (event === "SIGNED_OUT" || event === "INITIAL_SESSION") {
+      bounceToSuite();
     }
   });
 

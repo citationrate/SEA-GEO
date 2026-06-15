@@ -6,6 +6,8 @@ import { NextResponse, type NextRequest } from "next/server";
 // leak auth cookies onto the PHP apex and overflow its request-header limit.
 const IS_PROD = process.env.NODE_ENV === "production";
 const SUITE_LOGIN_URL = "https://suite.citationrate.com";
+// One-shot guard so the transparent re-handoff can't loop into the suite login.
+const SSO_RETRY_COOKIE = "sso_retry";
 
 /**
  * Decode a JWT payload without verification (we trust Supabase's cookie).
@@ -148,12 +150,30 @@ export async function middleware(request: NextRequest) {
         }
       }
     }
+    // Session restored: clear any one-shot re-handoff guard.
+    if (request.cookies.get(SSO_RETRY_COOKIE)) {
+      res.cookies.set(SSO_RETRY_COOKIE, "", { path: "/", maxAge: 0 });
+    }
     return res;
   }
 
-  // No session cookie at all — redirect to login
+  // No session cookie. Before forcing a re-login, try a single transparent
+  // re-handoff through the suite: its session cookie is usually still valid
+  // (e.g. the user just logged in and AVI lost the cross-tool refresh-token
+  // rotation race), so /api/sso/launch can re-establish AVI server-side and
+  // bounce back here. A one-shot guard cookie prevents an infinite loop when
+  // the suite is genuinely signed out.
   if (IS_PROD) {
-    return NextResponse.redirect(SUITE_LOGIN_URL);
+    if (!request.cookies.get(SSO_RETRY_COOKIE)) {
+      const target = new URL("https://suite.citationrate.com/api/sso/launch");
+      target.searchParams.set("next", path + request.nextUrl.search);
+      const res = NextResponse.redirect(target);
+      res.cookies.set(SSO_RETRY_COOKIE, "1", { path: "/", maxAge: 30, sameSite: "lax", secure: true });
+      return res;
+    }
+    const res = NextResponse.redirect(SUITE_LOGIN_URL);
+    res.cookies.set(SSO_RETRY_COOKIE, "", { path: "/", maxAge: 0 });
+    return res;
   }
   return NextResponse.redirect(new URL("/login", request.url));
 }
