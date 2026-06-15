@@ -3,6 +3,7 @@ import { createServiceClient } from "./supabase/service";
 import {
   callAIModel,
   type AIModelResult,
+  type GroundingMetadata,
   extractFromResponse,
   type ExtractedSource,
   mergeSources,
@@ -415,6 +416,8 @@ interface AICallResult {
   rawText: string;
   citationSources: string[];
   aiSources: ExtractedSource[];
+  /** Engine-native grounding evidence (Gemini fan-out + claim→source map). Internal only. */
+  grounding: GroundingMetadata | null;
 }
 
 /**
@@ -467,6 +470,7 @@ async function executeAICall(
 
   const rawText = aiResult.text;
   const citationSources: string[] = aiResult.citationSources ?? [];
+  const grounding: GroundingMetadata | null = aiResult.grounding ?? null;
   const promptError: string | null = rawText ? null : (aiResult.error ?? "Risposta vuota dal modello");
 
   await (supabase.from("prompts_executed") as any)
@@ -476,6 +480,7 @@ async function executeAICall(
       executed_at: new Date().toISOString(),
       error: promptError,
       citation_urls: citationSources,
+      grounding_metadata: grounding,
     })
     .eq("id", promptRecord.id);
 
@@ -484,6 +489,7 @@ async function executeAICall(
     rawText,
     citationSources,
     aiSources: aiResult.sources,
+    grounding,
   };
 }
 

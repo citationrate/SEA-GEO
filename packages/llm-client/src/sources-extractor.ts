@@ -103,6 +103,48 @@ export function extractFromGrounding(candidates: any[], brandDomain?: string): E
   return results;
 }
 
+/**
+ * Extracts Gemini's native grounding evidence from the response candidates:
+ *  - `webSearchQueries`: the fan-out queries the model actually issued
+ *  - `groundingSupports`: claim→source mapping (which text span is backed by
+ *    which consulted chunk), the basis for recuperato/citato/inventato
+ *  - `grounded`: whether live retrieval evidence was returned at all
+ *
+ * Captured for internal analysis only; not surfaced to users yet. The
+ * `sourceIndices` align with `extractFromGrounding` order (groundingChunks).
+ */
+export function extractGeminiGrounding(candidates: any[]): {
+  searchQueries: string[];
+  supports: Array<{
+    text?: string;
+    startIndex?: number;
+    endIndex?: number;
+    sourceIndices?: number[];
+    confidence?: number[];
+  }>;
+  grounded: boolean;
+} {
+  const empty = { searchQueries: [] as string[], supports: [], grounded: false };
+  try {
+    const meta = candidates?.[0]?.groundingMetadata;
+    if (!meta) return empty;
+    const searchQueries: string[] = Array.isArray(meta.webSearchQueries) ? meta.webSearchQueries : [];
+    const supports = (Array.isArray(meta.groundingSupports) ? meta.groundingSupports : []).map((s: any) => ({
+      text: s?.segment?.text,
+      startIndex: s?.segment?.startIndex,
+      endIndex: s?.segment?.endIndex,
+      sourceIndices: s?.groundingChunkIndices,
+      confidence: s?.confidenceScores,
+    }));
+    const chunkCount = Array.isArray(meta.groundingChunks) ? meta.groundingChunks.length : 0;
+    const grounded = chunkCount > 0 || searchQueries.length > 0 || supports.length > 0;
+    return { searchQueries, supports, grounded };
+  } catch (e) {
+    console.error("extractGeminiGrounding error:", e);
+    return empty;
+  }
+}
+
 const BLACKLIST = new Set([
   "next.js", "node.js", "react.js", "type.ts", "index.js",
   "package.json", "vercel.app", "example.com", "e.g",

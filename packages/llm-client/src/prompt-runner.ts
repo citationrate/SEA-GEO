@@ -7,17 +7,42 @@ import {
   extractFromAnnotations,
   extractFromAnthropicSearch,
   extractFromGrounding,
+  extractGeminiGrounding,
   extractFromText,
   mergeSources,
   classifyDomainForPerplexity,
 } from "./sources-extractor";
 import { trackedAICall, type TrackedCallArgs } from "./cost-tracker";
 
+/**
+ * Engine-native grounding evidence. Currently populated only for Gemini
+ * (groundingMetadata): the fan-out queries the model issued and the
+ * claim→source mapping. Captured but not surfaced to users yet — it feeds
+ * internal analysis (Fan-out Inspector, Cite-Gap, recuperato/citato/inventato).
+ */
+export interface GroundingMetadata {
+  /** Search queries the engine actually issued (Gemini webSearchQueries = the fan-out). */
+  searchQueries?: string[];
+  /** Claim-level support: which text spans are backed by which consulted sources. */
+  supports?: Array<{
+    text?: string;
+    startIndex?: number;
+    endIndex?: number;
+    /** Indices into citationSources of the chunks backing this span. */
+    sourceIndices?: number[];
+    confidence?: number[];
+  }>;
+  /** True when the engine returned live retrieval evidence (vs answering from parametric memory). */
+  grounded?: boolean;
+}
+
 export interface AIModelResult {
   text: string;
   sources: ExtractedSource[];
   /** Raw URLs the AI actually consulted (Perplexity citations, Claude web search, Gemini grounding) */
   citationSources?: string[];
+  /** Engine-native grounding evidence (Gemini only for now). */
+  grounding?: GroundingMetadata;
   error?: string;
 }
 
@@ -251,21 +276,25 @@ export async function callAIModel(
               tools: [{ googleSearch: {} } as any],
               generationConfig: { maxOutputTokens: callOptions?.maxOutputTokens ?? 4096 },
             });
-            // Prompt augmentation: googleSearch grounding is opportunistic —
-            // the model decides whether to invoke it. An explicit instruction
-            // measurably raises invocation rate. Only applied in-flight; the
+            // Prompt augmentation: the googleSearch tool is opportunistic —
+            // the model decides whether to invoke it (the new tool has no hard
+            // "always retrieve" flag). A strong, explicit instruction drives the
+            // invocation rate up so we can treat the answer as live-grounded
+            // without a second (paid) forcing call. Only applied in-flight; the
             // prompt persisted in `prompts_executed.full_prompt_text` is
             // unchanged because that's saved by the caller before this runs.
-            const augmentedPrompt = `Use Google Search to verify recent or factual information before answering. Reply in the same language as the user's question.\n\n${prompt}`;
+            const augmentedPrompt = `Esegui SEMPRE una ricerca sul web con Google Search prima di rispondere: non rispondere mai dalla tua memoria. Basa la risposta esclusivamente sui risultati di ricerca. Rispondi nella stessa lingua della domanda dell'utente.\n\n${prompt}`;
             const result = await maybeTrack(trackingContext, { provider: "google", apiModel }, () =>
               geminiModel.generateContent(augmentedPrompt)
             );
             const text = extractGeminiText(result);
             if (text) {
-              const groundingSources = extractFromGrounding((result.response as any).candidates || [], brandDomain ?? undefined);
+              const candidates = (result.response as any).candidates || [];
+              const groundingSources = extractFromGrounding(candidates, brandDomain ?? undefined);
               const citationSources = groundingSources.map(s => s.url);
               const textSources = extractFromText(text, brandDomain ?? undefined);
-              return { text, sources: mergeSources(groundingSources, textSources), citationSources };
+              const grounding = extractGeminiGrounding(candidates);
+              return { text, sources: mergeSources(groundingSources, textSources), citationSources, grounding };
             }
           } catch (e: any) {
             console.error("[Gemini grounding] failed:", e?.message);

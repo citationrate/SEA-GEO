@@ -1,6 +1,6 @@
 // Multi-provider LLM caller (OpenAI, Anthropic, Google, Perplexity, xAI, Azure)
 export { callAIModel, API_MODEL_ID } from "./prompt-runner";
-export type { AIModelResult } from "./prompt-runner";
+export type { AIModelResult, GroundingMetadata } from "./prompt-runner";
 
 // Claude Haiku-based response extraction (brand mentions, sentiment, competitors, topics, sources)
 export { extractFromResponse } from "./extractor";
