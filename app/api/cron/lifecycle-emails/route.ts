@@ -250,11 +250,11 @@ async function renderTemplate(type: EmailType, c: any, lang: "it" | "en"): Promi
 }
 
 function extractPayload(type: EmailType, c: any): Record<string, any> {
-  const base = { plan: c.plan, days_since_signup: c.days_since_signup };
+  const base = { full_name: c.full_name, plan: c.plan, days_since_signup: c.days_since_signup };
   if (type.startsWith("D4_CS") || type.startsWith("D5_CS"))
-    return { ...base, brand: c.brand, audit_id: c.audit_id };
+    return { ...base, brand: c.brand, audit_id: c.audit_id, scores: c.scores };
   if (type.startsWith("D4_AVI") || type.startsWith("D5_AVI"))
-    return { ...base, brand: c.brand, project_id: c.project_id, run_id: c.run_id, avi_score: c.avi_score };
+    return { ...base, brand: c.brand, project_id: c.project_id, run_id: c.run_id, avi_score: c.avi_score, presence_score: c.presence_score, sentiment_score: c.sentiment_score, avg_brand_rank: c.avg_brand_rank };
   if (type === "D6") return { ...base, days_since_upgrade: c.days_since_upgrade };
   return base;
 }

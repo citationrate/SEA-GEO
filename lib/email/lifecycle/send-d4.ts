@@ -183,7 +183,7 @@ export async function sendD4CS(params: {
       lang,
       subject,
       html,
-      payload: { brand: params.brand, audit_id: params.auditId, plan: userData.plan },
+      payload: { full_name: userData.full_name, brand: params.brand, audit_id: params.auditId, scores: params.scores, plan: userData.plan },
     });
 
     return { ok: r.ok, skipped: r.skipped, error: r.error };
@@ -231,7 +231,7 @@ export async function sendD4AVI(params: {
       lang,
       subject,
       html,
-      payload: { brand: params.brand, project_id: params.projectId, run_id: params.runId, avi_score: params.aviScore, plan: userData.plan },
+      payload: { full_name: userData.full_name, brand: params.brand, project_id: params.projectId, run_id: params.runId, avi_score: params.aviScore, presence_score: params.presenceScore, sentiment_score: params.sentimentScore, avg_brand_rank: params.avgBrandRank, plan: userData.plan },
     });
 
     return { ok: r.ok, skipped: r.skipped, error: r.error };
@@ -270,7 +270,7 @@ export async function sendD4BP(params: {
       lang,
       subject,
       html,
-      payload: { brand: params.brand, project_id: params.projectId, run_id: params.runId, plan: userData.plan },
+      payload: { full_name: userData.full_name, brand: params.brand, project_id: params.projectId, run_id: params.runId, plan: userData.plan },
     });
 
     return { ok: r.ok, skipped: r.skipped, error: r.error };
@@ -303,7 +303,7 @@ export async function sendF1CS(params: {
       lang,
       subject,
       html,
-      payload: { brand: params.brand, plan: userData.plan },
+      payload: { full_name: userData.full_name, brand: params.brand, plan: userData.plan },
     });
 
     return { ok: r.ok, skipped: r.skipped, error: r.error };
@@ -334,7 +334,7 @@ export async function sendF1AVI(params: {
       lang,
       subject,
       html,
-      payload: { brand: params.brand, plan: userData.plan },
+      payload: { full_name: userData.full_name, brand: params.brand, plan: userData.plan },
     });
 
     return { ok: r.ok, skipped: r.skipped, error: r.error };
@@ -365,7 +365,7 @@ export async function sendF1BP(params: {
       lang,
       subject,
       html,
-      payload: { brand: params.brand, plan: userData.plan },
+      payload: { full_name: userData.full_name, brand: params.brand, plan: userData.plan },
     });
 
     return { ok: r.ok, skipped: r.skipped, error: r.error };
