@@ -425,5 +425,6 @@ export const TRIGGERS: Record<EmailType, () => Promise<any[]>> = {
   F1_CS: async () => [],  // triggered on failure, not cron
   F1_AVI: async () => [],
   F1_BP: async () => [],
-  D7_TOOL: async () => [], // triggered by Suite ToolTracker, not cron
+  D7_TIPS: async () => [],  // triggered by Suite ToolTracker immediately
+  D7_CROSS: async () => [], // triggered by cron +3 days after first tool use
 };
