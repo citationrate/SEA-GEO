@@ -24,7 +24,8 @@ export type EmailType =
   | "D6"
   | "F1_CS"
   | "F1_AVI"
-  | "F1_BP";
+  | "F1_BP"
+  | "D7_TOOL";
 
 interface BaseInput {
   name: string;
