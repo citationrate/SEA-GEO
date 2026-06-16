@@ -1073,10 +1073,10 @@ export const runAnalysis = inngest.createFunction(
           projectId,
           brand: project.target_brand || "",
           country: project.country || null,
-          aviScore: Number(aviH.avi_score) || 0,
-          presenceScore: Number(aviH.presence_score) || 0,
-          sentimentScore: Number(aviH.sentiment_score) || 0,
-          avgBrandRank: aviH.avg_brand_rank ? Number(aviH.avg_brand_rank) : null,
+          aviScore: aviH.avi_score != null ? Number(aviH.avi_score) : 0,
+          presenceScore: aviH.presence_score != null ? Number(aviH.presence_score) : 0,
+          sentimentScore: aviH.sentiment_score != null ? Number(aviH.sentiment_score) : 0,
+          avgBrandRank: aviH.avg_brand_rank != null ? Number(aviH.avg_brand_rank) : null,
         });
       }
     });

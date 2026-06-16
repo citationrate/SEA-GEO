@@ -192,10 +192,10 @@ export async function findCandidatesD4_AVI(): Promise<CandidateForAVI[]> {
       run_id: r.id,
       brand: proj.target_brand || "",
       country: proj.country || null,
-      avi_score: Number(h.avi_score) || 0,
-      presence_score: Number(h.presence_score) || 0,
-      sentiment_score: Number(h.sentiment_score) || 0,
-      avg_brand_rank: h.avg_brand_rank ? Number(h.avg_brand_rank) : null,
+      avi_score: h.avi_score != null ? Number(h.avi_score) : 0,
+      presence_score: h.presence_score != null ? Number(h.presence_score) : 0,
+      sentiment_score: h.sentiment_score != null ? Number(h.sentiment_score) : 0,
+      avg_brand_rank: h.avg_brand_rank != null ? Number(h.avg_brand_rank) : null,
       run_created_at: r.completed_at,
     });
   }
@@ -296,10 +296,10 @@ export async function findCandidatesD5_AVI(): Promise<CandidateForAVI[]> {
       run_id: r.id,
       brand: proj.target_brand || "",
       country: proj.country || null,
-      avi_score: Number(h.avi_score) || 0,
-      presence_score: Number(h.presence_score) || 0,
-      sentiment_score: Number(h.sentiment_score) || 0,
-      avg_brand_rank: h.avg_brand_rank ? Number(h.avg_brand_rank) : null,
+      avi_score: h.avi_score != null ? Number(h.avi_score) : 0,
+      presence_score: h.presence_score != null ? Number(h.presence_score) : 0,
+      sentiment_score: h.sentiment_score != null ? Number(h.sentiment_score) : 0,
+      avg_brand_rank: h.avg_brand_rank != null ? Number(h.avg_brand_rank) : null,
       run_created_at: r.completed_at,
     });
   }

@@ -177,10 +177,10 @@ function interpolate(body: string, vars: Record<string, string | number | null |
 /** Build template variables from candidate data */
 function candidateVars(type: EmailType, c: any): Record<string, string | number | null> {
   const scores = c.scores || {};
-  const aviScore = c.avi_score ? Math.round(Number(c.avi_score)) : null;
-  const presence = c.presence_score ? Math.round(Number(c.presence_score)) : null;
-  const sentiment = c.sentiment_score ? Math.round(Number(c.sentiment_score)) : null;
-  const avgRank = c.avg_brand_rank ? Number(c.avg_brand_rank).toFixed(1) : null;
+  const aviScore = c.avi_score != null ? Math.round(Number(c.avi_score)) : null;
+  const presence = c.presence_score != null ? Math.round(Number(c.presence_score)) : null;
+  const sentiment = c.sentiment_score != null ? Math.round(Number(c.sentiment_score)) : null;
+  const avgRank = c.avg_brand_rank != null ? Number(c.avg_brand_rank).toFixed(1) : null;
 
   // Per-engine scores — scores is flat: { ChatGPT: 60, Claude: 58, ... }
   const engineKeys: Record<string, string> = {
@@ -207,11 +207,11 @@ function candidateVars(type: EmailType, c: any): Record<string, string | number 
     nome: c.full_name || "",
     brand: c.brand || "",
     days: c.days_since_signup ?? "",
-    globalScore: global ? String(global) : "",
-    aviScore: aviScore ? String(aviScore) : "",
-    presence: presence ? String(presence) : "",
-    sentiment: sentiment ? String(sentiment) : "",
-    avgRank: avgRank || "",
+    globalScore: global != null ? String(global) : "",
+    aviScore: aviScore != null ? String(aviScore) : "",
+    presence: presence != null ? String(presence) : "",
+    sentiment: sentiment != null ? String(sentiment) : "",
+    avgRank: avgRank ?? "",
     plan: c.plan || "",
     daysSinceUpgrade: c.days_since_upgrade ?? "",
     auditLimit: c.audit_limit ?? "",
