@@ -43,6 +43,9 @@ export function AnalysisLauncher({
   const [querySource, setQuerySource] = useState<"plan" | "wallet">("plan");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // Query generate in background dal seed: se non ancora pronte al click su
+  // Avvia Analisi, mostriamo un avviso centrato invece di un errore inline.
+  const [showNotReady, setShowNotReady] = useState(false);
 
   // Usage & plan limits
   const usage = useUsage();
@@ -152,7 +155,7 @@ export function AnalysisLauncher({
     }
   }
 
-  const canStart = hasQueries;
+  void hasQueries; // non gating l'apertura: le query possono essere in arrivo dal seed
 
   // Next month name for renewal message
   const nextMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1)
@@ -170,15 +173,31 @@ export function AnalysisLauncher({
     <>
       <button
         data-tour="launch-analysis-btn"
-        onClick={() => canStart ? setOpen(true) : setError(t("analysisLauncher.configureQueries"))}
+        onClick={() => setOpen(true)}
         className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-[2px] hover:bg-primary/85 transition-colors"
       >
         <Play className="w-4 h-4" />
         {t("analysisLauncher.launchAnalysis")}
       </button>
 
-      {!canStart && error && (
-        <p className="text-xs text-destructive mt-1">{error}</p>
+      {/* Avviso centrato: query ancora in preparazione (seed in background) */}
+      {showNotReady && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm" onClick={() => setShowNotReady(false)}>
+          <div className="w-full max-w-md p-6 text-center rounded-sm border border-border bg-card" onClick={(e) => e.stopPropagation()}>
+            <Loader2 className="w-8 h-8 text-primary mx-auto mb-3 animate-spin" />
+            <h3 className="font-display text-lg font-semibold text-foreground mb-2">Le domande sono in preparazione</h3>
+            <p className="text-sm text-muted-foreground mb-5">
+              Stiamo ancora generando le domande di analisi per il tuo progetto. Attendi qualche
+              secondo e riprova: di solito sono pronte in meno di un minuto.
+            </p>
+            <button
+              onClick={() => setShowNotReady(false)}
+              className="w-full py-2.5 rounded-sm bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/85 transition-colors"
+            >
+              Ho capito
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Demo exhausted — full-screen upgrade modal */}
@@ -503,7 +522,7 @@ export function AnalysisLauncher({
                 {t("common.cancel")}
               </button>
               <button
-                onClick={startAnalysis}
+                onClick={() => (queryCount === 0 ? setShowNotReady(true) : startAnalysis())}
                 disabled={loading || (profileLoaded && (wouldExceed || modelsExceed))}
                 className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold text-sm py-2.5 rounded-sm hover:bg-primary/85 transition-colors disabled:opacity-50"
               >
