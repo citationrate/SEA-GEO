@@ -319,6 +319,20 @@ export function AnalysisLauncher({
               </div>
             )}
 
+            {/* Modifica prompt — prominente, sotto il browsing. Le query sono
+                state generate automaticamente; qui l'utente le rivede/modifica. */}
+            <a
+              href={`/projects/${projectId}/queries`}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-sm border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-all text-left"
+            >
+              <Settings2 className="w-4 h-4 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">Modifica i prompt da inviare</p>
+                <p className="text-[13px] text-muted-foreground mt-0.5">Li abbiamo scritti noi per te, modificali quando vuoi.</p>
+              </div>
+              <span className="font-mono text-primary shrink-0">→</span>
+            </a>
+
             {/* Query source selector — only shown if wallet has credits */}
             {!isDemo && !(isBase && effectiveBrowsing) && hasWallet && (
               <div className="space-y-2">
@@ -372,13 +386,6 @@ export function AnalysisLauncher({
                 <p className="text-xs text-muted-foreground flex-1">
                   {queryCount} query &times; {modelsConfig.length} {modelsConfig.length === 1 ? t("analysisLauncher.modelSingular") : t("analysisLauncher.modelPlural")} &times; {Math.max(segmentCount, 1)} {segmentCount === 1 ? t("analysisLauncher.segmentSingular") : t("analysisLauncher.segmentPlural")} &times; {runCount} run = {totalPrompts} prompt
                 </p>
-                <a
-                  href={`/projects/${projectId}/queries`}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-medium text-primary hover:text-primary/70 border border-primary/25 rounded-[2px] px-2 py-1 transition-colors shrink-0"
-                >
-                  <Settings2 className="w-3 h-3" />
-                  Manage queries
-                </a>
               </div>
 
               {profileLoaded && !isDemo && (

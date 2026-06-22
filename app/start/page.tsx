@@ -17,12 +17,11 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, AlertCircle, Sparkles } from "lucide-react";
 
-type Phase = "starting" | "creating_project" | "adding_queries" | "redirecting" | "error";
+type Phase = "starting" | "creating_project" | "redirecting" | "error";
 
 const PHASE_COPY: Record<Phase, string> = {
   starting: "Preparo il tuo progetto...",
   creating_project: "Configuro l'analisi AI...",
-  adding_queries: "Genero le domande di analisi...",
   redirecting: "Quasi pronto...",
   error: "Qualcosa è andato storto",
 };
@@ -124,33 +123,22 @@ function StartInner() {
         if (!projectId) throw new Error("ID progetto mancante");
         track("avi_seed_project_created", { project_id: projectId, plan: planId });
 
-        // 2) Auto-genera le query (BX). Best-effort: se fallisce, l'utente le
-        // crea in AVI; non blocchiamo l'atterraggio.
-        setPhase("adding_queries");
+        // 2) Genera le query in BACKGROUND. `keepalive: true` fa sopravvivere
+        // la richiesta alla navigazione, così NON mostriamo il loader di
+        // generazione e l'utente atterra subito sulla dashboard. Le query
+        // compaiono in pochi secondi (endpoint server-side combinato gen+save).
         try {
-          const genRes = await fetch("/api/queries/ai-generate", {
+          fetch("/api/queries/seed", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "same-origin",
-            body: JSON.stringify({ project_id: projectId, count: queryCount, mode: "generali", tofu_pct: 50 }),
-          });
-          if (genRes.ok) {
-            const gen = await genRes.json().catch(() => ({}));
-            const queries: Array<{ text: string; funnel_stage: "TOFU" | "MOFU" }> = Array.isArray(gen?.queries) ? gen.queries : [];
-            for (const q of queries) {
-              const stage = q.funnel_stage === "TOFU" ? "tofu" : "mofu";
-              await fetch("/api/queries", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "same-origin",
-                body: JSON.stringify({ project_id: projectId, text: q.text, funnel_stage: stage }),
-              }).catch(() => {});
-            }
-            track("avi_seed_queries_added", { project_id: projectId, generated: queries.length });
-          }
-        } catch { /* best-effort, l'utente può generarle in AVI */ }
+            keepalive: true,
+            body: JSON.stringify({ project_id: projectId, count: queryCount }),
+          }).catch(() => {});
+        } catch { /* ignore */ }
+        track("avi_seed_queries_bg", { project_id: projectId });
 
-        // 3) Atterra sulla dashboard del progetto, pronto a lanciare.
+        // 3) Subito alla dashboard del progetto, pronta al lancio.
         setPhase("redirecting");
         router.replace(`/dashboard?projectId=${projectId}`);
       } catch (e) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Radar, Loader2, ArrowLeft, ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
@@ -38,6 +38,27 @@ export function BrandProfileWizard({
   const [country, setCountry] = useState<(typeof COUNTRIES)[number]>("IT");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Pre-fill dal progetto canonico della suite (UX unificata): l'utente trova
+  // brand, sito, settore e paese già compilati e clicca solo avanti.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/canonical-project", { cache: "no-store" });
+        if (!r.ok) return;
+        const proj = (await r.json())?.project;
+        if (!proj || cancelled) return;
+        if (proj.brand) setBrand((b) => b || proj.brand);
+        if (proj.primary_url) setBrandUrl((u) => u || proj.primary_url);
+        if (proj.sector_label) setSector((s) => s || proj.sector_label);
+        if (proj.country && (COUNTRIES as readonly string[]).includes(proj.country)) {
+          setCountry((c) => (c === "IT" ? (proj.country as (typeof COUNTRIES)[number]) : c));
+        }
+      } catch { /* best-effort */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const stepTitles: Record<Step, string> = {
     1: t("brandProfile.step1Title"),
