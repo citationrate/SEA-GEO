@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Cpu, Settings, Sparkles, Info } from "lucide-react";
 import { AnalysisLauncher } from "./analysis-launcher";
 import { ProjectAVITrend } from "./project-avi-trend";
-import { DeleteProjectButton } from "./delete-project-button";
+// DeleteProjectButton rimosso: i progetti si eliminano nella Suite (UX unificata).
 import { OpenAnalysisButton } from "./open-analysis-button";
 import { ArchivedRunsSection } from "./archived-runs-section";
 import { AutoLaunch } from "./auto-launch";
@@ -517,7 +517,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             <T k="projectDetail.segments" />
           </a>
         </div>
-        <DeleteProjectButton projectId={params.id} projectName={proj.name} />
       </div>
 
       <BotMount plan={userPlan} context={botContext} />

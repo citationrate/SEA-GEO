@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Ticket, LogOut, AlertTriangle, Check, Loader2, Trash2, Key, Send, Shield, Download, Camera, X } from "lucide-react";
+import { User, Ticket, LogOut, AlertTriangle, Check, Loader2, Key, Send, Shield, Download, Camera, X } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { createClient as createAuthClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -375,16 +375,7 @@ export function SettingsClient({
           <AlertTriangle className="w-5 h-5 text-destructive" />
           <h2 className="font-display font-semibold text-destructive">{t("settings.dangerZone")}</h2>
         </div>
-        <div className="flex items-center justify-between bg-destructive/5 rounded-[2px] px-4 py-3 border border-destructive/20">
-          <div className="flex items-center gap-3">
-            <Trash2 className="w-4 h-4 text-destructive shrink-0" />
-            <div>
-              <p className="text-sm text-foreground font-medium">{t("settings.deletedProjects")}</p>
-              <p className="text-xs text-muted-foreground">{t("settings.restoreDeleted")}</p>
-            </div>
-          </div>
-          <a href="/settings/deleted-projects" className="px-4 py-2 border border-destructive/30 text-destructive rounded-[2px] text-sm font-medium hover:bg-destructive/10 transition-colors shrink-0">{t("common.manage")}</a>
-        </div>
+        {/* "Progetti eliminati" rimosso: eliminazione/ripristino gestiti nella Suite (UX unificata). */}
         <div className="bg-destructive/5 rounded-[2px] px-4 py-3 border border-destructive/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

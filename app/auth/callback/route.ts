@@ -1,4 +1,4 @@
-import { createServerClient, createDataClient } from "@/lib/supabase/server";
+import { createServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -15,18 +15,8 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${next}`);
       }
 
-      // Check if this is a new user (onboarding not completed)
-      const { data: { user } } = await auth.auth.getUser();
-      if (user) {
-        const supabase = createDataClient();
-        const { data: profile } = await (supabase.from("profiles") as any)
-          .select("onboarding_completed")
-          .eq("id", user.id)
-          .single();
-        if (!profile?.onboarding_completed) {
-          return NextResponse.redirect(`${origin}/dashboard?welcome=1`);
-        }
-      }
+      // Onboarding gestito dalla suite (UX unificata): niente più redirect
+      // ?welcome=1 / tour AVI. Si va dritti alla dashboard.
       return NextResponse.redirect(`${origin}/dashboard`);
     }
   }

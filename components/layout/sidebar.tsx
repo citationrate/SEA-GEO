@@ -7,9 +7,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { useTranslation } from "@/lib/i18n/context";
 import {
-  LayoutDashboard, FolderOpen, Play, BarChart3,
+  LayoutDashboard, FolderOpen, BarChart3,
   Users, Link2, Tag, GitCompare, Settings,
-  Database, ChevronRight, Plus,
+  Database, ChevronRight,
   PanelLeftClose, PanelLeftOpen,
   X, Newspaper, CreditCard, Sparkles, LogOut,
 } from "lucide-react";
@@ -71,7 +71,7 @@ export function Sidebar({ profile }: SidebarProps) {
     {
       group: t("sidebar.analysis"),
       items: [
-        { href: "/projects/new", icon: Play,            label: t("sidebar.newProject") },
+        // "Nuovo Progetto" rimosso: i progetti si creano nella suite (UX unificata).
         { href: "/results",     icon: BarChart3,       label: t("sidebar.results")    },
         { href: "/compare",     icon: GitCompare,      label: t("sidebar.compare")    },
         { href: "/datasets",    icon: Database,        label: t("sidebar.dataset")      },
@@ -191,16 +191,7 @@ export function Sidebar({ profile }: SidebarProps) {
                           {item.href === "/notizie" && hasUnread && (
                             <span className="w-2 h-2 rounded-full bg-[#D97706] animate-pulse" />
                           )}
-                          {item.href === "/projects" && !locked && (
-                            <Link
-                              href="/projects/new"
-                              onClick={(e) => { e.stopPropagation(); closeMobile(); }}
-                              className="w-5 h-5 flex items-center justify-center rounded-[2px] text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                              title={t("sidebar.newProject")}
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </Link>
-                          )}
+                          {/* Quick-add "+" rimosso: i progetti si creano nella suite. */}
                           {locked && (
                             <span className="font-mono text-[0.625rem] tracking-wide text-[#c4a882] border border-[#c4a882]/30 px-1 py-0.5 rounded-[2px]">PRO</span>
                           )}

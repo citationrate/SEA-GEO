@@ -2,9 +2,24 @@ import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-export async function GET() {
+export async function GET(request: Request) {
   const { supabase, user, error } = await requireAuth();
   if (error) return error;
+
+  // Idempotenza seed suite→AVI: cerca il progetto AVI mappato a un progetto
+  // canonico della suite. Ritorna { project } (o null) invece della lista.
+  const canonical = new URL(request.url).searchParams.get("canonical");
+  if (canonical) {
+    const { data: match } = await supabase
+      .from("projects")
+      .select("id, name, canonical_project_id")
+      .eq("user_id", user.id)
+      .eq("canonical_project_id", canonical)
+      .is("deleted_at", null)
+      .limit(1)
+      .maybeSingle();
+    return NextResponse.json({ project: match ?? null });
+  }
 
   const { data } = await supabase
     .from("projects")
@@ -29,6 +44,8 @@ const projectSchema = z.object({
   country: z.string().nullable().default(null),
   models_config: z.array(z.string()).min(1).default(["gpt-5.4-mini"]),
   site_analysis: z.any().nullable().default(null),
+  // Link al progetto canonico della suite (seed A1). Null per progetti legacy.
+  canonical_project_id: z.string().uuid().nullable().default(null),
 });
 
 export async function POST(request: Request) {
