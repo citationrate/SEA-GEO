@@ -98,9 +98,34 @@ function getSessionFromCookies(request: NextRequest): { userId: string; expired:
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
-  // Skip auth for API routes
+  // Skip auth for API routes (+ CORS per la suite). La suite chiama questi
+  // endpoint DAL BROWSER per il lancio in-suite di AVI/BP: stesso sito
+  // *.citationrate.com → i cookie auth passano, serve solo abilitare il CORS
+  // con credenziali per l'origine suite. Additivo: nessun effetto same-origin.
   if (path.startsWith("/api/")) {
-    return NextResponse.next();
+    const origin = request.headers.get("origin") || "";
+    const ALLOWED = new Set<string>([
+      "https://suite.citationrate.com",
+      "https://avi.citationrate.com",
+    ]);
+    if (!IS_PROD) { ALLOWED.add("http://localhost:3000"); ALLOWED.add("http://localhost:3001"); }
+    const corsOk = ALLOWED.has(origin);
+    if (request.method === "OPTIONS" && corsOk) {
+      const pre = new NextResponse(null, { status: 204 });
+      pre.headers.set("Access-Control-Allow-Origin", origin);
+      pre.headers.set("Access-Control-Allow-Credentials", "true");
+      pre.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+      pre.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      pre.headers.set("Vary", "Origin");
+      return pre;
+    }
+    const res = NextResponse.next();
+    if (corsOk) {
+      res.headers.set("Access-Control-Allow-Origin", origin);
+      res.headers.set("Access-Control-Allow-Credentials", "true");
+      res.headers.set("Vary", "Origin");
+    }
+    return res;
   }
 
   const isAuthRoute = path.startsWith("/login") || path.startsWith("/register") || path.startsWith("/forgot-password");
