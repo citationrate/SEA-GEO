@@ -258,13 +258,32 @@ async function computeCompetitorAVI(
     );
   const denominator = analysisCount ?? totalPrompts;
 
-  // Group by competitor name
+  // Group by NORMALIZED match key: così le varianti di maiuscole/minuscole/spazi/
+  // underscore/punteggiatura dello STESSO competitor collassano in uno solo
+  // (es. "Milano ha fame" = "Milanohafame" = "Milano ha Fame" = "dove_mangiamo_oggi").
+  const matchKey = (s: string) =>
+    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const byCompetitor = new Map<string, any[]>();
+  const displayCounts = new Map<string, Map<string, number>>(); // key → { variante: conteggio }
   for (const m of rows) {
-    const name = m.competitor_name;
-    if (!byCompetitor.has(name)) byCompetitor.set(name, []);
-    byCompetitor.get(name)!.push(m);
+    const k = matchKey(m.competitor_name);
+    if (!k) continue;
+    if (!byCompetitor.has(k)) { byCompetitor.set(k, []); displayCounts.set(k, new Map()); }
+    byCompetitor.get(k)!.push(m);
+    const dc = displayCounts.get(k)!;
+    dc.set(m.competitor_name, (dc.get(m.competitor_name) || 0) + 1);
   }
+  // Nome da mostrare per ogni gruppo: il più frequente; a parità, quello con spazi
+  // (più leggibile) e più lungo.
+  const bestDisplay = (k: string): string => {
+    const dc = displayCounts.get(k);
+    if (!dc) return k;
+    return Array.from(dc.entries()).sort((a, b) =>
+      (b[1] - a[1])
+      || ((b[0].includes(" ") ? 1 : 0) - (a[0].includes(" ") ? 1 : 0))
+      || (b[0].length - a[0].length)
+    )[0][0];
+  };
 
   // Get run numbers for consistency calculation
   const { data: promptsData } = await supabase
@@ -276,7 +295,8 @@ async function computeCompetitorAVI(
   const totalRuns = uniqueRuns.size || 1;
 
   const upsertRows: any[] = [];
-  for (const [name, mentionRows] of Array.from(byCompetitor.entries())) {
+  for (const [key, mentionRows] of Array.from(byCompetitor.entries())) {
+    const name = bestDisplay(key); // nome leggibile, varianti già collassate
     const count = mentionRows.length;
 
     // Check if new aligned metrics are available (competitor_tone column populated)
