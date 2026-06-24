@@ -411,6 +411,17 @@ function extractRealUrlsFromText(text: string): Set<string> {
   return domains;
 }
 
+/** Match deterministico fonte↔dominio del brand: il "sito tuo" non si affida a
+ *  Haiku, si riconosce confrontando i domini normalizzati. */
+function domainMatchesBrand(domain?: string | null, brandDomain?: string | null): boolean {
+  if (!domain || !brandDomain) return false;
+  const norm = (d: string) =>
+    d.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "").toLowerCase().trim();
+  const a = norm(domain), b = norm(brandDomain);
+  if (!a || !b || b.length < 4) return false;
+  return a === b || a.endsWith("." + b) || a.includes(b) || b.includes(a);
+}
+
 /** Filter AI-extracted sources to only keep those whose domain actually appears in the response */
 function validateSources<T extends { domain: string | null }>(
   sources: T[],
@@ -679,14 +690,17 @@ ${cleanResponse}`;
       })(),
       sources: validateSources(
         Array.isArray(parsed.sources)
-          ? parsed.sources.map((s: any) => ({
-              url: s.url ?? null,
-              domain: s.domain ?? null,
-              label: s.label ?? null,
-              source_type: VALID_SOURCE_TYPES.includes(s.source_type) ? s.source_type : "other",
-              is_brand_owned: Boolean(s.is_brand_owned),
-              context: s.context ?? null,
-            }))
+          ? parsed.sources.map((s: any) => {
+              const brandOwned = domainMatchesBrand(s.domain, brandDomain) || Boolean(s.is_brand_owned);
+              return {
+                url: s.url ?? null,
+                domain: s.domain ?? null,
+                label: s.label ?? null,
+                source_type: brandOwned ? "brand_owned" : (VALID_SOURCE_TYPES.includes(s.source_type) ? s.source_type : "other"),
+                is_brand_owned: brandOwned,
+                context: s.context ?? null,
+              };
+            })
           : [],
         response,
       ),
@@ -993,14 +1007,17 @@ source_type: media|review|ecommerce|social|competitor|wikipedia|other`;
       })(),
       sources: validateSources(
         Array.isArray(parsed.sources)
-          ? parsed.sources.map((s: any) => ({
-              url: s.url ?? null,
-              domain: s.domain ?? null,
-              label: s.label ?? null,
-              source_type: VALID_SOURCE_TYPES.includes(s.source_type) ? s.source_type : "other",
-              is_brand_owned: Boolean(s.is_brand_owned),
-              context: s.context ?? null,
-            }))
+          ? parsed.sources.map((s: any) => {
+              const brandOwned = domainMatchesBrand(s.domain, brandDomain) || Boolean(s.is_brand_owned);
+              return {
+                url: s.url ?? null,
+                domain: s.domain ?? null,
+                label: s.label ?? null,
+                source_type: brandOwned ? "brand_owned" : (VALID_SOURCE_TYPES.includes(s.source_type) ? s.source_type : "other"),
+                is_brand_owned: brandOwned,
+                context: s.context ?? null,
+              };
+            })
           : [],
         response,
       ),
