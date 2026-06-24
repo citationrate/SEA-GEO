@@ -452,7 +452,8 @@ function getSectorCompetitorGuidance(sector?: string, brandType?: string): strin
     return [
       `This brand is a content creator / publisher / media outlet (sector: "${sector ?? "generic"}").`,
       `Valid competitors are ONLY OTHER content creators, bloggers, influencers, online magazines, blogs, channels and media outlets in the SAME niche.`,
-      `Do NOT list the venues, restaurants, shops, products, companies, brands, events, places or businesses they cover, review, recommend or feature — those are SUBJECTS of the content, NOT competitors.`,
+      `Do NOT list the venues, restaurants, bars, hotels, shops, products, physical businesses, places or events they cover, review, recommend or feature — those are SUBJECTS of the content, NOT competitors.`,
+      `Do NOT list influencer-marketing platforms, creator marketplaces, talent agencies, creator databases or analytics tools (e.g. tools used to FIND, hire or measure creators) — those are TOOLS, not creators.`,
       PLATFORM_EXCLUSION,
     ].join(" ");
   }

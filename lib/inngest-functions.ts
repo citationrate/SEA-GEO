@@ -153,6 +153,10 @@ const PLATFORM_GENERIC_BLOCKLIST = [
   "tiktok", "instagram", "youtube", "facebook", "linkedin", "reddit",
   "pinterest", "threads", "snapchat", "twitch", "telegram", "whatsapp",
   "twitter", "bloggeritalia", "blogger italia",
+  // Tool/piattaforme di influencer-marketing (strumenti per trovare/misurare
+  // creator, non competitor di un creator).
+  "influur", "heepsy", "blogmeter", "influenxer", "checkbb", "socialveins",
+  "upfluence", "klear", "hypeauditor", "modash", "buzzoole", "favikon",
 ];
 
 function isInstitutional(name: string): boolean {
