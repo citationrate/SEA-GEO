@@ -12,6 +12,10 @@ const startSchema = z.object({
   run_count: z.number().int().min(1).max(3).default(1),
   browsing: z.boolean().default(true),
   query_source: z.enum(["plan", "wallet"]).default("plan"),
+  // Override opzionali (lancio in-suite "scegli quante query/modelli"). Additivi:
+  // se assenti, comportamento invariato (tutte le query attive + modelli progetto).
+  query_ids: z.array(z.string().uuid()).min(1).optional(),
+  models: z.array(z.string()).min(1).optional(),
 });
 
 export async function POST(request: Request) {
@@ -29,7 +33,7 @@ export async function POST(request: Request) {
     const parsed = startSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { project_id, run_count, browsing: requestedBrowsing, query_source } = parsed.data;
+    const { project_id, run_count, browsing: requestedBrowsing, query_source, query_ids: queryIdsOverride, models: modelsOverride } = parsed.data;
 
     // Auto-fail stale running runs (older than 30 minutes)
     await (supabase.from("analysis_runs") as any)
@@ -47,18 +51,27 @@ export async function POST(request: Request) {
       .single();
     if (!project) return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
 
-    // Read models from project config
-    const models_used: string[] = (project as any).models_config ?? ["gpt-5.4-mini"];
+    // Read models from project config. Override opzionale: limita ai modelli scelti
+    // CHE IL PROGETTO HA GIÀ configurato (nessuna escalation di piano).
+    let models_used: string[] = (project as any).models_config ?? ["gpt-5.4-mini"];
+    if (modelsOverride?.length) {
+      const picked = models_used.filter((id: string) => modelsOverride.includes(id));
+      models_used = picked.length ? picked : models_used;
+    }
     let validModels = models_used.filter((id: string) => ALL_MODEL_IDS.includes(id));
     if (!validModels.length) return NextResponse.json({ error: "Nessun modello valido configurato" }, { status: 400 });
 
-    // Fetch only active, non-soft-deleted queries.
-    const { data: queries } = await supabase
+    // Fetch only active, non-soft-deleted queries. Override opzionale: solo il
+    // sottoinsieme scelto (lancio in-suite "scegli quante domande").
+    const { data: allQueries } = await supabase
       .from("queries")
       .select("*")
       .eq("project_id", project_id)
       .neq("is_active", false)
       .is("deleted_at", null);
+    const queries = queryIdsOverride?.length
+      ? (allQueries ?? []).filter((q: any) => queryIdsOverride.includes(q.id))
+      : (allQueries ?? []);
 
     const { data: segments } = await supabase
       .from("audience_segments")
