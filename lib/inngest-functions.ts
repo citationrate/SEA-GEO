@@ -147,8 +147,17 @@ const INSTITUTIONAL_BLOCKLIST = [
   "cassazione", "appello",
 ];
 
+// Piattaforme/social + generici: MAI competitor di nessun brand (sono canali o
+// termini di categoria). Esclusione universale, vale per ogni settore.
+const PLATFORM_GENERIC_BLOCKLIST = [
+  "tiktok", "instagram", "youtube", "facebook", "linkedin", "reddit",
+  "pinterest", "threads", "snapchat", "twitch", "telegram", "whatsapp",
+  "twitter", "bloggeritalia", "blogger italia",
+];
+
 function isInstitutional(name: string): boolean {
-  const lower = name.toLowerCase().trim();
+  const lower = ` ${name.toLowerCase().trim()} `;
+  if (PLATFORM_GENERIC_BLOCKLIST.some(kw => lower.includes(kw))) return true;
   return INSTITUTIONAL_BLOCKLIST.some(kw => lower.includes(kw));
 }
 

@@ -258,7 +258,7 @@ function stripMarkdown(s: string): string {
  * Strips markdown formatting before comparison to handle
  * bold/italic brand names (e.g. **Lattebusche**).
  */
-function detectBrandMention(response: string, targetBrand: string): BrandDetection {
+export function detectBrandMention(response: string, targetBrand: string): BrandDetection {
   const cleanBrand = targetBrand.trim();
   const brandWordCount = cleanBrand.split(/\s+/).filter(Boolean).length;
   const classifyMatch = (variant: string): "full" | "partial" => {
@@ -427,9 +427,36 @@ function validateSources<T extends { domain: string | null }>(
   });
 }
 
-/** Sector-aware guidance for competitor extraction */
-function getSectorCompetitorGuidance(sector?: string): string {
+// Piattaforme/social: MAI competitor di nessun brand (sono canali). Esclusione
+// universale, valida per ogni settore.
+const PLATFORM_EXCLUSION =
+  "Never include social platforms or channels (TikTok, Instagram, YouTube, Facebook, X/Twitter, LinkedIn, Reddit, Pinterest, Threads, Twitch) as competitors — they are distribution channels, not competitors.";
+
+/** Sector-aware guidance for competitor extraction. Generale per qualsiasi brand:
+ *  il tipo dei competitor deriva dalla NATURA del brand (settore/brand_type). */
+function getSectorCompetitorGuidance(sector?: string, brandType?: string): string {
   const s = (sector ?? "").toLowerCase();
+  const bt = (brandType ?? "").toLowerCase();
+
+  // Media / editori / content creator / agenzie di contenuto: i competitor sono
+  // ALTRI creator/media/blog dello stesso ambito, NON i locali, prodotti, aziende
+  // o eventi che coprono o recensiscono (quelli sono SOGGETTI, non competitor).
+  const MEDIA_HINTS = [
+    "news", "editoria", "portali", "media", "giornal", "magazine", "rivista",
+    "blog", "creator", "content", "contenut", "influencer", "publisher",
+    "informativ", "marketing", "comunicazione", "communication", "divulgaz",
+  ];
+  const isMediaCreator = MEDIA_HINTS.some((k) => s.includes(k))
+    || ["creator", "media", "publisher", "influencer", "blog"].some((k) => bt.includes(k));
+  if (isMediaCreator) {
+    return [
+      `This brand is a content creator / publisher / media outlet (sector: "${sector ?? "generic"}").`,
+      `Valid competitors are ONLY OTHER content creators, bloggers, influencers, online magazines, blogs, channels and media outlets in the SAME niche.`,
+      `Do NOT list the venues, restaurants, shops, products, companies, brands, events, places or businesses they cover, review, recommend or feature — those are SUBJECTS of the content, NOT competitors.`,
+      PLATFORM_EXCLUSION,
+    ].join(" ");
+  }
+
   const sectorMap: Record<string, string> = {
     "legal": "law firms, consulting firms, claims management companies, legal-tech platforms",
     "legale": "studi legali, società di consulenza, società di gestione sinistri, piattaforme legal-tech",
@@ -461,7 +488,7 @@ function getSectorCompetitorGuidance(sector?: string): string {
     validTypes = "companies, agencies, studios, or services that a customer could hire or buy from";
   }
 
-  return `For this sector (${sector ?? "generic"}), valid competitors are: ${validTypes}.`;
+  return `For this sector (${sector ?? "generic"}), valid competitors are: ${validTypes}. ${PLATFORM_EXCLUSION}`;
 }
 
 function positionScore(rank: number | null, nCompetitors: number): number {
@@ -499,7 +526,7 @@ async function extractCompetitorsTopicsSources(
   const lang = language === "en" ? "English" : language === "fr" ? "French" : language === "de" ? "German" : language === "es" ? "Spanish" : "Italian";
   const langInstr = `IMPORTANT: All extracted topics, labels, and context text MUST be in ${lang} — match the language of the response being analyzed.`;
 
-  const sectorCompetitorGuidance = getSectorCompetitorGuidance(sector);
+  const sectorCompetitorGuidance = getSectorCompetitorGuidance(sector, brandType);
 
   // Split prompt into a STATIC prefix (cacheable for the duration of a run —
   // brand/sector/language/brandType are stable) and a DYNAMIC suffix
@@ -750,7 +777,7 @@ You MUST distinguish between:
 Only set brand_mentioned=true if the response refers to the SPECIFIC COMPANY "${targetBrand}"${brandDomain ? ` (website: ${brandDomain})` : ""}, NOT when category words appear generically.`
     : "";
 
-  const sectorGuidance = getSectorCompetitorGuidance(sector);
+  const sectorGuidance = getSectorCompetitorGuidance(sector, brandType);
 
   const competitorExclusionRules = `Extract ONLY the parent brand/company name for each competitor mentioned. Never include product model names, version numbers, or product lines.
 Examples: 'Samsung Galaxy S24 Ultra' → 'Samsung', 'Asus ProArt Studiobook' → 'Asus', 'Google Pixel Watch' → 'Google', 'Microsoft Surface' → 'Microsoft', 'Dell XPS 14' → 'Dell'.
