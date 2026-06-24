@@ -237,6 +237,9 @@ export async function POST(request: Request) {
         modelsUsed: validModels,
         runCount: effectiveRunCount,
         browsing,
+        // Sottoinsieme di query scelto (lancio in-suite): il worker deve eseguire
+        // SOLO queste, altrimenti completed_prompts supera total_prompts (barra >100%).
+        queryIds: queryIdsOverride ?? null,
         // Pass billing context so Inngest can deduct after confirming start
         billing: {
           userId: user.id,

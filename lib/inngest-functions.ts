@@ -799,13 +799,14 @@ export const runAnalysis = inngest.createFunction(
   },
   { event: "analysis/start" },
   async ({ event, step }) => {
-    const { runId, projectId, modelsUsed: rawModels, runCount, browsing = true, billing } = event.data as {
+    const { runId, projectId, modelsUsed: rawModels, runCount, browsing = true, billing, queryIds } = event.data as {
       runId: string;
       projectId: string;
       modelsUsed: string[];
       runCount: number;
       browsing?: boolean;
       billing?: { userId: string; querySource: string; promptCost: number };
+      queryIds?: string[] | null;
     };
 
     // Filter out models whose provider credentials are not configured
@@ -860,12 +861,16 @@ export const runAnalysis = inngest.createFunction(
         .eq("id", projectId)
         .single();
 
-      const { data: queries } = await supabase
+      const { data: allQueries } = await supabase
         .from("queries")
         .select("*")
         .eq("project_id", projectId)
         .eq("is_active", true)
         .is("deleted_at", null);
+      // Lancio in-suite: esegui SOLO il sottoinsieme scelto (coerente con total_prompts).
+      const queries = queryIds?.length
+        ? (allQueries ?? []).filter((q: { id: string }) => queryIds.includes(q.id))
+        : (allQueries ?? []);
 
       const { data: segments } = await supabase
         .from("audience_segments")
