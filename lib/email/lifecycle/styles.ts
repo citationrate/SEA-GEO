@@ -135,7 +135,7 @@ export function heading(line1: string, accentLine?: string): string {
 export function emailLayout(opts: { preview: string; bodyInner: string; lang?: string }): string {
   const lang = opts.lang || "it";
   const f = {
-    address: "CitationRate &middot; suite.citationrate.com &middot; avi.citationrate.com",
+    address: `<a href="https://www.linkedin.com/company/citationrate/about/" target="_blank" style="color:${colors.textMuted};text-decoration:none;">LinkedIn</a> &middot; <a href="https://www.instagram.com/citationrate" target="_blank" style="color:${colors.textMuted};text-decoration:none;">Instagram</a> &middot; <a href="https://www.facebook.com/profile.php?id=61586232725287" target="_blank" style="color:${colors.textMuted};text-decoration:none;">Facebook</a> &middot; <a href="https://www.citationrate.com" target="_blank" style="color:${colors.textMuted};text-decoration:none;">Website</a>`,
   };
 
   return `<!DOCTYPE html>
