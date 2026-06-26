@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     const { data: project } = await supabase
       .from("projects")
-      .select("target_brand, sector, language, website_url, market_context")
+      .select("target_brand, sector, language, website_url, market_context, known_competitors, country, site_analysis")
       .eq("id", project_id)
       .eq("user_id", user.id)
       .is("deleted_at", null)
@@ -39,12 +39,28 @@ export async function POST(request: Request) {
     const finalCount = (prof?.plan ?? "demo") === "demo" ? Math.min(count, 2) : count;
     const langName = LANG_NAME[p.language] || "italiano";
 
+    // KB-2: contesto extra dal progetto (competitor + profilo-sito) per query più
+    // mirate sull'offerta reale. Tutto opzionale: se manca, il prompt resta come prima.
+    const competitors: string[] = Array.isArray(p.known_competitors)
+      ? p.known_competitors.filter((c: unknown): c is string => typeof c === "string" && c.trim().length > 0).slice(0, 6)
+      : [];
+    const sa = p.site_analysis && typeof p.site_analysis === "object" ? (p.site_analysis as Record<string, unknown>) : null;
+    const mainService = sa && typeof sa.main_service === "string" ? sa.main_service : "";
+    const valueProp = sa && typeof sa.value_proposition === "string" ? sa.value_proposition : "";
+    const sectorKeywords = sa && Array.isArray(sa.sector_keywords)
+      ? (sa.sector_keywords as unknown[]).filter((k): k is string => typeof k === "string").slice(0, 6)
+      : [];
+
     const prompt = `Sei un esperto di ricerca AI. Genera ESATTAMENTE ${finalCount} domande che un potenziale cliente digiterebbe a un assistente AI (tipo ChatGPT) per trovare aziende o servizi nel settore "${p.sector || "generico"}".
 Regole:
 - NON menzionare il brand "${p.target_brand}". Sono domande generiche di scoperta, non sul brand.
 - Scrivi le domande in ${langName}.
 - Mix di TOFU (scoperta ampia, es. "quali sono le migliori aziende che...") e MOFU (valutazione/confronto, es. "come scegliere tra...").
 ${p.market_context ? `- Contesto di mercato: ${p.market_context}` : ""}
+${mainService ? `- L'azienda offre principalmente: ${mainService}. Genera domande pertinenti a questa offerta, non solo al settore generico.` : ""}
+${valueProp ? `- Proposta di valore: ${valueProp}.` : ""}
+${sectorKeywords.length ? `- Temi rilevanti: ${sectorKeywords.join(", ")}.` : ""}
+${competitors.length ? `- Concorrenti noti nello spazio (servono solo a orientare il TIPO di domande di scoperta; NON nominarli nelle domande): ${competitors.join(", ")}.` : ""}
 Rispondi SOLO con un array JSON, nessun altro testo: [{"text": "...", "funnel_stage": "TOFU"|"MOFU"}]`;
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
