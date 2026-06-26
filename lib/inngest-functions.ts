@@ -1,5 +1,6 @@
 import { inngest } from "./inngest";
 import { createServiceClient } from "./supabase/service";
+import { createCitationRateServiceClient } from "./supabase/citationrate-service";
 import {
   callAIModel,
   type AIModelResult,
@@ -1090,6 +1091,46 @@ export const runAnalysis = inngest.createFunction(
             queries_reset_at: isNewMonth ? now.toISOString() : undefined,
           })
           .eq("id", project.user_id);
+      }
+    });
+
+    // Step 3b (KB-3): la knowledge base del brand cresce dai run. Best-effort e
+    // NON-FATALE: i competitor scoperti rientrano nel progetto canonico (DB
+    // CitationRate), senza mai sovrascrivere ciò che l'utente ha confermato.
+    await step.run("kb-sync-brand", async () => {
+      try {
+        const seageo = createServiceClient();
+        const { data: aviProj } = await (seageo.from("projects") as any)
+          .select("canonical_project_id").eq("id", projectId).single();
+        const canonicalId = aviProj?.canonical_project_id;
+        if (!canonicalId) return;
+
+        const { data: comps } = await (seageo.from("competitor_avi") as any)
+          .select("competitor_name").eq("run_id", runId);
+        const names: string[] = ((comps ?? []) as any[])
+          .map((c) => (typeof c?.competitor_name === "string" ? c.competitor_name.trim() : ""))
+          .filter((s: string) => s.length > 0);
+        const discovered: string[] = Array.from(new Set<string>(names)).slice(0, 12);
+        if (!discovered.length) return;
+
+        const cr = createCitationRateServiceClient();
+        const { data: proj } = await (cr.from("projects") as any)
+          .select("competitors, field_meta").eq("id", canonicalId).is("deleted_at", null).single();
+        if (!proj) return;
+
+        const fm = (proj.field_meta && typeof proj.field_meta === "object") ? proj.field_meta : {};
+        if (fm?.competitors?.confirmed === true) return; // l'utente possiede il campo: non toccare
+
+        const existing: string[] = Array.isArray(proj.competitors)
+          ? proj.competitors.filter((x: any) => typeof x === "string") : [];
+        const union = Array.from(new Set<string>([...existing, ...discovered])).slice(0, 12);
+        const nowIso = new Date().toISOString();
+        const newFm = { ...fm, competitors: { source: "avi-run", confidence: 0.6, confirmed: false, updated_at: nowIso } };
+        await (cr.from("projects") as any)
+          .update({ competitors: union, field_meta: newFm, updated_at: nowIso })
+          .eq("id", canonicalId).is("deleted_at", null);
+      } catch (e) {
+        console.error("[inngest] kb-sync-brand non-fatal:", e instanceof Error ? e.message : e);
       }
     });
 
