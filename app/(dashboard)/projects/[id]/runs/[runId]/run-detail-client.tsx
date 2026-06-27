@@ -9,6 +9,7 @@ import { AVIBars } from "./avi-bars";
 import { RunMetrics } from "./run-metrics";
 import { SegmentSection } from "./segment-section";
 import { StabilitySection } from "./stability-section";
+import { RunCalibratedCta } from "./run-calibrated-cta";
 import { modelIdToBrand } from "@citationrate/llm-client";
 
 const MODEL_LABELS: Record<string, string> = {
@@ -106,6 +107,7 @@ export interface RunDetailClientProps {
   competitorAviData: any[];
   segments: any[];
   runCount: number;
+  plan: string;
 }
 
 export function RunDetailClient({
@@ -122,6 +124,7 @@ export function RunDetailClient({
   competitorAviData,
   segments,
   runCount,
+  plan,
 }: RunDetailClientProps) {
   const { t } = useTranslation();
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
@@ -211,6 +214,9 @@ export function RunDetailClient({
           />
         </div>
       )}
+
+      {/* Vista calibrata: vittoria (coriandoli al 1° run) + gancio gap → upsell */}
+      {showAvi && !selectedModel && <RunCalibratedCta plan={plan} runCount={runCount} />}
 
       {/* Consultation CTA after AVI */}
       {showAvi && <ConsultationCTA />}

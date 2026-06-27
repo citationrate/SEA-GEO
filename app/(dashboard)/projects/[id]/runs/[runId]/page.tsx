@@ -389,6 +389,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
         competitorAviData={competitorAviData ?? []}
         segments={(segments ?? []) as any[]}
         runCount={runCount}
+        plan={botPlan}
       />
 
       {/* T4: Locked preview + CTA pricing per utenti demo. Trasforma la
