@@ -52,7 +52,8 @@ interface AVICalcResult {
   stability_score: number;
 }
 
-function calculateAVIFromAnalyses(analyses: any[], prompts: any[]): AVICalcResult {
+// Calcolo "core" su un sottoinsieme di righe (un blocco solo).
+function aviCore(analyses: any[]): AVICalcResult {
   const zero: AVICalcResult = { avi_score: 0, presence_score: 0, rank_score: 0, sentiment_score: 0, stability_score: 0 };
   if (analyses.length === 0) return zero;
 
@@ -90,6 +91,28 @@ function calculateAVIFromAnalyses(analyses: any[], prompts: any[]): AVICalcResul
     rank_score: Math.round(rank_score * 100) / 100,
     sentiment_score: Math.round(sentiment_score * 100) / 100,
     stability_score: Math.round(stability_score * 100) / 100,
+  };
+}
+
+// AVI blended 50/50 branded/non-branded, allineato al calcolo server (avi.ts).
+// setTypeByPrompt: prompt_executed_id → set_type della query. Fallback su aviCore
+// se manca un blocco (vista filtrata senza branded, run vecchi).
+function calculateAVIFromAnalyses(analyses: any[], setTypeByPrompt: Map<string, string>): AVICalcResult {
+  if (analyses.length === 0) return { avi_score: 0, presence_score: 0, rank_score: 0, sentiment_score: 0, stability_score: 0 };
+  const branded = analyses.filter((a) => setTypeByPrompt.get(a.prompt_executed_id) === "branded");
+  const rest = analyses.filter((a) => setTypeByPrompt.get(a.prompt_executed_id) !== "branded");
+  if (branded.length === 0 || rest.length === 0) return aviCore(analyses);
+  const w = 0.5;
+  const b = aviCore(branded);
+  const r = aviCore(rest);
+  const all = aviCore(analyses);
+  const blend = (x: number, y: number) => x * w + y * (1 - w);
+  return {
+    avi_score: Math.max(0, Math.min(100, Math.round(blend(b.avi_score, r.avi_score) * 10) / 10)),
+    presence_score: Math.round(blend(b.presence_score, r.presence_score) * 100) / 100,
+    rank_score: Math.round(blend(b.rank_score, r.rank_score) * 100) / 100,
+    sentiment_score: Math.round(blend(b.sentiment_score, r.sentiment_score) * 100) / 100,
+    stability_score: all.stability_score,
   };
 }
 
@@ -136,12 +159,21 @@ export function RunDetailClient({
     return map;
   }, [analyses]);
 
+  // set_type per prompt (per il blend AVI 50/50 lato client, coerente col server)
+  const setTypeByPrompt = useMemo(() => {
+    const qSet = new Map<string, string>();
+    for (const q of queries as any[]) qSet.set(q.id, q.set_type || "");
+    const m = new Map<string, string>();
+    for (const p of prompts as any[]) m.set(p.id, qSet.get(p.query_id) || "");
+    return m;
+  }, [queries, prompts]);
+
   // Filter prompts & analyses by selected model
-  const { filteredPrompts, filteredAnalyses } = useMemo(() => {
+  const { filteredAnalyses } = useMemo(() => {
     const fp = selectedModel ? prompts.filter((p: any) => p.model === selectedModel) : prompts;
     const fpIds = new Set(fp.map((p: any) => p.id));
     const fa = analyses.filter((a: any) => fpIds.has(a.prompt_executed_id));
-    return { filteredPrompts: fp, filteredAnalyses: fa };
+    return { filteredAnalyses: fa };
   }, [selectedModel, prompts, analyses]);
 
   // Recalculate AVI for selected model (or use original for "Tutti")
@@ -155,8 +187,8 @@ export function RunDetailClient({
         stability_score: aviData.stability_score,
       };
     }
-    return calculateAVIFromAnalyses(filteredAnalyses, filteredPrompts);
-  }, [selectedModel, aviData, filteredAnalyses, filteredPrompts]);
+    return calculateAVIFromAnalyses(filteredAnalyses, setTypeByPrompt);
+  }, [selectedModel, aviData, filteredAnalyses, setTypeByPrompt]);
 
   const showAvi = aviData || (selectedModel && filteredAnalyses.length > 0);
   const noBrandMentions = computedAvi.avi_score === 0 && computedAvi.presence_score === 0;
