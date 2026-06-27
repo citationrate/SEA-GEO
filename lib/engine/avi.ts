@@ -19,6 +19,8 @@ interface AnalysisRow {
   run_number: number;
   query_id: string;
   segment_id: string;
+  /** Tipo di query: "branded" (sul nome del brand) vs il resto (competitive). */
+  set_type?: string;
 }
 
 /**
@@ -109,6 +111,41 @@ export function calculateAVI(analyses: AnalysisRow[]): AVIResult {
       sentiment_score: Math.round(sentiment_score * 100) / 100,
       stability_score: Math.round(stability_score * 100) / 100,
       avg_brand_rank,
+    },
+  };
+}
+
+/**
+ * AVI "blended": media pesata tra il blocco BRANDED (query sul nome del brand)
+ * e il blocco non-branded (query competitive). Peso fisso → confrontabile nel
+ * tempo. Restituisce un solo AVI (le componenti presenza/posizione/sentiment
+ * sono blendate con lo stesso peso; stability e avg_brand_rank restano calcolati
+ * su tutti i prompt, sono informativi).
+ *
+ * RETE DI SICUREZZA: se manca uno dei due blocchi (es. run vecchi o progetti
+ * senza query branded), ricade ESATTAMENTE su calculateAVI(tutti) = comportamento
+ * di oggi. Cosi' lo storico e i progetti senza branded NON cambiano.
+ */
+export function calculateBlendedAVI(analyses: AnalysisRow[], brandedWeight = 0.5): AVIResult {
+  const branded = analyses.filter((a) => a.set_type === "branded");
+  const rest = analyses.filter((a) => a.set_type !== "branded");
+  if (branded.length === 0 || rest.length === 0) {
+    return calculateAVI(analyses);
+  }
+  const w = Math.min(1, Math.max(0, brandedWeight));
+  const b = calculateAVI(branded);
+  const r = calculateAVI(rest);
+  const all = calculateAVI(analyses); // per stability + avg_brand_rank (informativi)
+  const blend = (x: number, y: number) => x * w + y * (1 - w);
+  const avi_score = Math.round(blend(b.avi_score, r.avi_score) * 10) / 10;
+  return {
+    avi_score: Math.max(0, Math.min(100, avi_score)),
+    components: {
+      presence_score: Math.round(blend(b.components.presence_score, r.components.presence_score) * 100) / 100,
+      rank_score: Math.round(blend(b.components.rank_score, r.components.rank_score) * 100) / 100,
+      sentiment_score: Math.round(blend(b.components.sentiment_score, r.components.sentiment_score) * 100) / 100,
+      stability_score: all.components.stability_score,
+      avg_brand_rank: all.components.avg_brand_rank,
     },
   };
 }

@@ -6,6 +6,7 @@
 
 export interface GenerationInputs {
   categoria: string;
+  brand?: string; // nome del brand → abilita la famiglia "branded" (query sul nome)
   mercato?: string;
   luogo?: string;
   punti_di_forza: string[];
@@ -55,7 +56,7 @@ export interface Persona {
 
 export interface GeneratedQuery {
   text: string;
-  set_type: "generale" | "verticale" | "persona";
+  set_type: "generale" | "verticale" | "persona" | "branded";
   funnel_stage: "TOFU" | "MOFU";
   persona_mode?: "demographic" | "decision_drivers";
   persona_id?: string;
@@ -75,6 +76,16 @@ export function generateQueries(inputs: GenerationInputs): GeneratedQuery[] {
   const obiezione1 = inputs.obiezioni[0] || "";
   const luogo = inputs.luogo || "";
   const mercato = inputs.mercato || "";
+
+  // --- Family 0: BRANDED (sul nome del brand) ---
+  // Query dove l'AI quasi sempre ti cita = la "vittoria". Entrano nell'AVI con
+  // peso fisso (blend 50/50) e alimentano la vista "quando ti cercano l'AI ti trova".
+  const brand = inputs.brand?.trim();
+  if (brand) {
+    queries.push({ text: `Cosa offre ${brand} e per cosa si distingue?`, set_type: "branded", funnel_stage: "TOFU" });
+    queries.push({ text: `${brand} è affidabile? Cosa dicono le recensioni?`, set_type: "branded", funnel_stage: "MOFU" });
+    queries.push({ text: `Quali sono i punti di forza di ${brand} rispetto alle alternative?`, set_type: "branded", funnel_stage: "MOFU" });
+  }
 
   // --- Family 1: GENERALI (Benchmark) ---
   queries.push({

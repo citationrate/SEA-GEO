@@ -15,6 +15,31 @@ const schema = z.object({
 
 const LANG_NAME: Record<string, string> = { it: "italiano", en: "English", fr: "français", de: "Deutsch", es: "español" };
 
+// Famiglia BRANDED (sul nome del brand) = la "vittoria": l'AI quasi sempre ti
+// cita. Entra nell'AVI col blend 50/50. Template per lingua, niente trattini.
+const BRANDED_TEMPLATES: Record<string, (b: string) => Array<{ text: string; funnel_stage: "tofu" | "mofu" }>> = {
+  it: (b) => [
+    { text: `Cosa offre ${b} e per cosa si distingue?`, funnel_stage: "tofu" },
+    { text: `${b} è affidabile? Cosa dicono le recensioni?`, funnel_stage: "mofu" },
+  ],
+  en: (b) => [
+    { text: `What does ${b} offer and what makes it stand out?`, funnel_stage: "tofu" },
+    { text: `Is ${b} reliable? What do reviews say about it?`, funnel_stage: "mofu" },
+  ],
+  fr: (b) => [
+    { text: `Que propose ${b} et qu'est-ce qui le distingue ?`, funnel_stage: "tofu" },
+    { text: `${b} est-il fiable ? Que disent les avis ?`, funnel_stage: "mofu" },
+  ],
+  de: (b) => [
+    { text: `Was bietet ${b} und wodurch hebt es sich ab?`, funnel_stage: "tofu" },
+    { text: `Ist ${b} zuverlässig? Was sagen die Bewertungen?`, funnel_stage: "mofu" },
+  ],
+  es: (b) => [
+    { text: `¿Qué ofrece ${b} y en qué se distingue?`, funnel_stage: "tofu" },
+    { text: `¿${b} es fiable? ¿Qué dicen las reseñas?`, funnel_stage: "mofu" },
+  ],
+};
+
 export async function POST(request: Request) {
   try {
     const { supabase, user, error } = await requireAuth();
@@ -88,10 +113,22 @@ Rispondi SOLO con un array JSON, nessun altro testo: [{"text": "...", "funnel_st
         set_type: "generale",
       }));
 
-    if (rows.length > 0) {
-      await (supabase.from("queries") as any).insert(rows);
+    // Aggiunge la famiglia branded (vittoria + ingresso nel blend AVI 50/50).
+    const brandName = (p.target_brand || "").trim();
+    const brandedRows = brandName
+      ? (BRANDED_TEMPLATES[p.language] || BRANDED_TEMPLATES.it)(brandName).map((q) => ({
+          project_id,
+          text: q.text,
+          funnel_stage: q.funnel_stage,
+          set_type: "branded",
+        }))
+      : [];
+
+    const allRows = [...brandedRows, ...rows];
+    if (allRows.length > 0) {
+      await (supabase.from("queries") as any).insert(allRows);
     }
-    return NextResponse.json({ ok: true, inserted: rows.length });
+    return NextResponse.json({ ok: true, inserted: allRows.length, branded: brandedRows.length });
   } catch (err) {
     console.error("[queries/seed] error:", err instanceof Error ? err.message : err);
     return NextResponse.json({ error: "Errore seed query" }, { status: 500 });

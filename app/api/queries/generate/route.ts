@@ -23,7 +23,7 @@ const bodySchema = z.object({
   project_id: z.string().uuid(),
   queries: z.array(z.object({
     text: z.string().min(1),
-    set_type: z.enum(["generale", "verticale", "persona"]),
+    set_type: z.enum(["generale", "verticale", "persona", "branded"]),
     funnel_stage: z.enum(["TOFU", "MOFU"]),
     persona_mode: z.enum(["demographic", "decision_drivers"]).optional(),
     persona_id: z.string().optional(),

@@ -17,6 +17,7 @@ interface Query {
 }
 
 const SET_TYPE_COLORS: Record<string, string> = {
+  branded: "border-green-500/30 text-green-400 bg-green-500/5",
   generale: "border-muted-foreground/30 text-muted-foreground bg-muted-foreground/5",
   verticale: "border-blue-500/30 text-blue-400 bg-blue-500/5",
   persona: "border-purple-500/30 text-purple-400 bg-purple-500/5",
@@ -24,13 +25,14 @@ const SET_TYPE_COLORS: Record<string, string> = {
 };
 
 const SET_TYPE_LABELS: Record<string, string> = {
+  branded: "BRAND",
   generale: "GEN",
   verticale: "VERT",
   persona: "PERS",
   manual: "MAN",
 };
 
-type FilterSetType = "all" | "generale" | "verticale" | "persona" | "manual";
+type FilterSetType = "all" | "branded" | "generale" | "verticale" | "persona" | "manual";
 
 export default function QueriesPage() {
   const params = useParams();

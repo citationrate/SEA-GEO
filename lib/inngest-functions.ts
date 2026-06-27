@@ -13,7 +13,7 @@ import {
   filterAvailableModels,
   MODEL_MAP,
 } from "@citationrate/llm-client";
-import { calculateAVI } from "./engine/avi";
+import { calculateAVI, calculateBlendedAVI } from "./engine/avi";
 import { consumeWalletQueries, incrementBrowsingPromptsUsed, incrementNoBrowsingPromptsUsed } from "./usage";
 import { sendFailureAlert } from "./webhooks/alert-email";
 import { sendD4AVI, sendF1AVI } from "./email/lifecycle/send-d4";
@@ -192,20 +192,33 @@ async function computeAndSaveAVI(
   const rows = (analyses ?? []) as any[];
   if (rows.length === 0) return;
 
+  // set_type per query → distingue le query branded (sul nome) dalle competitive.
+  // Serve all'AVI blended; se nessuna query e' branded il blend ricade su oggi.
+  const queryIds = Array.from(new Set(promptsList.map((p: any) => p.query_id).filter(Boolean)));
+  const setTypeByQuery = new Map<string, string>();
+  if (queryIds.length > 0) {
+    const { data: qRows } = await supabase.from("queries").select("id, set_type").in("id", queryIds);
+    for (const q of (qRows ?? []) as any[]) setTypeByQuery.set(q.id, q.set_type || "");
+  }
+
   // IMPORTANT: Supabase returns NUMERIC columns as strings — always coerce with Number()
   const analysisRows = rows.map((r: any) => {
     const pe = promptMap.get(r.prompt_executed_id);
+    const qid = pe?.query_id ?? "";
     return {
       brand_mentioned: Boolean(r.brand_mentioned),
       brand_rank: r.brand_rank != null ? Number(r.brand_rank) : null,
       sentiment_score: r.sentiment_score != null ? Number(r.sentiment_score) : null,
       run_number: pe?.run_number ?? 1,
-      query_id: pe?.query_id ?? "",
+      query_id: qid,
       segment_id: pe?.segment_id ?? "",
+      set_type: setTypeByQuery.get(qid) || "",
     };
   });
 
-  const result = calculateAVI(analysisRows);
+  // AVI blended 50/50 branded/non-branded (peso fisso, confrontabile nel tempo).
+  // Fallback automatico al calcolo di oggi se mancano query branded.
+  const result = calculateBlendedAVI(analysisRows, 0.5);
 
   const { error: aviError } = await (supabase.from("avi_history") as any)
     .upsert({
