@@ -348,6 +348,182 @@ export async function findCandidatesD6(): Promise<CandidateForUpgrade[]> {
   return out;
 }
 
+// ===== Azioni "Design Diabolico" gruppo D (codici NUOVI, ricorrenti) =====
+
+/** Media semplice (0-100) dei valori numerici di un oggetto scores jsonb. */
+function avgScores(scores: any): number {
+  if (!scores || typeof scores !== "object") return 0;
+  const vals = Object.values(scores).filter((v): v is number => typeof v === "number");
+  return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
+}
+
+function signed(n: number): string {
+  const r = Math.round(n);
+  return r > 0 ? `+${r}` : String(r);
+}
+
+/**
+ * Rate-limit per le mail RICORRENTI: true se NON ne e' stata inviata una dello
+ * stesso tipo all'utente negli ultimi `days` giorni. Sostituisce il dedup
+ * permanente (che per questi tipi e' disattivato in send.ts).
+ */
+async function notSentSince(cr: any, userId: string, type: EmailType, days: number): Promise<boolean> {
+  const { data } = await (cr.from("lifecycle_emails") as any)
+    .select("sent_at")
+    .eq("user_id", userId)
+    .eq("email_type", type)
+    .gte("sent_at", new Date(Date.now() - days * 86400_000).toISOString())
+    .limit(1);
+  return !(data && data.length > 0);
+}
+
+/**
+ * RECAP_M (D1-libro) — recap mensile "Il tuo mese con CitationRate".
+ * Utenti con almeno un'analisi completata negli ultimi 31 giorni, non gia'
+ * recapati negli ultimi 27 (≈ una volta al mese, rolling sull'anniversario).
+ */
+export async function findCandidatesRECAP_M(): Promise<any[]> {
+  const cr = createCitationRateServiceClient();
+  const { data: audits } = await (cr.from("audits") as any)
+    .select("user_id, brand, scores, status, created_at")
+    .eq("status", "completed")
+    .gt("created_at", new Date(Date.now() - 31 * 86400_000).toISOString())
+    .order("created_at", { ascending: false });
+  if (!audits || audits.length === 0) return [];
+
+  const byUser = new Map<string, any[]>();
+  for (const a of audits) {
+    if (!a.scores || !Object.keys(a.scores).length) continue;
+    if (!byUser.has(a.user_id)) byUser.set(a.user_id, []);
+    byUser.get(a.user_id)!.push(a);
+  }
+  const userIds = Array.from(byUser.keys());
+  const profiles = await fetchProfiles(userIds);
+  const auths = await fetchAuthUsers(userIds);
+
+  const out: any[] = [];
+  for (const [userId, list] of Array.from(byUser.entries())) {
+    const p = profiles.get(userId);
+    const u = auths.get(userId);
+    if (!p || !u || p.is_admin) continue;
+    if (!(await notSentSince(cr, userId, "RECAP_M", 27))) continue;
+    const latest = list[0];
+    const prev = list[1] || null;
+    out.push({
+      user_id: userId,
+      email: u.email,
+      full_name: p.full_name,
+      lang_hint: p.lang || null,
+      plan: p.plan,
+      signup_at: u.created_at,
+      days_since_signup: Math.floor((Date.now() - new Date(u.created_at).getTime()) / 86400_000),
+      brand: latest.brand || "",
+      scores: latest.scores,
+      audits_this_month: list.length,
+      score_delta: prev ? signed(avgScores(latest.scores) - avgScores(prev.scores)) : "",
+    });
+  }
+  return out;
+}
+
+/**
+ * Confronto AVI tra le ultime 2 history per i progetti con un run completato
+ * nelle ultime 48h. Base condivisa per INSIGHT_AVI (salita) e DECAY_AVI (calo).
+ */
+async function recentAviDeltas(): Promise<Array<{ project_id: string; curr: any; prev: any }>> {
+  const seageo = createServiceClient();
+  const { data: runs } = await (seageo.from("analysis_runs") as any)
+    .select("project_id, completed_at, status")
+    .eq("status", "completed")
+    .gt("completed_at", new Date(Date.now() - 2 * 86400_000).toISOString());
+  if (!runs || runs.length === 0) return [];
+  const projectIds = Array.from(new Set(runs.map((r: any) => r.project_id))) as string[];
+
+  const { data: hist } = await (seageo.from("avi_history") as any)
+    .select("project_id, run_id, avi_score, presence_score, sentiment_score, avg_brand_rank, computed_at")
+    .in("project_id", projectIds)
+    .order("computed_at", { ascending: false });
+  const byProj = new Map<string, any[]>();
+  for (const h of hist || []) {
+    if (!byProj.has(h.project_id)) byProj.set(h.project_id, []);
+    const arr = byProj.get(h.project_id)!;
+    if (arr.length < 2) arr.push(h);
+  }
+  const res: Array<{ project_id: string; curr: any; prev: any }> = [];
+  for (const [pid, arr] of Array.from(byProj.entries())) {
+    if (arr.length < 2) continue;
+    res.push({ project_id: pid, curr: arr[0], prev: arr[1] });
+  }
+  return res;
+}
+
+async function buildAviCandidates(
+  kind: "decay" | "insight",
+): Promise<any[]> {
+  const deltas = await recentAviDeltas();
+  if (deltas.length === 0) return [];
+  const seageo = createServiceClient();
+  const cr = createCitationRateServiceClient();
+  const pids = deltas.map((d) => d.project_id);
+  const { data: projects } = await (seageo.from("projects") as any)
+    .select("id, user_id, target_brand, country")
+    .in("id", pids);
+  const projMap = new Map<string, any>();
+  for (const p of projects || []) projMap.set(p.id, p);
+  const userIds = Array.from(new Set((projects || []).map((p: any) => p.user_id))) as string[];
+  const profiles = await fetchProfiles(userIds);
+  const auths = await fetchAuthUsers(userIds);
+
+  const type: EmailType = kind === "decay" ? "DECAY_AVI" : "INSIGHT_AVI";
+  const out: any[] = [];
+  for (const d of deltas) {
+    const curr = Number(d.curr.avi_score);
+    const prev = Number(d.prev.avi_score);
+    const presGain = Number(d.curr.presence_score) - Number(d.prev.presence_score);
+    const diff = curr - prev;
+    if (kind === "decay" && !(-diff >= 8)) continue;       // calo >= 8 punti AVI
+    if (kind === "insight" && !(diff >= 8 || presGain >= 8)) continue; // salita >= 8
+    const proj = projMap.get(d.project_id);
+    if (!proj) continue;
+    const userId = proj.user_id;
+    if (!userId) continue;
+    const p = profiles.get(userId);
+    const u = auths.get(userId);
+    if (!p || !u || p.is_admin) continue;
+    if (!(await notSentSince(cr, userId, type, 14))) continue;
+    out.push({
+      user_id: userId,
+      email: u.email,
+      full_name: p.full_name,
+      lang_hint: p.lang || null,
+      plan: p.plan,
+      signup_at: u.created_at,
+      days_since_signup: Math.floor((Date.now() - new Date(u.created_at).getTime()) / 86400_000),
+      brand: proj.target_brand || "",
+      project_id: d.project_id,
+      run_id: d.curr.run_id,
+      avi_score: Math.round(curr),
+      prev_avi_score: Math.round(prev),
+      presence_score: Math.round(Number(d.curr.presence_score)),
+      sentiment_score: Math.round(Number(d.curr.sentiment_score)),
+      avg_brand_rank: d.curr.avg_brand_rank != null ? Number(d.curr.avg_brand_rank) : null,
+      drop_points: Math.round(-diff),
+      gain_points: Math.round(Math.max(diff, presGain)),
+    });
+  }
+  return out;
+}
+
+/** DECAY_AVI (D5-libro) — la visibilita' AI e' calata: "difendi la tua visibilita'". */
+export async function findCandidatesDECAY_AVI(): Promise<any[]> {
+  return buildAviCandidates("decay");
+}
+
+/** INSIGHT_AVI (D4-libro) — insight a sorpresa: la visibilita' AI e' salita. */
+export async function findCandidatesINSIGHT_AVI(): Promise<any[]> {
+  return buildAviCandidates("insight");
+}
+
 // ===== helpers =====
 
 /**
@@ -427,4 +603,7 @@ export const TRIGGERS: Record<EmailType, () => Promise<any[]>> = {
   F1_BP: async () => [],
   D7_TIPS: async () => [],  // triggered by Suite ToolTracker immediately
   D7_CROSS: async () => [], // triggered by cron +3 days after first tool use
+  RECAP_M: findCandidatesRECAP_M,
+  INSIGHT_AVI: findCandidatesINSIGHT_AVI,
+  DECAY_AVI: findCandidatesDECAY_AVI,
 };

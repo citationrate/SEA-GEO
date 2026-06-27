@@ -26,7 +26,12 @@ export type EmailType =
   | "F1_AVI"
   | "F1_BP"
   | "D7_TIPS"
-  | "D7_CROSS";
+  | "D7_CROSS"
+  // Azioni "Design Diabolico" gruppo D (retention). Codici NUOVI, distinti dai
+  // D1/D4/D5 esistenti (che sono drip/post-analisi/upgrade, non queste).
+  | "RECAP_M"      // D1-libro: recap mensile "Il tuo mese con CitationRate"
+  | "INSIGHT_AVI"  // D4-libro: insight a sorpresa (visibilita' AI salita)
+  | "DECAY_AVI";   // D5-libro: alert calo visibilita' AI ("difendi la tua visibilita'")
 
 interface BaseInput {
   name: string;

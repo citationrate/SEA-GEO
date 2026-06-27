@@ -63,7 +63,7 @@ export async function GET(request: Request) {
 
   const types: EmailType[] = onlyType
     ? [onlyType]
-    : ["D1", "D2", "D3", "D5_CS", "D5_AVI", "D6"];
+    : ["D1", "D2", "D3", "D5_CS", "D5_AVI", "D6", "RECAP_M", "INSIGHT_AVI", "DECAY_AVI"];
 
   const report: RunSummary[] = [];
 
@@ -218,6 +218,12 @@ function candidateVars(type: EmailType, c: any): Record<string, string | number 
     auditId: c.audit_id || "",
     projectId: c.project_id || "",
     runId: c.run_id || "",
+    // Variabili per le azioni-libro gruppo D (recap/insight/decay).
+    auditsThisMonth: c.audits_this_month != null ? String(c.audits_this_month) : "",
+    scoreDelta: c.score_delta != null ? String(c.score_delta) : "",
+    prevAviScore: c.prev_avi_score != null ? String(c.prev_avi_score) : "",
+    dropPoints: c.drop_points != null ? String(c.drop_points) : "",
+    gainPoints: c.gain_points != null ? String(c.gain_points) : "",
     ...engineVars,
   };
 }
@@ -256,5 +262,8 @@ function extractPayload(type: EmailType, c: any): Record<string, any> {
   if (type.startsWith("D4_AVI") || type.startsWith("D5_AVI"))
     return { ...base, brand: c.brand, project_id: c.project_id, run_id: c.run_id, avi_score: c.avi_score, presence_score: c.presence_score, sentiment_score: c.sentiment_score, avg_brand_rank: c.avg_brand_rank };
   if (type === "D6") return { ...base, days_since_upgrade: c.days_since_upgrade };
+  if (type === "RECAP_M") return { ...base, brand: c.brand, audits_this_month: c.audits_this_month, score_delta: c.score_delta, scores: c.scores };
+  if (type === "INSIGHT_AVI" || type === "DECAY_AVI")
+    return { ...base, brand: c.brand, project_id: c.project_id, run_id: c.run_id, avi_score: c.avi_score, prev_avi_score: c.prev_avi_score, drop_points: c.drop_points, gain_points: c.gain_points };
   return base;
 }
