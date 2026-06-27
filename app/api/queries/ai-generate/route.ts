@@ -2,6 +2,7 @@ import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
+import { brandedQueries } from "@/lib/branded-queries";
 
 const schema = z.object({
   project_id: z.string().uuid(),
@@ -107,7 +108,14 @@ export async function POST(request: Request) {
     // Trim to exact count if over
     queries = queries.slice(0, count);
 
-    return NextResponse.json({ queries }, { status: 200 });
+    // Punto 3: includi la famiglia branded (vittoria + ingresso nel blend AVI),
+    // deduplicata su testo gia' presente nel progetto. Per i demo non aggiungere
+    // (count gia' capato a 2, restano le generiche).
+    const branded = userPlan === "demo"
+      ? []
+      : brandedQueries(p.target_brand, lang || p.language).filter((b) => !existingTexts.includes(b.text));
+
+    return NextResponse.json({ queries: [...branded, ...queries] }, { status: 200 });
   } catch (err: any) {
     console.error("[QUERY-GEN] ERROR:", err?.message ?? err, err?.status, err?.stack?.slice(0, 300));
     return NextResponse.json({ error: "Errore nella generazione" }, { status: 500 });

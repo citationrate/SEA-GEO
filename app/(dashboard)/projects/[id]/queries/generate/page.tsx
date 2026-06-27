@@ -200,7 +200,7 @@ export default function GenerateQueriesPage() {
       const data = await res.json();
       const aiQueries: GeneratedQuery[] = (data.queries ?? []).map((q: any) => ({
         text: q.text,
-        set_type: "generale" as const,
+        set_type: q.set_type === "branded" ? ("branded" as const) : ("generale" as const),
         funnel_stage: q.funnel_stage === "MOFU" ? "MOFU" as const : "TOFU" as const,
       }));
 
