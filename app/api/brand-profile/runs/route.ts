@@ -65,11 +65,27 @@ export async function POST(request: Request) {
     return apiError("Quota Brand Profile esaurita per questo mese", 402);
   }
 
+  // KB-5: lega la run al progetto canonico (CitationRate) dell'utente, risolto per
+  // brand. Così l'analisi appartiene a un progetto, non solo all'utente. Best-effort.
+  let canonicalProjectId: string | null = null;
+  try {
+    const { data: proj } = await (cr.from("projects") as any)
+      .select("id")
+      .eq("user_id", user.id)
+      .ilike("brand", payload.brand)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    canonicalProjectId = proj?.id ?? null;
+  } catch { /* best-effort */ }
+
   const { data: run, error: insertErr } = await (
     (await import("@/lib/supabase/service")).createServiceClient().schema("brand_profile" as any).from("runs") as any
   )
     .insert({
       user_id: user.id,
+      canonical_project_id: canonicalProjectId,
       brand_name: payload.brand,
       brand_url: payload.brand_url,
       sector: payload.sector,
