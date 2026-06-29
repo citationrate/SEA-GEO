@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 import { createAuthServiceClient, createDataClient } from "@/lib/supabase/server";
 
 /**
@@ -131,7 +132,27 @@ async function ensureProfile(
  */
 export async function requireAuth() {
   const auth = createAuthServiceClient();
-  const { data: { user } } = await auth.auth.getUser();
+  let user: Awaited<ReturnType<typeof auth.auth.getUser>>["data"]["user"] | null = null;
+
+  // 1) Token Bearer (chiamate cross-origin dalla suite): i cookie auth sono
+  //    SameSite=Lax e NON viaggiano sulle fetch cross-site in nessun browser, per
+  //    questo AVI non partiva dalla suite (nemmeno su Chrome). La suite passa il
+  //    token nell'header Authorization e lo validiamo qui.
+  try {
+    const authz = headers().get("authorization") || "";
+    const bearer = authz.toLowerCase().startsWith("bearer ") ? authz.slice(7).trim() : "";
+    if (bearer) {
+      const { data } = await auth.auth.getUser(bearer);
+      user = data?.user ?? null;
+    }
+  } catch { /* fallback al cookie */ }
+
+  // 2) Fallback: sessione via cookie (navigazione diretta su avi.citationrate.com).
+  if (!user) {
+    const { data } = await auth.auth.getUser();
+    user = data?.user ?? null;
+  }
+
   if (!user) {
     return { supabase: null, user: null, error: apiError("Non autenticato", 401) } as const;
   }
