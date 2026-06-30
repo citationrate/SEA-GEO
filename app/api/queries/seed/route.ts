@@ -2,6 +2,9 @@ import { requireAuth } from "@/lib/api-helpers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
+import { analyzeSite, type AnalyzeLang } from "@/lib/site-analysis";
+
+const ANALYZE_LANGS = new Set<AnalyzeLang>(["it", "en", "fr", "de", "es"]);
 
 export const maxDuration = 60;
 
@@ -69,7 +72,29 @@ export async function POST(request: Request) {
     const competitors: string[] = Array.isArray(p.known_competitors)
       ? p.known_competitors.filter((c: unknown): c is string => typeof c === "string" && c.trim().length > 0).slice(0, 6)
       : [];
-    const sa = p.site_analysis && typeof p.site_analysis === "object" ? (p.site_analysis as Record<string, unknown>) : null;
+    let sa = p.site_analysis && typeof p.site_analysis === "object" ? (p.site_analysis as Record<string, unknown>) : null;
+
+    // Suite gap fix: progetti creati da /start nascono con site_analysis = null,
+    // quindi senza crawl le query non-branded uscivano solo dal macro-settore.
+    // Se manca il profilo-sito ma c'è un URL, lo generiamo ora (crawl + Haiku) e
+    // lo PERSISTIAMO sul progetto: ne beneficiano anche il wizard e la pipeline
+    // d'analisi (che leggono site_analysis). Best-effort: se fallisce, si ripiega
+    // sul prompt basato sul solo settore, come prima.
+    if (!sa && typeof p.website_url === "string" && p.website_url.trim()) {
+      try {
+        const lang: AnalyzeLang = ANALYZE_LANGS.has(p.language as AnalyzeLang) ? (p.language as AnalyzeLang) : "it";
+        const result = await analyzeSite(p.website_url, lang);
+        if (result.ok) {
+          sa = result.analysis as unknown as Record<string, unknown>;
+          await (supabase.from("projects") as any)
+            .update({ site_analysis: result.analysis })
+            .eq("id", project_id)
+            .eq("user_id", user.id);
+        }
+      } catch (e) {
+        console.warn("[queries/seed] site analysis failed, falling back to sector-only:", e instanceof Error ? e.message : e);
+      }
+    }
     const mainService = sa && typeof sa.main_service === "string" ? sa.main_service : "";
     const valueProp = sa && typeof sa.value_proposition === "string" ? sa.value_proposition : "";
     const sectorKeywords = sa && Array.isArray(sa.sector_keywords)
@@ -113,10 +138,14 @@ Rispondi SOLO con un array JSON, nessun altro testo: [{"text": "...", "funnel_st
         set_type: "generale",
       }));
 
-    // Aggiunge la famiglia branded (vittoria + ingresso nel blend AVI 50/50).
+    // Branded: per i piani a pagamento le domande sul brand NON sono più
+    // auto-iniettate qui — si scelgono dal selettore dedicato nel wizard. In
+    // DEMO ne teniamo UNA sola, così nell'esperienza demo la citazione sul
+    // brand (la "vittoria" che entra nel blend AVI) è comunque presente.
     const brandName = (p.target_brand || "").trim();
-    const brandedRows = brandName
-      ? (BRANDED_TEMPLATES[p.language] || BRANDED_TEMPLATES.it)(brandName).map((q) => ({
+    const isDemo = (prof?.plan ?? "demo") === "demo";
+    const brandedRows = (brandName && isDemo)
+      ? (BRANDED_TEMPLATES[p.language] || BRANDED_TEMPLATES.it)(brandName).slice(0, 1).map((q) => ({
           project_id,
           text: q.text,
           funnel_stage: q.funnel_stage,

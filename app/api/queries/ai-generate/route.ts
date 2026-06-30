@@ -108,14 +108,14 @@ export async function POST(request: Request) {
     // Trim to exact count if over
     queries = queries.slice(0, count);
 
-    // Punto 3: includi la famiglia branded (vittoria + ingresso nel blend AVI),
-    // deduplicata su testo gia' presente nel progetto. Per i demo non aggiungere
-    // (count gia' capato a 2, restano le generiche).
+    // Branded restituite in un elenco SEPARATO (non più prepese alle generiche):
+    // il wizard le mostra in un selettore dedicato, NON pre-selezionate. Per i
+    // demo niente branded dal wizard (la demo ne riceve una sola dal seed).
     const branded = userPlan === "demo"
       ? []
       : brandedQueries(p.target_brand, lang || p.language).filter((b) => !existingTexts.includes(b.text));
 
-    return NextResponse.json({ queries: [...branded, ...queries] }, { status: 200 });
+    return NextResponse.json({ queries, branded }, { status: 200 });
   } catch (err: any) {
     console.error("[QUERY-GEN] ERROR:", err?.message ?? err, err?.status, err?.stack?.slice(0, 300));
     return NextResponse.json({ error: "Errore nella generazione" }, { status: 500 });

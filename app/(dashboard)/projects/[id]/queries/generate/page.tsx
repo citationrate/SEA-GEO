@@ -92,10 +92,23 @@ export default function GenerateQueriesPage() {
       if (Array.isArray(qs)) setExistingQueryCount(qs.filter((q: any) => q.is_active !== false).length);
     }).catch(() => {});
 
-    // Prefill della categoria dal sector del progetto: snellisce un campo
-    // perché l'utente di solito ripete quello che gia' c'è nel progetto.
+    // Prefill della categoria: NON dal macro-settore (era il segnale generico
+    // che sfasava le query, es. Nutella → "manifattura"). Preferiamo la
+    // categoria REALE derivata dall'analisi del sito (keyword di settore o
+    // servizio principale); il sector resta solo come ultimo fallback.
     fetch(`/api/projects/${projectId}`).then((r) => r.json()).then((proj) => {
-      if (proj?.sector && !categoria) setCategoria(proj.sector);
+      if (categoria) return;
+      const sa = proj?.site_analysis;
+      let fromSite = "";
+      if (sa && typeof sa === "object") {
+        if (Array.isArray(sa.sector_keywords) && typeof sa.sector_keywords[0] === "string" && sa.sector_keywords[0].trim()) {
+          fromSite = sa.sector_keywords[0].trim();
+        } else if (typeof sa.main_service === "string" && sa.main_service.trim()) {
+          fromSite = sa.main_service.trim();
+        }
+      }
+      const prefill = fromSite || proj?.sector || "";
+      if (prefill) setCategoria(prefill);
     }).catch(() => {});
 
     // Luogo passato dalla pagina /queries (input "Luogo della rilevazione"):
@@ -198,13 +211,17 @@ export default function GenerateQueriesPage() {
         throw new Error(data.error || t("common.error"));
       }
       const data = await res.json();
-      const aiQueries: GeneratedQuery[] = (data.queries ?? []).map((q: any) => ({
+      const mapQ = (q: any, forceBranded = false): GeneratedQuery => ({
         text: q.text,
-        set_type: q.set_type === "branded" ? ("branded" as const) : ("generale" as const),
+        set_type: (forceBranded || q.set_type === "branded") ? ("branded" as const) : ("generale" as const),
         funnel_stage: q.funnel_stage === "MOFU" ? "MOFU" as const : "TOFU" as const,
-      }));
+      });
+      const aiQueries: GeneratedQuery[] = (data.queries ?? []).map((q: any) => mapQ(q));
+      // Le branded arrivano in un elenco SEPARATO e finiscono in un selettore a
+      // parte: vengono accodate ma NON pre-selezionate (l'utente le sceglie).
+      const brandedQueries: GeneratedQuery[] = (data.branded ?? []).map((q: any) => mapQ(q, true));
 
-      setGeneratedQueries(aiQueries);
+      setGeneratedQueries([...aiQueries, ...brandedQueries]);
       setSelectedIndexes(new Set(aiQueries.map((_: any, i: number) => i)));
       setStep(3);
     } catch (err) {
@@ -696,14 +713,48 @@ export default function GenerateQueriesPage() {
             </button>
           </div>
 
-          {/* Lista unica delle query AI: TOFU/MOFU non sono piu' visibili in UI
-              (rimangono nei dati per l'engine, ordinati TOFU prima poi MOFU). */}
-          {generatedQueries.length > 0 && (
+          {/* Lista delle query AI: TOFU/MOFU non sono piu' visibili in UI
+              (rimangono nei dati per l'engine, ordinati TOFU prima poi MOFU).
+              Le domande generiche (non-branded) sono pre-selezionate. */}
+          {generatedQueries.some((q) => q.set_type !== "branded") && (
             <div className="card p-5 space-y-1.5">
               {generatedQueries
                 .map((q, i) => ({ ...q, idx: i }))
+                .filter((q) => q.set_type !== "branded")
                 .sort((a, b) => {
-                  // TOFU prima, MOFU dopo — mantiene ordine senza esporre la categoria
+                  if (a.funnel_stage === b.funnel_stage) return a.idx - b.idx;
+                  return a.funnel_stage === "TOFU" ? -1 : 1;
+                })
+                .map((q) => (
+                  <QueryPreviewRow
+                    key={q.idx}
+                    query={q}
+                    idx={q.idx}
+                    selected={selectedIndexes.has(q.idx)}
+                    regenerating={regeneratingIdx === q.idx}
+                    regenDisabled={regeneratingIdx !== null && regeneratingIdx !== q.idx}
+                    onToggle={toggleQuery}
+                    onEdit={(idx, text) => {
+                      setGeneratedQueries((prev) => prev.map((p, i) => i === idx ? { ...p, text } : p));
+                    }}
+                    onRegenerate={regenerateOne}
+                  />
+                ))}
+            </div>
+          )}
+
+          {/* Selettore a parte: domande SUL TUO BRAND. Opzionali e NON
+              pre-selezionate — entrano nell'AVI come "vittoria" solo se scelte. */}
+          {generatedQueries.some((q) => q.set_type === "branded") && (
+            <div className="card p-5 space-y-1.5 border-amber-500/30">
+              <div className="mb-1.5">
+                <p className="text-sm font-semibold text-foreground">{t("generateQueries.brandedTitle")}</p>
+                <p className="text-xs text-muted-foreground">{t("generateQueries.brandedHint")}</p>
+              </div>
+              {generatedQueries
+                .map((q, i) => ({ ...q, idx: i }))
+                .filter((q) => q.set_type === "branded")
+                .sort((a, b) => {
                   if (a.funnel_stage === b.funnel_stage) return a.idx - b.idx;
                   return a.funnel_stage === "TOFU" ? -1 : 1;
                 })
