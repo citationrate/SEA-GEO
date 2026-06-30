@@ -40,7 +40,27 @@ export default async function SourcesPage({
 
   const projectsList = (projects ?? []) as any[];
   const projectIds = projectsList.map((p: any) => p.id);
-  const selectedId = resolveProjectId(searchParams, projectIds);
+
+  // Default landing project = the one holding the user's most recently COMPLETED
+  // analysis — mirrors the dashboard so "Fonti" lands on the same project the user
+  // was looking at, not projects[0] (newest-created, often an empty project).
+  // Only needed when the URL doesn't already pin a project.
+  let lastCompletedProjectId: string | null = null;
+  if (!searchParams.projectId && projectIds.length > 0) {
+    const { data: lastDone } = await supabase
+      .from("analysis_runs")
+      .select("project_id")
+      .in("project_id", projectIds)
+      .eq("status", "completed")
+      .is("deleted_at", null)
+      .order("completed_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    lastCompletedProjectId = (lastDone as any)?.project_id ?? null;
+  }
+
+  const selectedId = resolveProjectId(searchParams, projectIds, lastCompletedProjectId);
 
   const targetIds = selectedId ? [selectedId] : projectIds;
   const selectedProject = projectsList.find((p: any) => p.id === selectedId);
