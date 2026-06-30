@@ -419,7 +419,10 @@ function domainMatchesBrand(domain?: string | null, brandDomain?: string | null)
     d.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "").toLowerCase().trim();
   const a = norm(domain), b = norm(brandDomain);
   if (!a || !b || b.length < 4) return false;
-  return a === b || a.endsWith("." + b) || a.includes(b) || b.includes(a);
+  // Solo uguaglianza esatta o sottodominio del brand. Il vecchio match fuzzy
+  // (a.includes(b) || b.includes(a)) marcava brand_owned per errore su domini
+  // corti/generici (es. un dominio terzo che contiene la stringa del brand).
+  return a === b || a.endsWith("." + b);
 }
 
 /** Filter AI-extracted sources to only keep those whose domain actually appears in the response */
