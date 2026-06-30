@@ -215,6 +215,48 @@ export function paragraph(html: string): string {
   return `<p style="margin:0 0 16px 0;font-family:${fonts.ui};font-size:15px;line-height:1.65;color:${colors.text};">${html}</p>`;
 }
 
+/**
+ * Discounted price display — shows old price struck through + new price bold.
+ * Fully customizable via options; all values have sensible defaults.
+ * Uses table layout for maximum email client compatibility (Gmail, Outlook, Apple Mail).
+ */
+export function priceStrikethrough(opts?: {
+  oldPrice?: string;
+  newPrice?: string;
+  oldPriceColor?: string;
+  newPriceColor?: string;
+  oldPriceFontSize?: string;
+  newPriceFontSize?: string;
+  fontFamily?: string;
+  fontWeight?: number | string;
+  spacing?: string;
+  strikeThickness?: string;
+  strikeColor?: string;
+  textAlign?: "left" | "center" | "right";
+}): string {
+  const o = opts || {};
+  const oldPrice = o.oldPrice || "{oldPrice}";
+  const newPrice = o.newPrice || "{newPrice}";
+  const oldColor = o.oldPriceColor || "#9CA3AF";
+  const newColor = o.newPriceColor || "#16A34A";
+  const oldSize = o.oldPriceFontSize || "18px";
+  const newSize = o.newPriceFontSize || "30px";
+  const family = o.fontFamily || "Inter, Arial, sans-serif";
+  const weight = o.fontWeight ?? 700;
+  const gap = o.spacing || "8px";
+  const thickness = o.strikeThickness || "1.5px";
+  const strikeCol = o.strikeColor || oldColor;
+  const align = o.textAlign || "center";
+
+  // Don't escape template placeholders ({oldPrice}, {newPrice}) — they get
+  // interpolated later by interpolate(). Literal values are escaped.
+  const isPlaceholder = (v: string) => /^\{[\w]+\}$/.test(v);
+  const safeOld = isPlaceholder(oldPrice) ? oldPrice : escapeHtml(oldPrice);
+  const safeNew = isPlaceholder(newPrice) ? newPrice : escapeHtml(newPrice);
+
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td align="${align}" style="padding:0;"><!--[if mso]><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding-right:${gap};vertical-align:baseline;"><![endif]--><span style="display:inline-block;vertical-align:baseline;font-family:${family};font-size:${oldSize};color:${oldColor};text-decoration:line-through;text-decoration-color:${strikeCol};text-decoration-thickness:${thickness};-webkit-text-decoration-color:${strikeCol};mso-style-textdecoration:line-through;line-height:1;padding-right:${gap};">${safeOld}</span><!--[if mso]></td><td style="vertical-align:baseline;"><![endif]--><span style="display:inline-block;vertical-align:baseline;font-family:${family};font-size:${newSize};font-weight:${weight};color:${newColor};line-height:1;">${safeNew}</span><!--[if mso]></td></tr></table><![endif]--></td></tr></table>`;
+}
+
 export function statTable(rows: Array<[string, string]>): string {
   const tds = rows
     .map(
