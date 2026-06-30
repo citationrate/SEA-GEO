@@ -698,9 +698,20 @@ async function extractAndPersist(
     }));
 
   if (sourceRows.length > 0) {
-    const { error } = await (supabase.from("sources") as any)
-      .upsert(sourceRows, { onConflict: "project_id,domain,model" });
-    if (error) console.error("Sources upsert error:", error.message);
+    // Atomic per-(project,domain,model) citation tally. Plain upsert can only
+    // overwrite citation_count to 1; the RPC does ON CONFLICT DO UPDATE
+    // citation_count = citation_count + EXCLUDED so frequency accumulates and
+    // the Sources page can rank by "most cited". Falls back to the old upsert
+    // if the RPC isn't present yet, so deploying this before the DB migration
+    // never drops sources (counts just stay at 1 until the RPC exists).
+    const { error: rpcErr } = await (supabase as any)
+      .rpc("upsert_sources_increment", { rows: sourceRows });
+    if (rpcErr) {
+      console.warn("Sources increment RPC unavailable, falling back to upsert:", rpcErr.message);
+      const { error } = await (supabase.from("sources") as any)
+        .upsert(sourceRows, { onConflict: "project_id,domain,model" });
+      if (error) console.error("Sources upsert error:", error.message);
+    }
   }
 
   // Batch upsert competitors (with normalization + canonical)
