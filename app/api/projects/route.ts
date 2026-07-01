@@ -42,7 +42,7 @@ const projectSchema = z.object({
   market_context: z.string().nullable().default(null),
   language: z.enum(["it", "en", "fr", "de", "es"]),
   country: z.string().nullable().default(null),
-  models_config: z.array(z.string()).min(1).default(["gpt-5.4-mini"]),
+  models_config: z.array(z.string()).min(1).default(["gpt-5.4-mini", "gemini-2.5-flash"]),
   site_analysis: z.any().nullable().default(null),
   // Link al progetto canonico della suite (seed A1). Null per progetti legacy.
   canonical_project_id: z.string().uuid().nullable().default(null),
