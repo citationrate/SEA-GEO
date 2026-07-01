@@ -1,7 +1,7 @@
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { isProUser, isDemoUser } from "@/lib/utils/is-pro";
-import { resolveProjectId } from "@/lib/utils/resolve-project";
+import { getActiveProjectId, getLastCompletedProjectId } from "@/lib/utils/active-project";
 import { ComparePaywall, CompareList } from "./compare-content";
 
 export const metadata = { title: "Confronto Competitivo" };
@@ -48,7 +48,12 @@ export default async function ComparePage({
 
   const projectsList = (projects ?? []) as any[];
   const projectIds = projectsList.map((p: any) => p.id);
-  const selectedId = resolveProjectId(searchParams, projectIds);
+  // Same active-project resolution as the dashboard (cookie anchor + last
+  // completed analysis as fallback) so all tabs agree on the active project.
+  const lastCompletedProjectId = searchParams.projectId
+    ? null
+    : await getLastCompletedProjectId(supabase, projectIds);
+  const selectedId = getActiveProjectId(searchParams, projectIds, lastCompletedProjectId);
 
   // Fetch competitive analyses (filtered by project if selected)
   const targetIds = selectedId ? [selectedId] : projectIds;

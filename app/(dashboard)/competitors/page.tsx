@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
 
-import { resolveProjectId } from "@/lib/utils/resolve-project";
+import { getActiveProjectId, getLastCompletedProjectId } from "@/lib/utils/active-project";
 import { CompetitorsClient } from "./competitors-client";
 
 export const metadata = { title: "Competitor" };
@@ -30,7 +30,12 @@ export default async function CompetitorsPage({
 
   const projectsList = (projects ?? []) as any[];
   const projectIds = projectsList.map((p: any) => p.id);
-  const selectedId = resolveProjectId(searchParams, projectIds);
+  // Same active-project resolution as the dashboard (cookie anchor + last
+  // completed analysis as fallback) so all tabs agree on the active project.
+  const lastCompletedProjectId = searchParams.projectId
+    ? null
+    : await getLastCompletedProjectId(supabase, projectIds);
+  const selectedId = getActiveProjectId(searchParams, projectIds, lastCompletedProjectId);
 
   const targetIds = selectedId ? [selectedId] : projectIds;
   const projectMap = new Map(projectsList.map((p: any) => [p.id, p]));

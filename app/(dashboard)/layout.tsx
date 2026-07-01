@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/topbar";
 import { MobileNavProvider } from "@/components/layout/mobile-nav-context";
+import { ActiveProjectSync } from "@/components/layout/active-project-sync";
 import { TrackingInit } from "@/components/tracking-init";
 
 import { isShowcase } from "@/lib/showcase";
@@ -59,6 +61,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </main>
         </div>
         <TrackingInit userId={user.id} email={user.email} />
+        <Suspense fallback={null}>
+          <ActiveProjectSync />
+        </Suspense>
       </div>
     </MobileNavProvider>
   );

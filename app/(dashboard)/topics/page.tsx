@@ -1,6 +1,6 @@
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
-import { resolveProjectId } from "@/lib/utils/resolve-project";
+import { getActiveProjectId, getLastCompletedProjectId } from "@/lib/utils/active-project";
 import { TopicsClient } from "./topics-client";
 import { TopicsHeader, TopicsEmpty } from "./topics-header";
 
@@ -29,7 +29,12 @@ export default async function TopicsPage({
 
   const projectsList = (projects ?? []) as any[];
   const projectIds = projectsList.map((p) => p.id);
-  const selectedId = resolveProjectId(searchParams, projectIds);
+  // Same active-project resolution as the dashboard (cookie anchor + last
+  // completed analysis as fallback) so all tabs agree on the active project.
+  const lastCompletedProjectId = searchParams.projectId
+    ? null
+    : await getLastCompletedProjectId(supabase, projectIds);
+  const selectedId = getActiveProjectId(searchParams, projectIds, lastCompletedProjectId);
 
   const targetProjects = selectedId
     ? projectsList.filter((p) => p.id === selectedId)

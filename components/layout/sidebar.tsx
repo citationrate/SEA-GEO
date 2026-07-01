@@ -38,6 +38,9 @@ export function Sidebar({ profile }: SidebarProps) {
       // (Auth cookies are HttpOnly + handled by the server signOut above.)
       try { window.localStorage.clear(); } catch {}
       try { window.sessionStorage.clear(); } catch {}
+      // Also drop the active-project cookie (non-HttpOnly UX state) so the next
+      // user on this browser doesn't inherit the previous account's project.
+      try { document.cookie = "avi_active_project=; path=/; max-age=0; samesite=lax"; } catch {}
       // Hard redirect (full reload) — bypasses bfcache and forces a clean SSR.
       window.location.href = "/login";
     } finally {

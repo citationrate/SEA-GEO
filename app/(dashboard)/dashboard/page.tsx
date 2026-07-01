@@ -1,5 +1,5 @@
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
-import { resolveProjectId } from "@/lib/utils/resolve-project";
+import { getActiveProjectId } from "@/lib/utils/active-project";
 import { DemoBanner } from "@/components/dashboard/demo-banner";
 import { MetaPageTrack } from "@/components/meta-page-track";
 
@@ -67,7 +67,7 @@ export default async function DashboardPage({
     lastCompletedProjectId = (lastDone as any)?.project_id ?? null;
   }
 
-  const selectedId = resolveProjectId(searchParams, projectIds, lastCompletedProjectId);
+  const selectedId = getActiveProjectId(searchParams, projectIds, lastCompletedProjectId);
 
   const targetIds = selectedId ? [selectedId] : projectIds;
   const projectMap = new Map(projectsList.map((p: any) => [p.id, p]));

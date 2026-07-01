@@ -1,7 +1,7 @@
 import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { ProjectSelector } from "@/components/project-selector";
 
-import { resolveProjectId } from "@/lib/utils/resolve-project";
+import { getActiveProjectId } from "@/lib/utils/active-project";
 import { SourcesClient } from "./sources-client";
 
 export const metadata = { title: "Fonti" };
@@ -60,7 +60,7 @@ export default async function SourcesPage({
     lastCompletedProjectId = (lastDone as any)?.project_id ?? null;
   }
 
-  const selectedId = resolveProjectId(searchParams, projectIds, lastCompletedProjectId);
+  const selectedId = getActiveProjectId(searchParams, projectIds, lastCompletedProjectId);
 
   const targetIds = selectedId ? [selectedId] : projectIds;
   const selectedProject = projectsList.find((p: any) => p.id === selectedId);
