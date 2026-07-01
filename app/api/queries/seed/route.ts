@@ -14,6 +14,9 @@ export const maxDuration = 60;
 const schema = z.object({
   project_id: z.string().uuid(),
   count: z.number().int().min(1).max(20).default(5),
+  // Tema/argomento opzionale su cui focalizzare le domande (personalizzazione
+  // "Ibrido": seed rapido di default, ma l'utente può indirizzare i topic).
+  theme: z.string().trim().max(160).optional(),
 });
 
 const LANG_NAME: Record<string, string> = { it: "italiano", en: "English", fr: "français", de: "Deutsch", es: "español" };
@@ -50,7 +53,7 @@ export async function POST(request: Request) {
 
     const parsed = schema.safeParse(await request.json());
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
-    const { project_id, count } = parsed.data;
+    const { project_id, count, theme } = parsed.data;
 
     const { data: project } = await supabase
       .from("projects")
@@ -110,6 +113,7 @@ ${p.market_context ? `- Contesto di mercato: ${p.market_context}` : ""}
 ${mainService ? `- L'azienda offre principalmente: ${mainService}. Genera domande pertinenti a questa offerta, non solo al settore generico.` : ""}
 ${valueProp ? `- Proposta di valore: ${valueProp}.` : ""}
 ${sectorKeywords.length ? `- Temi rilevanti: ${sectorKeywords.join(", ")}.` : ""}
+${theme ? `- Focalizza TUTTE le domande su questo tema/argomento specifico indicato dall'utente: "${theme}". Restano domande di scoperta generiche (senza nominare il brand), ma calate su questo tema.` : ""}
 ${competitors.length ? `- Concorrenti noti nello spazio (servono solo a orientare il TIPO di domande di scoperta; NON nominarli nelle domande): ${competitors.join(", ")}.` : ""}
 Rispondi SOLO con un array JSON, nessun altro testo: [{"text": "...", "funnel_stage": "TOFU"|"MOFU"}]`;
 
@@ -144,7 +148,17 @@ Rispondi SOLO con un array JSON, nessun altro testo: [{"text": "...", "funnel_st
     // brand (la "vittoria" che entra nel blend AVI) è comunque presente.
     const brandName = (p.target_brand || "").trim();
     const isDemo = (prof?.plan ?? "demo") === "demo";
-    const brandedRows = (brandName && isDemo)
+    // Rigenerando (Ibrido: "genera altre domande") il seed viene richiamato più
+    // volte: non ri-aggiungere la branded se il progetto ne ha già una.
+    let hasBranded = false;
+    if (brandName && isDemo) {
+      const { count: brandedCount } = await (supabase.from("queries") as any)
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", project_id)
+        .eq("set_type", "branded");
+      hasBranded = (brandedCount ?? 0) > 0;
+    }
+    const brandedRows = (brandName && isDemo && !hasBranded)
       ? (BRANDED_TEMPLATES[p.language] || BRANDED_TEMPLATES.it)(brandName).slice(0, 1).map((q) => ({
           project_id,
           text: q.text,
