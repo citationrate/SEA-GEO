@@ -863,7 +863,7 @@ export const runAnalysis = inngest.createFunction(
       modelsUsed: string[];
       runCount: number;
       browsing?: boolean;
-      billing?: { userId: string; querySource: string; promptCost: number };
+      billing?: { userId: string; querySource: string; promptCost: number; source?: string };
       queryIds?: string[] | null;
     };
 
@@ -947,7 +947,9 @@ export const runAnalysis = inngest.createFunction(
 
     // Step 1b: deduct credits now that the analysis is confirmed viable.
     // This runs INSIDE Inngest so credits aren't lost if the trigger failed.
-    if (billing) {
+    // billing.source === "token": run pagato a token dal suite → NON dedurre i
+    // crediti-prompt legacy (evita il doppio addebito).
+    if (billing && billing.source !== "token") {
       await step.run("deduct-credits", async () => {
         if (billing.querySource === "wallet") {
           await consumeWalletQueries(

@@ -35,6 +35,14 @@ export async function POST(request: Request) {
 
     const { project_id, run_count, browsing: requestedBrowsing, query_source, query_ids: queryIdsOverride, models: modelsOverride } = parsed.data;
 
+    // Billing a TOKEN dal suite: se la chiamata porta il secret server-to-server
+    // valido, il run è già stato pagato a token a monte (route suite /api/avi/launch)
+    // → si SALTA il gate legacy sui crediti-prompt. Il secret non è mai esposto al
+    // client, quindi non è aggirabile. I crediti-prompt restano per gli utenti
+    // diretti del sottodominio avi.citationrate.com.
+    const launchSecret = process.env.CR_AVI_LAUNCH_SECRET || "";
+    const tokenBilled = launchSecret.length > 0 && request.headers.get("x-cr-launch-secret") === launchSecret;
+
     // Auto-fail stale running runs (older than 30 minutes)
     await (supabase.from("analysis_runs") as any)
       .update({ status: "failed" })
@@ -160,7 +168,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Il tuo piano supporta max ${plan.max_models_per_project} modelli per progetto.` }, { status: 403 });
     }
 
-    // Hard block: enforce prompt limits for ALL plans (server-side)
+    // Hard block: enforce prompt limits (LEGACY per-plan credits). Skipped when
+    // the run is token-billed via the suite (x-cr-launch-secret valido): in quel
+    // caso il billing è già avvenuto sul backend token a monte.
+    if (!tokenBilled) {
     if (query_source === "wallet") {
       const wallet = await getWallet(user.id);
       const walletAvail = browsing ? wallet.browsingQueries : wallet.noBrowsingQueries;
@@ -198,6 +209,7 @@ export async function POST(request: Request) {
         }
       }
     }
+    } // fine gate legacy crediti-prompt (saltato se tokenBilled)
 
     // Count existing runs for version number
     const { count: existingRuns } = await supabase
@@ -245,6 +257,8 @@ export async function POST(request: Request) {
           userId: user.id,
           querySource: query_source,
           promptCost,
+          // token-billed dal suite → l'Inngest NON deve dedurre i crediti-prompt legacy
+          source: tokenBilled ? "token" : "plan",
         },
       },
     });
