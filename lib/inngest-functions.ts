@@ -692,6 +692,11 @@ async function extractAndPersist(
       url: s.url || "https://" + s.domain,
       domain: s.domain,
       source_type: s.source_type || "other",
+      // Deriva is_brand_owned dal source_type: classifyDomain/extractor forzano
+      // "brand_owned" quando il dominio è del brand. Senza questo il campo non
+      // veniva mai scritto (bug storico) → la metrica "citano il tuo sito"
+      // dell'overview (che somma is_brand_owned) restava 0% pur col badge brand_owned.
+      is_brand_owned: (s.source_type || "other") === "brand_owned",
       source_origin: s.source_origin || "text_mention",
       context: s.context || "",
       citation_count: 1,
