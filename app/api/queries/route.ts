@@ -102,6 +102,24 @@ export async function PATCH(request: Request) {
 
     // Use service client to bypass RLS
     const svc = createServiceClient();
+
+    // Ownership: la query DEVE appartenere a un progetto dell'utente. Il service
+    // client bypassa RLS, quindi senza questo check un PATCH per solo `id`
+    // permetterebbe di modificare query di altri (IDOR). Verifichiamo il
+    // proprietario del progetto prima di scrivere.
+    const { data: q } = await (svc.from("queries") as any)
+      .select("id, project_id")
+      .eq("id", id)
+      .single();
+    if (!q) return NextResponse.json({ error: "not found" }, { status: 404 });
+    const { data: proj } = await (svc.from("projects") as any)
+      .select("id")
+      .eq("id", q.project_id)
+      .eq("user_id", user.id)
+      .is("deleted_at", null)
+      .single();
+    if (!proj) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
     const { error: dbError } = await (svc.from("queries") as any)
       .update(patch)
       .eq("id", id);

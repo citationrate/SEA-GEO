@@ -114,7 +114,7 @@ export async function middleware(request: NextRequest) {
       const pre = new NextResponse(null, { status: 204 });
       pre.headers.set("Access-Control-Allow-Origin", origin);
       pre.headers.set("Access-Control-Allow-Credentials", "true");
-      pre.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+      pre.headers.set("Access-Control-Allow-Methods", "GET,POST,PATCH,OPTIONS");
       pre.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
       pre.headers.set("Vary", "Origin");
       return pre;
