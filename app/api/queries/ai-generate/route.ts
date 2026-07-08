@@ -58,6 +58,16 @@ export async function POST(request: Request) {
 
     const p = project as any;
 
+    // Fingerprint (punto 1/A): scarta il profilo-sito persistito se generato per
+    // un URL diverso da quello attuale (stantìo, residuo di una versione
+    // precedente del progetto). websiteContext viene comunque ri-crawlato live
+    // dall'URL corrente qui sotto, quindi il contesto resta fresco.
+    if (p.site_analysis && typeof p.site_analysis === "object"
+        && typeof p.site_analysis.__source_url === "string"
+        && p.site_analysis.__source_url !== (p.website_url ?? "")) {
+      p.site_analysis = null;
+    }
+
     // Fetch website content for context if URL is provided
     let websiteContext = "";
     if (p.website_url) {

@@ -77,6 +77,15 @@ export async function POST(request: Request) {
       : [];
     let sa = p.site_analysis && typeof p.site_analysis === "object" ? (p.site_analysis as Record<string, unknown>) : null;
 
+    // Fingerprint (punto 1/A): se il profilo-sito è stato generato per un URL
+    // diverso da quello attuale, è stantìo (residuo di una versione precedente
+    // del progetto) → lo scartiamo e lasciamo che il blocco sotto lo ri-crawli
+    // dall'URL corrente. I blob legacy senza __source_url si considerano validi
+    // (nessuna invalidazione retroattiva).
+    if (sa && typeof sa.__source_url === "string" && sa.__source_url !== (p.website_url ?? "")) {
+      sa = null;
+    }
+
     // Suite gap fix: progetti creati da /start nascono con site_analysis = null,
     // quindi senza crawl le query non-branded uscivano solo dal macro-settore.
     // Se manca il profilo-sito ma c'è un URL, lo generiamo ora (crawl + Haiku) e
@@ -88,9 +97,11 @@ export async function POST(request: Request) {
         const lang: AnalyzeLang = ANALYZE_LANGS.has(p.language as AnalyzeLang) ? (p.language as AnalyzeLang) : "it";
         const result = await analyzeSite(p.website_url, lang);
         if (result.ok) {
-          sa = result.analysis as unknown as Record<string, unknown>;
+          // Marchiamo il profilo col fingerprint dell'URL da cui è stato
+          // generato, così un futuro cambio-sito lo invalida (vedi sopra).
+          sa = { ...(result.analysis as unknown as Record<string, unknown>), __source_url: p.website_url };
           await (supabase.from("projects") as any)
-            .update({ site_analysis: result.analysis })
+            .update({ site_analysis: sa })
             .eq("id", project_id)
             .eq("user_id", user.id);
         }
