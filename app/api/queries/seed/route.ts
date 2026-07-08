@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
     const { data: project } = await supabase
       .from("projects")
-      .select("target_brand, sector, language, website_url, market_context, known_competitors, country, site_analysis")
+      .select("target_brand, sector, brand_type, language, website_url, market_context, known_competitors, country, site_analysis")
       .eq("id", project_id)
       .eq("user_id", user.id)
       .is("deleted_at", null)
@@ -104,16 +104,39 @@ export async function POST(request: Request) {
       ? (sa.sector_keywords as unknown[]).filter((k): k is string => typeof k === "string").slice(0, 6)
       : [];
 
-    const prompt = `Sei un esperto di ricerca AI. Genera ESATTAMENTE ${finalCount} domande che un potenziale cliente digiterebbe a un assistente AI (tipo ChatGPT) per trovare aziende o servizi nel settore "${p.sector || "generico"}".
+    // Prodotto vs servizio: il 58% dei progetti è "manufacturer" (fa prodotti),
+    // ma il vecchio prompt spingeva sempre verso "aziende o servizi", spingendo
+    // il modello a inventare fornitori-di-servizio anche per un prodotto fisico.
+    // Scegliamo il sostantivo di ricerca giusto in base a brand_type.
+    const brandType = typeof p.brand_type === "string" ? p.brand_type.toLowerCase() : "";
+    const providerNoun =
+      ["manufacturer", "retailer", "pharma", "ecommerce", "product"].includes(brandType)
+        ? "brand, marchi o aziende produttrici"
+        : ["service", "financial", "agency", "consulting", "saas", "legal", "law"].includes(brandType)
+        ? "aziende, studi o professionisti"
+        : "aziende, brand o servizi";
+
+    // ANCORA DEL DOMINIO: settore/tema/brand attuali hanno la precedenza. I
+    // blocchi derivati dal sito (site_analysis, market_context) vanno usati SOLO
+    // per il lessico e IGNORATI se descrivono un settore diverso — sono spesso
+    // residui di una versione precedente del progetto (brand/URL cambiati, o
+    // progetto AVI riusato dalla suite) e sono la causa principale del drift
+    // tipo "studi di architettura specializzati in <prodotto nuovo>".
+    const prompt = `Sei un esperto di ricerca AI. Genera ESATTAMENTE ${finalCount} domande che un potenziale cliente digiterebbe a un assistente AI (tipo ChatGPT) per trovare ${providerNoun} nel settore "${p.sector || "generico"}".
+
+⚠️ ANCORA DEL DOMINIO (ha PRIORITÀ su tutto il resto):
+- Argomento autorevole = settore "${p.sector || "generico"}"${theme ? ` + tema specifico dell'utente "${theme}"` : ""}. Il brand è "${p.target_brand}" (serve solo a capire il dominio, NON va nominato nelle domande).
+- OGNI domanda deve restare dentro questo settore/tema. Se un qualsiasi contesto qui sotto (offerta dal sito, temi, contesto di mercato) descrive un settore DIVERSO, IGNORALO del tutto: è un residuo di una versione precedente del progetto, non usarlo per decidere DI COSA parlano le domande. Non fondere mai due settori diversi nella stessa domanda.
+
 Regole:
 - NON menzionare il brand "${p.target_brand}". Sono domande generiche di scoperta, non sul brand.
 - Scrivi le domande in ${langName}.
 - Mix di TOFU (scoperta ampia, es. "quali sono le migliori aziende che...") e MOFU (valutazione/confronto, es. "come scegliere tra...").
-${p.market_context ? `- Contesto di mercato: ${p.market_context}` : ""}
-${mainService ? `- L'azienda offre principalmente: ${mainService}. Genera domande pertinenti a questa offerta, non solo al settore generico.` : ""}
-${valueProp ? `- Proposta di valore: ${valueProp}.` : ""}
-${sectorKeywords.length ? `- Temi rilevanti: ${sectorKeywords.join(", ")}.` : ""}
-${theme ? `- Focalizza TUTTE le domande su questo tema/argomento specifico indicato dall'utente: "${theme}". Restano domande di scoperta generiche (senza nominare il brand), ma calate su questo tema.` : ""}
+${theme ? `- Focalizza TUTTE le domande sul tema "${theme}": restano domande di scoperta generiche (senza nominare il brand), ma calate su questo tema.` : ""}
+${p.market_context ? `- Contesto di mercato (usa SOLO se coerente col settore "${p.sector || "generico"}", altrimenti ignora): ${p.market_context}` : ""}
+${mainService ? `- Offerta reale dal sito (rende le domande più pertinenti, ma usala SOLO se coerente col settore/tema sopra; altrimenti ignorala): ${mainService}.` : ""}
+${valueProp ? `- Proposta di valore (solo per lessico/tono, se coerente): ${valueProp}.` : ""}
+${sectorKeywords.length ? `- Temi dal sito (usa SOLO quelli coerenti col settore/tema): ${sectorKeywords.join(", ")}.` : ""}
 ${competitors.length ? `- Concorrenti noti nello spazio (servono solo a orientare il TIPO di domande di scoperta; NON nominarli nelle domande): ${competitors.join(", ")}.` : ""}
 Rispondi SOLO con un array JSON, nessun altro testo: [{"text": "...", "funnel_stage": "TOFU"|"MOFU"}]`;
 

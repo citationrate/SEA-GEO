@@ -338,6 +338,31 @@ function buildSystemPrompt(
   const isSpecific = userInputs?.mode === "specifiche" && typeof userInputs?.theme === "string" && userInputs.theme.trim().length > 0;
   const themeSanitized = isSpecific ? sanitizeInput(userInputs!.theme!) : "";
 
+  // Prodotto vs servizio: il 58% dei progetti è "manufacturer" (fa prodotti),
+  // ma il prompt era cablato tutto sul framing "CHI FORNISCE il servizio / studi
+  // / società / professionisti", producendo per i prodotti domande assurde tipo
+  // "studi di architettura specializzati in <prodotto>". Adattiamo il vocabolario
+  // di ricerca al brand_type.
+  const btype = typeof project.brand_type === "string" ? project.brand_type.toLowerCase() : "";
+  const isProduct = ["manufacturer", "retailer", "pharma", "ecommerce", "product"].includes(btype);
+  const competitorNoun = isProduct
+    ? "aziende, marchi o produttori"
+    : "aziende, studi, agenzie o servizi";
+  const supplyPhrase = isProduct ? "CHI PRODUCE o VENDE il prodotto" : "CHI FORNISCE il servizio";
+  const providerExamples = isProduct
+    ? `Invece di domande generiche sulla categoria, chiedi QUALI MARCHI/AZIENDE producono o vendono il prodotto:
+❌ SBAGLIATO: "Quali caratteristiche deve avere un buon prodotto di questo tipo?"
+✅ GIUSTO: "Quali marchi o aziende producono i migliori prodotti di questo tipo in Italia?"
+❌ SBAGLIATO: "Come scegliere il prodotto giusto?"
+✅ GIUSTO: "Quali brand offrono questo prodotto con le caratteristiche X e un buon rapporto qualità/prezzo?"`
+    : `Invece di domande generiche sulla categoria, chiedi CHI FORNISCE il servizio:
+❌ SBAGLIATO: "Quali sono i diritti dopo un incidente stradale?"
+✅ GIUSTO: "Quali aziende o studi specializzati aiutano a ottenere risarcimenti dopo un incidente stradale?"
+❌ SBAGLIATO: "Come si ottiene il risarcimento danni?"
+✅ GIUSTO: "Chi sono i migliori professionisti o società per ottenere il massimo risarcimento danni in Italia?"
+❌ SBAGLIATO: "Quali sono le migliori soluzioni fiscali?"
+✅ GIUSTO: "Quali studi o società di consulenza fiscale aiutano le PMI italiane a ridurre le tasse legalmente?"`;
+
   // In Specifiche mode the brand-360 context (website content, full market
   // context, existing brand queries) is the #1 source of off-theme drift:
   // the model picks up adjacent concepts as "inspiration" and rephrases them.
@@ -407,8 +432,10 @@ ${isSpecific
 - Contesto aggiuntivo: ${project.market_context ?? "nessuno"}`}
 ${userContextBlock}${websiteBlock}${buildSiteAnalysisBlock(project.site_analysis, isSpecific)}${existingBlock}
 Genera esattamente ${count} query uniche e realistiche in ${lang}.
-
-OBIETTIVO CHIAVE: Le query devono far emergere COMPETITOR COMMERCIALI — aziende, studi, agenzie o servizi che un cliente potrebbe scegliere IN ALTERNATIVA a "${project.target_brand}".
+${isSpecific ? "" : `
+⚠️ ANCORA DEL DOMINIO: l'argomento autorevole è il settore "${project.sector ?? "non specificato"}" del brand "${project.target_brand}". Se il contenuto del sito, le query già presenti o il contesto qui sopra descrivono un settore DIVERSO da questo, IGNORALI nella scelta dell'argomento: sono spesso residui di una versione precedente del progetto (brand/URL cambiati o progetto riusato). Non fondere mai due settori diversi nella stessa query.
+`}
+OBIETTIVO CHIAVE: Le query devono far emergere COMPETITOR COMMERCIALI — ${competitorNoun} che un cliente potrebbe scegliere IN ALTERNATIVA a "${project.target_brand}".
 
 Evita formulazioni che farebbero emergere:
 - Enti governativi o pubblici (Ministero, INPS, INAIL, Regione, Comune)
@@ -417,22 +444,16 @@ Evita formulazioni che farebbero emergere:
 - Associazioni consumatori (Altroconsumo, Codacons)
 - Portali informativi o sportelli pubblici
 
-Invece di domande generiche sulla categoria, chiedi CHI FORNISCE il servizio:
-❌ SBAGLIATO: "Quali sono i diritti dopo un incidente stradale?"
-✅ GIUSTO: "Quali aziende o studi specializzati aiutano a ottenere risarcimenti dopo un incidente stradale?"
-❌ SBAGLIATO: "Come si ottiene il risarcimento danni?"
-✅ GIUSTO: "Chi sono i migliori professionisti o società per ottenere il massimo risarcimento danni in Italia?"
-❌ SBAGLIATO: "Quali sono le migliori soluzioni fiscali?"
-✅ GIUSTO: "Quali studi o società di consulenza fiscale aiutano le PMI italiane a ridurre le tasse legalmente?"
+${providerExamples}
 
-La query deve sempre puntare verso FORNITORI COMMERCIALI del servizio, non verso informazioni sul servizio stesso.
+La query deve sempre puntare verso FORNITORI COMMERCIALI ${isProduct ? "del prodotto (marchi/aziende), non verso informazioni sul prodotto stesso" : "del servizio, non verso informazioni sul servizio stesso"}.
 
 DUE TIPOLOGIE DI QUERY:
 
 ${nTofu} TOFU — Domande di scoperta generiche sul settore che fanno emergere AZIENDE e BRAND.
 L'utente sta esplorando il settore, non conosce ancora i brand.
 NON menzionare "${project.target_brand}" né alcun competitor.
-Le query devono chiedere "quali aziende/studi/servizi..." o "chi offre..." — NON "cos'è" o "quali sono i diritti".
+Le query devono chiedere "${isProduct ? "quali marchi/aziende/prodotti" : "quali aziende/studi/servizi"}..." o "chi ${isProduct ? "produce/vende" : "offre"}..." — NON "cos'è" o "quali sono i diritti".
 Esempi di angolazione: quali aziende dominano il settore, chi sono i leader, quali servizi scegliere, migliori fornitori.
 
 ${nMofu} MOFU — Domande su bisogni specifici che il brand risolve, formulate per far emergere FORNITORI COMMERCIALI, MA senza mai nominare "${project.target_brand}" né alcun competitor.
@@ -440,7 +461,7 @@ L'utente descrive un problema, un'esigenza o una situazione concreta che "${proj
 Lo scopo è intercettare i BISOGNI LATENTI: l'utente chiede aiuto all'AI descrivendo cosa gli serve, e noi misuriamo se l'AI risponde suggerendo "${project.target_brand}".
 Queste query devono:
 - Descrivere un bisogno specifico legato ai prodotti/servizi reali del brand (usa il contenuto del sito web)
-- Chiedere esplicitamente CHI fornisce il servizio o QUALE AZIENDA può aiutare
+- Chiedere esplicitamente ${supplyPhrase} o QUALE ${isProduct ? "MARCHIO/AZIENDA" : "AZIENDA"} può aiutare
 - Usare il linguaggio che un potenziale cliente userebbe
 - NON contenere MAI il nome del brand né dei competitor — sono completamente unbranded
 - Essere abbastanza specifiche da "puntare" implicitamente verso il brand senza nominarlo
