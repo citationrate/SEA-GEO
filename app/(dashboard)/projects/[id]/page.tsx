@@ -210,15 +210,23 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               <Settings className="w-4 h-4" />
               <T k="projectDetail.editProject" />
             </a>
-            <ProjectArgomentoBar projectId={params.id} argomenti={argomenti}>
-              <AnalysisLauncher
-                projectId={params.id}
-                argomentoId={argomenti[0]?.id ?? ""}
-                hasQueries={(queries ?? []).length > 0}
-                queryCount={(queries ?? []).length}
-                segmentCount={(segments ?? []).length}
-                modelsConfig={(proj.models_config as string[]) ?? ["gpt-5.4-mini"]}
-              />
+            <ProjectArgomentoBar
+              projectId={params.id}
+              argomenti={argomenti}
+              allRuns={allRuns.map((r: any) => ({ id: r.id, argomento_id: r.argomento_id, version: r.version, status: r.status, models_used: r.models_used, completed_prompts: r.completed_prompts, total_prompts: r.total_prompts, completed_at: r.completed_at, created_at: r.created_at, deleted_at: r.deleted_at }))}
+              aviMap={Object.fromEntries(aviList.map((a: any) => [a.run_id, Math.round(Number(a.avi_score) * 10) / 10]))}
+              dateLocale={dateLocale}
+            >
+              {(argomentoId, _runCount) => (
+                <AnalysisLauncher
+                  projectId={params.id}
+                  argomentoId={argomentoId}
+                  hasQueries={(queries ?? []).length > 0}
+                  queryCount={(queries ?? []).length}
+                  segmentCount={(segments ?? []).length}
+                  modelsConfig={(proj.models_config as string[]) ?? ["gpt-5.4-mini"]}
+                />
+              )}
             </ProjectArgomentoBar>
           </div>
         </div>
@@ -424,61 +432,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         )}
       </div>
 
-      {/* Analisi eseguite */}
-      {allRuns.length > 0 && (
-        <div data-tour="run-results" className="card p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-primary" />
-            <h2 className="font-display font-semibold text-foreground"><T k="projectDetail.executedAnalyses" /></h2>
-            <span className="badge badge-muted text-[12px]">{allRuns.length}</span>
-          </div>
-          <div className="space-y-2">
-            {allRuns.map((run: any) => {
-              const Icon = run.status === "completed" ? CheckCircle : run.status === "failed" ? XCircle : run.status === "running" ? Loader2 : Clock;
-              const badgeClass = run.status === "completed"
-                ? "bg-green-500/15 text-green-500 border-green-500/30"
-                : run.status === "running"
-                ? "bg-yellow-500/15 text-yellow-500 border-yellow-500/30"
-                : run.status === "failed"
-                ? "bg-red-500/15 text-red-500 border-red-500/30"
-                : "badge-muted";
-              const statusKey = run.status === "completed" ? "results.completed" : run.status === "running" ? "results.running" : run.status === "failed" ? "results.failed" : null;
-              const aviScore = aviMap.get(run.id);
-              return (
-                <div key={run.id} className="space-y-1">
-                  <a
-                    href={`/projects/${params.id}/runs/${run.id}`}
-                    className="flex items-center justify-between bg-muted rounded-[2px] px-4 py-3 border border-border hover:border-primary/30 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="font-display font-semibold text-foreground group-hover:text-primary transition-colors">v{run.version}</span>
-                      {aviScore != null && (
-                        <span className="font-display font-bold text-primary text-sm">AVI {aviScore}</span>
-                      )}
-                      <span className="text-xs text-muted-foreground">{(run.models_used?.length ?? 0)} {t("projectDetail.aiModelsShort")}</span>
-                      <span className="text-xs text-muted-foreground">{run.completed_prompts}/{run.total_prompts} prompt</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground">{new Date(run.completed_at ?? run.created_at).toLocaleDateString(dateLocale)}</span>
-                      <span className={`inline-flex items-center gap-1 text-[12px] font-semibold px-2 py-0.5 rounded-[2px] border ${badgeClass}`}>
-                        <Icon className={`w-3 h-3 ${run.status === "running" ? "animate-spin" : ""}`} />
-                        {statusKey ? <T k={statusKey} /> : run.status}
-                      </span>
-                    </div>
-                  </a>
-                  {run.status === "failed" && (
-                    <p className="text-xs text-muted-foreground px-4">
-                      {run.completed_prompts === 0
-                        ? <T k="projectDetail.failedBeforeStart" />
-                        : `${run.completed_prompts}/${run.total_prompts} prompt`}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Analisi eseguite — gestite dal ProjectArgomentoBar (filtrate per argomento) */}
 
       {/* AVI Trend Chart */}
       {trendData.length > 0 && (
