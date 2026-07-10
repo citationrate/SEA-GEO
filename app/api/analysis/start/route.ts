@@ -9,7 +9,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 const startSchema = z.object({
   project_id: z.string().uuid(),
-  argomento_id: z.string().uuid(),
+  argomento_id: z.string().uuid().optional(),
   run_count: z.number().int().min(1).max(3).default(1),
   browsing: z.boolean().default(true),
   query_source: z.enum(["plan", "wallet"]).default("plan"),
@@ -60,14 +60,26 @@ export async function POST(request: Request) {
       .single();
     if (!project) return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
 
-    // Validate argomento belongs to project
-    const { data: argomento } = await (supabase.from("argomenti") as any)
-      .select("id")
-      .eq("id", argomento_id)
-      .eq("project_id", project_id)
-      .is("deleted_at", null)
-      .maybeSingle();
-    if (!argomento) return NextResponse.json({ error: "Argomento non trovato" }, { status: 404 });
+    // Resolve argomento: use provided ID or fallback to first (default "Generale")
+    let resolvedArgomentoId = argomento_id;
+    if (!resolvedArgomentoId) {
+      const { data: defaultArg } = await (supabase.from("argomenti") as any)
+        .select("id")
+        .eq("project_id", project_id)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: true })
+        .limit(1);
+      resolvedArgomentoId = defaultArg?.[0]?.id;
+    }
+    if (resolvedArgomentoId) {
+      const { data: argomento } = await (supabase.from("argomenti") as any)
+        .select("id")
+        .eq("id", resolvedArgomentoId)
+        .eq("project_id", project_id)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (!argomento) return NextResponse.json({ error: "Argomento non trovato" }, { status: 404 });
+    }
 
     // Read models from project config. Override opzionale: limita ai modelli scelti
     // CHE IL PROGETTO HA GIÀ configurato (nessuna escalation di piano).
@@ -85,7 +97,7 @@ export async function POST(request: Request) {
       .from("queries") as any)
       .select("*")
       .eq("project_id", project_id)
-      .eq("argomento_id", argomento_id)
+      .eq("argomento_id", resolvedArgomentoId)
       .neq("is_active", false)
       .is("deleted_at", null);
     const queries = queryIdsOverride?.length
@@ -226,7 +238,7 @@ export async function POST(request: Request) {
     const { count: existingRuns } = await (supabase
       .from("analysis_runs") as any)
       .select("*", { count: "exact", head: true })
-      .eq("argomento_id", argomento_id);
+      .eq("argomento_id", resolvedArgomentoId);
 
     const totalPrompts = queries.length * Math.max((segments ?? []).length, 1) * validModels.length * effectiveRunCount;
 
@@ -234,7 +246,7 @@ export async function POST(request: Request) {
     const { data: run, error: runError } = await (supabase.from("analysis_runs") as any)
       .insert({
         project_id,
-        argomento_id,
+        argomento_id: resolvedArgomentoId,
         version: (existingRuns ?? 0) + 1,
         status: "running",
         models_used: validModels,
@@ -258,7 +270,7 @@ export async function POST(request: Request) {
       data: {
         runId: run.id,
         projectId: project_id,
-        argomentoId: argomento_id,
+        argomentoId: resolvedArgomentoId,
         modelsUsed: validModels,
         runCount: effectiveRunCount,
         browsing,

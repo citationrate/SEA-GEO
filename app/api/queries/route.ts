@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const querySchema = z.object({
   project_id: z.string().uuid(),
-  argomento_id: z.string().uuid(),
+  argomento_id: z.string().uuid().optional(),
   text: z.string().min(1),
   funnel_stage: z.enum(["tofu", "mofu", "bofu"]),
 });
@@ -72,9 +72,18 @@ export async function POST(request: Request) {
       return NextResponse.json(revived, { status: 201 });
     }
 
+    // Resolve argomento_id: use provided or fallback to first (default "Generale")
+    let argId = parsed.data.argomento_id;
+    if (!argId) {
+      const { data: defArg } = await (supabase.from("argomenti") as any)
+        .select("id").eq("project_id", parsed.data.project_id).is("deleted_at", null)
+        .order("created_at", { ascending: true }).limit(1);
+      argId = defArg?.[0]?.id;
+    }
+
     const { data, error: dbError } = await supabase
       .from("queries")
-      .insert({ ...parsed.data, set_type: "manual" } as any)
+      .insert({ ...parsed.data, argomento_id: argId, set_type: "manual" } as any)
       .select("*")
       .single();
 
