@@ -20,7 +20,7 @@ export const maxDuration = 60;
 
 const schema = z.object({
   project_id: z.string().uuid(),
-  count: z.number().int().min(3).max(20).default(8),
+  count: z.number().int().min(3).max(20).default(10),
 });
 
 const LANG_NAME: Record<string, string> = { it: "italiano", en: "English", fr: "français", de: "Deutsch", es: "español" };
@@ -144,6 +144,14 @@ Il campo "topic" indica a quale prodotto/servizio si riferisce la domanda.`;
     let argomentoId: string;
     if (existingArg && existingArg.length > 0) {
       argomentoId = existingArg[0].id;
+      // Se ha già query, non rigenerare — ritorna subito
+      const { count: existingCount } = await (supabase.from("queries") as any)
+        .select("id", { count: "exact", head: true })
+        .eq("argomento_id", argomentoId)
+        .is("deleted_at", null);
+      if ((existingCount ?? 0) > 0) {
+        return NextResponse.json({ ok: true, argomento_id: argomentoId, argomento_name: overviewName, inserted: 0, suggested_topics: suggestedTopics, queries: [], already_exists: true });
+      }
     } else {
       const { data: newArg } = await (supabase.from("argomenti") as any)
         .insert({ project_id, name: overviewName, description: `Panoramica completa: ${suggestedTopics.join(", ")}` })
