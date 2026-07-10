@@ -17,12 +17,14 @@ const RUN_OPTIONS = [
 
 export function AnalysisLauncher({
   projectId,
+  argomentoId,
   hasQueries,
   queryCount,
   segmentCount,
   modelsConfig,
 }: {
   projectId: string;
+  argomentoId?: string;
   hasQueries: boolean;
   queryCount: number;
   segmentCount: number;
@@ -122,7 +124,7 @@ export function AnalysisLauncher({
       const res = await fetch("/api/analysis/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, run_count: runCount, browsing: effectiveBrowsing, query_source: (isBase && effectiveBrowsing) ? "plan" : querySource }),
+        body: JSON.stringify({ project_id: projectId, argomento_id: argomentoId, run_count: runCount, browsing: effectiveBrowsing, query_source: (isBase && effectiveBrowsing) ? "plan" : querySource }),
       });
 
       if (!res.ok) {

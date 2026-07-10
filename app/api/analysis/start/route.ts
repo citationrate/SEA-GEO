@@ -9,6 +9,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 const startSchema = z.object({
   project_id: z.string().uuid(),
+  argomento_id: z.string().uuid(),
   run_count: z.number().int().min(1).max(3).default(1),
   browsing: z.boolean().default(true),
   query_source: z.enum(["plan", "wallet"]).default("plan"),
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     const parsed = startSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
 
-    const { project_id, run_count, browsing: requestedBrowsing, query_source, query_ids: queryIdsOverride, models: modelsOverride } = parsed.data;
+    const { project_id, argomento_id, run_count, browsing: requestedBrowsing, query_source, query_ids: queryIdsOverride, models: modelsOverride } = parsed.data;
 
     // Billing a TOKEN dal suite: se la chiamata porta il secret server-to-server
     // valido, il run è già stato pagato a token a monte (route suite /api/avi/launch)
@@ -59,6 +60,15 @@ export async function POST(request: Request) {
       .single();
     if (!project) return NextResponse.json({ error: "Progetto non trovato" }, { status: 404 });
 
+    // Validate argomento belongs to project
+    const { data: argomento } = await (supabase.from("argomenti") as any)
+      .select("id")
+      .eq("id", argomento_id)
+      .eq("project_id", project_id)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (!argomento) return NextResponse.json({ error: "Argomento non trovato" }, { status: 404 });
+
     // Read models from project config. Override opzionale: limita ai modelli scelti
     // CHE IL PROGETTO HA GIÀ configurato (nessuna escalation di piano).
     let models_used: string[] = (project as any).models_config ?? ["gpt-5.4-mini"];
@@ -69,12 +79,13 @@ export async function POST(request: Request) {
     let validModels = models_used.filter((id: string) => ALL_MODEL_IDS.includes(id));
     if (!validModels.length) return NextResponse.json({ error: "Nessun modello valido configurato" }, { status: 400 });
 
-    // Fetch only active, non-soft-deleted queries. Override opzionale: solo il
-    // sottoinsieme scelto (lancio in-suite "scegli quante domande").
-    const { data: allQueries } = await supabase
-      .from("queries")
+    // Fetch only active, non-soft-deleted queries for this argomento.
+    // Override opzionale: solo il sottoinsieme scelto (lancio in-suite).
+    const { data: allQueries } = await (supabase
+      .from("queries") as any)
       .select("*")
       .eq("project_id", project_id)
+      .eq("argomento_id", argomento_id)
       .neq("is_active", false)
       .is("deleted_at", null);
     const queries = queryIdsOverride?.length
@@ -211,11 +222,11 @@ export async function POST(request: Request) {
     }
     } // fine gate legacy crediti-prompt (saltato se tokenBilled)
 
-    // Count existing runs for version number
-    const { count: existingRuns } = await supabase
-      .from("analysis_runs")
+    // Count existing runs for version number (scoped per argomento)
+    const { count: existingRuns } = await (supabase
+      .from("analysis_runs") as any)
       .select("*", { count: "exact", head: true })
-      .eq("project_id", project_id);
+      .eq("argomento_id", argomento_id);
 
     const totalPrompts = queries.length * Math.max((segments ?? []).length, 1) * validModels.length * effectiveRunCount;
 
@@ -223,6 +234,7 @@ export async function POST(request: Request) {
     const { data: run, error: runError } = await (supabase.from("analysis_runs") as any)
       .insert({
         project_id,
+        argomento_id,
         version: (existingRuns ?? 0) + 1,
         status: "running",
         models_used: validModels,
@@ -246,6 +258,7 @@ export async function POST(request: Request) {
       data: {
         runId: run.id,
         projectId: project_id,
+        argomentoId: argomento_id,
         modelsUsed: validModels,
         runCount: effectiveRunCount,
         browsing,

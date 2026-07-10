@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { ArrowLeft, Plus, MessageSquare, Users, BarChart3, CheckCircle, XCircle, Clock, Loader2, AlertTriangle, Cpu, Settings, Sparkles, Info } from "lucide-react";
 import { AnalysisLauncher } from "./analysis-launcher";
+import { ProjectArgomentoBar } from "./project-argomento-bar";
 import { ProjectAVITrend } from "./project-avi-trend";
 // DeleteProjectButton rimosso: i progetti si eliminano nella Suite (UX unificata).
 import { OpenAnalysisButton } from "./open-analysis-button";
@@ -43,7 +44,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   // The original code awaited them strictly in series. They are independent
   // reads on different tables — Promise.all collapses 3 round-trips into 1.
   // Profile fetch (for bot plan gating) is folded in to keep this one round-trip.
-  const [queriesRes, segmentsRes, allRunsRawRes, profileRes] = await Promise.all([
+  const [queriesRes, segmentsRes, allRunsRawRes, profileRes, argomentiRes] = await Promise.all([
     supabase
       .from("queries")
       .select("*")
@@ -67,10 +68,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       .select("plan")
       .eq("id", user.id)
       .single(),
+    (supabase.from("argomenti") as any)
+      .select("id, name, description")
+      .eq("project_id", params.id)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: true }),
   ]);
   const queries = (queriesRes as any).data;
   const segments = (segmentsRes as any).data;
   const allRunsRaw = (allRunsRawRes as any).data;
+  const argomenti = ((argomentiRes as any).data ?? []) as { id: string; name: string; description: string | null }[];
   const userPlan = getEffectivePlanId(((profileRes as any).data as { plan?: string } | null)?.plan);
 
   const allRuns = (allRunsRaw ?? []).filter((r: any) => !r.deleted_at);
@@ -203,13 +210,16 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               <Settings className="w-4 h-4" />
               <T k="projectDetail.editProject" />
             </a>
-            <AnalysisLauncher
-              projectId={params.id}
-              hasQueries={(queries ?? []).length > 0}
-              queryCount={(queries ?? []).length}
-              segmentCount={(segments ?? []).length}
-              modelsConfig={(proj.models_config as string[]) ?? ["gpt-5.4-mini"]}
-            />
+            <ProjectArgomentoBar projectId={params.id} argomenti={argomenti}>
+              <AnalysisLauncher
+                projectId={params.id}
+                argomentoId={argomenti[0]?.id ?? ""}
+                hasQueries={(queries ?? []).length > 0}
+                queryCount={(queries ?? []).length}
+                segmentCount={(segments ?? []).length}
+                modelsConfig={(proj.models_config as string[]) ?? ["gpt-5.4-mini"]}
+              />
+            </ProjectArgomentoBar>
           </div>
         </div>
       </div>

@@ -47,10 +47,24 @@ export interface Database {
         Insert: Omit<Database["public"]["Tables"]["projects"]["Row"], "id" | "created_at" | "updated_at" | "deleted_at" | "models_config"> & { models_config?: string[] };
         Update: Partial<Database["public"]["Tables"]["projects"]["Insert"]>;
       };
+      argomenti: {
+        Row: {
+          id: string;
+          project_id: string;
+          name: string;
+          description: string | null;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["argomenti"]["Row"], "id" | "created_at" | "updated_at" | "deleted_at">;
+        Update: Partial<Database["public"]["Tables"]["argomenti"]["Insert"]>;
+      };
       queries: {
         Row: {
           id: string;
           project_id: string;
+          argomento_id: string;
           text: string;
           funnel_stage: FunnelStage;
           created_at: string;
@@ -75,6 +89,7 @@ export interface Database {
         Row: {
           id: string;
           project_id: string;
+          argomento_id: string;
           version: number;
           status: AnalysisStatus;
           models_used: AIModel[];

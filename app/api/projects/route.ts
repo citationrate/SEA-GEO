@@ -74,6 +74,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: dbError.message }, { status: 500 });
     }
 
+    // Auto-create default "Generale" argomento for the new project
+    if ((data as any)?.id) {
+      await (supabase.from("argomenti") as any).insert({
+        project_id: (data as any).id,
+        name: "Generale",
+        description: "Argomento predefinito",
+      });
+    }
+
     return NextResponse.json(data, { status: 201 });
   } catch (err) {
     console.error("[API/PROJECTS] Unhandled error:", err instanceof Error ? err.message : err);

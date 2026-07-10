@@ -230,6 +230,15 @@ async function handleConfirm(
 ) {
   const supabase = createDataClient();
 
+  // Resolve the default argomento for this project (first one, usually "Generale")
+  const { data: argomentiList } = await (supabase.from("argomenti") as any)
+    .select("id")
+    .eq("project_id", project.id)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true })
+    .limit(1);
+  const defaultArgomentoId = argomentiList?.[0]?.id;
+
   // Load existing query texts to skip duplicates (case-insensitive compare in JS).
   const { data: existing } = await (supabase.from("queries") as any)
     .select("text")
@@ -246,6 +255,7 @@ async function handleConfirm(
   if (toInsert.length > 0) {
     const rows = toInsert.map((q) => ({
       project_id: project.id,
+      argomento_id: defaultArgomentoId,
       text: q.text,
       funnel_stage: q.funnel_stage,
       is_active: true,

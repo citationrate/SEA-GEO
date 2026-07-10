@@ -21,6 +21,7 @@ const personaSchema = z.object({
 
 const bodySchema = z.object({
   project_id: z.string().uuid(),
+  argomento_id: z.string().uuid().optional(),
   queries: z.array(z.object({
     text: z.string().min(1),
     set_type: z.enum(["generale", "verticale", "persona", "branded"]),
@@ -138,9 +139,19 @@ export async function POST(request: Request) {
       if (reviveErr) return NextResponse.json({ error: reviveErr.message }, { status: 500 });
     }
 
+    // Resolve argomento_id: from body or default
+    let argomentoId = parsed.data.argomento_id;
+    if (!argomentoId) {
+      const { data: argList } = await (supabase.from("argomenti") as any)
+        .select("id").eq("project_id", project_id).is("deleted_at", null)
+        .order("created_at", { ascending: true }).limit(1);
+      argomentoId = argList?.[0]?.id;
+    }
+
     // Insert queries with full metadata (set_type, persona_id, persona_mode)
     const rows = toInsert.map((q) => ({
       project_id,
+      argomento_id: argomentoId,
       text: q.text,
       funnel_stage: q.funnel_stage.toLowerCase() as "tofu" | "mofu",
       set_type: q.set_type,

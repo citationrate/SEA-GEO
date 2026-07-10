@@ -132,11 +132,21 @@ Rispondi SOLO con un array JSON, nessun altro testo: [{"text": "...", "funnel_st
       if (Array.isArray(arr)) parsedQueries = arr;
     } catch { /* niente query → no-op */ }
 
+    // Resolve default argomento for this project
+    const { data: argList } = await (supabase.from("argomenti") as any)
+      .select("id")
+      .eq("project_id", project_id)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    const defaultArgId = argList?.[0]?.id;
+
     const rows = parsedQueries
       .filter((q) => typeof q.text === "string" && q.text.trim().length > 10)
       .slice(0, finalCount)
       .map((q) => ({
         project_id,
+        argomento_id: defaultArgId,
         text: q.text.trim(),
         funnel_stage: (q.funnel_stage === "MOFU" ? "mofu" : "tofu") as "tofu" | "mofu",
         set_type: "generale",
@@ -161,6 +171,7 @@ Rispondi SOLO con un array JSON, nessun altro testo: [{"text": "...", "funnel_st
     const brandedRows = (brandName && isDemo && !hasBranded)
       ? (BRANDED_TEMPLATES[p.language] || BRANDED_TEMPLATES.it)(brandName).slice(0, 1).map((q) => ({
           project_id,
+          argomento_id: defaultArgId,
           text: q.text,
           funnel_stage: q.funnel_stage,
           set_type: "branded",

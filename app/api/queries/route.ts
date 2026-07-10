@@ -5,6 +5,7 @@ import { z } from "zod";
 
 const querySchema = z.object({
   project_id: z.string().uuid(),
+  argomento_id: z.string().uuid(),
   text: z.string().min(1),
   funnel_stage: z.enum(["tofu", "mofu", "bofu"]),
 });
@@ -16,17 +17,19 @@ export async function GET(request: NextRequest) {
 
     const projectId = request.nextUrl.searchParams.get("project_id");
     if (!projectId) return NextResponse.json({ error: "project_id richiesto" }, { status: 400 });
+    const argomentoId = request.nextUrl.searchParams.get("argomento_id");
 
     // Le query soft-deleted (deleted_at IS NOT NULL) sono nascoste dalla
     // dashboard di gestione. Lo storico delle run e gli export le pescano
     // direttamente dalle proprie API senza usare questo handler, quindi
     // filtrare qui non rompe i grafici/report storici.
-    const { data, error: dbError } = await supabase
-      .from("queries")
+    let q = (supabase.from("queries") as any)
       .select("*")
       .eq("project_id", projectId)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
+    if (argomentoId) q = q.eq("argomento_id", argomentoId);
+    const { data, error: dbError } = await q;
 
     if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
     return NextResponse.json(data);
