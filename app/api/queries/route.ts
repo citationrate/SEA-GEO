@@ -114,6 +114,14 @@ export async function PATCH(request: Request) {
 
     // Use service client to bypass RLS
     const svc = createServiceClient();
+
+    // Ownership: la query DEVE appartenere a un progetto dell'utente. Il service
+    // client bypassa RLS, quindi senza questo check un PATCH per solo `id`
+    // permetterebbe di modificare query di altri (IDOR).
+    if (!(await ownsQuery(svc, id, user.id))) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+
     const { error: dbError } = await (svc.from("queries") as any)
       .update(patch)
       .eq("id", id);
@@ -143,6 +151,12 @@ export async function DELETE(request: NextRequest) {
     // (run detail / export continuano a vedere il testo) e rimuove la query
     // dalle viste attive (GET, dashboard, pipeline di analisi).
     const svc = createServiceClient();
+
+    // Ownership: la query DEVE appartenere a un progetto dell'utente (vedi PATCH).
+    if (!(await ownsQuery(svc, id, user.id))) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+
     const { error: dbError } = await (svc.from("queries") as any)
       .update({ deleted_at: new Date().toISOString(), is_active: false })
       .eq("id", id)
@@ -157,4 +171,13 @@ export async function DELETE(request: NextRequest) {
     console.error("[queries DELETE] crash:", err?.message);
     return NextResponse.json({ error: "Errore interno" }, { status: 500 });
   }
+}
+
+/** true se la query esiste e appartiene a un progetto (non cancellato) dell'utente. */
+async function ownsQuery(svc: ReturnType<typeof createServiceClient>, id: string, userId: string): Promise<boolean> {
+  const { data: q } = await (svc.from("queries") as any).select("project_id").eq("id", id).single();
+  if (!q?.project_id) return false;
+  const { data: proj } = await (svc.from("projects") as any)
+    .select("id").eq("id", q.project_id).eq("user_id", userId).is("deleted_at", null).single();
+  return !!proj;
 }
