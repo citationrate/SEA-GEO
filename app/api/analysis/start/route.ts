@@ -81,12 +81,16 @@ export async function POST(request: Request) {
       if (!argomento) return NextResponse.json({ error: "Argomento non trovato" }, { status: 404 });
     }
 
-    // Read models from project config. Override opzionale: limita ai modelli scelti
-    // CHE IL PROGETTO HA GIÀ configurato (nessuna escalation di piano).
+    // Read models from project config. Override AUTORITATIVO: quando il lancio
+    // sceglie esplicitamente i modelli (es. selettore provider della suite),
+    // usiamo QUELLI, senza intersecarli con models_config — che per i progetti
+    // creati dalla suite è il default a 2 modelli e impediva di scegliere i
+    // provider. Nessuna escalation di piano: il gating demo/pro-only più sotto
+    // filtra comunque i modelli non consentiti dal piano dell'utente.
     let models_used: string[] = (project as any).models_config ?? ["gpt-5.4-mini"];
     if (modelsOverride?.length) {
-      const picked = models_used.filter((id: string) => modelsOverride.includes(id));
-      models_used = picked.length ? picked : models_used;
+      const picked = modelsOverride.filter((id: string) => ALL_MODEL_IDS.includes(id));
+      if (picked.length) models_used = picked;
     }
     let validModels = models_used.filter((id: string) => ALL_MODEL_IDS.includes(id));
     if (!validModels.length) return NextResponse.json({ error: "Nessun modello valido configurato" }, { status: 400 });
