@@ -76,6 +76,15 @@ export function extractFromAnthropicSearch(contentBlocks: any[], brandDomain?: s
   return results;
 }
 
+/** Se il title del chunk Gemini è un dominio nudo (es. "whathifi.com",
+ *  "en.wikipedia.org") lo ritorna normalizzato, altrimenti null. */
+function domainFromTitle(title?: string): string | null {
+  if (!title) return null;
+  const t = title.trim().toLowerCase();
+  const m = t.match(/^([a-z0-9-]+(?:\.[a-z0-9-]+)+)$/);
+  return m ? m[1].replace(/^www\./, "") : null;
+}
+
 /** Estrae fonti da Gemini grounding metadata */
 export function extractFromGrounding(candidates: any[], brandDomain?: string): ExtractedSource[] {
   const results: ExtractedSource[] = [];
@@ -84,11 +93,22 @@ export function extractFromGrounding(candidates: any[], brandDomain?: string): E
     const chunks = candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     for (const chunk of chunks) {
       if (chunk.web?.uri) {
-        const domain = safeDomain(chunk.web.uri);
+        let domain = safeDomain(chunk.web.uri);
+        let url: string = chunk.web.uri;
+        // La uri di Gemini/Vertex è un redirect vertexaisearch.cloud.google.com che
+        // dà 404 fuori contesto: non è una fonte reale. La fonte vera è nel title
+        // (spesso il dominio). Se ricaviamo un dominio reale lo usiamo, altrimenti
+        // scartiamo il chunk (niente redirect tra le fonti).
+        if (domain && domain.includes("vertexaisearch")) {
+          const real = domainFromTitle(chunk.web.title);
+          if (!real) continue;
+          domain = real;
+          url = `https://${real}`;
+        }
         if (domain && !seen.has(domain)) {
           seen.add(domain);
           results.push({
-            url: chunk.web.uri,
+            url,
             domain,
             title: chunk.web.title,
             source_type: classifyDomain(domain, brandDomain),
