@@ -455,6 +455,7 @@ interface PromptTask {
   sector: string | null;
   brandType: string | null;
   sectorKeywords: string[];
+  brandAliases: string[];
 }
 
 /** Result of a single AI call, serializable so it can travel between Inngest steps. */
@@ -569,6 +570,7 @@ async function extractAndPersist(
       promptId,
       meta: { query_id: task.queryId, segment_id: task.segmentId, run_number: task.runNumber },
     },
+    task.brandAliases,
   );
 
   // Detailed extraction logging
@@ -990,6 +992,9 @@ export const runAnalysis = inngest.createFunction(
     const brandTypeVal = project.brand_type ?? null;
     const siteAnalysis = project.site_analysis ?? null;
     const sectorKeywords: string[] = siteAnalysis?.sector_keywords ?? [];
+    // Alias/abbreviazioni del brand (es. "P&G" per "Procter & Gamble"): campo
+    // opzionale sul progetto. Se la colonna non esiste ancora → nessun alias.
+    const brandAliases: string[] = Array.isArray((project as any).brand_aliases) ? (project as any).brand_aliases : [];
 
     // Build all prompt tasks.
     // Audience segments are now manual-only: if the user hasn't created any
@@ -1031,6 +1036,7 @@ export const runAnalysis = inngest.createFunction(
               sector,
               brandType: brandTypeVal,
               sectorKeywords,
+              brandAliases,
             });
           }
         }
