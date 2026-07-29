@@ -119,6 +119,39 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/** Classe di separatori equivalenti tra nome brand e testo: spazi (anche nbsp),
+ *  trattini/lineette varie, punto, middle-dot, slash. Rende "Audio-Technica",
+ *  "Audio Technica" e "Audio.Technica" la stessa cosa in fase di match. */
+const SEP = "[\\s\\u00a0\\u2010-\\u2015\\-._\\u00b7/]";
+const SEP_SPLIT = new RegExp(SEP + "+", "g");
+
+/** Regex separator-insensitive per una variante: le parti del brand possono
+ *  essere unite da uno o più separatori diversi (trattino/spazio/punto…). */
+function separatorFlexiblePattern(variant: string): string {
+  const parts = variant.split(SEP_SPLIT).filter(Boolean).map(escapeRegex);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return `\\b${parts[0]}\\b`;
+  return `\\b${parts.join(`${SEP}+`)}\\b`;
+}
+
+/** Variante permissiva (brand circondato da qualunque non-alfanumerico). */
+function separatorFlexiblePatternLoose(variant: string): string {
+  const parts = variant.split(SEP_SPLIT).filter(Boolean).map(escapeRegex);
+  if (parts.length === 0) return "";
+  const core = parts.length === 1 ? parts[0] : parts.join(`${SEP}+`);
+  return `(?:^|[^a-z0-9])${core}(?:[^a-z0-9]|$)`;
+}
+
+/** Verifica deterministica che una forma (proposta dal recupero semantico Haiku)
+ *  sia DAVVERO presente nel testo — evita falsi positivi da allucinazione.
+ *  Confronto case/accent/separator-insensitive. */
+function phraseAppearsInText(phrase: string, text: string): boolean {
+  const norm = (s: string) => stripAccents(normalizeApostrophes(s).toLowerCase()).replace(SEP_SPLIT, " ").trim();
+  const p = norm(phrase);
+  if (p.replace(/\s/g, "").length < 2) return false; // troppo corta/generica
+  return norm(text).includes(p);
+}
+
 /**
  * Build brand name variants for matching:
  * - Full name as-is
@@ -126,22 +159,20 @@ function escapeRegex(s: string): string {
  * - First distinctive word (for multi-word brands like "Costa Crociere" → "Costa")
  * - Common international swaps (Crociere↔Cruises, Gruppo↔Group, etc.)
  */
-function buildBrandVariants(brand: string): string[] {
-  const variants = new Set<string>();
-
-  // Normalize curly apostrophes here so every variant we emit uses ASCII '.
-  // detectBrandMention applies the same normalization to the response, so a
-  // brand "McDonald's" (U+2019) matches a response written with U+0027.
-  const clean = normalizeApostrophes(brand.trim());
-  if (!clean) return [];
+/** Aggiunge a `variants` (e a `partials` per i match monoparola) le forme di UN
+ *  nome — il brand principale o un suo alias. Il match separator-insensitive è
+ *  applicato dopo, in detectBrandMention: qui NON serve enumerare trattino/spazio.
+ *  `allowFirstWord` genera la variante "prima parola" solo per il brand
+ *  principale (gli alias sono espliciti e matchano per intero). */
+function addCoreVariants(variants: Set<string>, partials: Set<string>, name: string, allowFirstWord: boolean): void {
+  const clean = normalizeApostrophes(name.trim());
+  if (!clean) return;
 
   // Full name
   variants.add(clean.toLowerCase());
   variants.add(stripAccents(clean).toLowerCase());
 
-  // Apostrophe-tolerant variants. AI models drop the apostrophe ("Mcdonalds"),
-  // replace it with a space ("L Oreal"), or keep it ("L'Oréal"). We emit all
-  // three so the regex word-boundary match succeeds in every case.
+  // Apostrophe-tolerant variants (McDonald's / Mcdonalds / L Oreal).
   if (clean.includes("'")) {
     const noApostrophe = clean.replace(/'/g, "");
     variants.add(noApostrophe.toLowerCase());
@@ -173,21 +204,6 @@ function buildBrandVariants(brand: string): string[] {
     }
   }
 
-  // First distinctive word for multi-word brands.
-  // Skip generic words (shared list with isGenericBrandName) to avoid
-  // first-word partial matches like "Health & Her" -> "health".
-  const GENERIC_WORDS = BRAND_GENERIC_WORDS;
-
-  const words = clean.split(/\s+/);
-  if (words.length >= 2) {
-    const firstWord = words[0];
-    // Only use first word if it's distinctive enough (>= 3 chars, not generic)
-    if (firstWord.length >= 3 && !GENERIC_WORDS.has(firstWord.toLowerCase())) {
-      variants.add(firstWord.toLowerCase());
-      variants.add(stripAccents(firstWord).toLowerCase());
-    }
-  }
-
   // Handle "&" / "and" / "e" variations: "Dolce & Gabbana" ↔ "Dolce and Gabbana"
   if (clean.includes("&")) {
     variants.add(clean.replace(/\s*&\s*/g, " and ").toLowerCase());
@@ -197,16 +213,52 @@ function buildBrandVariants(brand: string): string[] {
     variants.add(clean.replace(/\band\b/gi, "&").toLowerCase());
   }
 
-  // For brands with generic category suffixes (e.g. "Giesse Risarcimento Danni"),
-  // add the distinctive prefix as a variant and ensure the generic suffix alone
-  // is NOT a variant that could cause false positives.
+  // Generic category suffixes (e.g. "Giesse Risarcimento Danni") → distinctive prefix.
   const distinctivePrefix = extractDistinctivePrefix(clean);
   if (distinctivePrefix) {
     variants.add(distinctivePrefix.toLowerCase());
     variants.add(stripAccents(distinctivePrefix).toLowerCase());
   }
 
-  return Array.from(variants);
+  // First distinctive word for multi-word brands (whitespace split only, so
+  // hyphenated single tokens like "Audio-Technica" do NOT spawn a risky
+  // "audio" partial). Tracked in `partials` so the caller can apply weaker
+  // trust to first-word-only matches.
+  if (allowFirstWord) {
+    const words = clean.split(/\s+/);
+    if (words.length >= 2) {
+      const firstWord = words[0];
+      if (firstWord.length >= 3 && !BRAND_GENERIC_WORDS.has(firstWord.toLowerCase())) {
+        const fw = firstWord.toLowerCase();
+        const fwn = stripAccents(firstWord).toLowerCase();
+        variants.add(fw); partials.add(fw);
+        variants.add(fwn); partials.add(fwn);
+      }
+    }
+  }
+
+  // Forma completamente attaccata, senza separatori ("Audio-Technica" →
+  // "audiotechnica"). Solo se il nome ha ≥2 parti ed è lungo e distintivo
+  // (≥12 char), per evitare collisioni con parole comuni ("Pro Ject" →
+  // "project"). Le forme più corte le recupera comunque l'analisi semantica.
+  const collapsed = stripAccents(clean.replace(SEP_SPLIT, "")).toLowerCase();
+  const nParts = clean.split(SEP_SPLIT).filter(Boolean).length;
+  if (nParts >= 2 && collapsed.length >= 12 && !BRAND_GENERIC_WORDS.has(collapsed)) {
+    variants.add(collapsed);
+  }
+}
+
+/**
+ * Build brand name variants for matching, plus any user-provided aliases
+ * (e.g. "P&G" for "Procter & Gamble"). Returns the variant list and the set of
+ * first-word "partial" variants (used to apply weaker trust to partial matches).
+ */
+function buildBrandVariants(brand: string, aliases: string[] = []): { variants: string[]; partials: Set<string> } {
+  const variants = new Set<string>();
+  const partials = new Set<string>();
+  addCoreVariants(variants, partials, brand, true);
+  for (const a of aliases) if (a && a.trim()) addCoreVariants(variants, partials, a, false);
+  return { variants: Array.from(variants), partials };
 }
 
 interface BrandDetection {
@@ -258,31 +310,24 @@ function stripMarkdown(s: string): string {
  * Strips markdown formatting before comparison to handle
  * bold/italic brand names (e.g. **Lattebusche**).
  */
-export function detectBrandMention(response: string, targetBrand: string): BrandDetection {
-  const cleanBrand = targetBrand.trim();
-  const brandWordCount = cleanBrand.split(/\s+/).filter(Boolean).length;
-  const classifyMatch = (variant: string): "full" | "partial" => {
-    // Full match: the variant has at least as many words as the brand,
-    // or it equals one of the swap-variants (Crociere<->Cruises etc.).
-    // Single-word brands always land here (count >= 1).
-    return variant.split(/\s+/).filter(Boolean).length >= brandWordCount
-      ? "full"
-      : "partial";
-  };
+export function detectBrandMention(response: string, targetBrand: string, aliases: string[] = []): BrandDetection {
+  const { variants, partials } = buildBrandVariants(targetBrand, aliases);
+  // Partial = solo i match "prima parola" (registrati in `partials`). Alias e
+  // nomi completi sono sempre "full".
+  const classifyMatch = (variant: string): "full" | "partial" =>
+    partials.has(variant) ? "partial" : "full";
+
   // Normalize curly apostrophes (U+2019 etc.) to ASCII, then replace every
-  // apostrophe with a space. Reason: AI models render the same brand as
-  // "McDonald's", "Mcdonalds", or "McDonald s" in different runs. Stripping
-  // the apostrophe to a space, combined with the no-apostrophe + space
-  // variants emitted by buildBrandVariants, covers all three cases.
-  // Possessives like "Wovo's" → "Wovo s" then match \bwovo\b correctly.
+  // apostrophe with a space (McDonald's / Mcdonalds / McDonald s).
   const normalizedResponse = normalizeApostrophes(response).replace(/'/g, " ");
   const cleaned = stripMarkdown(normalizedResponse);
   const responseLower = cleaned.toLowerCase();
   const responseNorm = stripAccents(responseLower);
-  const variants = buildBrandVariants(targetBrand);
   const generic = isGenericBrandName(targetBrand);
 
-  // For generic brand names, only try full-name match (skip single-word partials)
+  // For generic brand names, only try multi-word (or exact full-name) variants:
+  // single-token variants like a generic distinctive-prefix ("Casa") would
+  // false-positive on everyday text. Precision > recall for generic names.
   const effectiveVariants = generic
     ? variants.filter((v) => v.includes(" ") || v === targetBrand.toLowerCase().trim())
     : variants;
@@ -290,24 +335,23 @@ export function detectBrandMention(response: string, targetBrand: string): Brand
   // Sort: longer variants first (full name before first-word)
   const sorted = effectiveVariants.sort((a, b) => b.length - a.length);
 
-  // Strategy 1: Word-boundary regex on cleaned text
+  // Strategy 1: separator-insensitive match on markdown-cleaned text.
+  // "Audio-Technica" / "Audio Technica" / "Audio.Technica" match the same brand.
   for (const variant of sorted) {
-    const variantNorm = stripAccents(variant);
-    const pattern = new RegExp(`\\b${escapeRegex(variantNorm)}\\b`, "gi");
-    const matches = responseNorm.match(pattern);
+    const pat = separatorFlexiblePattern(stripAccents(variant));
+    if (!pat) continue;
+    const matches = responseNorm.match(new RegExp(pat, "gi"));
     if (matches && matches.length > 0) {
       return { mentioned: true, occurrences: matches.length, matchedVariant: variant, matchType: classifyMatch(variant) };
     }
   }
 
-  // Strategy 2: Try on raw response (before markdown stripping) — catches brands
-  // inside markdown formatting that stripMarkdown might mangle
+  // Strategy 2: permissive match on the raw response (brand inside formatting).
   const rawLower = stripAccents(normalizedResponse.toLowerCase());
   for (const variant of sorted) {
-    const variantNorm = stripAccents(variant);
-    // More permissive: allow brand surrounded by any non-alphanumeric char
-    const pattern = new RegExp(`(?:^|[^a-z0-9])${escapeRegex(variantNorm)}(?:[^a-z0-9]|$)`, "gi");
-    const matches = rawLower.match(pattern);
+    const pat = separatorFlexiblePatternLoose(stripAccents(variant));
+    if (!pat) continue;
+    const matches = rawLower.match(new RegExp(pat, "gi"));
     if (matches && matches.length > 0) {
       return { mentioned: true, occurrences: matches.length, matchedVariant: variant, matchType: classifyMatch(variant) };
     }
@@ -516,6 +560,23 @@ function positionScore(rank: number | null, nCompetitors: number): number {
   return Math.max(0, 1 - ((rank - 1) / nCompetitors));
 }
 
+interface PartialExtraction extends Pick<ExtractionResult, "topics" | "competitors_found" | "sources"> {
+  /** Recupero semantico: il brand è stato riconosciuto sotto alias/variante? */
+  brand_present: boolean;
+  brand_matched_text: string | null;
+  brand_rank: number | null;
+  brand_occurrences: number;
+  tone_score: number | null;
+  recommendation_score: number | null;
+  brand_adjectives: string[];
+}
+
+const EMPTY_PARTIAL: PartialExtraction = {
+  brand_present: false, brand_matched_text: null, brand_rank: null, brand_occurrences: 0,
+  tone_score: null, recommendation_score: null, brand_adjectives: [],
+  topics: [], competitors_found: [], sources: [],
+};
+
 async function extractCompetitorsTopicsSources(
   response: string,
   targetBrand: string,
@@ -524,7 +585,7 @@ async function extractCompetitorsTopicsSources(
   language?: string,
   brandDomain?: string | null,
   trackingContext?: ExtractTrackingContext,
-): Promise<Pick<ExtractionResult, "topics" | "competitors_found" | "sources">> {
+): Promise<PartialExtraction> {
   // Clean control characters and Perplexity-style citation markers [1], [2], etc.
   // that can confuse Haiku into including them in competitor names
   const cleanResponse = response
@@ -535,7 +596,7 @@ async function extractCompetitorsTopicsSources(
     .slice(0, 3000);
 
   if (!cleanResponse || cleanResponse.length < 50) {
-    return { topics: [], competitors_found: [], sources: [] };
+    return { ...EMPTY_PARTIAL };
   }
 
   const lang = language === "en" ? "English" : language === "fr" ? "French" : language === "de" ? "German" : language === "es" ? "Spanish" : "Italian";
@@ -550,18 +611,19 @@ async function extractCompetitorsTopicsSources(
   // every subsequent call within ~5 min pay only 10% of the input rate on
   // the cached portion. For Haiku this collapses ~$0.0009 → ~$0.0001 per
   // cached call after the first one.
-  const staticPrompt = `You are an AI analyst. The brand "${targetBrand}" is NOT present in this response.
+  const staticPrompt = `You are an AI analyst. A deterministic string match did NOT find the brand "${targetBrand}" verbatim in this response, but it MAY still be mentioned under a variant: a different spelling/spacing/hyphenation (e.g. "Audio-Technica" vs "Audio Technica"), an abbreviation or acronym (e.g. "P&G" for "Procter & Gamble", "GSK" for "GlaxoSmithKline", "VW" for "Volkswagen"), or an official alias / parent / common short name.
 Sector: ${sector ?? "generic"}
 Brand type: ${brandType ?? "manufacturer"}
 
 ${langInstr}
 
-Extract ONLY commercial competitors — companies, agencies, studios, or services that a customer could choose INSTEAD of "${targetBrand}" for the same service.
+Your job: (1) decide whether the SAME company/brand "${targetBrand}" is actually mentioned (under any form), and (2) extract commercial competitors, topics and sources.
 
 ${sectorCompetitorGuidance}
 
 Extract:
-- competitors_found: ALL commercial brands/companies/services mentioned that compete with the target brand
+- brand_present / brand_matched_text: whether "${targetBrand}" (or a genuine alias/abbreviation/spelling variant of the SAME entity) is mentioned, and the exact text that refers to it
+- competitors_found: ALL commercial brands/companies/services mentioned that compete with the target brand (do NOT include "${targetBrand}" itself, in any form)
 - topics: main topics discussed (in ${lang})
 - sources: most relevant sites/domains cited
 
@@ -569,10 +631,25 @@ Respond ONLY with valid JSON. No text before or after JSON.
 
 Required JSON schema:
 {
+  "brand_present": boolean,
+  "brand_matched_text": string | null,
+  "brand_rank": number | null,
+  "brand_occurrences": number,
+  "tone_score": number,
+  "recommendation_score": number,
+  "brand_adjectives": string[],
   "topics": string[],
   "competitors_found": [{ "name": string, "type": "direct"|"indirect"|"channel"|"aggregator", "rank": number, "sentiment": number, "tone": number, "recommendation": number }],
   "sources": [{ "url": string|null, "domain": string, "label": string|null, "source_type": string, "is_brand_owned": boolean, "context": string }]
 }
+
+BRAND PRESENCE RULES:
+- brand_present: true ONLY if the SAME entity "${targetBrand}" is mentioned (verbatim, or via a genuine spelling variant / abbreviation / official alias). Do NOT set true for merely similar names or for competitors.
+- brand_matched_text: the EXACT substring, copied verbatim from the response, that refers to the brand (must literally appear in the text). null if brand_present=false.
+- brand_rank: position of the brand's first mention among distinct brands (1 = first). null if not present.
+- brand_occurrences: how many times the brand appears (0 if absent).
+- tone_score / recommendation_score: sentiment [-1.0..+1.0] and recommendation [-1.0..+1.0] toward the brand (0 if absent).
+- brand_adjectives: 2-3 adjectives describing the brand (in ${lang}); [] if absent.
 
 For each competitor in competitors_found:
 - rank: position of first mention (1 = first mentioned brand)
@@ -661,6 +738,13 @@ ${cleanResponse}`;
       }
     }
     return {
+      brand_present: parsed.brand_present === true,
+      brand_matched_text: typeof parsed.brand_matched_text === "string" ? parsed.brand_matched_text : null,
+      brand_rank: parsed.brand_rank != null ? Number(parsed.brand_rank) : null,
+      brand_occurrences: Number(parsed.brand_occurrences) || 0,
+      tone_score: parsed.tone_score != null ? Math.max(-1, Math.min(1, Number(parsed.tone_score))) : null,
+      recommendation_score: parsed.recommendation_score != null ? Math.max(-1, Math.min(1, Number(parsed.recommendation_score))) : null,
+      brand_adjectives: Array.isArray(parsed.brand_adjectives) ? parsed.brand_adjectives : [],
       topics: Array.isArray(parsed.topics) ? parsed.topics : [],
       competitors_found: (() => {
         const mapped = Array.isArray(parsed.competitors_found)
@@ -710,7 +794,7 @@ ${cleanResponse}`;
     };
   } catch (e) {
     console.error("[extractor] partial extraction failed:", e);
-    return { topics: [], competitors_found: [], sources: [] };
+    return { ...EMPTY_PARTIAL };
   }
 }
 
@@ -738,9 +822,10 @@ export async function extractFromResponse(
   language?: string,
   brandDomain?: string | null,
   trackingContext?: ExtractTrackingContext,
+  aliases: string[] = [],
 ): Promise<ExtractionResult> {
-  // Robust brand detection with variants and partial matching
-  const detection = detectBrandMention(response, targetBrand);
+  // Robust brand detection with variants, separator-insensitive matching and aliases
+  const detection = detectBrandMention(response, targetBrand, aliases);
 
   console.log(`[extractor] brand="${targetBrand}" detected=${detection.mentioned} occurrences=${detection.occurrences} variant="${detection.matchedVariant}" responseLen=${response.length} preview="${response.substring(0, 150).replace(/\n/g, " ")}"`);
 
@@ -749,6 +834,37 @@ export async function extractFromResponse(
     const partialResult = await extractCompetitorsTopicsSources(
       response, targetBrand, sector, brandType, language, brandDomain, trackingContext
     );
+
+    // RECUPERO SEMANTICO (B): la regex non ha trovato il brand, ma l'estrattore
+    // semantico può averlo riconosciuto sotto una variante/alias non colta
+    // (es. "P&G" per "Procter & Gamble"). Accettiamo il match SOLO se la forma
+    // restituita è DAVVERO presente nel testo (anti-allucinazione) e il brand
+    // non è un nome generico (troppo rischio di falso positivo).
+    if (
+      !isGenericBrandName(targetBrand) &&
+      partialResult.brand_present &&
+      partialResult.brand_matched_text &&
+      phraseAppearsInText(partialResult.brand_matched_text, response)
+    ) {
+      const toneScore = partialResult.tone_score ?? 0;
+      const recScore = partialResult.recommendation_score ?? 0;
+      const sentimentFinal = Math.max(-1, Math.min(1, (toneScore * 0.6) + (recScore * 0.4)));
+      console.log(`[extractor] RECUPERO semantico: brand="${targetBrand}" riconosciuto come "${partialResult.brand_matched_text}" (regex mancata)`);
+      return {
+        brand_mentioned: true,
+        brand_rank: partialResult.brand_rank ?? null,
+        brand_occurrences: partialResult.brand_occurrences || 1,
+        sentiment_score: sentimentFinal,
+        tone_score: toneScore,
+        position_score: positionScore(partialResult.brand_rank ?? null, partialResult.competitors_found.length),
+        recommendation_score: recScore,
+        brand_adjectives: partialResult.brand_adjectives ?? [],
+        topics: partialResult.topics,
+        competitors_found: partialResult.competitors_found,
+        sources: partialResult.sources,
+      };
+    }
+
     return {
       brand_mentioned: false,
       brand_rank: null,
