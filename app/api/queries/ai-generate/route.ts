@@ -374,8 +374,8 @@ function buildSystemPrompt(
   }
   const userContextBlock = userContextParts.length > 0
     ? isSpecific
-      ? `\nContesto dall'utente:\n${userContextParts.join("\n")}\n\nVINCOLO ASSOLUTO — modalità "Specifiche":\n1. OGNI singola query generata DEVE menzionare letteralmente la keyword del tema ("${themeSanitized}") oppure un sinonimo stretto/iperonimo immediato. Niente query che parlano del brand a 360° o di prodotti adiacenti fuori dal tema.\n2. Se l'utente ha fornito un "Obiettivo dell'indagine", le query devono adottare ESATTAMENTE quel punto di vista. Esempi di lettura del campo:\n   - "voglio capire come un utente cerca X per la prima volta" → query da NEOFITA che descrive il proprio livello/esigenza\n   - "voglio vedere chi viene citato quando un cliente è insoddisfatto del fornitore attuale" → query da CHI VUOLE CAMBIARE, con framing di switch\n   - "voglio capire le domande tipiche di un acquirente premium" → query con vocabolario, criteri e budget premium\n   - "voglio misurare le citazioni su criteri di sostenibilità" → query in cui la sostenibilità è il criterio decisivo\n   Adatta tono, persona implicita, situazione e criteri di scelta a quel punto di vista.\n3. Le query MOFU devono essere comparative o decisionali RESTANDO sul tema (es. "miglior X per [tema] sotto N €"). Le query TOFU devono essere esplorative RESTANDO sul tema.\n4. NESSUNA query che, letta da sola fuori contesto, potrebbe essere scambiata per una query brand-360°. Se hai dubbi, scarta e rifai.\n5. Il BACKGROUND BRAND/SITE serve SOLO per scegliere vocabolario, tono e livello di expertise del target: NON per espandere il dominio della query a tutto il portafoglio del brand.\n\nEsempi del filtro on-topic vs off-topic (tema = "${themeSanitized}"):\n✅ ON-TOPIC: query coerente con il punto di vista dell'indagine, sul tema "${themeSanitized}"\n❌ OFF-TOPIC: query che parla di altri prodotti/servizi del brand non legati a ${themeSanitized} → SCARTA E RIFAI\n❌ OFF-TOPIC: query generica sul settore senza menzionare ${themeSanitized} → SCARTA E RIFAI\n❌ FUORI INDAGINE: query che ignora il punto di vista dichiarato (es. l'utente vuole il momento di switch e tu generi query da chi sceglie per la prima volta) → SCARTA E RIFAI\n`
-      : `\nContesto specifico dall'utente:\n${userContextParts.join("\n")}\n\nUSA ATTIVAMENTE questi dettagli per generare query più mirate. Le query MOFU devono riflettere i bisogni reali dei clienti, le caratteristiche distintive e le considerazioni d'acquisto.\n`
+      ? `\nContesto dall'utente:\n${userContextParts.join("\n")}\n\nREGOLE — modalità "Tema" (tema = "${themeSanitized}"):\n1. Ogni query DEVE restare sul tema "${themeSanitized}" (usa la keyword del tema o un sinonimo/iperonimo stretto). Niente query sul brand a 360° o su prodotti/servizi adiacenti fuori dal tema.\n2. Genera domande che una PERSONA REALE farebbe davvero a ChatGPT/Gemini quando valuta cosa scegliere sul tema: naturali, dirette, mai artificiose. L'obiettivo è far emergere BRAND, AZIENDE e PRODOTTI citabili sul tema.\n   Forme preferite (TOFU sul tema): "quali sono i/le migliori ${themeSanitized}", "quali sono le migliori marche/aziende di ${themeSanitized}", "cosa scegliere per ${themeSanitized}", "chi sono i leader in ${themeSanitized}", "migliori ${themeSanitized} per [esigenza o uso concreto]".\n   MOFU sul tema: l'utente descrive un'esigenza reale legata al tema e chiede QUALE prodotto/marca/azienda scegliere (es. "quali ${themeSanitized} mi consigliate per [caso d'uso]?").\n3. SCARTA le domande iper-focalizzate, tecniche o puramente informative che NON fanno emergere nomi di brand/prodotti. Esempi da NON generare:\n   ❌ "Qual è la differenza tra ${themeSanitized} premium e standard in termini di performance?" (confronto di attributi)\n   ❌ "Come funziona / che caratteristiche ha ${themeSanitized}?" (informativa pura)\n   In caso di dubbio, riscrivi nella forma "quali sono i/le migliori..." oppure "chi / quale marca / quale azienda...".\n4. Se l'utente ha fornito un "Obiettivo dell'indagine", adatta persona, situazione e criteri a quel punto di vista — MA senza sacrificare la naturalezza e l'orientamento alla citazione del punto 2.\n5. Il BACKGROUND BRAND/SITE serve SOLO per scegliere vocabolario, tono e livello di expertise del target: NON per espandere il dominio della query oltre il tema.\n`
+      : `\nContesto specifico dall'utente:\n${userContextParts.join("\n")}\n\nUSA ATTIVAMENTE questi dettagli per generare query più mirate, ma mantieni domande naturali che una persona reale farebbe davvero (forma "quali sono i/le migliori..." o "chi / quale azienda / quale marca..."). Le query MOFU devono riflettere i bisogni reali dei clienti, le caratteristiche distintive e le considerazioni d'acquisto — senza scadere in domande tecniche o di puro confronto di attributi.\n`
     : "";
 
   const today = new Date().toLocaleDateString("it-IT", { year: "numeric", month: "long", day: "numeric" });
@@ -408,7 +408,7 @@ ${isSpecific
 ${userContextBlock}${websiteBlock}${buildSiteAnalysisBlock(project.site_analysis, isSpecific)}${existingBlock}
 Genera esattamente ${count} query uniche e realistiche in ${lang}.
 
-OBIETTIVO CHIAVE: Le query devono far emergere COMPETITOR COMMERCIALI — aziende, studi, agenzie o servizi che un cliente potrebbe scegliere IN ALTERNATIVA a "${project.target_brand}".
+OBIETTIVO CHIAVE: Le query devono far emergere NOMI CITABILI — brand, aziende, prodotti, studi, agenzie o servizi — che un cliente potrebbe scegliere IN ALTERNATIVA a "${project.target_brand}". Devono suonare come domande VERE che una persona reale farebbe, non come domande da manuale.
 
 Evita formulazioni che farebbero emergere:
 - Enti governativi o pubblici (Ministero, INPS, INAIL, Regione, Comune)
@@ -425,7 +425,13 @@ Invece di domande generiche sulla categoria, chiedi CHI FORNISCE il servizio:
 ❌ SBAGLIATO: "Quali sono le migliori soluzioni fiscali?"
 ✅ GIUSTO: "Quali studi o società di consulenza fiscale aiutano le PMI italiane a ridurre le tasse legalmente?"
 
-La query deve sempre puntare verso FORNITORI COMMERCIALI del servizio, non verso informazioni sul servizio stesso.
+Per i brand di PRODOTTO o consumer la forma più naturale è chiedere direttamente i migliori prodotti o le migliori marche:
+✅ GIUSTO: "Quali sono le migliori scarpe da running?"
+✅ GIUSTO: "Quali sono le migliori marche/aziende di scarpe da running?"
+❌ SBAGLIATO: "Qual è la differenza tra scarpe premium e standard in termini di performance?" (confronto di attributi: non fa emergere marche)
+❌ SBAGLIATO: "Come funziona / che caratteristiche ha una scarpa da running?" (informativa pura)
+
+La query deve sempre puntare verso NOMI di brand/aziende/prodotti da scegliere, non verso informazioni tecniche, definizioni o confronti astratti di attributi.
 
 DUE TIPOLOGIE DI QUERY:
 
@@ -433,7 +439,7 @@ ${nTofu} TOFU — Domande di scoperta generiche sul settore che fanno emergere A
 L'utente sta esplorando il settore, non conosce ancora i brand.
 NON menzionare "${project.target_brand}" né alcun competitor.
 Le query devono chiedere "quali aziende/studi/servizi..." o "chi offre..." — NON "cos'è" o "quali sono i diritti".
-Esempi di angolazione: quali aziende dominano il settore, chi sono i leader, quali servizi scegliere, migliori fornitori.
+Esempi di angolazione: quali sono i/le migliori [prodotti/categoria], quali marche o aziende scegliere, quali aziende dominano il settore, chi sono i leader, migliori fornitori.
 
 ${nMofu} MOFU — Domande su bisogni specifici che il brand risolve, formulate per far emergere FORNITORI COMMERCIALI, MA senza mai nominare "${project.target_brand}" né alcun competitor.
 L'utente descrive un problema, un'esigenza o una situazione concreta che "${project.target_brand}" potrebbe risolvere, chiedendo CHI può aiutarlo.
@@ -452,6 +458,7 @@ Regole generali:
 - Adatta tono e vocabolario al settore e tipo di brand
 - NESSUNA query deve contenere il nome "${project.target_brand}" — né TOFU né MOFU
 - NON usare template ripetitivi — varia struttura, angolazione e formulazione
+- EVITA domande puramente informative o di confronto di attributi che non portano a citare nomi (es. "che differenza c'è tra X e Y", "come funziona X", "quali caratteristiche ha X"): preferisci SEMPRE la forma "quali sono i/le migliori..." oppure "chi / quale azienda / quale marca..."
 - Usa i temi, prodotti e servizi reali del brand emersi dal sito web per rendere le query MOFU specifiche e contestualizzate ai bisogni reali dei clienti
 - Rispondi SOLO con un JSON array, nessun altro testo
 
@@ -476,8 +483,8 @@ function buildFollowUpPrompt(
 
 Sei un esperto di AI Search Optimization. Devi generare ${missing} query aggiuntive per il settore di "${project.target_brand}" (settore: ${project.sector ?? "non specificato"}).
 
-OBIETTIVO: Le query devono far emergere COMPETITOR COMMERCIALI — aziende, studi, agenzie, servizi che un cliente potrebbe scegliere. NON enti pubblici, sindacati, patronati, autorità regolatorie o associazioni consumatori.
-Chiedi sempre CHI FORNISCE il servizio, non informazioni generiche sul servizio.
+OBIETTIVO: Le query devono far emergere NOMI CITABILI — brand, aziende, prodotti, studi, agenzie o servizi che un cliente potrebbe scegliere. NON enti pubblici, sindacati, patronati, autorità regolatorie o associazioni consumatori.
+Devono suonare come domande VERE ("quali sono i/le migliori...", "quali marche/aziende...", "chi offre..."), MAI domande tecniche, definizioni o confronti astratti di attributi.
 
 Query già generate (NON duplicarle):
 ${allExisting.map((t) => `- ${t}`).join("\n")}
