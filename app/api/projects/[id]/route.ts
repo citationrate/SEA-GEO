@@ -34,6 +34,8 @@ const updateSchema = z.object({
   language: z.enum(["it", "en", "fr", "de", "es"]),
   country: z.string().nullable().default(null),
   models_config: z.array(z.string()).min(1).optional(),
+  // Alias/abbreviazioni del brand per il match menzioni (es. "P&G").
+  brand_aliases: z.array(z.string().max(120)).max(20).optional(),
 });
 
 export async function PATCH(

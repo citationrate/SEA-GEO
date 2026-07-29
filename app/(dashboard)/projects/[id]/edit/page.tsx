@@ -49,6 +49,7 @@ export default function EditProjectPage() {
 
   const [name, setName] = useState("");
   const [targetBrand, setTargetBrand] = useState("");
+  const [brandAliases, setBrandAliases] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [sector, setSector] = useState("");
   const [brandType, setBrandType] = useState("manufacturer");
@@ -81,6 +82,7 @@ export default function EditProjectPage() {
       const project = await projRes.json();
       setName(project.name ?? "");
       setTargetBrand(project.target_brand ?? "");
+      setBrandAliases(Array.isArray(project.brand_aliases) ? project.brand_aliases.join(", ") : "");
       setWebsiteUrl(project.website_url ?? "");
       setSector(project.sector ?? "");
       setBrandType(project.brand_type ?? "manufacturer");
@@ -142,6 +144,7 @@ export default function EditProjectPage() {
         body: JSON.stringify({
           name,
           target_brand: targetBrand,
+          brand_aliases: brandAliases.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 20),
           website_url: websiteUrl || null,
           sector: sector || null,
           brand_type: brandType || null,
@@ -219,6 +222,23 @@ export default function EditProjectPage() {
             placeholder={t("editProject.brandPlaceholder")}
             className="input-base"
           />
+        </div>
+
+        {/* Alias / abbreviazioni del brand (opzionale) */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+            Alias del brand
+            <span className="text-xs font-normal text-muted-foreground">opzionale</span>
+            <InfoTooltip text="Altre forme con cui il brand viene citato: abbreviazioni, acronimi, nomi alternativi. Vengono conteggiate come lo stesso brand. Separa con la virgola. Es. per «Procter & Gamble»: P&G, Procter and Gamble." />
+          </label>
+          <input
+            type="text"
+            value={brandAliases}
+            onChange={(e) => setBrandAliases(e.target.value)}
+            placeholder="Es. P&G, Procter and Gamble"
+            className="input-base"
+          />
+          <p className="text-xs text-muted-foreground">Separate da virgola. Utile per acronimi/abbreviazioni non ovvi.</p>
         </div>
 
         {/* Lingua — promossa in cima per coerenza con /new */}
