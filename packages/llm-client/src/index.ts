@@ -3,7 +3,7 @@ export { callAIModel, API_MODEL_ID } from "./prompt-runner";
 export type { AIModelResult, GroundingMetadata } from "./prompt-runner";
 
 // Claude Haiku-based response extraction (brand mentions, sentiment, competitors, topics, sources)
-export { extractFromResponse } from "./extractor";
+export { extractFromResponse, domainMatchesBrand } from "./extractor";
 export type { ExtractionResult } from "./extractor";
 
 // AI model registry
