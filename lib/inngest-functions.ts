@@ -6,6 +6,7 @@ import {
   type AIModelResult,
   type GroundingMetadata,
   extractFromResponse,
+  domainMatchesBrand,
   type ExtractedSource,
   mergeSources,
   canonicalizeCompetitorName,
@@ -698,7 +699,18 @@ async function extractAndPersist(
       // "brand_owned" quando il dominio è del brand. Senza questo il campo non
       // veniva mai scritto (bug storico) → la metrica "citano il tuo sito"
       // dell'overview (che somma is_brand_owned) restava 0% pur col badge brand_owned.
-      is_brand_owned: (s.source_type || "other") === "brand_owned",
+      //
+      // 10/09/2026: non bastava. L'etichetta `source_type` la decide il modello, e
+      // il modello classifica volentieri il sito del cliente come "media": nella
+      // prova d'uso duelombardialristorante.it e' uscito come fonte PIU' citata (3 AI
+      // su 4, 4 citazioni) e la pagina diceva lo stesso "0% citano il tuo sito".
+      // L'extractor il confronto lo faceva gia' bene, ma il valore andava perso nel
+      // rimappaggio poco sopra, che non copia il campo. Qui si ricalcola dal dato
+      // certo, cioe' il dominio del progetto, che non dipende da come ha etichettato
+      // il modello. Il confronto e' stretto (uguaglianza esatta o sottodominio).
+      is_brand_owned:
+        (s.source_type || "other") === "brand_owned" ||
+        domainMatchesBrand(s.domain, task.brandDomain),
       source_origin: s.source_origin || "text_mention",
       context: s.context || "",
       citation_count: 1,

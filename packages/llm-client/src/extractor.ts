@@ -457,7 +457,13 @@ function extractRealUrlsFromText(text: string): Set<string> {
 
 /** Match deterministico fonte↔dominio del brand: il "sito tuo" non si affida a
  *  Haiku, si riconosce confrontando i domini normalizzati. */
-function domainMatchesBrand(domain?: string | null, brandDomain?: string | null): boolean {
+/**
+ * Il dominio della fonte e' del brand analizzato?
+ * Esportata il 10/09/2026: serve anche a chi SALVA le fonti (lib/inngest-functions),
+ * che prima derivava is_brand_owned dalla sola etichetta del modello. Una seconda
+ * copia della regola sarebbe divergata al primo ritocco.
+ */
+export function domainMatchesBrand(domain?: string | null, brandDomain?: string | null): boolean {
   if (!domain || !brandDomain) return false;
   const norm = (d: string) =>
     d.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "").toLowerCase().trim();
