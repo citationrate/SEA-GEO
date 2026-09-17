@@ -592,16 +592,29 @@ async function retryCall(
   providerLabel: string,
 ): Promise<AIModelResult> {
   let lastError: any;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  // 17/09/2026 — un 429 e' un "riprova fra un po'", non un "no". Con due
+  // tentativi a 3 secondi fissi si ricadeva dentro la stessa finestra di
+  // limite: nella prova del 17/09 la Reputazione AI ha perso 8 risposte su 54,
+  // tutte per "Perplexity 429", e il punteggio 52 e' stato presentato come
+  // pieno. Ora sul 429 si insiste di piu' e si aspetta sempre di piu', con un
+  // pizzico di casualita' per non ripartire tutti insieme.
+  const ATTESE_429 = [3000, 8000, 20000, 45000];
+  let tentativo = 0;
+  const maxVeri = maxAttempts;
+  for (let attempt = 1; attempt <= Math.max(maxVeri, ATTESE_429.length + 1); attempt++) {
     try {
       return await fn();
     } catch (e: any) {
       lastError = e;
       const status = e instanceof RetryableError ? e.statusCode : 0;
-      if (attempt < maxAttempts) {
-        const delay = status === 429 ? 3000 : 2000;
-        await new Promise(r => setTimeout(r, delay));
-      }
+      const limiteFrequenza = status === 429;
+      // Per tutto quello che non e' un 429 si resta al comportamento di prima.
+      if (!limiteFrequenza && attempt >= maxVeri) break;
+      if (limiteFrequenza && tentativo >= ATTESE_429.length) break;
+      const attesa = limiteFrequenza
+        ? ATTESE_429[tentativo++] * (0.8 + Math.random() * 0.4)
+        : 2000;
+      await new Promise(r => setTimeout(r, attesa));
     }
   }
   const errMsg = lastError?.message ?? `Errore sconosciuto ${providerLabel}`;
