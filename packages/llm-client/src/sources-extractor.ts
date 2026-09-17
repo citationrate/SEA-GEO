@@ -266,11 +266,46 @@ export function classifyDomainForPerplexity(domain: string, brandDomain?: string
   return classifyDomain(domain, brandDomain);
 }
 
+// 17/09/2026 — questa funzione aveva due difetti che si sommavano.
+//
+// 1. L'elenco dei negozi era di SEI nomi, quindi unieuro.it, mediaworld.it,
+//    eataly.com e perfino walmart.com, che e' la piu' grande catena di negozi
+//    del mondo, non venivano riconosciuti.
+// 2. Il ripiego era "media". Un dominio che non rientra in nessuna regola NON
+//    e' un organo di stampa: e' semplicemente sconosciuto.
+//
+// Il risultato e' che nella prova su bialetti.com cinque fonti su otto erano
+// etichettate "media" e nessuna delle cinque lo era, con il riquadro in
+// evidenza che dichiarava "100% da media terzi". Un numero falso, grande, in
+// cima alla pagina. Ora il ripiego e' "other" e l'elenco dei negozi copre i
+// grandi nomi italiani ed europei.
+const NEGOZI = new RegExp(
+  [
+    // internazionali
+    "amazon", "ebay", "aliexpress", "etsy", "temu", "shein", "walmart", "ikea",
+    "zalando", "asos", "shopify", "backmarket", "wayfair",
+    // italiani ed europei
+    "unieuro", "mediaworld", "euronics", "trony", "expert\\.it", "comet\\.it",
+    "eprice", "monclick", "kasanova", "maisonsdumonde", "leroymerlin",
+    "obi-italia", "bricoman", "decathlon", "cisalfa", "eataly", "esselunga",
+    "coop\\.it", "carrefour", "conad", "tannico", "vinicum", "cremashop",
+    // segnali generici di negozio
+    "shop\\.", "\\.shop", "store\\.", "/negozio", "manomano", "trovaprezzi",
+    "idealo", "pagomeno", "kelkoo",
+  ].join("|")
+);
+
+const COMPARATORI = /trovaprezzi|idealo|kelkoo|pagomeno|shopalike/;
+
 function classifyDomain(domain: string, brandDomain?: string): ExtractedSource["source_type"] {
   if (brandDomain && domain.includes(brandDomain.replace(/^www\./, "").toLowerCase())) return "brand_owned";
-  if (/amazon|ebay|zalando|shopify|etsy|shop\.|aliexpress/.test(domain)) return "ecommerce";
-  if (/wikipedia\.org/.test(domain)) return "wikipedia";
-  if (/instagram|facebook|twitter|x\.com|tiktok|youtube|linkedin|reddit|threads/.test(domain)) return "social";
-  if (/trustpilot|tripadvisor|yelp|recensioni|glassdoor|g2\.com/.test(domain)) return "review";
-  return "media";
+  if (/wikipedia\.org|wikidata\.org/.test(domain)) return "wikipedia";
+  if (/instagram|facebook|twitter|x\.com|tiktok|youtube|linkedin|reddit|threads|pinterest/.test(domain)) return "social";
+  if (/trustpilot|tripadvisor|yelp|recensioni|glassdoor|g2\.com|altroconsumo/.test(domain)) return "review";
+  if (COMPARATORI.test(domain) || NEGOZI.test(domain)) return "ecommerce";
+  // Organi di stampa riconosciuti per estensione o per nome: qui l'etichetta
+  // "media" si puo' dare, perche' e' un riconoscimento e non un ripiego.
+  if (/\.press$|corriere|repubblica|ilsole24ore|ansa\.it|wired|forbes|reuters|bloomberg|ilfattoquotidiano|lastampa|ilmessaggero|adnkronos|agi\.it|tgcom|skytg24|rainews|milanofinanza|pambianco|markup|gdoweek|distribuzionemoderna/.test(domain)) return "media";
+  // Tutto il resto: sconosciuto, non "media".
+  return "other";
 }

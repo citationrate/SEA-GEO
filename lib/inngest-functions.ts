@@ -280,8 +280,25 @@ async function computeCompetitorAVI(
   // Group by NORMALIZED match key: così le varianti di maiuscole/minuscole/spazi/
   // underscore/punteggiatura dello STESSO competitor collassano in uno solo
   // (es. "Milano ha fame" = "Milanohafame" = "Milano ha Fame" = "dove_mangiamo_oggi").
-  const matchKey = (s: string) =>
-    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  // 17/09/2026 \u2014 la chiave non toglieva i suffissi societari e geografici,
+  // quindi "G.A.T. Italy" faceva "gatitaly" e "G.a.t" faceva "gat": due righe
+  // nell'elenco concorrenti, stesso marchio, stesso punteggio. Ora il suffisso
+  // si toglie prima di confrontare.
+  // Fuori dall'elenco di proposito: "co", "sa", "ag". Sono troppo corti e
+  // taglierebbero marchi veri ("Coco" diventerebbe "co").
+  const SUFFISSI_SOCIETARI = /(italia|italy|europe|group|holding|srls|srl|spa|sas|snc|gmbh|sarl|inc|llc|ltd|plc)$/;
+  const matchKey = (s: string) => {
+    let k = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    // Ripetuto, per i casi tipo "gatitaliasrl". Si ferma se quello che resta
+    // scende sotto i tre caratteri: meglio un doppione che due marchi fusi.
+    let prima: string;
+    do {
+      prima = k;
+      const senza = k.replace(SUFFISSI_SOCIETARI, "");
+      if (senza.length >= 3) k = senza;
+    } while (k !== prima);
+    return k;
+  };
   const byCompetitor = new Map<string, any[]>();
   const displayCounts = new Map<string, Map<string, number>>(); // key → { variante: conteggio }
   for (const m of rows) {
