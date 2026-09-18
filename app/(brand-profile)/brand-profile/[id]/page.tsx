@@ -3,6 +3,7 @@ import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
 import { bpComparePlanAllowed } from "@/lib/brand-profile/plans";
 import { BrandProfileReport } from "./report";
+import AIDisclaimer from "@/components/ai-disclaimer";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -62,6 +63,7 @@ export default async function BrandProfileRunPage({ params }: { params: { id: st
         userPlan={userPlan}
         isAdmin={isAdmin}
       />
+      <AIDisclaimer />
     </div>
   );
 }

@@ -423,6 +423,7 @@ export const PDF_FOOTER_HTML = (label: string, dateStr: string, host: string) =>
   .pf .pageNumber, .pf .totalPages { color: ${PALETTE.textFaint}; }
 </style>
 <div class="pf">
+  Analisi generata con l&#8217;ausilio di sistemi di intelligenza artificiale &middot;
   ${escapeHtml(label)} &middot; ${escapeHtml(dateStr)} &middot; ${escapeHtml(host)}
   &middot; <span class="pageNumber"></span>/<span class="totalPages"></span>
 </div>

@@ -2,6 +2,7 @@ import { createServerClient, createDataClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ResultsTable } from "./results-table";
 import { ResultsHeader, ResultsEmpty } from "./results-header";
+import AIDisclaimer from "@/components/ai-disclaimer";
 
 export const metadata = { title: "Risultati" };
 
@@ -73,6 +74,7 @@ export default async function ResultsPage() {
       ) : (
         <ResultsTable rows={rows} />
       )}
+      <AIDisclaimer />
     </div>
   );
 }

@@ -2,6 +2,17 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { sendMetaEvent, extractClientIp, readCookie, type MetaCustomData } from "@/lib/meta-capi";
 
+function hasMarketingConsent(request: Request): boolean {
+  const raw = readCookie(request, "cookie_consent");
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed.marketing === true;
+  } catch {
+    return false;
+  }
+}
+
 const ALLOWED_CLIENT_EVENTS = new Set([
   "Lead",
   "CompleteRegistration",
@@ -42,6 +53,11 @@ export async function POST(request: Request) {
   }
   if (!ALLOWED_CLIENT_EVENTS.has(event_name)) {
     return NextResponse.json({ error: "event_not_allowed" }, { status: 400 });
+  }
+
+  // Respect cookie consent — block CAPI if marketing consent not granted
+  if (!hasMarketingConsent(request)) {
+    return NextResponse.json({ ok: false, skipped: "no_marketing_consent" });
   }
 
   let externalId: string | undefined = body.external_id;

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { CompetitiveResults } from "./competitive-results";
 import { BotMount } from "@/components/BotMount";
+import AIDisclaimer from "@/components/ai-disclaimer";
 import { buildCompareContext, normalizeLang } from "@/lib/bot-context";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
 
@@ -97,6 +98,7 @@ export default async function CompetitiveResultsPage({
         currentAnalysisId={params.analysisId}
       />
       {botContext && <BotMount plan={botPlan} context={botContext} />}
+      <AIDisclaimer />
     </>
   );
 }

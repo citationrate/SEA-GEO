@@ -3,9 +3,9 @@
  * Same Pixel ID (901458989607754) so events from both domains land in the
  * same dataset and Meta sees them as a unified funnel.
  *
- * Privacy: CAPI runs server-side regardless of cookie consent (legitimate
- * interest, declared in privacy policy). Pixel browser is gated by the
- * suite/AVI cookie banner via Consent Mode v2 when wired in GTM.
+ * Privacy: CAPI is gated by the cookie_consent cookie — marketing events
+ * are sent only when the user has granted marketing consent. Pixel browser
+ * is gated by Consent Mode v2 via the suite/AVI cookie banner.
  */
 
 interface TrackOptions {
