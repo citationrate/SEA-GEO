@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { createAuthServiceClient, createDataClient } from "@/lib/supabase/server";
 import { createCitationRateServiceClient } from "@/lib/supabase/citationrate-service";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Permanent account deletion (GDPR Art. 17). Wipes:
- *   - seageo1 (AVI): projects + cascading runs/prompts/responses/avi_history,
+ *   - seageo1 (AVI): brand_profile.runs (cascading scores/insights/prompt_results/diagnostics),
+ *     query_wallet, projects (cascading runs/prompts/responses/avi_history/competitive_analyses),
  *     plus the seageo1 profile row.
- *   - CitationRate: audits, lifecycle_emails, profile, then the auth.users
+ *   - CitationRate: audits, lifecycle_emails, email_events, profile, then the auth.users
  *     record itself (which invalidates the session and revokes all subdomain
  *     cookies).
  *
@@ -28,6 +30,15 @@ export async function DELETE() {
     const data = createDataClient();
     const cr = createCitationRateServiceClient();
 
+    const svc = createServiceClient();
+
+    // seageo1: brand_profile schema (runs cascade to scores, insights, prompt_results, diagnostics)
+    await (svc.schema("brand_profile" as any).from("runs") as any).delete().eq("user_id", userId);
+
+    // seageo1: query_wallet
+    await (svc.from("query_wallet") as any).delete().eq("user_id", userId);
+
+    // seageo1: projects (cascades to runs, prompts, responses, avi_history, competitive_analyses, competitive_prompts, competitors, sources, topics)
     const { error: projErr } = await data.from("projects").delete().eq("user_id", userId);
     if (projErr) {
       console.error("[account/delete] seageo projects delete failed:", projErr.message);
@@ -35,8 +46,10 @@ export async function DELETE() {
     }
     await (data.from("profiles") as any).delete().eq("id", userId);
 
+    // CitationRate: audits, lifecycle_emails, email_events, profile
     await cr.from("audits").delete().eq("user_id", userId);
     await cr.from("lifecycle_emails").delete().eq("user_id", userId);
+    await (cr.from("email_events") as any).delete().eq("user_id", userId);
     await cr.from("profiles").delete().eq("id", userId);
 
     const { error: authErr } = await cr.auth.admin.deleteUser(userId);
