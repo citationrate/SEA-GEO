@@ -4,6 +4,7 @@ import { isProUser } from "@/lib/utils/is-pro";
 import { getUserPlanLimits } from "@/lib/usage";
 import { DatasetClient } from "./dataset-client";
 import { DatasetsPaywall } from "./datasets-paywall";
+import AIDisclaimer from "@/components/ai-disclaimer";
 
 export const metadata = { title: "Dataset" };
 
@@ -39,12 +40,15 @@ export default async function DatasetsPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <DatasetClient
-      projects={(projects ?? []).map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        brand: p.target_brand,
-      }))}
-    />
+    <>
+      <DatasetClient
+        projects={(projects ?? []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          brand: p.target_brand,
+        }))}
+      />
+      <AIDisclaimer />
+    </>
   );
 }

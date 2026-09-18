@@ -4,6 +4,7 @@ import { ProjectSelector } from "@/components/project-selector";
 
 import { getActiveProjectId, getLastCompletedProjectId } from "@/lib/utils/active-project";
 import { CompetitorsClient } from "./competitors-client";
+import AIDisclaimer from "@/components/ai-disclaimer";
 
 export const metadata = { title: "Competitor" };
 
@@ -349,6 +350,7 @@ export default async function CompetitorsPage({
         selectedModel={selectedModel}
       />
       </Suspense>
+      <AIDisclaimer />
     </div>
   );
 }

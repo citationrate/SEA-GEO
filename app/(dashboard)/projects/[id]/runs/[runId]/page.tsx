@@ -13,6 +13,7 @@ import { RunDetailClient } from "./run-detail-client";
 import { BrandNarrative } from "./brand-narrative";
 import { LowScoreBridge } from "./low-score-bridge";
 import { LockedPreviewCta } from "./locked-preview-cta";
+import AIDisclaimer from "@/components/ai-disclaimer";
 import { GalacticSiegeGame } from "@/components/galactic-siege-game";
 import { CancelRunButton } from "./cancel-run-button";
 import { BotMount } from "@/components/BotMount";
@@ -404,6 +405,7 @@ export default async function RunDetailPage({ params }: { params: { id: string; 
       )}
 
       {botContext && <BotMount plan={botPlan} context={botContext} />}
+      <AIDisclaimer />
     </div>
   );
 }

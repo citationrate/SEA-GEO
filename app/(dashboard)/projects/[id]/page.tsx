@@ -14,6 +14,7 @@ import { T } from "@/components/translated-label";
 import { getServerTranslator } from "@/lib/i18n/server";
 import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { BotMount } from "@/components/BotMount";
+import AIDisclaimer from "@/components/ai-disclaimer";
 import { buildProjectContext, normalizeLang } from "@/lib/bot-context";
 import { getEffectivePlanId } from "@/lib/utils/is-pro";
 import { PROVIDER_GROUPS, PRO_ONLY_MODEL_IDS, ENTERPRISE_ONLY_MODEL_IDS, MODEL_MAP, modelIdToBrand } from "@citationrate/llm-client";
@@ -484,6 +485,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       </div>
 
       <BotMount plan={userPlan} context={botContext} />
+      <AIDisclaimer />
     </div>
   );
 }

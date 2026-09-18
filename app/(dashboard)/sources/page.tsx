@@ -3,6 +3,7 @@ import { ProjectSelector } from "@/components/project-selector";
 
 import { getActiveProjectId } from "@/lib/utils/active-project";
 import { SourcesClient } from "./sources-client";
+import AIDisclaimer from "@/components/ai-disclaimer";
 
 export const metadata = { title: "Fonti" };
 
@@ -167,6 +168,7 @@ export default async function SourcesPage({
         availableModels={availableModels}
         selectedModel={selectedModel}
       />
+      <AIDisclaimer />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { DemoBanner } from "@/components/dashboard/demo-banner";
 import { MetaPageTrack } from "@/components/meta-page-track";
 
 import { DashboardClient } from "./dashboard-client";
+import AIDisclaimer from "@/components/ai-disclaimer";
 
 export const metadata = { title: "Dashboard" };
 
@@ -326,6 +327,7 @@ export default async function DashboardPage({
       projectSegmentCount={projectSegmentCount}
       projectModelsConfig={projectModelsConfig}
     />
+    <AIDisclaimer />
     </>
   );
 }

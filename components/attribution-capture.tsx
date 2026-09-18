@@ -20,8 +20,18 @@ export default function AttributionCapture() {
     const secureAttr = isProduction ? "; Secure" : "";
     const ninetyDays = 90 * 24 * 60 * 60;
 
+    // Check marketing consent before setting tracking cookies
+    let marketingConsent = false;
+    try {
+      const cm = document.cookie.match(/(?:^|; )cookie_consent=([^;]*)/);
+      if (cm) {
+        const parsed = JSON.parse(decodeURIComponent(cm[1]));
+        marketingConsent = parsed.marketing === true;
+      }
+    } catch { /* no consent cookie = no consent */ }
+
     const fbclid = params.get("fbclid");
-    if (fbclid) {
+    if (fbclid && marketingConsent) {
       const fbcValue = `fb.1.${Date.now()}.${fbclid}`;
       document.cookie = `_fbc=${encodeURIComponent(fbcValue)}; path=/; max-age=${ninetyDays}${domainAttr}; SameSite=Lax${secureAttr}`;
     }
@@ -37,7 +47,7 @@ export default function AttributionCapture() {
         anyUtm = true;
       }
     }
-    if (anyUtm && !hasFirstTouch) {
+    if (anyUtm && !hasFirstTouch && marketingConsent) {
       const payload = encodeURIComponent(JSON.stringify({ ...utm, ts: Date.now() }));
       document.cookie = `attribution_first_touch=${payload}; path=/; max-age=${ninetyDays}${domainAttr}; SameSite=Lax${secureAttr}`;
     }

@@ -34,7 +34,15 @@ export async function trackEvent(eventName: string, options: TrackOptions = {}):
 
   try {
     if (typeof window !== "undefined" && typeof window.fbq === "function") {
-      window.fbq("track", eventName, options.custom_data ?? {}, { eventID: eventId });
+      // Check marketing consent before firing browser-side pixel
+      let consent = false;
+      try {
+        const m = document.cookie.match(/(?:^|; )cookie_consent=([^;]*)/);
+        if (m) consent = JSON.parse(decodeURIComponent(m[1])).marketing === true;
+      } catch { /* no consent */ }
+      if (consent) {
+        window.fbq("track", eventName, options.custom_data ?? {}, { eventID: eventId });
+      }
     }
   } catch {
     // Pixel errors must never block CAPI fallback.

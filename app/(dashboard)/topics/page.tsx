@@ -3,6 +3,7 @@ import { ProjectSelector } from "@/components/project-selector";
 import { getActiveProjectId, getLastCompletedProjectId } from "@/lib/utils/active-project";
 import { TopicsClient } from "./topics-client";
 import { TopicsHeader, TopicsEmpty } from "./topics-header";
+import AIDisclaimer from "@/components/ai-disclaimer";
 
 export const metadata = { title: "Topic" };
 
@@ -156,6 +157,7 @@ export default async function TopicsPage({
       ) : (
         <TopicsClient topics={topicItems} brand={brand} />
       )}
+      <AIDisclaimer />
     </div>
   );
 }
