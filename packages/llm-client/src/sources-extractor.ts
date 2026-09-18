@@ -24,7 +24,7 @@ export function extractFromAnnotations(output: any[], brandDomain?: string): Ext
           for (const annotation of content.annotations || []) {
             if (annotation.type === "url_citation" && annotation.url) {
               const domain = safeDomain(annotation.url);
-              if (domain && !seen.has(domain)) {
+              if (domain && !fonteDaScartare(domain) && !seen.has(domain)) {
                 seen.add(domain);
                 results.push({
                   url: annotation.url,
@@ -55,7 +55,7 @@ export function extractFromAnthropicSearch(contentBlocks: any[], brandDomain?: s
         for (const result of block.content || []) {
           if (result.type === "web_search_result" && result.url) {
             const domain = safeDomain(result.url);
-            if (domain && !seen.has(domain)) {
+            if (domain && !fonteDaScartare(domain) && !seen.has(domain)) {
               seen.add(domain);
               results.push({
                 url: result.url,
@@ -85,7 +85,7 @@ export function extractFromGrounding(candidates: any[], brandDomain?: string): E
     for (const chunk of chunks) {
       if (chunk.web?.uri) {
         const domain = safeDomain(chunk.web.uri);
-        if (domain && !seen.has(domain)) {
+        if (domain && !fonteDaScartare(domain) && !seen.has(domain)) {
           seen.add(domain);
           results.push({
             url: chunk.web.uri,
@@ -150,6 +150,21 @@ const BLACKLIST = new Set([
   "package.json", "vercel.app", "example.com", "e.g",
 ]);
 
+// 18/09/2026 — fra le fonti di un'analisi sulle caffettiere compariva
+// music.amazon.it. Non e' una fonte: e' un pezzo di piattaforma che non parla
+// del brand, e in elenco toglie credibilita' a tutte le altre. Si scartano i
+// sottodomini di servizio e i domini di infrastruttura.
+// "support." e "help." NON stanno qui: le pagine di assistenza di un brand
+// sono fonti vere, spesso le uniche con le schede tecniche.
+const SOTTODOMINIO_DI_SERVIZIO = /^(music|maps|mail|accounts?|login|signin|auth|checkout|cart|carrello|pay|payments?|policies|advertising|ads|adservice|analytics|track|tracking|cdn|static|assets|img|images|photos|drive|translate|player)\./;
+const DOMINIO_DI_SERVIZIO = /^(doubleclick\.net|googletagmanager\.com|google-analytics\.com|gstatic\.com|googleusercontent\.com|googleapis\.com|cloudfront\.net|akamaized\.net|w3\.org|schema\.org)$/;
+
+/** La fonte non dice niente sul brand: e' infrastruttura, non contenuto. */
+export function fonteDaScartare(domain: string): boolean {
+  const d = (domain || "").toLowerCase();
+  return SOTTODOMINIO_DI_SERVIZIO.test(d) || DOMINIO_DI_SERVIZIO.test(d);
+}
+
 /**
  * Estrae fonti organiche dal testo della risposta AI.
  * Cattura: markdown links, plain URLs, footnotes, inline domain references.
@@ -160,7 +175,7 @@ export function extractFromText(text: string, brandDomain?: string): ExtractedSo
 
   function addSource(url: string, title?: string, context?: string) {
     const domain = safeDomain(url) ?? extractBareDomain(url);
-    if (!domain || seen.has(domain) || BLACKLIST.has(domain) || domain.length < 4) return;
+    if (!domain || seen.has(domain) || BLACKLIST.has(domain) || fonteDaScartare(domain) || domain.length < 4) return;
     seen.add(domain);
     results.push({
       url: url.startsWith("http") ? url : "https://" + url,

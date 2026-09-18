@@ -37,6 +37,7 @@ export {
   extractFromText,
   mergeSources,
   classifyDomainForPerplexity,
+  fonteDaScartare,
 } from "./sources-extractor";
 export type { ExtractedSource, SourceOrigin } from "./sources-extractor";
 

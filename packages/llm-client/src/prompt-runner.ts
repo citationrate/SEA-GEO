@@ -11,6 +11,7 @@ import {
   extractFromText,
   mergeSources,
   classifyDomainForPerplexity,
+  fonteDaScartare,
 } from "./sources-extractor";
 import { trackedAICall, type TrackedCallArgs } from "./cost-tracker";
 
@@ -350,7 +351,7 @@ export async function callAIModel(
         for (const url of citationSources) {
           try {
             const domain = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
-            if (domain && !seenDomains.has(domain)) {
+            if (domain && !fonteDaScartare(domain) && !seenDomains.has(domain)) {
               seenDomains.add(domain);
               perplexitySources.push({
                 url,
