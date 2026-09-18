@@ -129,7 +129,7 @@ function drawFooter(
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(8);
   pdf.setTextColor(140, 140, 140);
-  pdf.text(`${brand} · ${date}`, MARGIN, A4_H - 8);
+  pdf.text(`Analisi generata con l'ausilio di sistemi di intelligenza artificiale · ${brand} · ${date}`, MARGIN, A4_H - 8);
   const right = `${l.page} ${page} ${l.of} ${total}`;
   pdf.text(right, A4_W - MARGIN, A4_H - 8, { align: "right" });
   pdf.setDrawColor(220);

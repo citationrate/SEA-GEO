@@ -113,6 +113,7 @@ export async function GET(
     ["Prompts Total", promptList.length],
     ["Prompts Completed", promptList.filter((p) => p.status === "completed").length],
   ];
+  summaryRows.unshift(["Analisi generata con l'ausilio di sistemi di intelligenza artificiale."], []);
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryRows), "Riepilogo");
 
   // Sheet 2 — Prompt Detail

@@ -141,6 +141,7 @@ export async function GET(
       ? `${(aviData.stability_score > 80 ? t("dashboard.highReliability") : aviData.stability_score >= 50 ? t("dashboard.mediumReliability") : t("dashboard.lowReliability"))} (${Math.round(aviData.stability_score)})`
       : "—"],
   ];
+  summaryRows.unshift(["Analisi generata con l'ausilio di sistemi di intelligenza artificiale."], []);
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
   XLSX.utils.book_append_sheet(wb, wsSummary, "AVI Summary");
 

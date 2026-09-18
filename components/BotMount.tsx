@@ -36,11 +36,16 @@ export function BotMount({
   if (!botId) return null;
 
   return (
-    <Script
-      id={`avi-bot-${context.pagina}`}
-      src={botWidgetSrc(botId)}
-      data-context={JSON.stringify(context)}
-      strategy="afterInteractive"
-    />
+    <>
+      <p className="text-[0.65rem] mt-4 mb-2 text-center" style={{ color: "var(--c-muted, #888)" }}>
+        L&apos;assistente in basso a destra è basato su intelligenza artificiale.
+      </p>
+      <Script
+        id={`avi-bot-${context.pagina}`}
+        src={botWidgetSrc(botId)}
+        data-context={JSON.stringify(context)}
+        strategy="afterInteractive"
+      />
+    </>
   );
 }

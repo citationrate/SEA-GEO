@@ -129,7 +129,7 @@ export async function GET(
     ];
   });
 
-  const wsSummary = XLSX.utils.aoa_to_sheet([...summaryHeader, ...summaryRows]);
+  const wsSummary = XLSX.utils.aoa_to_sheet([["Analisi generata con l'ausilio di sistemi di intelligenza artificiale."], [], ...summaryHeader, ...summaryRows]);
   XLSX.utils.book_append_sheet(wb, wsSummary, t("results.project"));
 
   // ── Sheet 2: Competitor ──
